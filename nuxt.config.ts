@@ -24,6 +24,7 @@ export default defineNuxtConfig({
     },
   },
   app: {
+    baseURL: process.env.NUXT_APP_BASE_URL || '/la-coco-vie/',
     head: {
       title: 'Chapter — Milla Nova',
       meta: [
