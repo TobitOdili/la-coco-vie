@@ -53,6 +53,7 @@ html {
 html, body {
   width: 100%;
   height: 100%;
+  height: 100dvh;
   overflow: hidden;
   font-family: 'Bague', ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -157,15 +158,33 @@ body::after {
 }
 
 /* ===== WebGL Canvas ===== */
-#canvas-container,
-#canvas-container > canvas,
-#webgl-canvas {
-  height: 100vh !important;
+#canvas-container {
+  height: 100vh;
+  height: 100dvh;
   left: 0;
   position: fixed;
   top: 0;
   width: 100%;
   z-index: 0;
+  pointer-events: none;
+}
+
+#webgl-canvas {
+  height: 100%;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
+  pointer-events: none;
+  display: block;
+}
+
+/* Interaction capture layer — above canvas, below nav (z-10 nav = z-20) */
+#canvas-hit-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  cursor: none;
 }
 
 /* ===== Menu Item ===== */

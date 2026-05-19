@@ -198,6 +198,7 @@ void main() {
     if (gl_FrontFacing) {
         gl_FragColor = fin;
     } else {
+        // Original: back face renders as near-white (blends with white background)
         gl_FragColor = mix(vec4(vec3(.95), poster.a), fin, 0.01);
     }
 }
@@ -218,11 +219,14 @@ export function useChapterScene() {
   let videoTextures = []
   let canvasEl
   let width, height, aspectRatio
-  // Original starts mouse at screen (-10,-10)px → normalized ≈ (-1,-1)
-  // Camera parallax formula: pos.x += mouse.x * 0.7 - (pos.x - base.x) / 18
-  // So mouse.x = -1 pushes camera hard left → cards appear left-biased
-  let mouse = new THREE.Vector2(-1.0, -1.0)
-  let prevMouse = new THREE.Vector2(-1.0, -1.0)
+  // Original source:
+  // x = {x: -10, y: -10} initially (way off-screen left, creates strong left-bias during intro)
+  // be = {x: 0, y: -0.5} (used for hover raycasting, separate from camera parallax)
+  // Camera uses x.x, x.y directly; parallax = f(x.x, 0, w.value)*ne - dx/oe
+  // During carousel (w.value=0): full mouse parallax
+  // f is lerp: f(a,b,t) = a*(1-t) + b*t
+  let mouse = new THREE.Vector2(-10.0, -10.0)  // matches original x start
+  let prevMouse = new THREE.Vector2(-10.0, -10.0)
   let raycaster = new THREE.Raycaster()
   let hoveredIndex = -1
   let selectedIndex = -1
@@ -231,12 +235,13 @@ export function useChapterScene() {
   let isMobile = false
 
   const N = 8
-  const baseDistance = 42  // slight pull-back to reduce Wine O'Clock dominance
+  const baseDistance = 40  // original source: ve=40
   const introDistance = 75
   const SELECTED_Y = -70
 
   let scrollRotationY = 0
   let carouselTargetRot = 0
+  let carouselLerpTarget = 0  // smooth lerp target like original f(current, target, .06)
 
   let onSelectCallback = null
   let onHoverCallback = null
@@ -291,17 +296,27 @@ export function useChapterScene() {
     })
   }
 
+  function getViewportSize() {
+    // Use visualViewport when available (handles mobile keyboard/browser chrome correctly)
+    if (window.visualViewport) {
+      return { w: Math.round(window.visualViewport.width), h: Math.round(window.visualViewport.height) }
+    }
+    return { w: window.innerWidth, h: window.innerHeight }
+  }
+
   async function init(canvas) {
     canvasEl = canvas
-    width = window.innerWidth
-    height = window.innerHeight
+    const vp = getViewportSize()
+    width = vp.w
+    height = vp.h
     aspectRatio = width / height
     isMobile = aspectRatio < 1
 
     // Renderer
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.setSize(width, height)
+    // Don't update canvas style (CSS controls it via 100dvh)
+    renderer.setSize(width, height, false)
     renderer.setClearColor(0x000000, 0)
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.NoToneMapping
@@ -319,19 +334,21 @@ export function useChapterScene() {
     camera.basePosition = camera.position.clone()
     scene.add(camera)
 
-    // Groups — use YXZ order to match original GSAP-driven Euler decomposition
+    // Groups — original source uses default XYZ order (never sets rotation.order)
     groupG = new THREE.Group()
-    groupG.rotation.order = 'YXZ'
+    // Do NOT set rotation.order — use THREE.js default 'XYZ' to match original
     if (isMobile) {
       groupG.rotation.set(toRad(22), 0, 0)
     } else {
-      groupG.rotation.set(toRad(25), toRad(-70), toRad(15))
+      // Original source confirmed: W = (degToRad(25), degToRad(70), degToRad(15)) — +70°
+      groupG.rotation.set(toRad(25), toRad(70), toRad(15))
     }
     scene.add(groupG)
 
     carousel = new THREE.Group()
-    // 45° offset rotates Wine O'Clock (i=3, intRot=135°) to effective 180° = dominant front position
-    carousel.animatedRotationY = THREE.MathUtils.degToRad(90)
+    // Original: B.animatedRotationY = 0, animates to degToRad(360*2) = 720°
+    carousel.animatedRotationY = 0
+    carousel.rotation.y = 0
     groupG.add(carousel)
 
     // Load logo texture
@@ -383,7 +400,7 @@ export function useChapterScene() {
     }
     posters = await Promise.all(posterLoadTasks)
 
-    // Start render loop
+    // Start render loop — use lerped rotation like the original
     animate()
 
     // Intro animation
@@ -473,12 +490,13 @@ export function useChapterScene() {
     isIntro = true
     introComplete = false
 
-    // Animate carousel spin: 720° over 6s, with small offset so Wine O'Clock faces front
-    const startRot = THREE.MathUtils.degToRad(90) // 45° offset: Wine O'Clock (i=3, intRot=135°) → effective 180° = dominant front
-    carousel.animatedRotationY = startRot
-    const rotProxy = { val: startRot }
+    // Original: B.animatedRotationY starts at 0, animates to degToRad(360*2) = 720°
+    carousel.animatedRotationY = 0
+    carousel.rotation.y = 0
+    carouselLerpTarget = 0
+    const rotProxy = { val: 0 }
     gsap.to(rotProxy, {
-      val: Math.PI * 4 + startRot,
+      val: Math.PI * 4,  // 720° = degToRad(360*2)
       duration: 6,
       ease: 'power3.inOut',
       onUpdate: () => {
@@ -486,12 +504,15 @@ export function useChapterScene() {
       },
     })
 
-    // Camera mouse-based lean animation  
-    // Original: mouse starts at screen (-10,-10)px → normalized ≈ (-1,-1), animates to center (0,0 in our 0-1 system = 0.5,0.5 → net 0 parallax)
-    const camMouseProxy = { x: -1.0, y: -1.0 }
+    // Original: x starts at {x:-10, y:-10} then lerps to {x:.5, y:.5} over 6s
+    // Camera parallax = x.x * 0.7 - dx/18
+    // Starting at x=-10 → strong leftward bias → cards pushed RIGHT in screen space
+    mouse.set(-10.0, -10.0)
+    prevMouse.set(-10.0, -10.0)
+    const camMouseProxy = { x: -10.0, y: -10.0 }
     gsap.to(camMouseProxy, {
-      x: 0.0,
-      y: 0.0,
+      x: 0.5,
+      y: 0.5,
       duration: 6,
       ease: 'power3.inOut',
       onUpdate: () => {
@@ -538,21 +559,24 @@ export function useChapterScene() {
   function animate() {
     animFrame = requestAnimationFrame(animate)
 
-    // Lerp mouse
-    prevMouse.x += (mouse.x - prevMouse.x) * 0.05
-    prevMouse.y += (mouse.y - prevMouse.y) * 0.05
+    // Original: E.x = f(E.x, x.x, 0.1), E.y = f(E.y, x.y, 0.001)
+    // f(a,b,t) = a*(1-t)+b*t = lerp
+    prevMouse.x = prevMouse.x * (1 - 0.1) + mouse.x * 0.1
+    prevMouse.y = prevMouse.y * (1 - 0.001) + mouse.y * 0.001
 
     // Camera parallax from mouse — original formula: pos += mouse*ne - (pos-base)/oe
     // This is a stable spring: net force = mouse*ne - displacement/oe
     if (selectedIndex === -1) {
-      const mx = isMobile ? 0 : prevMouse.x
-      const my = isMobile ? 0 : prevMouse.y
+      // Original: camera.x += f(de, 0, w=0)*ne - dx/oe = de*ne - dx/oe
+      // de = x.x (direct, no smoothing) for camera in original
+      // No clamping in original!
+      const mx = isMobile ? 0 : mouse.x   // x.x in original
+      const my = isMobile ? 0 : mouse.y   // x.y in original
       const ne = 0.7, oe = 18
-      // Clamp position to prevent runaway accumulation
       const dx = camera.position.x - camera.basePosition.x
       const dy = camera.position.y - camera.basePosition.y
-      camera.position.x = camera.basePosition.x + Math.max(-5, Math.min(5, dx + mx * ne - dx / oe))
-      camera.position.y = camera.basePosition.y + Math.max(-5, Math.min(5, dy + (-my) * ne - dy / oe))
+      camera.position.x += mx * ne - dx / oe
+      camera.position.y += my * (-ne) - dy / oe
       camera.position.z = camera.basePosition.z
       camera.lookAt(new THREE.Vector3(0, camera.basePosition.y, 0))
     }
@@ -565,15 +589,22 @@ export function useChapterScene() {
       }
     })
 
-    // Update carousel rotation
-    const totalRot = carousel.animatedRotationY + scrollRotationY
-    carousel.rotation.y = totalRot
+    // Update carousel rotation — original uses lerp: f(current, target, 0.06)
+    // B.rotation.y = f(B.rotation.y, (B.scrollRotationY??0) + parseFloat(B.animatedRotationY), .06)
+    const targetRot = (scrollRotationY || 0) + (carousel.animatedRotationY || 0)
+    carousel.rotation.y += (targetRot - carousel.rotation.y) * 0.06
 
-    // Update uniforms
+    // Update uniforms — original: angle = xe*10 - (-scrollDelta/10 - 10)
+    // xe = x.x (NOT E.x) in original - uses direct mouse/intro value, no smooth lerp
+    // angle = x.x*10 - (-0 - 10) = x.x*10 + 10
+    // At rest after intro (x.x=0.5): angle = 5 + 10 = 15°
+    // During intro (x.x=-10): angle = -100 + 10 = -90°
+    const currentUAngle = mouse.x * 10 + 10  // using mouse.x = x.x equivalent
     posters.forEach((p) => {
       if (p.material.uniforms) {
         p.material.uniforms.aspectRatio.value = aspectRatio
         p.material.uniforms.windowWidth.value = width
+        p.material.uniforms.uAngle.value = currentUAngle
       }
     })
 
@@ -597,8 +628,10 @@ export function useChapterScene() {
   }
 
   function onMouseMove(e) {
-    mouse.x = e.clientX / width
-    mouse.y = e.clientY / height
+    // Original: x.x = de.x/width*2-1 (NDC), x.y = de.y/height*2-1 (NDC)
+    // Camera parallax uses x.x and x.y directly (not be)
+    mouse.x = (e.clientX / width) * 2 - 1
+    mouse.y = (e.clientY / height) * 2 - 1
 
     if (!introComplete || selectedIndex !== -1) return
 
@@ -731,7 +764,7 @@ export function useChapterScene() {
     if (isMobile) {
       tl.to(groupG.rotation, { x: toRad(22), y: 0, z: 0, duration: 2.5, ease: 'power3.inOut' }, 0)
     } else {
-      tl.to(groupG.rotation, { x: toRad(25), y: toRad(-70), z: toRad(15), duration: 2.5, ease: 'power3.inOut' }, 0)
+      tl.to(groupG.rotation, { x: toRad(25), y: toRad(70), z: toRad(15), duration: 2.5, ease: 'power3.inOut' }, 0)
     }
 
     // Restore carousel
@@ -754,18 +787,21 @@ export function useChapterScene() {
   }
 
   function onResize(w, h) {
+    const vp = getViewportSize()
+    w = vp.w
+    h = vp.h
     width = w
     height = h
     aspectRatio = w / h
     isMobile = aspectRatio < 1
     camera.aspect = aspectRatio
     camera.updateProjectionMatrix()
-    renderer.setSize(w, h)
+    renderer.setSize(w, h, false)
 
     if (isMobile && selectedIndex === -1) {
       groupG.rotation.set(toRad(22), 0, 0)
     } else if (!isMobile && selectedIndex === -1) {
-      groupG.rotation.set(toRad(25), toRad(-70), toRad(15))
+      groupG.rotation.set(toRad(25), toRad(70), toRad(15))
     }
   }
 

@@ -23,9 +23,10 @@ const progress = ref(0)
 const emit = defineEmits(['complete'])
 
 onMounted(() => {
-  // Animate progress from 0 to 100 over 5s
+  // Original: loading overlay fades in 1s when assets are done loading
+  // We use a 1s animation to match that timing
   const start = Date.now()
-  const duration = 5000
+  const duration = 1000
 
   function update() {
     const elapsed = Date.now() - start
@@ -35,10 +36,11 @@ onMounted(() => {
     if (pct < 100) {
       requestAnimationFrame(update)
     } else {
+      // Fade out quickly (matching original's 1s fade)
       setTimeout(() => {
         visible.value = false
         emit('complete')
-      }, 400)
+      }, 200)
     }
   }
   requestAnimationFrame(update)
