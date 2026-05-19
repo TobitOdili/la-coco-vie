@@ -363,14 +363,18 @@ export function useChapterScene() {
     const logoTexture = await loadTexture(asset('/images/logo.png'))
 
     // Add floating title texture plane (txt-1.png by default)
+    // IMPORTANT: added to scene root (not groupG) so it doesn't inherit groupG's
+    // 25°/70°/15° tilt. lookAt(camera) called every frame keeps it facing the viewer.
+    // This matches original: D.add(F) where D=scene, F=txt mesh, F.lookAt(O.position) per frame.
     const txtTex = await loadTexture(asset('/images/txt-1.png'))
     txtTex.wrapS = THREE.ClampToEdgeWrapping
     txtTex.wrapT = THREE.ClampToEdgeWrapping
     const txtGeo = new THREE.PlaneGeometry(60, 60)
-    const txtMat = new THREE.MeshBasicMaterial({ map: txtTex, transparent: true, opacity: 1.0, depthWrite: false })
+    const txtMat = new THREE.MeshBasicMaterial({ map: txtTex, transparent: true, opacity: 1.0, depthWrite: false, alphaTest: 0.5 })
+    txtMat.toneMapped = false
     const txtMesh = new THREE.Mesh(txtGeo, txtMat)
-    txtMesh.position.set(0, 0, 0)
-    groupG.add(txtMesh)
+    txtMesh.position.set(0, 0, 20) // z=20 matches original (le.position.z = 20)
+    scene.add(txtMesh)
     groupG.userData.txtMesh = txtMesh
     groupG.userData.txtMat = txtMat
     logoTexture.wrapS = THREE.ClampToEdgeWrapping
@@ -615,6 +619,11 @@ export function useChapterScene() {
         p.material.uniforms.uAngle.value = currentUAngle
       }
     })
+
+    // txt mesh always faces camera — matches original: F.lookAt(O.position) per frame
+    if (groupG.userData.txtMesh) {
+      groupG.userData.txtMesh.lookAt(camera.position)
+    }
 
     renderer.render(scene, camera)
   }
