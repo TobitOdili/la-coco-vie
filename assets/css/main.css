@@ -1,0 +1,285 @@
+@import "tailwindcss";
+
+/* ===== Custom Fonts ===== */
+@font-face {
+  font-family: 'Bague';
+  src: url('/fonts/Bague.woff') format('woff');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Movie';
+  src: url('/fonts/Movie.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ===== CSS Variables ===== */
+html {
+  --accent: gray;
+  --accentLight: gray;
+  --accentLighter: gray;
+}
+
+.--eat-marry-love {
+  --accent: #b32c05;
+  --accentLighter: #f0d7bf;
+  --accentLight: #f3ebe4;
+}
+.--la-storia {
+  --accent: #304443;
+  --accentLighter: #a0aeae;
+  --accentLight: #d7dddd;
+}
+.--wine-o-clock {
+  --accent: #353454;
+  --accentLighter: #b3b0db;
+  --accentLight: #d6d5e8;
+}
+.--amour-getaway {
+  --accent: #7e3c48;
+  --accentLighter: #f0c3e1;
+  --accentLight: #ffe7f7;
+}
+
+/* ===== Global Reset ===== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Bague', ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  padding: 0;
+}
+
+/* ===== Custom cursor ===== */
+body {
+  cursor: none;
+}
+
+.cursor {
+  position: fixed;
+  width: 24px;
+  height: 24px;
+  top: -200px;
+  left: -200px;
+  z-index: 100;
+  pointer-events: none;
+  transition-duration: 0.4s;
+  transition-property: width, height, margin;
+  transition-timing-function: cubic-bezier(.68, -.6, .32, 1.6);
+}
+
+.cursor.active {
+  width: 140px;
+  height: 140px;
+  margin: -70px 0 0 -70px;
+}
+
+.cursor-box {
+  align-items: center;
+  border: 1px solid gray;
+  border-radius: 50%;
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  position: relative;
+  transition: 0.3s ease-in-out;
+  width: 100%;
+}
+
+.cursor.active > .cursor-box {
+  background-color: #000;
+}
+
+.cursor-box > .explore {
+  color: #fff;
+  opacity: 0;
+  transition: 0s;
+  transition-delay: 0s;
+}
+
+.cursor.active > .cursor-box > .explore {
+  opacity: 1;
+  transition: 0.3s;
+  transition-delay: 0.2s;
+}
+
+.explore {
+  color: #fff;
+  font-size: 14px;
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: 0.56px;
+  line-height: normal;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* ===== Noise Overlay ===== */
+body::after {
+  animation: noise 1s steps(2) infinite;
+  background-image: url('/images/noise.png');
+  background-position: center;
+  content: "";
+  height: calc(100vh + 20rem);
+  left: -10rem;
+  opacity: 0.4;
+  pointer-events: none;
+  position: fixed;
+  top: -10rem;
+  width: calc(100vw + 20rem);
+  will-change: transform;
+  z-index: 1000;
+}
+
+@keyframes noise {
+  0%   { transform: translate3d(0, 9rem, 0); }
+  10%  { transform: translate3d(-1rem, -4rem, 0); }
+  20%  { transform: translate3d(-8rem, 2rem, 0); }
+  30%  { transform: translate3d(9rem, -9rem, 0); }
+  40%  { transform: translate3d(-2rem, -7rem, 0); }
+  50%  { transform: translate3d(-9rem, 2rem, 0); }
+  60%  { transform: translate3d(2rem, -8rem, 0); }
+  70%  { transform: translate3d(1rem, -2rem, 0); }
+  80%  { transform: translate3d(-6rem, 4rem, 0); }
+  90%  { transform: translate3d(6rem, 1rem, 0); }
+  100% { transform: translate3d(2rem, 9rem, 0); }
+}
+
+/* ===== WebGL Canvas ===== */
+#canvas-container,
+#canvas-container > canvas,
+#webgl-canvas {
+  height: 100vh !important;
+  left: 0;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 0;
+}
+
+/* ===== Menu Item ===== */
+.menu-item {
+  align-items: center;
+  display: flex;
+  font-size: 11px;
+  gap: 0.25rem;
+  height: 4rem;
+  justify-content: center;
+  letter-spacing: 0.05em;
+  min-width: 4rem;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+@media (min-width: 640px) {
+  .menu-item {
+    font-size: 0.875rem;
+    gap: 0.5rem;
+    line-height: 1.25rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+.menu-item.active {
+  background-color: var(--accent);
+  border-radius: 9999px;
+  color: var(--accentLight);
+}
+
+/* SVG path fills */
+.menu-item > svg > path {
+  fill: var(--accent);
+}
+.menu-item.active > svg > path {
+  fill: var(--accentLight);
+}
+.logo > svg > g > path {
+  fill: var(--accent);
+}
+
+/* ===== Typography ===== */
+.movie {
+  font-family: 'Movie', sans-serif;
+  font-size: 6.5vh;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 90%;
+}
+
+.movie.sm {
+  font-size: 5vh;
+}
+
+@media (min-width: 768px) {
+  .movie.sm { font-size: 6.5vh; }
+}
+
+.display {
+  display: inline-block;
+  font-size: 3.75rem;
+  line-height: 1em;
+}
+
+@media (min-width: 1024px) {
+  .display { font-size: 8rem; }
+}
+@media (min-width: 1280px) {
+  .display { font-size: 150px; }
+}
+@media (min-width: 1536px) {
+  .display { font-size: 210px; }
+}
+
+.--eat-marry-love .display {
+  font-family: 'Over the Rainbow', cursive;
+}
+.--la-storia .display {
+  font-family: 'Italiana', sans-serif;
+}
+.--wine-o-clock .display {
+  font-family: 'Monoton', sans-serif;
+  text-transform: uppercase;
+}
+.--amour-getaway .display {
+  font-family: 'Bague', sans-serif;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* ===== Color Helpers ===== */
+.text-accent { color: var(--accent); }
+.bg-accent { background-color: var(--accent); }
+.text-accent-light { color: var(--accentLight); }
+.bg-accent-light { background-color: var(--accentLight); }
+
+/* ===== Container ===== */
+.container {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: none;
+  position: relative;
+  width: 91.666667%;
+  z-index: 1;
+}
+
+/* ===== Transition Helpers ===== */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
