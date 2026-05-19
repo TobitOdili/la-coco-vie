@@ -16,10 +16,11 @@ import { ref, onMounted, onUnmounted } from 'vue'
 const cursorRef = ref(null)
 const isActive = ref(false)
 
-let currentX = -200
-let currentY = -200
-let targetX = -200
-let targetY = -200
+// Start offscreen — matches original EO constructor (mouse: {x:-100, y:-100})
+let currentX = -100
+let currentY = -100
+let targetX = -100
+let targetY = -100
 let rafId = null
 
 function lerp(a, b, t) {
@@ -36,7 +37,12 @@ function loop() {
   currentY = lerp(currentY, targetY, 0.2)
 
   if (cursorRef.value) {
-    cursorRef.value.style.transform = `translate(${currentX}px, ${currentY}px)`
+    // Centre cursor on pointer by offsetting half its current rendered size.
+    // Original EO.update() uses hardcoded -12 (half of 24px rest size).
+    // We read actual size so it stays centred during the active expand animation too.
+    const half = cursorRef.value.offsetWidth / 2
+    cursorRef.value.style.top  = (currentY - half) + 'px'
+    cursorRef.value.style.left = (currentX - half) + 'px'
   }
 
   rafId = requestAnimationFrame(loop)

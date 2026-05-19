@@ -50,7 +50,15 @@ html {
   box-sizing: border-box;
 }
 
-html, body {
+html {
+  width: 100%;
+  height: 100%;
+  /* Must be visible so fixed cursor isn’t clipped by overflow:hidden ancestors.
+     Only body clips content — matches original site behaviour. */
+  overflow: visible;
+}
+
+body {
   width: 100%;
   height: 100%;
   height: 100dvh;
@@ -71,19 +79,21 @@ body {
   position: fixed;
   width: 24px;
   height: 24px;
-  top: -200px;
-  left: -200px;
+  /* Initial position off-screen — JS overrides top/left on first mousemove */
+  top: -100px;
+  left: -100px;
   z-index: 100;
   pointer-events: none;
+  /* Transition only size — no margin, no transform */
   transition-duration: 0.4s;
-  transition-property: width, height, margin;
+  transition-property: width, height;
   transition-timing-function: cubic-bezier(.68, -.6, .32, 1.6);
 }
 
 .cursor.active {
   width: 140px;
   height: 140px;
-  margin: -70px 0 0 -70px;
+  /* No margin offset — JS centres via top = mouseY - cursorHeight/2 */
 }
 
 .cursor-box {

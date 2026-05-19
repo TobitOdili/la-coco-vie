@@ -301,10 +301,14 @@ export function useChapterScene() {
   }
 
   function getViewportSize() {
-    // Use visualViewport when available (handles mobile keyboard/browser chrome correctly)
-    if (window.visualViewport) {
-      return { w: Math.round(window.visualViewport.width), h: Math.round(window.visualViewport.height) }
+    // Use canvas-container's bounding rect — matches original exactly.
+    // This avoids window.innerHeight including mobile browser chrome.
+    const container = document.getElementById('canvas-container')
+    if (container) {
+      const rect = container.getBoundingClientRect()
+      return { w: Math.round(rect.width), h: Math.round(rect.height) }
     }
+    // Fallback before DOM is ready
     return { w: window.innerWidth, h: window.innerHeight }
   }
 
