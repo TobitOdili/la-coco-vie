@@ -35,6 +35,9 @@ jobs:
         env:
           NUXT_APP_BASE_URL: /la-coco-vie/
 
+      - name: Add .nojekyll (allow _nuxt/ assets)
+        run: touch .output/public/.nojekyll
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

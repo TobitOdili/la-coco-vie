@@ -3,6 +3,12 @@ import { gsap } from 'gsap'
 
 const toRad = (deg) => (deg * Math.PI) / 180
 
+// Resolve asset paths relative to the app base URL (handles GitHub Pages /la-coco-vie/ prefix)
+const base = (typeof window !== 'undefined' && document.querySelector('base')?.href)
+  ? new URL(document.querySelector('base').href).pathname.replace(/\/$/, '')
+  : (import.meta.env?.VITE_BASE_URL || '').replace(/\/$/, '')
+const asset = (path) => `${base}${path}`
+
 // Chapter data
 export const CHAPTERS = [
   {
@@ -11,11 +17,11 @@ export const CHAPTERS = [
     accent: '#B32C05',
     accentLight: '#F3EBE4',
     accentLighter: '#f0d7bf',
-    audio: '/audio/eat-merry-love.mp3',
-    video: '/video/eat-intro.mp4',
-    poster: '/images/poster-1.jpg',
-    txt: '/images/txt-1.png',
-    svg: '/images/p1.svg',
+    audio: asset('/audio/eat-merry-love.mp3'),
+    video: asset('/video/eat-intro.mp4'),
+    poster: asset('/images/poster-1.jpg'),
+    txt: asset('/images/txt-1.png'),
+    svg: asset('/images/p1.svg'),
     index: 0,
   },
   {
@@ -24,11 +30,11 @@ export const CHAPTERS = [
     accent: '#304443',
     accentLight: '#D7DDDD',
     accentLighter: '#a0aeae',
-    audio: '/audio/la-storia.mp3',
-    video: '/video/la-intro.mp4',
-    poster: '/images/poster-2.jpg',
-    txt: '/images/txt-2.png',
-    svg: '/images/p2.svg',
+    audio: asset('/audio/la-storia.mp3'),
+    video: asset('/video/la-intro.mp4'),
+    poster: asset('/images/poster-2.jpg'),
+    txt: asset('/images/txt-2.png'),
+    svg: asset('/images/p2.svg'),
     index: 1,
   },
   {
@@ -37,11 +43,11 @@ export const CHAPTERS = [
     accent: '#353454',
     accentLight: '#D6D5E8',
     accentLighter: '#b3b0db',
-    audio: '/audio/wine-time.mp3',
-    video: '/video/wine-intro.mp4',
-    poster: '/images/poster-3.jpg',
-    txt: '/images/txt-3.png',
-    svg: '/images/p3.svg',
+    audio: asset('/audio/wine-time.mp3'),
+    video: asset('/video/wine-intro.mp4'),
+    poster: asset('/images/poster-3.jpg'),
+    txt: asset('/images/txt-3.png'),
+    svg: asset('/images/p3.svg'),
     index: 2,
   },
   {
@@ -50,11 +56,11 @@ export const CHAPTERS = [
     accent: '#7E3C48',
     accentLight: '#FFE7F7',
     accentLighter: '#f0c3e1',
-    audio: '/audio/amour-getway.mp3',
-    video: '/video/amour-intro.mp4',
-    poster: '/images/poster-4.jpg',
-    txt: '/images/txt-4.png',
-    svg: '/images/p4.svg',
+    audio: asset('/audio/amour-getway.mp3'),
+    video: asset('/video/amour-intro.mp4'),
+    poster: asset('/images/poster-4.jpg'),
+    txt: asset('/images/txt-4.png'),
+    svg: asset('/images/p4.svg'),
     index: 3,
   },
 ]
@@ -352,10 +358,10 @@ export function useChapterScene() {
     groupG.add(carousel)
 
     // Load logo texture
-    const logoTexture = await loadTexture('/images/logo.png')
+    const logoTexture = await loadTexture(asset('/images/logo.png'))
 
     // Add floating title texture plane (txt-1.png by default)
-    const txtTex = await loadTexture('/images/txt-1.png')
+    const txtTex = await loadTexture(asset('/images/txt-1.png'))
     txtTex.wrapS = THREE.ClampToEdgeWrapping
     txtTex.wrapT = THREE.ClampToEdgeWrapping
     const txtGeo = new THREE.PlaneGeometry(60, 60)

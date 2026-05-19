@@ -129,7 +129,7 @@ body {
 /* ===== Noise Overlay ===== */
 body::after {
   animation: noise 1s steps(2) infinite;
-  background-image: url('/images/noise.png');
+  background-image: var(--noise-url, url('/images/noise.png'));
   background-position: center;
   content: "";
   height: calc(100vh + 20rem);
