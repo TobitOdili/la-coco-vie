@@ -142,29 +142,47 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 
 ## ⚠️ Current Issues & Remaining Work
 
-### 🔴 High Priority (to reach 9/10 similarity)
+> Full audit with root causes, raw metrics, and original JS analysis in [`AUDIT.md`](./AUDIT.md) — conducted 2026-05-19
 
-**1. Stack overlap / nesting**
+### 🔴 High Priority
+
+**1. Cursor clipping / viewport overflow** ← *fixing next*
+- Cursor clips at bottom edge, overshoots at top
+- **Bug A**: We use `transform: translate(X,Y)` anchored from `top:-200px; left:-200px`. Original uses direct `top/left` px (`top = lerpedY - 12px`). The fixed anchor fights the transform near edges.
+- **Bug B**: `html { overflow: hidden }` clips fixed children in some browsers. Original has `html { overflow: visible }` — only `body` clips.
+- **Bug C**: `.cursor.active` uses `margin: -70px` to re-centre the 140px cursor, which conflicts with transform positioning.
+- Fix: switch to `top`/`left` direct positioning; fix `html` overflow; remove conflicting margin.
+
+**2. Viewport height — wrong height source**
+- We use `window.innerHeight` for renderer sizing and mouse Y normalisation
+- Original derives height from `canvasContainer.getBoundingClientRect().height` — the actual rendered element
+- Affects mouse precision and renderer size on mobile/browsers where `innerHeight` includes browser chrome
+
+**3. Stack overlap / nesting**
 - Card rotation angles create slightly wrong depth order
 - The secondary cards behind Wine O'Clock don't nest as convincingly as the original
 - `toRad(-90 - intRotationY)` — needs closer comparison against original
 
-**2. Card scale slightly too large**
+**4. Card scale slightly too large**
 - Wine O'Clock appears ~10% too close/large vs original
 - Candidates: increase `baseDistance` from 42 → 44, or push camera back to `z = 105`
 
-**3. SVG colour saturation**
+**5. SVG colour saturation**
 - Poster SVGs render ~15% more saturated than the original
 - Possibly needs `renderer.toneMapping = THREE.NoToneMapping`
 - Original uses `THREE.SRGBColorSpace` output but no tone mapping
 
 ### 🟡 Medium Priority
 
-**4. Background card visibility**
+**6. Noise texture 404 on GitHub Pages**
+- `_nuxt/images/noise.png` 404s because Vite resolves the CSS `url()` relative to the compiled bundle location
+- Fix: move `noise.png` to `assets/` (not `public/`) and import via `url('~/assets/images/noise.png')` so Vite hashes and bundles it correctly
+
+**7. Background card visibility**
 - Cards at the far side of the ring are too visible in our replica
 - Original barely shows them — need opacity falloff based on world Z position
 
-**5. Scroll-driven chapter-exit transition**
+**8. Scroll-driven chapter-exit transition**
 - When on a chapter page, scrolling back should trigger the reverse animation (`setPageProgress`)
 - Currently only the back button works; scroll-back is not implemented
 
@@ -188,6 +206,8 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 |---|---|
 | Camera parallax accumulated unboundedly → "Maximum call stack size exceeded" | Clamp displacement to ±5 units |
 | `.nuxt/` build artifacts committed to git | Removed from tracking with `git rm --cached .nuxt/` |
+| Asset paths 404 on GitHub Pages (`/images/` at root) | Use `import.meta.env.BASE_URL` via `asset()` helper, baked in at Vite build time |
+| GitHub Pages ignoring `_nuxt/` folder | Added `.nojekyll` in deploy workflow |
 
 ---
 
@@ -247,4 +267,8 @@ git add -A && git commit -m "your message" && git push
 - Set up Browserless + Cloudflare tunnel for pixel comparison workflow
 - Iterated through 12 comparison versions, reaching 7.8/10 similarity
 - Published to GitHub: https://github.com/TobitOdili/la-coco-vie
-- Established this living PROGRESS.md document for ongoing tracking
+- Set up GitHub Actions deploy → GitHub Pages (https://tobitodili.github.io/la-coco-vie/)
+- Fixed asset path 404s on GitHub Pages using `import.meta.env.BASE_URL` baked at Vite build time
+- Full homepage audit conducted (2026-05-19): Browserless DOM metrics + original JS bundle analysis
+- Identified cursor clipping root causes (3 bugs), viewport height mismatch, noise 404, and more — see AUDIT.md
+- Next: fix cursor clipping (Issues #1 → top/left positioning + html overflow fix)
