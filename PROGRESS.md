@@ -146,7 +146,22 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 
 ### 🔴 High Priority
 
-**1. Cursor clipping / viewport overflow** ← *fixing next*
+**1. Center text/logo offset to the right** *(tackling next)*
+- Logo + "Chapter the bride" subtitle appear right-shifted
+- Root cause: `.container` class is `91.67%` wide; `justify-center` centres within that inset, not the true viewport midpoint. Asymmetric nav text lengths (About vs Collection) exaggerate the visual offset
+- Fix: Remove `.container` wrapper from the logo row, use pure `w-full flex justify-center` directly
+
+**2. Center text doesn't change on card hover**
+- Original shows chapter-specific description text in the center/bottom on hover; ours shows nothing
+- Root cause: Missing `ae()` hover text system. Original has a `.copyright` block with per-chapter text driven by `hoverChapterIdx`. Our `onChapterHover` only activates the cursor and fades audio
+- Fix: Add a center text component, wire to `onChapterHover(idx)` / `onChapterUnhover()`, animate with GSAP fade
+
+**3. Horizontal scroll doesn't rotate carousel**
+- Vertical scroll works perfectly; horizontal trackpad swipe does nothing
+- Root cause: We pass only `event.deltaY` to `onScroll()`. Original uses `(de.y - de.x) / 2e4` — combines both axes
+- Fix: One line — `scene.onScroll(event.deltaY - event.deltaX)`
+
+**4. Cursor clipping / viewport overflow** ✅ *fixed*
 - Cursor clips at bottom edge, overshoots at top
 - **Bug A**: We use `transform: translate(X,Y)` anchored from `top:-200px; left:-200px`. Original uses direct `top/left` px (`top = lerpedY - 12px`). The fixed anchor fights the transform near edges.
 - **Bug B**: `html { overflow: hidden }` clips fixed children in some browsers. Original has `html { overflow: visible }` — only `body` clips.
@@ -258,6 +273,15 @@ git add -A && git commit -m "your message" && git push
 ---
 
 ## 🗓 Session Log
+
+### 2026-05-19 (session 2)
+- User reported 3 new issues: center text offset, text not changing on hover, horizontal scroll broken
+- Full JS bundle analysis confirmed root causes for all 3 (see AUDIT.md issues #8–10)
+- Horizontal scroll: 1-line fix identified (`deltaY - deltaX`)
+- Hover text: missing `ae()` system — needs new component + GSAP wiring
+- Center text offset: `.container` width causing false centering
+- Cursor/viewport fixes confirmed working on both Vercel and GitHub Pages
+- AUDIT.md and PROGRESS.md updated with all new findings
 
 ### 2026-05-18 → 2026-05-19
 - Reverse-engineered the full Milla Nova Chapter homepage from source
