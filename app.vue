@@ -71,12 +71,9 @@ async function initAudio() {
   try {
     const { Howl, Howler } = await import('howler')
     howlerModule = Howler
-    const base = document.querySelector('base')?.href
-      ? new URL(document.querySelector('base').href).pathname.replace(/\/$/, '')
-      : ''
-    tickSound = new Howl({ src: [`${base}/audio/tick.mp3`], volume: 0.4 })
+    tickSound = new Howl({ src: ['/audio/tick.mp3'], volume: 0.4 })
     sounds = CHAPTERS.map((ch) => new Howl({
-      src: [ch.audio], // already base-prefixed via asset() in useChapterScene
+      src: [ch.audio],
       loop: true,
       volume: 0,
       html5: true,
@@ -137,11 +134,6 @@ const initAudioOnce = () => initAudio()
 onMounted(() => {
   window.addEventListener('click', initAudioOnce, { once: true })
   window.addEventListener('touchstart', initAudioOnce, { once: true })
-  // Set noise texture path with correct base URL for GitHub Pages
-  const base = document.querySelector('base')?.href
-    ? new URL(document.querySelector('base').href).pathname.replace(/\/$/, '')
-    : ''
-  document.documentElement.style.setProperty('--noise-url', `url('${base}/images/noise.png')`)
 })
 
 onUnmounted(() => {
