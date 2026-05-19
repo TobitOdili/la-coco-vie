@@ -71,7 +71,8 @@ async function initAudio() {
   try {
     const { Howl, Howler } = await import('howler')
     howlerModule = Howler
-    tickSound = new Howl({ src: ['/audio/tick.mp3'], volume: 0.4 })
+    const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
+    tickSound = new Howl({ src: [`${base}/audio/tick.mp3`], volume: 0.4 })
     sounds = CHAPTERS.map((ch) => new Howl({
       src: [ch.audio],
       loop: true,
@@ -134,6 +135,8 @@ const initAudioOnce = () => initAudio()
 onMounted(() => {
   window.addEventListener('click', initAudioOnce, { once: true })
   window.addEventListener('touchstart', initAudioOnce, { once: true })
+  const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
+  document.documentElement.style.setProperty('--noise-url', `url('${base}/images/noise.png')`)
 })
 
 onUnmounted(() => {
