@@ -530,10 +530,10 @@ The raycaster's `intersects` array is sorted by distance. The front card (closer
 |---|---|---|---|
 | 13 | Cards mirrored on hover — hover key is `chapterIdx`, should be slot `i` | 🔴 High | Open |
 | 12 | Loading animation broken — fake timer, wrong layout, no GSAP exit | 🔴 High | Open |
-| 1 | Cursor clipping — wrong positioning method + overflow | 🔴 High | Open |
-| 2 | Viewport height — use `getBoundingClientRect` not `innerHeight` | 🔴 High | Open |
+| 1 | Cursor clipping — wrong positioning method + overflow | 🔴 High | ✅ Fixed |
+| 2 | Viewport height — use `getBoundingClientRect` not `innerHeight` | 🔴 High | ✅ Fixed |
 | 9 | Center text doesn't change on hover — missing `ae()` system | 🔴 High | Open |
-| 10 | Horizontal scroll doesn't rotate carousel — `deltaX` ignored | 🔴 High | Open |
+| 10 | Horizontal scroll doesn't rotate carousel — `deltaX` ignored | 🔴 High | ✅ Fixed |
 | 8 | Center text/logo offset right — container width centering | 🔴 High | Open |
 | 11 | Logo-to-txtMesh spacing too small — txtMesh world Y=0 too high | 🟡 Medium | Open |
 | 3 | Noise texture 404 on GitHub Pages | 🟡 Medium | Open |

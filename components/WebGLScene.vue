@@ -50,9 +50,9 @@ onMounted(async () => {
   try {
     const VS = (await import('virtualscroll')).default
     vsInstance = new VS({ el: hitLayerRef.value, touchMultiplier: 25, firefoxMultiplier: 50 })
-    vsInstance.on((event) => scene.onScroll(event.deltaY))
+    vsInstance.on((event) => scene.onScroll(event.deltaY - event.deltaX))
   } catch (e) {
-    window.addEventListener('wheel', (e) => scene.onScroll(e.deltaY), { passive: true })
+    window.addEventListener('wheel', (e) => scene.onScroll(e.deltaY - e.deltaX), { passive: true })
   }
 
   // Resize — listen to both window resize and visualViewport resize (mobile)

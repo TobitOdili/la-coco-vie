@@ -170,10 +170,10 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 - Root cause: Missing `ae()` hover text system; `onChapterHover` only activates cursor + audio
 - Fix: Add `CopyrightText.vue` component, wire to `onChapterHover(idx)`, GSAP fade in/out
 
-**[#10] Horizontal scroll doesn't rotate carousel**
+**[#10] Horizontal scroll doesn't rotate carousel** ✅ Fixed (2026-05-24)
 - Vertical scroll works perfectly; horizontal trackpad swipe does nothing
 - Root cause: We pass only `event.deltaY`. Original uses `(de.y - de.x) / 2e4` — subtracts deltaX
-- Fix: One line — `scene.onScroll(event.deltaY - event.deltaX)`
+- Fix: Changed both `vsInstance.on` and the `wheel` fallback in `WebGLScene.vue` to pass `deltaY - deltaX`
 
 **[#1] Cursor clipping / viewport overflow**
 - Cursor clips at bottom edge, overshoots at top
@@ -282,6 +282,10 @@ git add -A && git commit -m "your message" && git push
 ---
 
 ## 🗓 Session Log
+
+### 2026-05-24 (session 4)
+- **[#10] Fixed horizontal scroll** — changed both `vsInstance.on` and `wheel` fallback in `WebGLScene.vue` to pass `event.deltaY - event.deltaX` (was only passing `deltaY`). Matches original's `(de.y - de.x)` formula. Horizontal trackpad swipes now rotate the carousel.
+- AUDIT.md and PROGRESS.md status updated: #1, #2 marked ✅ Fixed (were done in `59d6d91b` but table was stale); #10 marked ✅ Fixed
 
 ### 2026-05-24 (session 3)
 - User confirmed progress from last session worked
