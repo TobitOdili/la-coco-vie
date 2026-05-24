@@ -1,6 +1,6 @@
 # La Coco Vie — Project Progress
 
-> Last updated: 2026-05-19
+> Last updated: 2026-05-24
 
 ---
 
@@ -142,76 +142,85 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 
 ## ⚠️ Current Issues & Remaining Work
 
-> Full audit with root causes, raw metrics, and original JS analysis in [`AUDIT.md`](./AUDIT.md) — conducted 2026-05-19
+> Full audit with root causes, reproduction steps, and fix options in [`AUDIT.md`](./AUDIT.md)
+> Last full audit: 2026-05-19 | Issues #11–13 added: 2026-05-24
 
 ### 🔴 High Priority
 
-**1. Center text/logo offset to the right** *(tackling next)*
+**[#13] Cards mirrored on hover — both copies lift** *(new — 2026-05-24)*
+- Hovering a front card also raises the mirrored copy directly behind it (opposite side of ring)
+- Root cause: `hoverChapter(chIdx)` filters by `chapterIdx`, which is shared by both the front and back copy (posters 1–4 and 5–8 map to the same chapters). Should filter by poster slot `i` instead.
+- Fix: Change `getHoveredPoster` to return `data.i` (slot index); update `hoverChapter`/`unhoverChapter` to filter `p.i === slotI`; resolve `chapterIdx` from slot for audio/callbacks
+- See AUDIT.md Issue #13 for full code patch
+
+**[#12] Loading animation broken vs reference** *(new — 2026-05-24)*
+- Ours: bottom-center counter, linear rAF timing, CSS opacity fade, fake 1s timer
+- Original: bottom-left counter, two separate typefaces (Italiana for number, "Over the Rainbow" for %), GSAP ease, real asset-gated progress, GSAP wipe exit
+- Root cause: `LoadingScreen.vue` uses `requestAnimationFrame` over a fixed 1s — no connection to actual asset load events in `useChapterScene.init()`
+- Fix: Wire real progress from scene init load callbacks; drive counter with GSAP; add GSAP vertical-wipe exit
+- See AUDIT.md Issue #12 for comparison table + all fix options
+
+**[#8] Center text/logo offset to the right**
 - Logo + "Chapter the bride" subtitle appear right-shifted
-- Root cause: `.container` class is `91.67%` wide; `justify-center` centres within that inset, not the true viewport midpoint. Asymmetric nav text lengths (About vs Collection) exaggerate the visual offset
-- Fix: Remove `.container` wrapper from the logo row, use pure `w-full flex justify-center` directly
+- Root cause: `.container` class is `91.67%` wide; `justify-center` centres within that inset, not the true viewport midpoint
+- Fix: Use `w-full flex justify-center` directly (no container class) on the logo row
 
-**2. Center text doesn't change on card hover**
-- Original shows chapter-specific description text in the center/bottom on hover; ours shows nothing
-- Root cause: Missing `ae()` hover text system. Original has a `.copyright` block with per-chapter text driven by `hoverChapterIdx`. Our `onChapterHover` only activates the cursor and fades audio
-- Fix: Add a center text component, wire to `onChapterHover(idx)` / `onChapterUnhover()`, animate with GSAP fade
+**[#9] Center text doesn't change on card hover**
+- Original shows chapter-specific description text in center/bottom on hover; ours shows nothing
+- Root cause: Missing `ae()` hover text system; `onChapterHover` only activates cursor + audio
+- Fix: Add `CopyrightText.vue` component, wire to `onChapterHover(idx)`, GSAP fade in/out
 
-**3. Horizontal scroll doesn't rotate carousel**
+**[#10] Horizontal scroll doesn't rotate carousel**
 - Vertical scroll works perfectly; horizontal trackpad swipe does nothing
-- Root cause: We pass only `event.deltaY` to `onScroll()`. Original uses `(de.y - de.x) / 2e4` — combines both axes
+- Root cause: We pass only `event.deltaY`. Original uses `(de.y - de.x) / 2e4` — subtracts deltaX
 - Fix: One line — `scene.onScroll(event.deltaY - event.deltaX)`
 
-**4. Cursor clipping / viewport overflow** ✅ *fixed*
+**[#1] Cursor clipping / viewport overflow**
 - Cursor clips at bottom edge, overshoots at top
-- **Bug A**: We use `transform: translate(X,Y)` anchored from `top:-200px; left:-200px`. Original uses direct `top/left` px (`top = lerpedY - 12px`). The fixed anchor fights the transform near edges.
-- **Bug B**: `html { overflow: hidden }` clips fixed children in some browsers. Original has `html { overflow: visible }` — only `body` clips.
-- **Bug C**: `.cursor.active` uses `margin: -70px` to re-centre the 140px cursor, which conflicts with transform positioning.
-- Fix: switch to `top`/`left` direct positioning; fix `html` overflow; remove conflicting margin.
+- Root cause (3 bugs): transform-based positioning vs original's top/left; html overflow:hidden; conflicting margin on `.cursor.active`
+- Fix: Switch to top/left direct positioning; set html overflow to visible; remove margin conflict
 
-**2. Viewport height — wrong height source**
-- We use `window.innerHeight` for renderer sizing and mouse Y normalisation
-- Original derives height from `canvasContainer.getBoundingClientRect().height` — the actual rendered element
-- Affects mouse precision and renderer size on mobile/browsers where `innerHeight` includes browser chrome
-
-**3. Stack overlap / nesting**
-- Card rotation angles create slightly wrong depth order
-- The secondary cards behind Wine O'Clock don't nest as convincingly as the original
-- `toRad(-90 - intRotationY)` — needs closer comparison against original
-
-**4. Card scale slightly too large**
-- Wine O'Clock appears ~10% too close/large vs original
-- Candidates: increase `baseDistance` from 42 → 44, or push camera back to `z = 105`
-
-**5. SVG colour saturation**
-- Poster SVGs render ~15% more saturated than the original
-- Possibly needs `renderer.toneMapping = THREE.NoToneMapping`
-- Original uses `THREE.SRGBColorSpace` output but no tone mapping
+**[#2] Viewport height — wrong height source**
+- We use `window.innerHeight`; original uses `canvasContainer.getBoundingClientRect().height`
+- Affects mouse precision on mobile/browsers where innerHeight includes browser chrome
 
 ### 🟡 Medium Priority
 
-**6. Noise texture 404 on GitHub Pages**
-- `_nuxt/images/noise.png` 404s because Vite resolves the CSS `url()` relative to the compiled bundle location
-- Fix: move `noise.png` to `assets/` (not `public/`) and import via `url('~/assets/images/noise.png')` so Vite hashes and bundles it correctly
+**[#11] Logo-to-txtMesh spacing too small** *(new — 2026-05-24)*
+- The vertical gap between the CSS logo and the 3D `txtMesh` (`txt-1.png`) is too tight vs reference
+- Root cause: `txtMesh.position.set(0, 0, 20)` — world Y=0 projects too high on screen given camera tilt. Original likely sets negative Y to push text lower.
+- Fix: Try `txtMesh.position.set(0, -8, 20)` and iterate via Browserless side-by-side screenshots
+- See AUDIT.md Issue #11 for full options
 
-**7. Background card visibility**
-- Cards at the far side of the ring are too visible in our replica
-- Original barely shows them — need opacity falloff based on world Z position
+**[#3] Noise texture 404 on GitHub Pages**
+- `_nuxt/images/noise.png` resolves to wrong path inside compiled CSS bundle
+- Fix: Move to `assets/images/noise.png`; import via `url('~/assets/images/noise.png')`
 
-**8. Scroll-driven chapter-exit transition**
-- When on a chapter page, scrolling back should trigger the reverse animation (`setPageProgress`)
-- Currently only the back button works; scroll-back is not implemented
+**[#4] Card scale slightly too large**
+- Wine O'Clock ~10% too close/large vs original
+- Fix: Try `baseDistance = 44–46` or push camera to `z = 105`
+
+**[#5] SVG colour saturation**
+- Poster SVGs ~15% more saturated than original
+- Fix: Add `renderer.toneMapping = THREE.NoToneMapping`
 
 ### 🟢 Lower Priority (future phases)
 
-**6. Chapter inner pages**
-- La Storia, Wine O'Clock, Eat Marry Love, Amour Getaway each have full inner pages
-- These use ScrollTrigger reveals, Mask component, Gallery parallax, ImgText, Header, DressTail
-- Placeholder components exist in the original: `Wrapper.vue`, `Placeholder.vue`, `Trigger.vue`, `Gallery.vue`
+**[#6] Background card opacity falloff**
+- Far-side ring cards too visible; original barely shows them
+- Fix: Opacity falloff based on world Z position
 
-**7. Dress tail cards** (bottom bar)
+**[#7] Scroll-driven chapter-exit transition**
+- Only back button works; scrolling back should trigger reverse animation
+- Fix: Implement `setPageProgress` driven by scroll delta when `selectedChapter !== null`
+
+**Chapter inner pages** *(future)*
+- La Storia, Wine O'Clock, Eat Marry Love, Amour Getaway each have full inner pages
+- Uses ScrollTrigger, Mask, Gallery parallax, ImgText, Header, DressTail
+
+**Dress tail cards** *(future)*
 - Shows matched dresses per chapter on select
 - Data: 11 dresses (`symphony`, `tasmania`, `sydney`, `markita`, etc.)
-- Each chapter triggers specific dress IDs via a `Trigger` component
 
 ---
 
@@ -273,6 +282,16 @@ git add -A && git commit -m "your message" && git push
 ---
 
 ## 🗓 Session Log
+
+### 2026-05-24 (session 3)
+- User confirmed progress from last session worked
+- 3 new issues reported and documented (see AUDIT.md #11–13):
+  - **#11** Logo-to-txtMesh spacing too small — root cause: `txtMesh` world Y=0 projects too high; fix: nudge Y to ~-8
+  - **#12** Loading animation broken — fake 1s rAF timer, wrong layout, no GSAP; fix: real asset gating + GSAP counter + wipe exit
+  - **#13** Cards mirrored on hover — both front and back copies lift; root cause: `hoverChapter` filters by `chapterIdx` (shared by both copies); fix: switch hover key to slot index `i`
+- Source code inspected for all 3: `LoadingScreen.vue`, `useChapterScene.js` (hoverChapter, createPoster, txtMesh position)
+- All fix options documented with code snippets in AUDIT.md
+- PROGRESS.md issue list restructured with numbered IDs for cross-referencing
 
 ### 2026-05-19 (session 2)
 - User reported 3 new issues: center text offset, text not changing on hover, horizontal scroll broken

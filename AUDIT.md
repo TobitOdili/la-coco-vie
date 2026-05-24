@@ -323,3 +323,221 @@ vsInstance.on((event) => scene.onScroll(event.deltaY))  // ← deltaX is dropped
 5. 🟡 **SVG saturation** — NoToneMapping
 6. 🟢 **Background card opacity**
 7. 🟢 **Scroll-driven chapter exit**
+
+---
+
+## Issue #11 — Logo-to-TextMesh Spacing Too Small 🟡 MEDIUM (new — 2026-05-24)
+
+### Symptom
+The vertical gap between the Milla Nova logo SVG (in `SiteNav.vue`) and the floating `txtMesh` (the `txt-1.png` chapter-title plane rendered in 3D space) is noticeably tighter in our replica vs the original. The logo and the 3D text feel cramped together.
+
+### How to Reproduce
+1. Load both sites side by side at 1440×900 (Browserless screenshot or browser devtools)
+2. Look at the area just below the top nav logo — the `txt-1.png` floating title mesh sits too close underneath
+
+### Root Cause (likely)
+The `txtMesh` lives in 3D world space at `position.set(0, 0, 20)` (z-depth only, `y=0`). The logo is a CSS-fixed 2D element at `top: ~40–60px` from viewport top. At `camera.position.set(0, -15, 100)` with `fov=45`, a mesh at world `(0, 0, 20)` projects to the upper portion of the viewport (camera is looking slightly down from y=-15). The original's JS bundle confirmed `le.position.z = 20` but did **not** confirm the `x`/`y` — it's likely the original sets a meaningful negative Y to push the text lower on screen, away from the logo.
+
+### Fix Options
+
+**Option A — Adjust txtMesh world Y** *(recommended, surgical)*
+```js
+// In useChapterScene.js, change:
+txtMesh.position.set(0, 0, 20)
+// To something like:
+txtMesh.position.set(0, -8, 20)   // push down in world space → appears lower on screen
+```
+Start with `-8` and iterate via Browserless comparison screenshots.
+
+**Option B — Adjust the logo CSS top offset**
+In `SiteNav.vue`, the center logo div uses `top-3` + `mt-2 md:mt-6`. Reducing `top-3` pushes the logo up, increasing the visual gap. Less surgical — doesn't fix the root; affects logo position relative to the nav.
+
+**Option C — Scale txtMesh down**
+The txtMesh is `60×60` world units. Reducing to `50×50` or `45×45` reduces apparent size and may reduce visual crowding:
+```js
+const txtGeo = new THREE.PlaneGeometry(50, 50)
+```
+
+### Verification Method
+- Start dev server + Cloudflare tunnel
+- Browserless screenshots of both sites at 1440×900, 12s after load (post-intro)
+- Stitch side-by-side with `sharp`, measure pixel Y from logo bottom edge to txtMesh top edge
+
+---
+
+## Issue #12 — Loading Animation Broken vs Reference 🔴 HIGH (new — 2026-05-24)
+
+### Symptom
+Our loading screen behaves and looks differently from the original. Ours: white overlay, counter 0→100 at bottom-center, disappears after ~1.2s with a CSS fade. Original has a cinematic multi-element animated cover.
+
+### How to Reproduce
+1. Hard-refresh `https://chapter.millanova.com/` (Ctrl+Shift+R or incognito)
+2. Observe loading animation before carousel appears
+3. Compare to `https://tobitodili.github.io/la-coco-vie/`
+4. Or: DevTools Network → throttle to "Slow 3G" for exaggerated slow loading
+
+### What the Original Does (from prior JS bundle analysis)
+1. **Large counter (0→100)** at **bottom-left** of screen — not centered
+2. **Two separate typefaces side-by-side**: Italiana (serif, dark teal) for the number; "Over the Rainbow" (cursive, red) for the `%` — `%` is `position: absolute`, offset right of the number to create asymmetric typography
+3. Counter driven by **GSAP with custom easing** — fast at start, decelerating near 100
+4. **Gated on real asset loading** — counter reflects actual texture/video/audio load progress, not a fixed timer
+5. **Exit: GSAP-driven vertical wipe or transform** — not a simple CSS opacity fade
+
+### What Ours Does Wrong
+| Aspect | Ours | Original |
+|---|---|---|
+| Counter position | bottom-center | bottom-left |
+| `%` placement | inline, same `<span>` as number | `position: absolute`, offset separately |
+| Easing | linear `requestAnimationFrame` over 1s | GSAP with custom ease |
+| Duration | fixed 1-second timer | tied to real asset load events |
+| Exit animation | CSS `transition: opacity 0.5s` | GSAP transform/wipe |
+| Asset gating | none (fake progress) | real `onLoad`/`canplay` callbacks |
+
+### Root Cause
+`LoadingScreen.vue` uses a `requestAnimationFrame` loop counting from 0→100 over 1 second — no connection to actual asset loading. The `useChapterScene.js` `init()` runs async texture/video loading in parallel; the loader hides at 1.2s regardless of whether the scene is ready.
+
+### Fix Options
+
+**Option A — GSAP counter + real asset gating** *(recommended, closest to original)*
+Emit progress events from `useChapterScene.init()` as each asset loads:
+```js
+// useChapterScene.js init() — count assets:
+let loaded = 0
+const total = N + 4  // 8 poster textures + 4 video elements
+const onAssetLoad = () => { loaded++; onProgress?.(Math.round((loaded / total) * 100)) }
+// Pass onAssetLoad to loadTexture() callbacks and video canplay events
+```
+In `LoadingScreen.vue`, receive `progress` prop and drive counter with GSAP:
+```js
+gsap.to(counterRef, { innerText: 100, snap: { innerText: 1 }, ease: 'power2.out', duration: totalLoadTime })
+```
+
+**Option B — Fix visual layout only** *(cosmetic-only, quicker)*
+Keep fake timer but fix layout to match reference:
+- Align counter to `padding-left: 5vw` (bottom-left)
+- Make `%` span `position: absolute` with `left: <counter-width>px`
+- Replace rAF with a GSAP tween on the counter value
+
+**Option C — Add GSAP exit wipe**
+Replace `<Transition name="fade">` exit with GSAP vertical slide:
+```js
+gsap.to(loaderEl.value, { yPercent: -100, duration: 0.8, ease: 'power3.inOut', onComplete: () => emit('complete') })
+```
+Can be combined with Option A or B.
+
+### Verification Method
+- DevTools → Network → throttle to "Slow 3G"
+- Compare both sites' loaders at reduced speed
+- Key things to observe: counter position, `%` layout, easing feel, exit style
+
+---
+
+## Issue #13 — Cards Mirrored on Hover (Both Copies Lift Together) 🔴 HIGH (new — 2026-05-24)
+
+### Symptom
+Hovering over a front-facing card (e.g. Wine O'Clock) causes **both** the front card and the mirrored copy directly behind it (opposite side of ring) to lift and go to `blendFactor=2.0`. On the original, only the card the cursor is over reacts.
+
+### How to Reproduce
+1. Load the replica, wait for intro animation to complete
+2. Hover over the front card (Wine O'Clock at ~12 o'clock on the ring)
+3. Observe: front card lifts ✅, but the back copy (at ~6 o'clock) also lifts ❌
+
+### Root Cause — `chapterIdx` used as hover key instead of poster slot `i`
+
+Carousel has `N=8` slots. Posters 1–4 and posters 5–8 share the same `chapterIdx` values:
+
+```js
+// useChapterScene.js line 410:
+const chapterIdx = i > 4 ? i - 4 : i  // i=5→chapterIdx=1, i=6→2, i=7→3, i=8→4
+```
+
+So `i=3` (Wine O'Clock front) and `i=7` (Wine O'Clock back) both have `chapterIdx=3`.
+
+The hover functions filter by `chapterIdx`, which matches BOTH copies:
+```js
+// hoverChapter (line 672):
+const targets = posters.filter((p) => p.chapterIdx === chIdx)
+// → matches BOTH i=3 AND i=7 → both get blendFactor=2, both lift y+7
+```
+
+The original tracks hover by individual poster slot index (`i`), not by chapter. The raycaster returns the specific mesh hit, and only that mesh gets the hover effect — not all copies of the same chapter.
+
+### Fix Options
+
+**Option A — Hover by slot index `i` instead of `chapterIdx`** *(recommended)*
+
+Change `getHoveredPoster` to return `data.i` (slot) instead of `data.chapterIdx`; update `hoverChapter`/`unhoverChapter` to filter by `i`; look up `chapterIdx` from slot when needed for audio/callback:
+
+```js
+// getHoveredPoster — return slot i:
+if (data && data.i !== undefined) return data.i
+
+// hoveredIndex now tracks slot i, not chapterIdx
+let hoveredIndex = -1
+
+function hoverChapter(slotI) {
+  const p = posters.find((p) => p.i === slotI)
+  if (!p) return
+  gsap.to(p.material.uniforms.blendFactor, { value: 2.0, duration: 1.0, ease: 'power2.inOut', overwrite: true })
+  gsap.to(p.mesh.position, { y: p.baseY + 7, duration: 1.0, ease: 'power2.inOut', overwrite: true })
+  const vid = videoElements[p.chapterIdx]
+  if (vid) vid.play().catch(() => {})
+}
+
+function unhoverChapter(slotI) {
+  const p = posters.find((p) => p.i === slotI)
+  if (!p) return
+  gsap.to(p.material.uniforms.blendFactor, { value: 0.0, duration: 1.0, ease: 'power2.inOut', overwrite: true })
+  gsap.to(p.mesh.position, { y: p.baseY, duration: 1.0, ease: 'power2.inOut', overwrite: true })
+  const vid = videoElements[p.chapterIdx]
+  if (vid) vid.pause()
+}
+
+// onMouseMove — pass chapterIdx to callback (for audio/cursor in app.vue):
+const slotI = getHoveredPoster(e.clientX, e.clientY)
+if (slotI !== hoveredIndex) {
+  if (hoveredIndex !== -1) {
+    const prevChIdx = posters.find(p => p.i === hoveredIndex)?.chapterIdx ?? -1
+    unhoverChapter(hoveredIndex)
+    onHoverCallback?.(prevChIdx, false)
+  }
+  hoveredIndex = slotI
+  if (slotI !== -1) {
+    const chIdx = posters.find(p => p.i === slotI)?.chapterIdx ?? -1
+    hoverChapter(slotI)
+    onHoverCallback?.(chIdx, true)
+  }
+}
+```
+
+**Option B — Camera-facing dot product check** *(more complex, more faithful to original)*
+Before applying hover, check whether the card's surface normal points toward the camera. If `dot(cardNormal, cameraDir) < 0`, the card is facing away — skip it. Works at the geometry level but requires computing world-space normals per frame.
+
+**Option C — Z-depth filter on raycaster hits**
+The raycaster's `intersects` array is sorted by distance. The front card (closer to camera) will always be `intersects[0]`. Only apply hover to the first hit — don't walk the full list. This might already be the case in `getHoveredPoster` since it returns on first hit, but the bug is in `hoverChapter` which then fans out to both copies via `chapterIdx`. Option A fixes it at the root.
+
+### Verification Method
+- After fix: open DevTools console, add `console.log('hover slot', slotI)` in `hoverChapter`
+- Hover front card — should log one slot only
+- Visually confirm back card stays flat
+- Check that audio still triggers correctly (chapterIdx-driven, not slot-driven)
+
+---
+
+## Updated Priority Order (as of 2026-05-24)
+
+| # | Issue | Priority | Status |
+|---|---|---|---|
+| 13 | Cards mirrored on hover — hover key is `chapterIdx`, should be slot `i` | 🔴 High | Open |
+| 12 | Loading animation broken — fake timer, wrong layout, no GSAP exit | 🔴 High | Open |
+| 1 | Cursor clipping — wrong positioning method + overflow | 🔴 High | Open |
+| 2 | Viewport height — use `getBoundingClientRect` not `innerHeight` | 🔴 High | Open |
+| 9 | Center text doesn't change on hover — missing `ae()` system | 🔴 High | Open |
+| 10 | Horizontal scroll doesn't rotate carousel — `deltaX` ignored | 🔴 High | Open |
+| 8 | Center text/logo offset right — container width centering | 🔴 High | Open |
+| 11 | Logo-to-txtMesh spacing too small — txtMesh world Y=0 too high | 🟡 Medium | Open |
+| 3 | Noise texture 404 on GitHub Pages | 🟡 Medium | Open |
+| 4 | Card scale slightly too large | 🟡 Medium | Open |
+| 5 | SVG colour saturation | 🟡 Medium | Open |
+| 6 | Background card opacity falloff | 🟢 Low | Open |
+| 7 | Scroll-driven chapter exit | 🟢 Low | Open |
