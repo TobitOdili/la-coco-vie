@@ -284,7 +284,7 @@ git add -A && git commit -m "your message" && git push
 ## 🗓 Session Log
 
 ### 2026-05-27 (session 5)
-- **[#9] Fixed center text not changing on hover** — diagnosed via Browserless side-by-side: the center "EMBARK ON A FEAST..." text is the `txtMesh` (3D texture plane), not an HTML overlay. It was hardcoded to `txt-1.png` and never updated.
+- **[#9] Fixed center text not changing on hover** *(verified live)* — diagnosed via Browserless side-by-side: the center "EMBARK ON A FEAST..." text is the `txtMesh` (3D texture plane), not an HTML overlay. It was hardcoded to `txt-1.png` and never updated.
 - Changes in `composables/useChapterScene.js`:
   - Added `txtTextures = []` to scene state
   - Replaced single `loadTexture('txt-1.png')` with `Promise.all(CHAPTERS.map(ch => loadTexture(ch.txt)))` — preloads all 4 chapter txt textures during init
