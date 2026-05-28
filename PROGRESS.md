@@ -165,10 +165,10 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 - Root cause: `.container` class is `91.67%` wide; `justify-center` centres within that inset, not the true viewport midpoint
 - Fix: Use `w-full flex justify-center` directly (no container class) on the logo row
 
-**[#9] Center text doesn't change on card hover**
-- Original shows chapter-specific description text in center/bottom on hover; ours shows nothing
-- Root cause: Missing `ae()` hover text system; `onChapterHover` only activates cursor + audio
-- Fix: Add `CopyrightText.vue` component, wire to `onChapterHover(idx)`, GSAP fade in/out
+**[#9] Center text doesn't change on card hover** ✅ Fixed (2026-05-27)
+- The center text IS rendered — it's the `txtMesh` (3D texture plane with `txt-1.png`) in `useChapterScene.js`. It was hardcoded to `txt-1.png` and never swapped on hover.
+- Browserless inspection confirmed: hovering different cards always showed the same `txt-1.png` content
+- Fix: Preloaded all 4 `txt-1..4.png` textures into a `txtTextures` array during init; `hoverChapter(chIdx)` now crossfades the material's `.map` to `txtTextures[chIdx]` (0.15s fade-out → swap → 0.25s fade-in). Last-hovered text persists after unhover (matches original).
 
 **[#10] Horizontal scroll doesn't rotate carousel** ✅ Fixed (2026-05-24)
 - Vertical scroll works perfectly; horizontal trackpad swipe does nothing
@@ -282,6 +282,14 @@ git add -A && git commit -m "your message" && git push
 ---
 
 ## 🗓 Session Log
+
+### 2026-05-27 (session 5)
+- **[#9] Fixed center text not changing on hover** — diagnosed via Browserless side-by-side: the center "EMBARK ON A FEAST..." text is the `txtMesh` (3D texture plane), not an HTML overlay. It was hardcoded to `txt-1.png` and never updated.
+- Changes in `composables/useChapterScene.js`:
+  - Added `txtTextures = []` to scene state
+  - Replaced single `loadTexture('txt-1.png')` with `Promise.all(CHAPTERS.map(ch => loadTexture(ch.txt)))` — preloads all 4 chapter txt textures during init
+  - In `hoverChapter(chIdx)`: added GSAP crossfade — opacity to 0 (0.15s) → swap `txtMat.map` → opacity to 1 (0.25s). Guarded against repeat swaps when same texture is already showing.
+  - Left `unhoverChapter` alone so the last-hovered chapter's text persists (matches original behavior)
 
 ### 2026-05-24 (session 4)
 - **[#10] Fixed horizontal scroll** — changed both `vsInstance.on` and `wheel` fallback in `WebGLScene.vue` to pass `event.deltaY - event.deltaX` (was only passing `deltaY`). Matches original's `(de.y - de.x)` formula. Horizontal trackpad swipes now rotate the carousel.

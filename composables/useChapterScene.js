@@ -221,6 +221,7 @@ export function useChapterScene() {
   let posters = []
   let videoElements = []
   let videoTextures = []
+  let txtTextures = []
   let canvasEl
   let width, height, aspectRatio
   // Original source:
@@ -362,15 +363,18 @@ export function useChapterScene() {
     // Load logo texture
     const logoTexture = await loadTexture(asset('/images/logo.png'))
 
-    // Add floating title texture plane (txt-1.png by default)
+    // Add floating title texture plane — preload all 4 chapter txt textures so
+    // hover can swap them in (Issue #9). Default to chapter 0 (txt-1.png) on init.
     // IMPORTANT: added to scene root (not groupG) so it doesn't inherit groupG's
     // 25°/70°/15° tilt. lookAt(camera) called every frame keeps it facing the viewer.
     // This matches original: D.add(F) where D=scene, F=txt mesh, F.lookAt(O.position) per frame.
-    const txtTex = await loadTexture(asset('/images/txt-1.png'))
-    txtTex.wrapS = THREE.ClampToEdgeWrapping
-    txtTex.wrapT = THREE.ClampToEdgeWrapping
+    txtTextures = await Promise.all(CHAPTERS.map((ch) => loadTexture(ch.txt)))
+    txtTextures.forEach((t) => {
+      t.wrapS = THREE.ClampToEdgeWrapping
+      t.wrapT = THREE.ClampToEdgeWrapping
+    })
     const txtGeo = new THREE.PlaneGeometry(60, 60)
-    const txtMat = new THREE.MeshBasicMaterial({ map: txtTex, transparent: true, opacity: 1.0, depthWrite: false, alphaTest: 0.5 })
+    const txtMat = new THREE.MeshBasicMaterial({ map: txtTextures[0], transparent: true, opacity: 1.0, depthWrite: false, alphaTest: 0.5 })
     txtMat.toneMapped = false
     const txtMesh = new THREE.Mesh(txtGeo, txtMat)
     txtMesh.position.set(0, 0, 20) // z=20 matches original (le.position.z = 20)
@@ -688,6 +692,24 @@ export function useChapterScene() {
     const vid = videoElements[chIdx]
     if (vid) {
       vid.play().catch(() => {})
+    }
+
+    // Swap txtMesh texture to hovered chapter (Issue #9) — quick crossfade.
+    // The last-hovered chapter's text persists after unhover (matches original).
+    const txtMatRef = groupG.userData.txtMat
+    if (txtMatRef && txtTextures[chIdx] && txtMatRef.map !== txtTextures[chIdx]) {
+      const newTex = txtTextures[chIdx]
+      gsap.killTweensOf(txtMatRef)
+      gsap.to(txtMatRef, {
+        opacity: 0,
+        duration: 0.15,
+        ease: 'power1.out',
+        onComplete: () => {
+          txtMatRef.map = newTex
+          txtMatRef.needsUpdate = true
+          gsap.to(txtMatRef, { opacity: 1.0, duration: 0.25, ease: 'power1.in' })
+        },
+      })
     }
   }
 
