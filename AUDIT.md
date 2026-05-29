@@ -229,6 +229,17 @@ Cards at the far side of the ring are too visible in our replica. Original barel
 
 ## Issue #7 — Scroll-driven Chapter Exit 🟢 LOW
 
+> ✅ **RESOLVED 2026-05-27 (`bcc9b342`).** Implemented as a scroll-back *trigger* (not a
+> scrubbed progress). In `onScroll`, while a chapter is selected, upward scroll (`delta<0`)
+> accumulates; past `SCROLL_EXIT_THRESHOLD` (500) it calls the existing `deselectChapter()`
+> and fires a new `onDeselect` callback. Down-scroll resets the accumulator.
+> `isSelecting`/`isDeselecting` flags gate against re-triggering during the in/out
+> animations. `WebGLScene` relays `onDeselect` as a `chapter-deselect` event; `app.vue`
+> `resetChapterState()` (shared with the back button's `goHome`). Verified live.
+>
+> ⚠️ **Discovered while verifying #7 — see Issue #15 (chapter selection was broken).**
+> Scroll-exit is unreachable if you can't enter a chapter; #15's fix was the prerequisite.
+
 ### Symptom
 Scrolling back while on a chapter page should trigger the reverse animation. Currently only the back button works.
 
@@ -651,6 +662,29 @@ rather than rotation angle (the group's 70° Y-tilt makes an angle calc unreliab
 
 ---
 
+## Issue #15 — Chapter Selection Broken (hit layer click-transparent) 🔴 HIGH (found 2026-05-27)
+
+### Symptom
+Clicking a poster did nothing — no chapter selection. Hover (cursor/text/lift) and scroll
+(carousel rotation) worked, masking it. Found while trying to verify #7 on Browserless:
+even clicking a confirmed hitbox (cursor went `.active`) never selected.
+
+### Root Cause
+`#canvas-hit-layer` (which carries `@click="onHitClick"` and hosts VirtualScroll) sits
+inside `#canvas-container`, which has `pointer-events: none`. `pointer-events` is an
+**inherited** property, so the hit layer inherited `none` and was click-transparent —
+`document.elementFromPoint(720, 450)` returned `.app-root`, not the hit layer. The Vue
+`@click` therefore never fired. (Hover survives via the `window` `mousemove` listener;
+scroll survives via VirtualScroll's own listeners.)
+
+### Fix (`bbedb5ec`)
+Set `pointer-events: auto` on `#canvas-hit-layer` to override the inherited `none`. The
+layer is `z-5`, below nav (`z-20`) / about / loader (`z-40`), so those still receive their
+own clicks; only the open scene area becomes clickable (the intended behaviour). Verified
+live: clicking a card now selects it (fills screen), which in turn unblocked #7.
+
+---
+
 ## Updated Priority Order (as of 2026-05-27)
 
 | # | Issue | Priority | Status |
@@ -668,4 +702,5 @@ rather than rotation angle (the group's 70° Y-tilt makes an angle calc unreliab
 | 4 | Card scale → actually ring viewing-angle (tilt) | 🟡 Medium | ⏸️ Parked — GPU extraction confirms fov 45° + radius 40 already match; residual is subtle tilt, no clean target. See §Issue #4. |
 | ~~5~~ | ~~SVG colour saturation~~ | ~~🟡 Medium~~ | ✅ Closed — `NoToneMapping`+`SRGBColorSpace` already set; colours match in side-by-side. |
 | ~~6~~ | ~~Background card opacity falloff~~ | ~~🟢 Low~~ | ✅ Fixed (`26ee0406` + `52b8cf9b`) — `uOpacity` uniform driven by per-card distance to camera (smoothstep 95→125, floor 0.2); far cards now faint ghosts like the original. Verified live. |
-| 7 | Scroll-driven chapter exit | 🟢 Low | Open |
+| ~~7~~ | ~~Scroll-driven chapter exit~~ | ~~🟢 Low~~ | ✅ Fixed (`bcc9b342`) — back-scroll past threshold runs the reverse animation via `onScroll`; `onDeselect` callback resets app state. Verified live. |
+| ~~15~~ | ~~Chapter selection broken — hit layer click-transparent~~ | 🔴 High | ✅ Fixed (`bbedb5ec`) — `#canvas-hit-layer` inherited `pointer-events:none`; clicks fell through to `.app-root` so `@click` never fired. Set `pointer-events:auto`. Found while verifying #7; verified live (clicking now selects). |

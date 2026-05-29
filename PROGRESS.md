@@ -131,8 +131,8 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 - Scroll-driven carousel rotation (VirtualScroll)
 - Hover: video plays, card flattens (`blendFactor → 2`), card lifts `y+7`
 - Audio: chapter tracks fade in on hover, louder on select, fade out on unhover
-- Click: carousel rotates chapter to front, body colour changes, card fills screen
-- Back button: reverses all animations cleanly
+- Click: carousel rotates chapter to front, body colour changes, card fills screen (hit layer now `pointer-events:auto` — selection was silently broken)
+- Back button **and scroll-back** both exit a chapter (reverse animation)
 - About panel toggle (blurs canvas)
 - Sound On/Off toggle
 - Loading screen — **real asset-gated** counter (gates on 13 textures), GSAP-eased number, GSAP fade exit, light-gray centered styling matching the original
@@ -208,6 +208,15 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 - Far-side ring cards rendered as prominent white rectangles; the original keeps them as faint ghosts.
 - Fix in `useChapterScene.js`: `uOpacity` uniform multiplied into the final fragment alpha; set each frame from the card's distance to camera (`smoothstep` 95→125, floor 0.2), gated to carousel mode and lerped to avoid pops. First pass (fade to 0) over-faded; the 0.2 floor matched the original's faint-back-card look.
 
+**[#7] Scroll-driven chapter-exit transition** ✅ Fixed (`bcc9b342`, verified live)
+- Only the back button exited a chapter; scrolling back should too.
+- Fix in `useChapterScene.js`: while selected, `onScroll` accumulates upward scroll (`delta<0`); past `SCROLL_EXIT_THRESHOLD` (500) it runs the existing `deselectChapter()` + fires `onDeselect`. `isSelecting`/`isDeselecting` flags prevent re-trigger during in/out animations. `WebGLScene` relays `onDeselect` → `chapter-deselect` → `app.vue` `resetChapterState()` (shared with `goHome`).
+
+**[#15] Chapter selection broken — hit layer click-transparent** ✅ Fixed (`bbedb5ec`, verified live) 🔴 *(found while verifying #7)*
+- Clicking a card did nothing — selection never fired. Hover + scroll masked it.
+- Root cause: `#canvas-hit-layer` (carries `@click`) inherited `pointer-events:none` from `#canvas-container`; `elementFromPoint` returned `.app-root`, so clicks fell through.
+- Fix: `pointer-events:auto` on `#canvas-hit-layer` (assets/css/main.css). Verified live — clicking now selects (card fills screen), which unblocked #7.
+
 ### ⏸️ Parked
 
 **[#4] Card scale → ring viewing-angle** — ⏸️ Parked (2026-05-27)
@@ -215,10 +224,6 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 - **Live GPU-uniform extraction from the original** (hooked `uniformMatrix4fv`, forced projection re-upload via resize) confirms the major params **already match**: camera **FOV = 45°**, aspect 1.6, ring **radius = 40** (`ve=40`). Group Y-tilt ≈ `(-0.146, 0.81, 0.568)` vs our `(-0.089, 0.773, 0.628)` — off by only a few degrees.
 - The AUDIT's old lever (`baseDistance 44–46` / camera `z=105`) is **wrong** — those match. Residual is a subtle tilt; the 70° Y-spin can't be isolated from the carousel rotation in a single capture, so there's no exact target to copy.
 - Parked: closing it means blind tilt-nudging + updating `deselect`'s hardcoded angles + re-verifying intro/select — high-risk, low-ROI. See AUDIT.md §Issue #4.
-
-### 🟢 Still open
-
-**[#7] Scroll-driven chapter-exit transition** — only the back button works; scrolling back should reverse. Fix: `setPageProgress` driven by scroll delta when a chapter is selected.
 
 ### 🔮 Future phases (not bugs)
 
@@ -317,8 +322,9 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
 | v8 | ~7.2/10 | Correct camera, group tilt |
 | v12 | ~7.8/10 | Hover/select/audio all working |
 | v17 | ~8.5/10 | Fixed cursor, viewport, hover txt swap, single-card hover, horizontal scroll, real-gated loader |
-| v22 (current) | ~9/10 | + logo-txt spacing (#11), front-card text (#14), noise texture (#3), far-card opacity falloff (#6); #5/#8 confirmed already-correct |
-| Target | 9.5-10/10 | Ring viewing-angle (#4, parked — needs original's exact tilt), scroll-driven exit (#7), then inner pages |
+| v22 | ~9/10 | + logo-txt spacing (#11), front-card text (#14), noise texture (#3), far-card opacity falloff (#6); #5/#8 confirmed already-correct |
+| v24 (current) | ~9/10 | + scroll-back exit (#7); fixed broken chapter selection (#15, pointer-events) |
+| Target | 9.5-10/10 | Ring viewing-angle (#4, parked — needs original's exact tilt), then inner pages / dress cards |
 
 ---
 
@@ -331,6 +337,8 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
 - **Audit accuracy pass:** corrected AUDIT.md #12 (centered light-gray, not bottom-left teal/red). Flagged two likely-stale issues for re-verification before any code change: **#8** (nav/logo looked centered in Browserless) and **#5** (`renderer.toneMapping = NoToneMapping` is already set, line ~331). Noted **#3** is GitHub-Pages-specific and may not reproduce on Vercel.
 - **[#11] Fixed** logo-to-txtMesh spacing (`txtMesh.position.y` 0 → -8); verified live. **[#8] & [#5] closed** after Browserless verification. **[#14] added** (default text ≠ front card).
 - **[#4] investigated → parked.** Matched-parallax capture + scroll-sweep reframed it as a ring viewing-angle (tilt) difference, not card scale. Extracted the original's live params via a `uniformMatrix4fv` GPU hook: **fov 45°, radius 40 already match**; residual is a subtle tilt with no cleanly-extractable target. Not worth risky geometry surgery — parked.
+- **[#7] Fixed** scroll-back chapter exit — upward scroll past a threshold runs the reverse animation (`onScroll` → `deselectChapter` + `onDeselect` callback → `app.vue` state reset). Verified live.
+- **[#15] Found & fixed (🔴) while verifying #7: chapter selection was silently broken.** `#canvas-hit-layer` inherited `pointer-events:none` from `#canvas-container`, so card clicks fell through to `.app-root` and `@click` never fired. Set `pointer-events:auto`. Verified live (clicking now selects). Hover/scroll had masked it. ⚠️ **Browserless lesson:** card hitboxes are flat `BoxGeometry` at mesh center while the visible card is shader-curved — to click/select reliably in Browserless, hunt for a hitbox by sweeping the mouse and checking `.cursor.active`, rather than aiming at the visible card.
 - **[#6] Fixed** far-side cards too visible. Added a `uOpacity` uniform driven by per-card distance to camera (smoothstep 95→125, floor 0.2), gated to carousel mode + lerped. First pass faded fully (over-faded vs original); the 0.2 floor matched the original's faint-ghost back cards. Verified live; also confirmed #14 center text unaffected.
 - **[#3] Fixed** missing noise/grain texture (affected Vercel too). Relative `--noise-url` (`./images/noise.png`, from `BASE_URL='./'`) resolved vs the `_nuxt/` CSS bundle → 404 → SPA `text/html` fallback. Now resolved to an absolute URL via `new URL(path, location.href)`. Grain verified rendering live.
 - **[#14] Fixed** default center text not matching the front card. `frontChapterIdx()` (nearest poster to camera) + `setTxtChapter()` driven from the animate loop; intro completion sets it instantly. Rest-state verified live (text matches front Amour card, pink). Refines #9: unhover now reverts to the front card's text. Hover-swap logic unchanged (Browserless can't reliably hit the curved cards' flat hitboxes to re-screenshot — confirm hover manually).
