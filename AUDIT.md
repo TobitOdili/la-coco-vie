@@ -100,9 +100,23 @@ On desktop these are identical, but on mobile/some browsers `innerHeight` includ
 
 ---
 
-## Issue #3 — Noise Texture 404 on GitHub Pages 🟡 MEDIUM
+## Issue #3 — Noise Texture 404 🟡 MEDIUM
 
-### Symptom
+> ✅ **RESOLVED 2026-05-27 (`1078a8f3`).** Affected **Vercel too**, not just GitHub Pages.
+> Confirmed root cause: this build's `import.meta.env.BASE_URL` is `./`, so `app.vue`
+> set `--noise-url: url('./images/noise.png')`. A **relative** `url()` in a CSS custom
+> property is resolved by the browser relative to the **stylesheet that consumes it**
+> (the `_nuxt/` CSS bundle), not the document → `_nuxt/images/noise.png`. That path 404s
+> and Vercel's SPA rewrite returns `index.html` (`content-type: text/html`, HTTP 200), so
+> the overlay had HTML as its `background-image` → no grain. The real PNG was always fine
+> at `/images/noise.png` (`image/png`, 792 KB).
+>
+> **Fix:** resolve to an absolute URL before setting the var:
+> `new URL(`${base}/images/noise.png`, window.location.href).href` → yields
+> `/images/noise.png` on Vercel root and `/<repo>/images/noise.png` on GH-Pages. Verified
+> live: `--noise-url` is now an absolute `https://…/images/noise.png` and the grain renders.
+
+### Symptom (original)
 `https://tobitodili.github.io/la-coco-vie/_nuxt/images/noise.png` → 404  
 (Note the `_nuxt/` prefix — wrong path)
 
@@ -639,7 +653,7 @@ rather than rotation angle (the group's 70° Y-tilt makes an angle calc unreliab
 | ~~8~~ | ~~Center text/logo offset right — container width centering~~ | ~~🔴 High~~ | ✅ Closed — Browserless side-by-side (×2) shows nav/logo centered identically; no shift. Resolved by `59d6d91b`. |
 | ~~11~~ | ~~Logo-to-txtMesh spacing too small — txtMesh world Y=0 too high~~ | ~~🟡 Medium~~ | ✅ Fixed (`55e0b4b1`) — `txtMesh.position.y` 0 → -8 (~110px lower); text now clears the logo/subtitle. Verified live. |
 | ~~14~~ | ~~Default center text doesn't match front-facing card (initial txt hardcoded)~~ | ~~🟡 Medium~~ | ✅ Fixed (`e4e80d2e`) — `frontChapterIdx()` (nearest poster to camera) drives `setTxtChapter()` from the animate loop; intro completion sets it instantly. Rest-state verified live. |
-| 3 | Noise texture 404 on GitHub Pages | 🟡 Medium | Open (GH-Pages-specific; may not affect Vercel) |
+| ~~3~~ | ~~Noise texture 404 — relative `--noise-url` resolves vs the `_nuxt/` CSS bundle~~ | ~~🟡 Medium~~ | ✅ Fixed (`1078a8f3`) — resolve `--noise-url` to an absolute URL via `new URL(path, location.href)`. Affected Vercel too (not just GH-Pages). Grain verified rendering live. |
 | 4 | Card scale → actually ring viewing-angle (tilt) | 🟡 Medium | ⏸️ Parked — GPU extraction confirms fov 45° + radius 40 already match; residual is subtle tilt, no clean target. See §Issue #4. |
 | ~~5~~ | ~~SVG colour saturation~~ | ~~🟡 Medium~~ | ✅ Closed — `NoToneMapping`+`SRGBColorSpace` already set; colours match in side-by-side. |
 | 6 | Background card opacity falloff | 🟢 Low | Open |

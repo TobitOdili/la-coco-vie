@@ -197,10 +197,10 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 - ⚠️ **Behavior refinement to #9:** unhover now reverts to the **front card's** text (via the animate-loop front-tracking) instead of persisting the last-hovered chapter — this matches the original. Hover-swap logic itself is unchanged (couldn't re-screenshot hover on Browserless — curved cards' flat hitboxes are hard to target remotely; verify manually as #9 was).
 - Note: which card rests at front (Amour vs the original's choice) is the parked rotation/#4 territory; #14 only ensures the text matches *our* front card.
 
-**[#3] Noise texture 404 on GitHub Pages**
-- `_nuxt/images/noise.png` resolves to the wrong path inside the compiled CSS bundle.
-- **Note:** this is GitHub-Pages-specific (path resolution under `_nuxt/`). The primary deploy is now **Vercel** (`la-coco-vie.vercel.app`), where this likely doesn't reproduce — confirm before prioritising.
-- Fix: move to `assets/images/noise.png`; import via `url('~/assets/images/noise.png')`.
+**[#3] Noise texture 404** ✅ Fixed (`1078a8f3`, verified live)
+- The grain overlay was missing — and it affected **Vercel too**, not just GH-Pages (the old note was wrong).
+- Root cause: `BASE_URL` builds as `./`, so `--noise-url` was `url('./images/noise.png')`. A relative `url()` in a CSS custom property resolves relative to the **`_nuxt/` CSS bundle** that consumes it → `_nuxt/images/noise.png` → 404 → Vercel SPA rewrite serves `index.html` (`text/html`, 200) → broken `background-image`. Real PNG was always fine at `/images/noise.png`.
+- Fix: in `app.vue`, resolve to an absolute URL with `new URL(path, location.href).href` before setting the var. Verified live (grain renders; var is absolute `https://…/images/noise.png`).
 
 **[#4] Card scale → ring viewing-angle** — ⏸️ Parked (2026-05-27)
 - Reframed: not card scale. Matched-parallax capture + scroll-sweep showed the replica's ring reads **face-on/wide-bowl** vs the original's **edge-on/tight-cluster** — a viewing-angle (group-tilt) difference.
@@ -322,6 +322,7 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
 - **Audit accuracy pass:** corrected AUDIT.md #12 (centered light-gray, not bottom-left teal/red). Flagged two likely-stale issues for re-verification before any code change: **#8** (nav/logo looked centered in Browserless) and **#5** (`renderer.toneMapping = NoToneMapping` is already set, line ~331). Noted **#3** is GitHub-Pages-specific and may not reproduce on Vercel.
 - **[#11] Fixed** logo-to-txtMesh spacing (`txtMesh.position.y` 0 → -8); verified live. **[#8] & [#5] closed** after Browserless verification. **[#14] added** (default text ≠ front card).
 - **[#4] investigated → parked.** Matched-parallax capture + scroll-sweep reframed it as a ring viewing-angle (tilt) difference, not card scale. Extracted the original's live params via a `uniformMatrix4fv` GPU hook: **fov 45°, radius 40 already match**; residual is a subtle tilt with no cleanly-extractable target. Not worth risky geometry surgery — parked.
+- **[#3] Fixed** missing noise/grain texture (affected Vercel too). Relative `--noise-url` (`./images/noise.png`, from `BASE_URL='./'`) resolved vs the `_nuxt/` CSS bundle → 404 → SPA `text/html` fallback. Now resolved to an absolute URL via `new URL(path, location.href)`. Grain verified rendering live.
 - **[#14] Fixed** default center text not matching the front card. `frontChapterIdx()` (nearest poster to camera) + `setTxtChapter()` driven from the animate loop; intro completion sets it instantly. Rest-state verified live (text matches front Amour card, pink). Refines #9: unhover now reverts to the front card's text. Hover-swap logic unchanged (Browserless can't reliably hit the curved cards' flat hitboxes to re-screenshot — confirm hover manually).
 - **[#13] Fixed mirrored hover** *(verified live)* — hover is now keyed by slot index `i` instead of `chapterIdx`. Changes in `composables/useChapterScene.js`:
   - `getHoveredPoster` returns the raycast-hit slot `i` (not `chapterIdx`); added `chapterIdxForSlot(i)` helper
