@@ -691,6 +691,30 @@ live: clicking a card now selects it (fills screen), which in turn unblocked #7.
 
 ---
 
+## Issue #16 — About panel gray-on-gray from homepage 🟢 LOW (found 2026-05-29)
+
+### Symptom
+Opening the About panel **from the homepage** (no chapter selected) renders the copy as
+gray text on a gray background — effectively invisible. Opening About *after* selecting a
+chapter looks correct (the chapter's accent colors apply).
+
+### Root Cause
+`AboutPanel` styles use `var(--accent)` (text) and `var(--accentLight)` (background). Those
+vars are only set by the per-chapter body class `--{slug}` (`assets/css/main.css`), which is
+only applied while a chapter is selected. With no chapter active, the `html` defaults apply:
+`--accent: gray; --accentLight: gray;` → gray on gray.
+
+Pre-existing (not introduced by the `site.config` work — that only changed the text source).
+
+### Open questions / fix options
+- **First confirm against the original** — does it also mute the About text on the homepage,
+  or does it set a default accent? Match whatever it does.
+- If it's a bug: set sensible non-gray defaults for `--accent` / `--accentLight` on `html`
+  (e.g. a neutral dark text on light bg), or give the About overlay its own default colors
+  independent of the chapter accent.
+
+---
+
 ## Updated Priority Order (as of 2026-05-27)
 
 | # | Issue | Priority | Status |
@@ -710,3 +734,4 @@ live: clicking a card now selects it (fills screen), which in turn unblocked #7.
 | ~~6~~ | ~~Background card opacity falloff~~ | ~~🟢 Low~~ | ✅ Fixed (`26ee0406` + `52b8cf9b`) — `uOpacity` uniform driven by per-card distance to camera (smoothstep 95→125, floor 0.2); far cards now faint ghosts like the original. Verified live. |
 | ~~7~~ | ~~Scroll-driven chapter exit~~ | ~~🟢 Low~~ | ✅ Fixed (`bcc9b342`) — back-scroll past threshold runs the reverse animation via `onScroll`; `onDeselect` callback resets app state. Verified live. |
 | ~~15~~ | ~~Chapter selection broken — hit layer click-transparent~~ | 🔴 High | ✅ Fixed (`bbedb5ec`) — `#canvas-hit-layer` inherited `pointer-events:none`; clicks fell through to `.app-root` so `@click` never fired. Set `pointer-events:auto`. Found while verifying #7; verified live (clicking now selects). |
+| 16 | About panel gray-on-gray when opened from homepage | 🟢 Low | Open (found 2026-05-29) — pre-existing; accent CSS vars default to `gray` until a chapter is selected. See §Issue #16. |

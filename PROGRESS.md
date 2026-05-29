@@ -223,6 +223,13 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 - Root cause: `#canvas-hit-layer` (carries `@click`) inherited `pointer-events:none` from `#canvas-container`; `elementFromPoint` returned `.app-root`, so clicks fell through.
 - Fix: `pointer-events:auto` on `#canvas-hit-layer` (assets/css/main.css). Verified live — clicking now selects (card fills screen), which unblocked #7.
 
+### 🟢 Still open
+
+**[#16] About panel gray-on-gray from homepage** 🟢 Low (found 2026-05-29)
+- Opening About with no chapter selected → gray text on gray bg (invisible). After selecting a chapter it's fine.
+- Cause: `AboutPanel` uses `var(--accent)`/`var(--accentLight)`, only set by the per-chapter body class; they default to `gray` on the homepage. Pre-existing (not from the `site.config` change).
+- Next: confirm the original's behavior first, then either set non-gray `html` defaults or give the About overlay its own default colors. See AUDIT.md §Issue #16.
+
 ### ⏸️ Parked
 
 **[#4] Card scale → ring viewing-angle** — ⏸️ Parked (2026-05-27)
