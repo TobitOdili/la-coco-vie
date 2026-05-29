@@ -152,12 +152,15 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 - Root cause: `hoverChapter(chIdx)` filtered by `chapterIdx`, which is shared by both the front and back copy (posters 1–4 and 5–8 map to the same chapters)
 - Fix: `getHoveredPoster` now returns the slot index `i`; added `chapterIdxForSlot(i)` helper; `hoverChapter`/`unhoverChapter` operate on the single slot poster (`p.i === slotI`); `chapterIdx` is resolved internally for video, txt swap (#9), audio callback, and `onClick → selectChapter`. Selection still animates both copies (correct).
 
-**[#12] Loading animation broken vs reference** *(new — 2026-05-24)*
-- Ours: bottom-center counter, linear rAF timing, CSS opacity fade, fake 1s timer
-- Original: bottom-left counter, two separate typefaces (Italiana for number, "Over the Rainbow" for %), GSAP ease, real asset-gated progress, GSAP wipe exit
-- Root cause: `LoadingScreen.vue` uses `requestAnimationFrame` over a fixed 1s — no connection to actual asset load events in `useChapterScene.init()`
-- Fix: Wire real progress from scene init load callbacks; drive counter with GSAP; add GSAP vertical-wipe exit
-- See AUDIT.md Issue #12 for comparison table + all fix options
+**[#12] Loading animation broken vs reference** ✅ Fixed (2026-05-27)
+- ⚠️ Live Browserless DOM probe corrected the original's design: it's **centered light-gray `zinc-200` "0%"** (Italiana number + Over the Rainbow cursive %), NOT the bottom-left teal/red the audit first described. Progress is real asset-gated.
+- Root cause: `LoadingScreen.vue` used `requestAnimationFrame` over a fixed 1s with no connection to actual asset loads
+- Fix (full real-gating, 4 files):
+  - `useChapterScene.js`: `onProgress` callback + `reportProgress()` fired after each of 13 texture loads (1 logo + 4 txt + 8 posters; videos `preload='none'`, excluded)
+  - `WebGLScene.vue`: relays progress as a `progress` event; `emit('progress', 100)` safety after init
+  - `app.vue`: monotonic `loadProgress` ref passed to LoadingScreen
+  - `LoadingScreen.vue`: GSAP-eased counter toward real progress, GSAP fade exit, light-gray centered restyle, 12s safety timeout so it can't hang
+- Validated with a local `nuxt build` (all components compile)
 
 **[#8] Center text/logo offset to the right**
 - Logo + "Chapter the bride" subtitle appear right-shifted
@@ -283,6 +286,7 @@ git add -A && git commit -m "your message" && git push
 ## 🗓 Session Log
 
 ### 2026-05-27 (session 5)
+- **[#12] Reworked loading animation (full real-gating)** — Browserless DOM probe of the live original corrected the audit's description (it's centered light-gray `zinc-200`, not bottom-left teal/red). Wired real asset-load progress scene→app→loader (13 textures), GSAP-eased counter, GSAP fade exit, 12s safety fallback. Touched `useChapterScene.js`, `WebGLScene.vue`, `app.vue`, `LoadingScreen.vue`. Local `nuxt build` passes. Pending live verification.
 - **[#13] Fixed mirrored hover** *(verified live)* — hover is now keyed by slot index `i` instead of `chapterIdx`. Changes in `composables/useChapterScene.js`:
   - `getHoveredPoster` returns the raycast-hit slot `i` (not `chapterIdx`); added `chapterIdxForSlot(i)` helper
   - `onMouseMove` tracks the slot in `hoveredIndex`; resolves chapterIdx for the audio/cursor callback so app.vue still gets 0–3

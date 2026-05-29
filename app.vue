@@ -1,7 +1,7 @@
 <template>
   <div class="app-root" :class="chapterClass" ref="appRoot">
     <!-- Loading screen -->
-    <LoadingScreen v-if="!loaded" @complete="onLoaded" />
+    <LoadingScreen v-if="!loaded" :progress="loadProgress" @complete="onLoaded" />
 
     <!-- Custom cursor -->
     <CustomCursor ref="cursorRef" />
@@ -12,6 +12,7 @@
       @chapter-select="onChapterSelect"
       @chapter-hover="onChapterHover"
       @chapter-unhover="onChapterUnhover"
+      @progress="onProgress"
     />
 
     <!-- Navigation (always visible) -->
@@ -41,6 +42,7 @@ const selectedChapterIdx = ref(null)
 const soundOn = ref(false)
 const isHome = ref(true)
 const loaded = ref(false)
+const loadProgress = ref(0)
 
 // Audio (lazily initialized on first user interaction)
 let howlerModule = null
@@ -63,6 +65,12 @@ const chapterClass = computed(() => {
 
 function onLoaded() {
   loaded.value = true
+}
+
+// Real asset-load progress from the scene (Issue #12). Keep it monotonic so
+// the counter never visibly jumps backwards.
+function onProgress(pct) {
+  if (pct > loadProgress.value) loadProgress.value = pct
 }
 
 async function initAudio() {

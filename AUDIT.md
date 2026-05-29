@@ -367,6 +367,26 @@ const txtGeo = new THREE.PlaneGeometry(50, 50)
 
 ## Issue #12 — Loading Animation Broken vs Reference 🔴 HIGH (new — 2026-05-24)
 
+> ✅ **RESOLVED 2026-05-27.** During the fix, a live Browserless DOM probe of the
+> original revealed this section's original description was **inaccurate**. Corrections:
+> - **Position:** NOT bottom-left. The original overlay is `flex justify-center
+>   items-center pb-[5vh]` — i.e. **centered**, nudged slightly up.
+> - **Colour:** NOT dark-teal number + red %. Both glyphs are **light gray**
+>   (`text-zinc-200`, rgb 228,228,231) on white. Subtle/monochrome.
+> - **Fonts:** Italiana (number) + Over the Rainbow cursive (%) — confirmed correct.
+> - **Progress:** confirmed **real asset-gated** (stuck at 0% under heavy throttle).
+> - **Exit:** could not be captured under throttle; implemented as a GSAP opacity
+>   fade (easy to swap for a wipe later if desired).
+>
+> **Implemented:** `useChapterScene.js` reports progress after each of 13 texture
+> loads (1 logo + 4 txt + 8 posters; videos use `preload='none'`, excluded) via a new
+> `onProgress` callback. `WebGLScene.vue` relays it as a `progress` event (plus a
+> `progress:100` safety emit after init). `app.vue` holds a monotonic `loadProgress`
+> ref passed to `LoadingScreen.vue`, which GSAP-eases the counter toward it and plays a
+> GSAP fade exit on reaching 100. A 12s safety timeout guarantees the loader can never
+> hang. Restyled to the corrected light-gray/centered design.
+
+
 ### Symptom
 Our loading screen behaves and looks differently from the original. Ours: white overlay, counter 0→100 at bottom-center, disappears after ~1.2s with a CSS fade. Original has a cinematic multi-element animated cover.
 
@@ -529,7 +549,7 @@ The raycaster's `intersects` array is sorted by distance. The front card (closer
 | # | Issue | Priority | Status |
 |---|---|---|---|
 | ~~13~~ | ~~Cards mirrored on hover — hover key is `chapterIdx`, should be slot `i`~~ | ~~🔴 High~~ | ✅ Fixed (`e05e638e`) — hover now keyed by slot `i`; `getHoveredPoster` returns slot, `chapterIdxForSlot()` resolves chapter for video/txt/audio/select. Only the hovered copy lifts. Verified live. |
-| 12 | Loading animation broken — fake timer, wrong layout, no GSAP exit | 🔴 High | Open |
+| ~~12~~ | ~~Loading animation broken — fake timer, wrong layout, no GSAP exit~~ | ~~🔴 High~~ | ✅ Fixed — real asset-gated progress (13 textures) wired scene→app→loader; GSAP-eased counter + GSAP fade exit; restyled to match LIVE original (light-gray `zinc-200`, centered). ⚠️ Note: the original's design differs from this audit's earlier description — see correction below. |
 | ~~1~~ | ~~Cursor clipping — wrong positioning method + overflow~~ | ~~🔴 High~~ | ✅ Fixed (`59d6d91b`) |
 | ~~2~~ | ~~Viewport height — use `getBoundingClientRect` not `innerHeight`~~ | ~~🔴 High~~ | ✅ Fixed (`59d6d91b`) |
 | ~~9~~ | ~~Center text doesn't change on hover — `txtMesh` hardcoded to `txt-1.png`~~ | ~~🔴 High~~ | ✅ Fixed (`1ec352e2`) — preloaded all 4 txt textures into `txtTextures[]`; `hoverChapter` crossfades `txtMat.map` to hovered chapter's txt (0.15s out → swap → 0.25s in); last-hovered persists. Verified live. |

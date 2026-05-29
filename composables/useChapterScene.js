@@ -251,6 +251,18 @@ export function useChapterScene() {
   let onSelectCallback = null
   let onHoverCallback = null
 
+  // Loading progress (Issue #12) — gate the loader on real asset loads.
+  // 13 textures load during init(): 1 logo + 4 txt + 8 poster SVGs.
+  // Videos use preload='none' so they don't block and aren't counted.
+  let onProgressCallback = null
+  let assetsLoaded = 0
+  const totalAssets = 1 + CHAPTERS.length + N
+  function reportProgress() {
+    assetsLoaded += 1
+    const pct = Math.min(100, Math.round((assetsLoaded / totalAssets) * 100))
+    if (onProgressCallback) onProgressCallback(pct)
+  }
+
   const textureLoader = new THREE.TextureLoader()
 
   function loadTexture(url) {
@@ -362,13 +374,16 @@ export function useChapterScene() {
 
     // Load logo texture
     const logoTexture = await loadTexture(asset('/images/logo.png'))
+    reportProgress()
 
     // Add floating title texture plane — preload all 4 chapter txt textures so
     // hover can swap them in (Issue #9). Default to chapter 0 (txt-1.png) on init.
     // IMPORTANT: added to scene root (not groupG) so it doesn't inherit groupG's
     // 25°/70°/15° tilt. lookAt(camera) called every frame keeps it facing the viewer.
     // This matches original: D.add(F) where D=scene, F=txt mesh, F.lookAt(O.position) per frame.
-    txtTextures = await Promise.all(CHAPTERS.map((ch) => loadTexture(ch.txt)))
+    txtTextures = await Promise.all(
+      CHAPTERS.map((ch) => loadTexture(ch.txt).then((t) => { reportProgress(); return t }))
+    )
     txtTextures.forEach((t) => {
       t.wrapS = THREE.ClampToEdgeWrapping
       t.wrapT = THREE.ClampToEdgeWrapping
@@ -436,6 +451,7 @@ export function useChapterScene() {
 
     // Load poster SVG texture (the illustrated poster graphic) via canvas
     const posterTex = await loadTexture(chapter.svg)
+    reportProgress()
     posterTex.wrapS = THREE.ClampToEdgeWrapping
     posterTex.wrapT = THREE.ClampToEdgeWrapping
 
@@ -879,6 +895,7 @@ export function useChapterScene() {
 
   function onSelect(cb) { onSelectCallback = cb }
   function onHover(cb) { onHoverCallback = cb }
+  function onProgress(cb) { onProgressCallback = cb }
 
   return {
     init,
@@ -889,6 +906,7 @@ export function useChapterScene() {
     destroy,
     onSelect,
     onHover,
+    onProgress,
     deselectChapter,
     getState: () => ({ selectedIndex, hoveredIndex, introComplete }),
   }

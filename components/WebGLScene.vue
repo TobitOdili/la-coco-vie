@@ -14,7 +14,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useChapterScene } from '~/composables/useChapterScene'
 
-const emit = defineEmits(['chapter-select', 'chapter-hover', 'chapter-unhover'])
+const emit = defineEmits(['chapter-select', 'chapter-hover', 'chapter-unhover', 'progress'])
 
 const canvasRef = ref(null)
 const hitLayerRef = ref(null)
@@ -29,7 +29,15 @@ function onHitClick(e) {
 onMounted(async () => {
   if (!canvasRef.value) return
 
+  // Relay real asset-load progress to the loader (Issue #12).
+  // Registered BEFORE init() so we catch every texture load.
+  scene.onProgress((pct) => emit('progress', pct))
+
   await scene.init(canvasRef.value)
+
+  // Safety net: scene is fully ready — guarantee the loader can complete
+  // even if the asset count drifts.
+  emit('progress', 100)
 
   scene.onSelect((idx) => {
     emit('chapter-select', idx)

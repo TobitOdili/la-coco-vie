@@ -1,71 +1,103 @@
 <template>
-  <Transition name="fade">
-    <div
-      v-if="visible"
-      class="loader-overlay"
-    >
-      <span class="--la-storia">
-        <span class="display loader">{{ progress }}</span>
-      </span>
-      <span class="--eat-marry-love" style="position: absolute;">
-        <span class="display loader">%</span>
-      </span>
-    </div>
-  </Transition>
+  <div v-if="visible" ref="overlayRef" class="loader-overlay">
+    <span class="num">
+      <span class="display loader">{{ displayPct }}</span>
+    </span>
+    <span class="pct">
+      <span class="display loader">%</span>
+    </span>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { gsap } from 'gsap'
 
-const visible = ref(true)
-const progress = ref(0)
+// Real asset-load progress (0–100) driven by the scene (Issue #12).
+const props = defineProps({
+  progress: { type: Number, default: 0 },
+})
 
 const emit = defineEmits(['complete'])
 
-onMounted(() => {
-  // Original: loading overlay fades in 1s when assets are done loading
-  // We use a 1s animation to match that timing
-  const start = Date.now()
-  const duration = 1000
+const visible = ref(true)
+const overlayRef = ref(null)
+const displayPct = ref(0)
 
-  function update() {
-    const elapsed = Date.now() - start
-    const pct = Math.min(100, Math.floor((elapsed / duration) * 100))
-    progress.value = pct
+// GSAP tweens a private value toward the real progress so the counter eases
+// smoothly instead of snapping with each asset load.
+const counter = { val: 0 }
+let exited = false
+let safetyTimer = null
 
-    if (pct < 100) {
-      requestAnimationFrame(update)
-    } else {
-      // Fade out quickly (matching original's 1s fade)
-      setTimeout(() => {
-        visible.value = false
-        emit('complete')
-      }, 200)
-    }
+function playExit() {
+  if (exited) return
+  exited = true
+  if (safetyTimer) { clearTimeout(safetyTimer); safetyTimer = null }
+  // GSAP fade-out exit (replaces the old CSS opacity transition).
+  gsap.to(overlayRef.value, {
+    opacity: 0,
+    duration: 0.6,
+    ease: 'power2.inOut',
+    onComplete: () => {
+      visible.value = false
+      emit('complete')
+    },
+  })
+}
+
+watch(
+  () => props.progress,
+  (target) => {
+    gsap.to(counter, {
+      val: target,
+      duration: 0.6,
+      ease: 'power2.out',
+      overwrite: true,
+      onUpdate: () => { displayPct.value = Math.round(counter.val) },
+      onComplete: () => {
+        if (target >= 100) playExit()
+      },
+    })
   }
-  requestAnimationFrame(update)
+)
+
+onMounted(() => {
+  // Safety fallback: if real progress never reaches 100 (e.g. init throws or a
+  // WebGL failure), force-complete after 12s so the loader can't hang forever.
+  safetyTimer = setTimeout(() => {
+    displayPct.value = 100
+    playExit()
+  }, 12000)
+})
+
+onUnmounted(() => {
+  if (safetyTimer) clearTimeout(safetyTimer)
 })
 </script>
 
 <style scoped>
 .loader-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100%;
   height: 100%;
-  background: white;
+  background: #fff;
   z-index: 40;
+  /* Centered (matches the live original: justify-center items-center pb-[5vh]) */
   display: flex;
   justify-content: center;
-  align-items: flex-end;
+  align-items: center;
   padding-bottom: 5vh;
+  /* Subtle light-gray counter (original uses text-zinc-200) */
+  color: #e4e4e7;
 }
 
 .display {
   display: inline-block;
-  font-size: 3.75rem;
   line-height: 1em;
+  color: #e4e4e7;
+  font-size: 3.75rem;
 }
 
 @media (min-width: 1024px) {
@@ -76,26 +108,18 @@ onMounted(() => {
   .display { font-size: 150px; }
 }
 
-.--la-storia .display {
+/* Number — Italiana serif */
+.num .display {
   font-family: 'Italiana', sans-serif;
-  color: #304443;
 }
 
-.--eat-marry-love {
-  position: relative;
+/* Percent — Over the Rainbow cursive, offset to the right of the number
+   (absolute so the number stays centered as its digit count changes). */
+.pct {
+  position: absolute;
 }
 
-.--eat-marry-love .display {
+.pct .display {
   font-family: 'Over the Rainbow', cursive;
-  color: #b32c05;
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.5s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
 }
 </style>
