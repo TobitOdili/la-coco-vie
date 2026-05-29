@@ -13,6 +13,7 @@
       @chapter-hover="onChapterHover"
       @chapter-unhover="onChapterUnhover"
       @progress="onProgress"
+      @chapter-deselect="onChapterDeselect"
     />
 
     <!-- Navigation (always visible) -->
@@ -125,12 +126,24 @@ function toggleAbout() {
   aboutOpen.value = !aboutOpen.value
 }
 
-function goHome() {
-  webglSceneRef.value?.scene?.deselectChapter()
+// Reset the chapter-related UI state (shared by the back button and the
+// scroll-back exit). Does NOT run the scene animation.
+function resetChapterState() {
   selectedChapterIdx.value = null
   isHome.value = true
   document.title = 'Chapter — Milla Nova'
   sounds.forEach((s) => s.volume(0))
+}
+
+function goHome() {
+  webglSceneRef.value?.scene?.deselectChapter()
+  resetChapterState()
+}
+
+// Scroll-back exit (Issue #7): the scene already ran the reverse animation and
+// notified us — just reset the UI state (don't re-trigger the animation).
+function onChapterDeselect() {
+  resetChapterState()
 }
 
 function toggleSound() {

@@ -260,9 +260,17 @@ export function useChapterScene() {
   let scrollRotationY = 0
   let carouselTargetRot = 0
   let carouselLerpTarget = 0  // smooth lerp target like original f(current, target, .06)
+  // Scroll-driven chapter exit (Issue #7): accumulate back-scroll while a chapter
+  // is open; past the threshold run the reverse animation. The flags gate against
+  // re-triggering during the select-in / deselect-out animations.
+  let scrollExitAccum = 0
+  let isSelecting = false
+  let isDeselecting = false
+  const SCROLL_EXIT_THRESHOLD = 500
 
   let onSelectCallback = null
   let onHoverCallback = null
+  let onDeselectCallback = null
 
   // Loading progress (Issue #12) — gate the loader on real asset loads.
   // 13 textures load during init(): 1 logo + 4 txt + 8 poster SVGs.
@@ -850,9 +858,10 @@ export function useChapterScene() {
 
   function selectChapter(chIdx) {
     selectedIndex = chIdx
+    isSelecting = true
     if (onSelectCallback) onSelectCallback(chIdx)
 
-    const tl = gsap.timeline()
+    const tl = gsap.timeline({ onComplete: () => { isSelecting = false } })
 
     // Fade out txt mesh
     if (groupG.userData.txtMat) {
@@ -893,9 +902,10 @@ export function useChapterScene() {
   }
 
   function deselectChapter() {
-    if (selectedIndex === -1) return
+    if (selectedIndex === -1 || isDeselecting) return
+    isDeselecting = true
     const tl = gsap.timeline({
-      onComplete: () => { selectedIndex = -1 }
+      onComplete: () => { selectedIndex = -1; isDeselecting = false }
     })
 
     // Restore txt mesh
@@ -925,7 +935,25 @@ export function useChapterScene() {
   }
 
   function onScroll(delta) {
-    if (!introComplete || selectedIndex !== -1) return
+    if (!introComplete) return
+
+    // Scroll back (up) to exit a selected chapter (Issue #7). Accumulate upward
+    // scroll so a deliberate gesture is needed; ignore while animating in/out.
+    if (selectedIndex !== -1) {
+      if (isSelecting || isDeselecting) return
+      if (delta < 0) {
+        scrollExitAccum += -delta
+        if (scrollExitAccum >= SCROLL_EXIT_THRESHOLD) {
+          scrollExitAccum = 0
+          deselectChapter()
+          if (onDeselectCallback) onDeselectCallback()
+        }
+      } else {
+        scrollExitAccum = 0  // scrolling the other way cancels the gesture
+      }
+      return
+    }
+
     scrollRotationY -= delta * 0.0008
   }
 
@@ -961,6 +989,7 @@ export function useChapterScene() {
   function onSelect(cb) { onSelectCallback = cb }
   function onHover(cb) { onHoverCallback = cb }
   function onProgress(cb) { onProgressCallback = cb }
+  function onDeselect(cb) { onDeselectCallback = cb }
 
   return {
     init,
@@ -972,6 +1001,7 @@ export function useChapterScene() {
     onSelect,
     onHover,
     onProgress,
+    onDeselect,
     deselectChapter,
     getState: () => ({ selectedIndex, hoveredIndex, introComplete }),
   }
