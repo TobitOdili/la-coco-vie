@@ -125,6 +125,7 @@ function toggleSound() {
 }
 
 // React to chapter changes (title + ambient audio) — driven by the route.
+// immediate:true so a deep-linked /{slug} gets the right <title> on first load.
 watch(selectedChapterIdx, (idx) => {
   document.title = idx !== null ? `${CHAPTERS[idx].title} ${SITE.titles.chapterSuffix}` : SITE.titles.home
   if (sounds.length) {
@@ -133,7 +134,7 @@ watch(selectedChapterIdx, (idx) => {
       else s.volume(0)
     })
   }
-})
+}, { immediate: true })
 
 // Drive the scene to match the URL. Handles browser back/forward and deep links;
 // for an in-app card click the scene is already animating (guarded by getState).
