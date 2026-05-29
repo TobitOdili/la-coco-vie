@@ -148,6 +148,7 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 - Film-grain noise overlay rendering correctly (absolute-resolved asset URL)
 - Far-side ring cards fade to faint ghosts (depth-based opacity falloff)
 - Per-chapter CSS body classes for background colour transitions
+- Real `/{slug}` chapter routes — card-select animates into the page; deep-links, browser back/forward, and per-slug prerender all work (Phase 2 skeleton)
 
 ---
 
@@ -255,6 +256,7 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 | Asset paths 404 on GitHub Pages (`/images/` at root) | Use `import.meta.env.BASE_URL` via `asset()` helper, baked in at Vite build time |
 | GitHub Pages ignoring `_nuxt/` folder | Added `.nojekyll` in deploy workflow |
 | Loader `%` covered the number (only "%" visible) — absolute span with no offset | Relative `.counter` + `%` at `left:100%` so both glyphs sit side-by-side (`96e0d083`) |
+| Deep-link `<title>` stuck on home title — manual `document.title` clobbered by Nuxt head (once `pages/` active) | Manage title via reactive `useHead({ title })` instead |
 
 ---
 
@@ -353,9 +355,15 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
   `[slug].vue` transparent hero shows it through → scroll reveals the scaffold body).
   `nitro.prerender` emits per-slug shells for GH-Pages. Scene API gained `selectChapter`,
   `onReady`, enriched `getState`, idempotent select guard.
-  - Verified on Wine O'Clock: deep-link → intro → auto-select → scroll → back-home; fixed a
-    deep-link `<title>` bug (`immediate:true` on the title watch).
-  - Inner-page **content + assets** still open; #7 scroll-exit to be re-done at the page level.
+  - Verified on Wine O'Clock: deep-link → intro → auto-select → scroll → back-home.
+  - Fixed a deep-link `<title>` bug: first tried `immediate:true` on a `document.title` watch
+    (didn't work — once `pages/` is active, Nuxt's head system clobbers manual `document.title`),
+    then switched to a reactive `useHead({ title })`. Verified live (`/wine-o-clock` →
+    "Wine O'Clock — Chapter Milla Nova").
+  - **Downloaded + committed Wine O'Clock inner-page assets** from the reference (~2MB: 6
+    gallery photos named `{slug}-{sub}-NN.jpg`, 4 video poster frames, 2 dress thumbnails) per
+    the user's download+commit choice. Documented in CONTENT-AND-ASSETS (incl. dress-name TODO).
+  - Inner-page **content** still a scaffold; #7 scroll-exit to be re-done at the page level.
     Full status in `docs/PHASE-2-INNER-PAGES.md`.
 
 ### 2026-05-29 (session 6)

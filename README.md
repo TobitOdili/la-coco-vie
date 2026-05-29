@@ -25,13 +25,16 @@ custom GLSL shaders, GSAP animation, spatial audio, and chapter transitions.
 
 ## Status
 
-**The homepage is functionally complete (~9/10 visual parity).** Every tracked issue is
-resolved or consciously parked; the next phase is the per-chapter inner pages.
+**Homepage complete (~9/10 parity); Phase 2 (chapter inner pages) underway.**
 
-- ✅ **Done:** intro animation, carousel, hover, click-to-select, scroll-back exit, audio,
-  loading screen, custom cursor, noise overlay, per-card depth fade, per-chapter center text.
+- ✅ **Homepage done:** intro animation, carousel, hover, click-to-select, scroll-back exit,
+  audio, loading screen, custom cursor, noise overlay, per-card depth fade, per-chapter center text.
+- 🟢 **Phase 2 — routing skeleton landed:** real `/{slug}` chapter routes, persistent WebGL
+  shell (no intro replay), the card-select animation *is* the transition into the page,
+  deep-links + browser back/forward, per-slug prerender. Inner-page **content** is still a
+  scaffold; Wine O'Clock assets downloaded. See [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md).
 - ⏸️ **Parked:** ring viewing-angle (#4) — needs the original's exact group tilt; low ROI.
-- 🔮 **Next:** chapter inner pages, then re-skin.
+- 🔮 **Next:** Wine O'Clock inner-page content (vertical slice) → other chapters → re-skin.
 
 Full live status → [`PROGRESS.md`](PROGRESS.md) · issue history → [`AUDIT.md`](AUDIT.md) · plan → [`docs/ROADMAP.md`](docs/ROADMAP.md)
 
