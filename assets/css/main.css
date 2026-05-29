@@ -189,12 +189,16 @@ body::after {
   display: block;
 }
 
-/* Interaction capture layer — above canvas, below nav (z-10 nav = z-20) */
+/* Interaction capture layer — above canvas, below nav (z-10 nav = z-20).
+   Must set pointer-events:auto to override the `none` inherited from
+   #canvas-container — otherwise clicks fall through to .app-root and chapter
+   selection never fires (the @click handler lives on this element). */
 #canvas-hit-layer {
   position: absolute;
   inset: 0;
   z-index: 5;
   cursor: none;
+  pointer-events: auto;
 }
 
 /* ===== Menu Item ===== */
