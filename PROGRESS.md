@@ -240,7 +240,7 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 
 ### 🔮 Future phases (not bugs)
 
-**Chapter inner pages** *(future)* — full inner pages per chapter (ScrollTrigger, Mask, Gallery parallax, ImgText, Header, DressTail).
+**Chapter inner pages** *(Phase 2 — in progress)* — 🟢 **Routing skeleton + transition landed** (real `/{slug}` routes, persistent WebGL shell, card-select = transition, deep-links/back-forward, per-slug prerender). Inner-page **content** (sub-chapters, gallery/parallax, films, dress tails) is still a scaffold; **assets** TBD. Scope + status: [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md).
 
 **Dress tail cards** *(future)* — matched dresses per chapter on select (11 dresses: `symphony`, `tasmania`, `sydney`, `markita`, etc.).
 
@@ -342,6 +342,21 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
 ---
 
 ## 🗓 Session Log
+
+### 2026-05-29 (session 7)
+- **Phase 2 kickoff — routing skeleton + transition (verified live).** Introduced Nuxt `pages/`
+  with `app.vue` as a **persistent shell** (scene/nav/cursor/loader never unmount → no intro
+  replay). Real `/{slug}` chapter routes; **URL is the single source of truth** for selection
+  (state computed from `route.params.slug`; a watcher drives `scene.selectChapter/deselect` on
+  route change for back/forward + deep links; `scene.onReady` defers deep-link selection until
+  the intro ends). The existing card-select animation **is** the transition (card fills →
+  `[slug].vue` transparent hero shows it through → scroll reveals the scaffold body).
+  `nitro.prerender` emits per-slug shells for GH-Pages. Scene API gained `selectChapter`,
+  `onReady`, enriched `getState`, idempotent select guard.
+  - Verified on Wine O'Clock: deep-link → intro → auto-select → scroll → back-home; fixed a
+    deep-link `<title>` bug (`immediate:true` on the title watch).
+  - Inner-page **content + assets** still open; #7 scroll-exit to be re-done at the page level.
+    Full status in `docs/PHASE-2-INNER-PAGES.md`.
 
 ### 2026-05-29 (session 6)
 - **Documentation pass for handoff.** Added `README.md` (front door) + `docs/` set:

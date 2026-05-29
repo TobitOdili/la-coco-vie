@@ -1,7 +1,13 @@
 # Phase 2 — Chapter Inner Pages (Scope)
 
 Scope and build plan for the per-chapter inner pages. Grounded in a live inspection of the
-original (`/wine-o-clock`) on 2026-05-29. Status: **not yet started** — this is the plan.
+original (`/wine-o-clock`) on 2026-05-29.
+
+> **Status (2026-05-29):** ✅ **Routing skeleton + transition landed & verified** (build
+> steps 1–2). Real `/{slug}` routes work; the card-select animation is the transition into
+> the page; deep-links + browser back/forward + back-button all work; per-slug static shells
+> prerender for GH-Pages. **Inner-page content (steps 3–8) is still a scaffold** + the
+> **asset question is still open**. See [Skeleton — what landed](#skeleton--what-landed).
 
 - [What an inner page is](#what-an-inner-page-is)
 - [Section breakdown](#section-breakdown)
@@ -174,3 +180,40 @@ Incremental, verify-against-original at each step (same workflow as Phase 1):
 8. **Polish pass** — Browserless side-by-side per section.
 
 Recommend doing **Wine O'Clock end-to-end first** as the vertical slice, then replicate.
+
+---
+
+## Skeleton — what landed
+
+Steps 1–2 are done and verified live (Wine O'Clock). Architecture as built:
+
+- **Persistent shell**: `app.vue` holds the WebGL scene, nav, cursor, loader, and About —
+  these never unmount, so navigating chapters does **not** replay the 7s intro. It renders
+  `<NuxtPage/>` for route content.
+- **Pages**: `pages/index.vue` (inert — the carousel is the home content) and
+  `pages/[slug].vue` (chapter scaffold; unknown slug → `navigateTo('/')`).
+- **URL is the single source of truth**: `selectedChapterIdx` / `isHome` / accent / body
+  class are all computed from `route.params.slug`.
+  - Card click → scene runs the select animation → `app` does `router.push('/{slug}')`.
+  - Nav logo / back button / scroll-exit → `router.push('/')`.
+  - A `watch(route.params.slug)` reconciles **browser back/forward + deep links** by driving
+    `scene.selectChapter` / `deselectChapter` (guarded by `getState()` so it never double-runs
+    an in-progress animation).
+  - Deep-link on a fresh load defers selection via `scene.onReady()` until the intro ends.
+- **The transition IS the existing select animation** — the card fills the screen and shows
+  through `[slug].vue`'s transparent hero section; scrolling reveals the (scaffold) body.
+- **Prerender**: `nitro.prerender.routes` emits `/{slug}/index.html` shells for GH-Pages.
+
+### Verified
+Deep-link `/wine-o-clock` → intro → auto-select (card-as-hero) → scroll → back-to-home. URL,
+page mount/unmount, slug validation, and document title all correct.
+
+### Known follow-ups (content phase)
+- **Scroll-back exit (#7) on inner pages:** the inner-page overlay captures scroll, so the
+  *scene's* scroll-exit doesn't fire on a routed chapter. Exit is currently via nav logo /
+  back button / browser-back. Re-implement "scroll up past the top of the inner page → go
+  home" at the page level when building the scroll content.
+- **Hero fidelity:** the scaffold hero is transparent (shows the filled WebGL card). Confirm
+  whether the original's hero is exactly that or a separate treatment when styling.
+- **Keep `nitro.prerender.routes` in sync** with chapter slugs (also hardcoded in nuxt.config).
+- **#16** (About gray-on-gray) only affects the homepage; on an inner page the accent is set.
