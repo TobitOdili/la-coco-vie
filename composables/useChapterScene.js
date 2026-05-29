@@ -632,6 +632,10 @@ export function useChapterScene() {
     renderer.render(scene, camera)
   }
 
+  // Returns the SLOT index (i, 1–8) of the specific poster hit — NOT chapterIdx.
+  // Each chapter has two copies on the ring (front + mirrored back) sharing a
+  // chapterIdx; hovering must affect only the one slot the cursor is over
+  // (Issue #13). Use chapterIdxForSlot() to resolve the chapter when needed.
   function getHoveredPoster(clientX, clientY) {
     const ndcX = (clientX / width) * 2 - 1
     const ndcY = -(clientY / height) * 2 + 1
@@ -643,9 +647,16 @@ export function useChapterScene() {
       // find userData from the hit object or its parent
       const obj = intersects[0].object
       const data = obj.userData.isPosterHitbox ? obj.userData : (obj.parent && obj.parent.userData)
-      if (data && data.chapterIdx !== undefined) return data.chapterIdx
+      if (data && data.i !== undefined) return data.i
     }
     return -1
+  }
+
+  // Resolve the chapter index (0–3) for a given slot index (i). Used for
+  // chapter-keyed behaviour: video playback, txt swap, audio, selection.
+  function chapterIdxForSlot(slotI) {
+    const p = posters.find((p) => p.i === slotI)
+    return p ? p.chapterIdx : -1
   }
 
   function onMouseMove(e) {
@@ -656,39 +667,46 @@ export function useChapterScene() {
 
     if (!introComplete || selectedIndex !== -1) return
 
-    const chIdx = getHoveredPoster(e.clientX, e.clientY)
+    // hoveredIndex now tracks the SLOT index (i) so only the single hovered
+    // poster reacts — not its mirrored copy (Issue #13). chapterIdx is resolved
+    // for the audio/cursor callback so app.vue still receives 0–3.
+    const slotI = getHoveredPoster(e.clientX, e.clientY)
 
-    if (chIdx !== hoveredIndex) {
+    if (slotI !== hoveredIndex) {
       if (hoveredIndex !== -1) {
-        // Unhover previous
+        // Unhover previous slot
+        const prevChIdx = chapterIdxForSlot(hoveredIndex)
         unhoverChapter(hoveredIndex)
-        if (onHoverCallback) onHoverCallback(hoveredIndex, false)
+        if (onHoverCallback) onHoverCallback(prevChIdx, false)
       }
-      hoveredIndex = chIdx
-      if (chIdx !== -1) {
-        hoverChapter(chIdx)
-        if (onHoverCallback) onHoverCallback(chIdx, true)
+      hoveredIndex = slotI
+      if (slotI !== -1) {
+        hoverChapter(slotI)
+        if (onHoverCallback) onHoverCallback(chapterIdxForSlot(slotI), true)
       }
     }
   }
 
-  function hoverChapter(chIdx) {
-    const targets = posters.filter((p) => p.chapterIdx === chIdx)
-    targets.forEach((p) => {
-      gsap.to(p.material.uniforms.blendFactor, {
-        value: 2.0,
-        duration: 1.0,
-        ease: 'power2.inOut',
-        overwrite: true,
-      })
-      gsap.to(p.mesh.position, {
-        y: p.baseY + 7,
-        duration: 1.0,
-        ease: 'power2.inOut',
-        overwrite: true,
-      })
+  function hoverChapter(slotI) {
+    // Only the single hovered poster lifts (Issue #13) — not both ring copies.
+    const p = posters.find((p) => p.i === slotI)
+    if (!p) return
+    const chIdx = p.chapterIdx
+
+    gsap.to(p.material.uniforms.blendFactor, {
+      value: 2.0,
+      duration: 1.0,
+      ease: 'power2.inOut',
+      overwrite: true,
     })
-    // Play video
+    gsap.to(p.mesh.position, {
+      y: p.baseY + 7,
+      duration: 1.0,
+      ease: 'power2.inOut',
+      overwrite: true,
+    })
+
+    // Play video (chapter-keyed)
     const vid = videoElements[chIdx]
     if (vid) {
       vid.play().catch(() => {})
@@ -713,21 +731,23 @@ export function useChapterScene() {
     }
   }
 
-  function unhoverChapter(chIdx) {
-    const targets = posters.filter((p) => p.chapterIdx === chIdx)
-    targets.forEach((p) => {
-      gsap.to(p.material.uniforms.blendFactor, {
-        value: 0.0,
-        duration: 1.0,
-        ease: 'power2.inOut',
-        overwrite: true,
-      })
-      gsap.to(p.mesh.position, {
-        y: p.baseY,
-        duration: 1.0,
-        ease: 'power2.inOut',
-        overwrite: true,
-      })
+  function unhoverChapter(slotI) {
+    // Mirror of hoverChapter — only the single slot poster settles back down.
+    const p = posters.find((p) => p.i === slotI)
+    if (!p) return
+    const chIdx = p.chapterIdx
+
+    gsap.to(p.material.uniforms.blendFactor, {
+      value: 0.0,
+      duration: 1.0,
+      ease: 'power2.inOut',
+      overwrite: true,
+    })
+    gsap.to(p.mesh.position, {
+      y: p.baseY,
+      duration: 1.0,
+      ease: 'power2.inOut',
+      overwrite: true,
     })
     const vid = videoElements[chIdx]
     if (vid) {
@@ -738,9 +758,12 @@ export function useChapterScene() {
   function onClick(e) {
     if (!introComplete || selectedIndex !== -1) return
 
-    const chIdx = getHoveredPoster(e.clientX, e.clientY)
-    if (chIdx !== -1) {
-      selectChapter(chIdx)
+    // getHoveredPoster returns a slot index now — resolve to chapterIdx so
+    // selectChapter still selects the whole chapter (both copies animate).
+    const slotI = getHoveredPoster(e.clientX, e.clientY)
+    if (slotI !== -1) {
+      const chIdx = chapterIdxForSlot(slotI)
+      if (chIdx !== -1) selectChapter(chIdx)
     }
   }
 

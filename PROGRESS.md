@@ -147,11 +147,10 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 
 ### 🔴 High Priority
 
-**[#13] Cards mirrored on hover — both copies lift** *(new — 2026-05-24)*
-- Hovering a front card also raises the mirrored copy directly behind it (opposite side of ring)
-- Root cause: `hoverChapter(chIdx)` filters by `chapterIdx`, which is shared by both the front and back copy (posters 1–4 and 5–8 map to the same chapters). Should filter by poster slot `i` instead.
-- Fix: Change `getHoveredPoster` to return `data.i` (slot index); update `hoverChapter`/`unhoverChapter` to filter `p.i === slotI`; resolve `chapterIdx` from slot for audio/callbacks
-- See AUDIT.md Issue #13 for full code patch
+**[#13] Cards mirrored on hover — both copies lift** ✅ Fixed (2026-05-27)
+- Hovering a front card also raised the mirrored copy directly behind it (opposite side of ring)
+- Root cause: `hoverChapter(chIdx)` filtered by `chapterIdx`, which is shared by both the front and back copy (posters 1–4 and 5–8 map to the same chapters)
+- Fix: `getHoveredPoster` now returns the slot index `i`; added `chapterIdxForSlot(i)` helper; `hoverChapter`/`unhoverChapter` operate on the single slot poster (`p.i === slotI`); `chapterIdx` is resolved internally for video, txt swap (#9), audio callback, and `onClick → selectChapter`. Selection still animates both copies (correct).
 
 **[#12] Loading animation broken vs reference** *(new — 2026-05-24)*
 - Ours: bottom-center counter, linear rAF timing, CSS opacity fade, fake 1s timer
@@ -284,6 +283,12 @@ git add -A && git commit -m "your message" && git push
 ## 🗓 Session Log
 
 ### 2026-05-27 (session 5)
+- **[#13] Fixed mirrored hover** — hover is now keyed by slot index `i` instead of `chapterIdx`. Changes in `composables/useChapterScene.js`:
+  - `getHoveredPoster` returns the raycast-hit slot `i` (not `chapterIdx`); added `chapterIdxForSlot(i)` helper
+  - `onMouseMove` tracks the slot in `hoveredIndex`; resolves chapterIdx for the audio/cursor callback so app.vue still gets 0–3
+  - `hoverChapter(slotI)` / `unhoverChapter(slotI)` now act on the single hovered poster (`posters.find(p => p.i === slotI)`); resolve chIdx internally for video + txt swap
+  - `onClick` resolves chapterIdx from slot before `selectChapter`, so clicking still selects the whole chapter (both copies animate) — unchanged
+  - Verified `node --check` passes; preserves #9 txt swap, audio, selection, video play/pause
 - **[#9] Fixed center text not changing on hover** *(verified live)* — diagnosed via Browserless side-by-side: the center "EMBARK ON A FEAST..." text is the `txtMesh` (3D texture plane), not an HTML overlay. It was hardcoded to `txt-1.png` and never updated.
 - Changes in `composables/useChapterScene.js`:
   - Added `txtTextures = []` to scene state
