@@ -136,9 +136,11 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 - About panel toggle (blurs canvas)
 - Sound On/Off toggle
 - Loading screen — **real asset-gated** counter (gates on 13 textures), GSAP-eased number, GSAP fade exit, light-gray centered styling matching the original
-- Center txt (`txtMesh`) swaps per hovered chapter with a crossfade
+- Center txt (`txtMesh`) follows the front-facing card and swaps on hover (crossfade)
 - Hover affects only the single card under the cursor (not its mirrored ring copy)
 - Horizontal trackpad scroll rotates the carousel
+- Film-grain noise overlay rendering correctly (absolute-resolved asset URL)
+- Far-side ring cards fade to faint ghosts (depth-based opacity falloff)
 - Per-chapter CSS body classes for background colour transitions
 
 ---
@@ -148,7 +150,7 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 > Full audit with root causes, reproduction steps, and fix options in [`AUDIT.md`](./AUDIT.md)
 > Last full audit: 2026-05-19 | Issues #11–13 added: 2026-05-24 | #1,#2,#9,#10,#12,#13 resolved: 2026-05-27
 
-### ✅ Resolved (6)
+### ✅ Resolved — high priority
 
 **[#1] Cursor clipping / viewport overflow** ✅ (`59d6d91b`)
 - Switched cursor to top/left direct positioning, set `html { overflow: visible }`, removed the conflicting `.cursor.active` margin.
@@ -180,7 +182,7 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 
 **[#5] SVG colour saturation** — `renderer.toneMapping = THREE.NoToneMapping` + `outputColorSpace = SRGBColorSpace` are already set (line ~331); poster card colours read the same as the original in the side-by-side. No over-saturation observed. Closed (reopen if a closer colour sample disagrees).
 
-### 🟡 Medium Priority (open)
+### ✅ Resolved — medium / low
 
 **[#11] Logo-to-txtMesh spacing too small** ✅ Fixed (`55e0b4b1`, verified live)
 - Vertical gap between the CSS logo and the 3D `txtMesh` was too tight vs reference. Confirmed real in the 2026-05-27 side-by-side.
@@ -202,17 +204,23 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 - Root cause: `BASE_URL` builds as `./`, so `--noise-url` was `url('./images/noise.png')`. A relative `url()` in a CSS custom property resolves relative to the **`_nuxt/` CSS bundle** that consumes it → `_nuxt/images/noise.png` → 404 → Vercel SPA rewrite serves `index.html` (`text/html`, 200) → broken `background-image`. Real PNG was always fine at `/images/noise.png`.
 - Fix: in `app.vue`, resolve to an absolute URL with `new URL(path, location.href).href` before setting the var. Verified live (grain renders; var is absolute `https://…/images/noise.png`).
 
+**[#6] Background card opacity falloff** ✅ Fixed (`26ee0406` + `52b8cf9b`, verified live)
+- Far-side ring cards rendered as prominent white rectangles; the original keeps them as faint ghosts.
+- Fix in `useChapterScene.js`: `uOpacity` uniform multiplied into the final fragment alpha; set each frame from the card's distance to camera (`smoothstep` 95→125, floor 0.2), gated to carousel mode and lerped to avoid pops. First pass (fade to 0) over-faded; the 0.2 floor matched the original's faint-back-card look.
+
+### ⏸️ Parked
+
 **[#4] Card scale → ring viewing-angle** — ⏸️ Parked (2026-05-27)
 - Reframed: not card scale. Matched-parallax capture + scroll-sweep showed the replica's ring reads **face-on/wide-bowl** vs the original's **edge-on/tight-cluster** — a viewing-angle (group-tilt) difference.
 - **Live GPU-uniform extraction from the original** (hooked `uniformMatrix4fv`, forced projection re-upload via resize) confirms the major params **already match**: camera **FOV = 45°**, aspect 1.6, ring **radius = 40** (`ve=40`). Group Y-tilt ≈ `(-0.146, 0.81, 0.568)` vs our `(-0.089, 0.773, 0.628)` — off by only a few degrees.
 - The AUDIT's old lever (`baseDistance 44–46` / camera `z=105`) is **wrong** — those match. Residual is a subtle tilt; the 70° Y-spin can't be isolated from the carousel rotation in a single capture, so there's no exact target to copy.
 - Parked: closing it means blind tilt-nudging + updating `deselect`'s hardcoded angles + re-verifying intro/select — high-risk, low-ROI. See AUDIT.md §Issue #4.
 
-### 🟢 Lower Priority (future phases)
-
-**[#6] Background card opacity falloff** — far-side ring cards too visible; original barely shows them. Fix: opacity falloff based on world Z.
+### 🟢 Still open
 
 **[#7] Scroll-driven chapter-exit transition** — only the back button works; scrolling back should reverse. Fix: `setPageProgress` driven by scroll delta when a chapter is selected.
+
+### 🔮 Future phases (not bugs)
 
 **Chapter inner pages** *(future)* — full inner pages per chapter (ScrollTrigger, Mask, Gallery parallax, ImgText, Header, DressTail).
 
@@ -308,8 +316,9 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
 | v5 | ~6.5/10 | Shaders added, intro animation |
 | v8 | ~7.2/10 | Correct camera, group tilt |
 | v12 | ~7.8/10 | Hover/select/audio all working |
-| v17 (current) | ~8.5/10 | Fixed cursor, viewport, hover txt swap, single-card hover, horizontal scroll, real-gated loader |
-| Target | 9-10/10 | Resolve scale (#4), logo-txt spacing (#11), depth-order/opacity (#6); re-verify #5/#8 |
+| v17 | ~8.5/10 | Fixed cursor, viewport, hover txt swap, single-card hover, horizontal scroll, real-gated loader |
+| v22 (current) | ~9/10 | + logo-txt spacing (#11), front-card text (#14), noise texture (#3), far-card opacity falloff (#6); #5/#8 confirmed already-correct |
+| Target | 9.5-10/10 | Ring viewing-angle (#4, parked — needs original's exact tilt), scroll-driven exit (#7), then inner pages |
 
 ---
 
@@ -322,6 +331,7 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
 - **Audit accuracy pass:** corrected AUDIT.md #12 (centered light-gray, not bottom-left teal/red). Flagged two likely-stale issues for re-verification before any code change: **#8** (nav/logo looked centered in Browserless) and **#5** (`renderer.toneMapping = NoToneMapping` is already set, line ~331). Noted **#3** is GitHub-Pages-specific and may not reproduce on Vercel.
 - **[#11] Fixed** logo-to-txtMesh spacing (`txtMesh.position.y` 0 → -8); verified live. **[#8] & [#5] closed** after Browserless verification. **[#14] added** (default text ≠ front card).
 - **[#4] investigated → parked.** Matched-parallax capture + scroll-sweep reframed it as a ring viewing-angle (tilt) difference, not card scale. Extracted the original's live params via a `uniformMatrix4fv` GPU hook: **fov 45°, radius 40 already match**; residual is a subtle tilt with no cleanly-extractable target. Not worth risky geometry surgery — parked.
+- **[#6] Fixed** far-side cards too visible. Added a `uOpacity` uniform driven by per-card distance to camera (smoothstep 95→125, floor 0.2), gated to carousel mode + lerped. First pass faded fully (over-faded vs original); the 0.2 floor matched the original's faint-ghost back cards. Verified live; also confirmed #14 center text unaffected.
 - **[#3] Fixed** missing noise/grain texture (affected Vercel too). Relative `--noise-url` (`./images/noise.png`, from `BASE_URL='./'`) resolved vs the `_nuxt/` CSS bundle → 404 → SPA `text/html` fallback. Now resolved to an absolute URL via `new URL(path, location.href)`. Grain verified rendering live.
 - **[#14] Fixed** default center text not matching the front card. `frontChapterIdx()` (nearest poster to camera) + `setTxtChapter()` driven from the animate loop; intro completion sets it instantly. Rest-state verified live (text matches front Amour card, pink). Refines #9: unhover now reverts to the front card's text. Hover-swap logic unchanged (Browserless can't reliably hit the curved cards' flat hitboxes to re-screenshot — confirm hover manually).
 - **[#13] Fixed mirrored hover** *(verified live)* — hover is now keyed by slot index `i` instead of `chapterIdx`. Changes in `composables/useChapterScene.js`:

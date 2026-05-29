@@ -207,6 +207,17 @@ Our renderer may be applying tone mapping on top of sRGB output. Original uses:
 
 ## Issue #6 — Background Card Opacity 🟢 LOW
 
+> ✅ **RESOLVED 2026-05-27 (`26ee0406` + `52b8cf9b`).** Far-side cards rendered as
+> prominent white rectangles; the original keeps them as faint ghosts.
+> **Implemented:** added a `uOpacity` uniform multiplied into the final fragment alpha
+> (both front/back-face branches). Each frame, in carousel mode only, `uOpacity` is set
+> per card from its distance to the camera — `smoothstep(DEPTH_FADE_NEAR=95 →
+> DEPTH_FADE_FAR=125)` with a `DEPTH_FADE_FLOOR=0.2` so far cards fade to faint (not
+> gone, matching the original). Gated to `introComplete && selectedIndex===-1` (selected/
+> intro cards stay opaque) and lerped (0.1) to avoid pops at intro-end and during scroll.
+> First pass (full fade to 0) over-faded vs the original; the 0.2 floor matched it.
+> Verified live: back cards are faint outlines like the original.
+
 ### Symptom
 Cards at the far side of the ring are too visible in our replica. Original barely shows them.
 
@@ -656,5 +667,5 @@ rather than rotation angle (the group's 70° Y-tilt makes an angle calc unreliab
 | ~~3~~ | ~~Noise texture 404 — relative `--noise-url` resolves vs the `_nuxt/` CSS bundle~~ | ~~🟡 Medium~~ | ✅ Fixed (`1078a8f3`) — resolve `--noise-url` to an absolute URL via `new URL(path, location.href)`. Affected Vercel too (not just GH-Pages). Grain verified rendering live. |
 | 4 | Card scale → actually ring viewing-angle (tilt) | 🟡 Medium | ⏸️ Parked — GPU extraction confirms fov 45° + radius 40 already match; residual is subtle tilt, no clean target. See §Issue #4. |
 | ~~5~~ | ~~SVG colour saturation~~ | ~~🟡 Medium~~ | ✅ Closed — `NoToneMapping`+`SRGBColorSpace` already set; colours match in side-by-side. |
-| 6 | Background card opacity falloff | 🟢 Low | Open |
+| ~~6~~ | ~~Background card opacity falloff~~ | ~~🟢 Low~~ | ✅ Fixed (`26ee0406` + `52b8cf9b`) — `uOpacity` uniform driven by per-card distance to camera (smoothstep 95→125, floor 0.2); far cards now faint ghosts like the original. Verified live. |
 | 7 | Scroll-driven chapter exit | 🟢 Low | Open |
