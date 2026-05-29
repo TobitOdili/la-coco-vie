@@ -1,10 +1,8 @@
 <template>
   <div v-if="visible" ref="overlayRef" class="loader-overlay">
-    <span class="num">
-      <span class="display loader">{{ displayPct }}</span>
-    </span>
-    <span class="pct">
-      <span class="display loader">%</span>
+    <span class="counter">
+      <span class="num">{{ displayPct }}</span>
+      <span class="pct">%</span>
     </span>
   </div>
 </template>
@@ -93,7 +91,16 @@ onUnmounted(() => {
   color: #e4e4e7;
 }
 
-.display {
+/* The number is the centered element; the % hangs off its right edge.
+   .counter shrink-wraps to the number's width (the % is absolute / out of
+   flow), so the digit count (1–3 chars) never shifts the % onto the number. */
+.counter {
+  position: relative;
+  display: inline-block;
+}
+
+.num,
+.pct {
   display: inline-block;
   line-height: 1em;
   color: #e4e4e7;
@@ -101,25 +108,26 @@ onUnmounted(() => {
 }
 
 @media (min-width: 1024px) {
-  .display { font-size: 8rem; }
+  .num, .pct { font-size: 8rem; }
 }
 
 @media (min-width: 1280px) {
-  .display { font-size: 150px; }
+  .num, .pct { font-size: 150px; }
 }
 
 /* Number — Italiana serif */
-.num .display {
+.num {
   font-family: 'Italiana', sans-serif;
 }
 
-/* Percent — Over the Rainbow cursive, offset to the right of the number
-   (absolute so the number stays centered as its digit count changes). */
+/* Percent — Over the Rainbow cursive, sitting just to the right of the number
+   (matches the original's asymmetric typography). */
 .pct {
   position: absolute;
-}
-
-.pct .display {
+  left: 100%;
+  top: 0;
+  margin-left: 0.08em;
   font-family: 'Over the Rainbow', cursive;
+  white-space: nowrap;
 }
 </style>
