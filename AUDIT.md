@@ -119,6 +119,32 @@ The `--noise-url` CSS variable set via JS in `onMounted()` arrives **after** the
 
 ## Issue #4 — Card Scale / Camera Distance 🟡 MEDIUM
 
+> ⚠️ **Reframed + largely de-risked (2026-05-27).** The original symptom ("cards ~10%
+> too large/close") was wrong. A matched-parallax Browserless capture + scroll-sweep
+> showed the real difference is the **ring reads face-on/wide-bowl in the replica vs
+> edge-on/tight-cluster in the original** — a *viewing-angle* difference, not card scale.
+>
+> **Live GPU-uniform extraction from the original** (hooked `uniformMatrix4fv`,
+> forced a projection re-upload via resize) then confirmed the major params ALREADY MATCH:
+> - **Camera FOV = 45°** — matches replica exactly
+> - **Aspect 1.6**, projection standard perspective
+> - **`baseDistance` (ring radius) = 40** — already matches (`ve=40`, line 243)
+> - **Group Y-axis tilt** ≈ `(-0.146, 0.81, 0.568)` vs replica's computed
+>   `(-0.089, 0.773, 0.628)` for `(25°,70°,15°)` XYZ — close, off by a few degrees
+>   (original slightly more upright / less Z-lean).
+>
+> So the AUDIT's old fix (`baseDistance 44–46`, camera `z=105`) is **wrong** — those
+> already match. The residual is a **subtle group-tilt difference**, and the exact target
+> can't be cleanly extracted: the 70° Y-spin is entangled with the carousel rotation in a
+> single-frame capture, so there's no precise angle to copy.
+>
+> **Status: parked.** Closing the gap means blind-nudging the tilt (~few degrees) +
+> updating `deselectChapter`'s hardcoded `(25°,70°,15°)` + re-verifying intro/select each
+> cycle — high-risk, low-ROI with no target value. Revisit only if the original's full
+> group rotation can be recovered (e.g. multi-card modelView decomposition).
+>
+> _(Original symptom/notes below retained for history.)_
+
 ### Symptom
 Wine O'Clock card appears ~10% too large/close vs original. Cards spread too wide.
 
@@ -131,12 +157,12 @@ O._initialPosition = new Q(0, -15, 100)  // camera z=100
 ### Our values:
 ```js
 camera.position.set(0, -15, 100)  // matches ✅
-baseDistance = 42  // ring radius — may be slightly too small (cards appear closer)
+baseDistance = 40  // ring radius — CONFIRMED matches original (ve=40)
 ```
 
-### Fix Plan
-- Try `baseDistance = 44–46` to push cards slightly further apart
-- Or nudge camera to `z = 105`
+### Fix Plan (superseded — see note above)
+- ~~Try `baseDistance = 44–46`~~ — already 40 (matches original); do not change
+- ~~Or nudge camera to `z = 105`~~ — fov/projection confirmed matching
 
 ---
 
@@ -603,7 +629,7 @@ on hover (the `ae()` system is driven by scroll/front-index too).
 | ~~11~~ | ~~Logo-to-txtMesh spacing too small — txtMesh world Y=0 too high~~ | ~~🟡 Medium~~ | ✅ Fixed (`55e0b4b1`) — `txtMesh.position.y` 0 → -8 (~110px lower); text now clears the logo/subtitle. Verified live. |
 | 14 | Default center text doesn't match front-facing card (initial txt hardcoded) | 🟡 Medium | Open (new — 2026-05-27) |
 | 3 | Noise texture 404 on GitHub Pages | 🟡 Medium | Open (GH-Pages-specific; may not affect Vercel) |
-| 4 | Card scale slightly too large | 🟡 Medium | Open — needs matched-rotation capture |
+| 4 | Card scale → actually ring viewing-angle (tilt) | 🟡 Medium | ⏸️ Parked — GPU extraction confirms fov 45° + radius 40 already match; residual is subtle tilt, no clean target. See §Issue #4. |
 | ~~5~~ | ~~SVG colour saturation~~ | ~~🟡 Medium~~ | ✅ Closed — `NoToneMapping`+`SRGBColorSpace` already set; colours match in side-by-side. |
 | 6 | Background card opacity falloff | 🟢 Low | Open |
 | 7 | Scroll-driven chapter exit | 🟢 Low | Open |

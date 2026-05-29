@@ -196,8 +196,11 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 - **Note:** this is GitHub-Pages-specific (path resolution under `_nuxt/`). The primary deploy is now **Vercel** (`la-coco-vie.vercel.app`), where this likely doesn't reproduce — confirm before prioritising.
 - Fix: move to `assets/images/noise.png`; import via `url('~/assets/images/noise.png')`.
 
-**[#4] Card scale slightly too large** — ❓ needs a matched-rotation capture
-- Side-by-side shows the replica's cards fanning wider/flatter vs the original's tighter cluster, but the two captures sat at different carousel rotations — inconclusive. Pin both to the same rotation before judging. Candidate fix: `baseDistance = 44–46` or camera `z = 105`.
+**[#4] Card scale → ring viewing-angle** — ⏸️ Parked (2026-05-27)
+- Reframed: not card scale. Matched-parallax capture + scroll-sweep showed the replica's ring reads **face-on/wide-bowl** vs the original's **edge-on/tight-cluster** — a viewing-angle (group-tilt) difference.
+- **Live GPU-uniform extraction from the original** (hooked `uniformMatrix4fv`, forced projection re-upload via resize) confirms the major params **already match**: camera **FOV = 45°**, aspect 1.6, ring **radius = 40** (`ve=40`). Group Y-tilt ≈ `(-0.146, 0.81, 0.568)` vs our `(-0.089, 0.773, 0.628)` — off by only a few degrees.
+- The AUDIT's old lever (`baseDistance 44–46` / camera `z=105`) is **wrong** — those match. Residual is a subtle tilt; the 70° Y-spin can't be isolated from the carousel rotation in a single capture, so there's no exact target to copy.
+- Parked: closing it means blind tilt-nudging + updating `deselect`'s hardcoded angles + re-verifying intro/select — high-risk, low-ROI. See AUDIT.md §Issue #4.
 
 ### 🟢 Lower Priority (future phases)
 
@@ -269,6 +272,18 @@ Gotchas learned:
 - **Viewport quirk:** under `connectOverCDP`, `page.evaluate` may report
   `window.innerWidth/Height` as 800×600 while the screenshot canvas is larger —
   judge centering by computed `justifyContent/alignItems`, not by raw screenshot x.
+- **Matched comparisons:** pin the mouse to dead-center (`page.mouse.move(W/2,H/2)`)
+  before capturing — mouse parallax shifts the camera, and different cursor positions
+  make two runs look different. Even so, the two sites may rest at different carousel
+  rotations; a scroll-sweep filmstrip (`page.mouse.wheel`) helps find matched states.
+- **Extracting the original's Three.js params (no source access):** the scene objects
+  are in closures (unreachable from `window`), but the camera's matrices hit the GPU.
+  Hook `WebGL(2)RenderingContext.prototype.uniformMatrix4fv` to capture 4×4 uniforms.
+  Projection matrix (column-major) has `m[11]=-1, m[15]=0` → `fov = 2·atan(1/m[5])`,
+  `aspect = m[5]/m[0]`. NOTE: Three.js caches the projection uniform, so force a
+  re-upload by resizing the viewport during capture. Per-object modelView matrices
+  (`m[15]=1`) reveal the group's Y-axis tilt (the Y-spin can't be isolated from the
+  carousel rotation in a single frame). See `/tmp/bless/extract.mjs`.
 - Stitch side-by-side / contact sheets with `sharp`.
 
 ### Commit & push
@@ -299,6 +314,8 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
   - **Follow-up (`96e0d083`):** Browserless check caught the absolute `%` covering the number (only "%" visible). Restructured to a relative `.counter` with the number in flow and `%` at `left:100%` — both glyphs now visible side-by-side. Re-verified on Browserless (shows "0%" correctly).
   - Noted: under throttle the `%` rendered as a plain glyph (Over the Rainbow Google Font still downloading) — transient, not a layout bug.
 - **Audit accuracy pass:** corrected AUDIT.md #12 (centered light-gray, not bottom-left teal/red). Flagged two likely-stale issues for re-verification before any code change: **#8** (nav/logo looked centered in Browserless) and **#5** (`renderer.toneMapping = NoToneMapping` is already set, line ~331). Noted **#3** is GitHub-Pages-specific and may not reproduce on Vercel.
+- **[#11] Fixed** logo-to-txtMesh spacing (`txtMesh.position.y` 0 → -8); verified live. **[#8] & [#5] closed** after Browserless verification. **[#14] added** (default text ≠ front card).
+- **[#4] investigated → parked.** Matched-parallax capture + scroll-sweep reframed it as a ring viewing-angle (tilt) difference, not card scale. Extracted the original's live params via a `uniformMatrix4fv` GPU hook: **fov 45°, radius 40 already match**; residual is a subtle tilt with no cleanly-extractable target. Not worth risky geometry surgery — parked.
 - **[#13] Fixed mirrored hover** *(verified live)* — hover is now keyed by slot index `i` instead of `chapterIdx`. Changes in `composables/useChapterScene.js`:
   - `getHoveredPoster` returns the raycast-hit slot `i` (not `chapterIdx`); added `chapterIdxForSlot(i)` helper
   - `onMouseMove` tracks the slot in `hoveredIndex`; resolves chapterIdx for the audio/cursor callback so app.vue still gets 0–3
