@@ -222,6 +222,8 @@ export function useChapterScene() {
   let videoElements = []
   let videoTextures = []
   let txtTextures = []
+  let currentTxtChapter = 0              // chapter shown on the center txtMesh (#9/#14)
+  const _frontVec = new THREE.Vector3()  // scratch vec for front-card detection (#14)
   let canvasEl
   let width, height, aspectRatio
   // Original source:
@@ -588,6 +590,8 @@ export function useChapterScene() {
     gsap.delayedCall(7, () => {
       isIntro = false
       introComplete = true
+      // Sync the center text to whichever card the intro left at front (Issue #14)
+      setTxtChapter(frontChapterIdx(), true)
     })
   }
 
@@ -648,6 +652,12 @@ export function useChapterScene() {
       groupG.userData.txtMesh.lookAt(camera.position)
     }
 
+    // Keep center text synced to the front-facing card when idle (Issue #14).
+    // Hover (#9) overrides; skip during intro and while a chapter is selected.
+    if (introComplete && selectedIndex === -1 && hoveredIndex === -1) {
+      setTxtChapter(frontChapterIdx())
+    }
+
     renderer.render(scene, camera)
   }
 
@@ -706,6 +716,45 @@ export function useChapterScene() {
     }
   }
 
+  // Crossfade the center txtMesh to a chapter's txt (Issues #9 + #14).
+  // No-ops if that chapter is already showing.
+  function setTxtChapter(chIdx, instant = false) {
+    if (chIdx < 0 || chIdx === currentTxtChapter) return
+    const txtMat = groupG.userData.txtMat
+    const newTex = txtTextures[chIdx]
+    if (!txtMat || !newTex) return
+    currentTxtChapter = chIdx
+    gsap.killTweensOf(txtMat)
+    if (instant) {
+      txtMat.map = newTex
+      txtMat.needsUpdate = true
+      txtMat.opacity = 1.0
+      return
+    }
+    gsap.to(txtMat, {
+      opacity: 0,
+      duration: 0.15,
+      ease: 'power1.out',
+      onComplete: () => {
+        txtMat.map = newTex
+        txtMat.needsUpdate = true
+        gsap.to(txtMat, { opacity: 1.0, duration: 0.25, ease: 'power1.in' })
+      },
+    })
+  }
+
+  // Chapter index of the poster currently nearest the camera (front-facing).
+  // Robust to the group tilt + carousel rotation since it reads world positions.
+  function frontChapterIdx() {
+    let best = -1, bestDist = Infinity
+    for (const p of posters) {
+      p.mesh.getWorldPosition(_frontVec)
+      const d = _frontVec.distanceToSquared(camera.position)
+      if (d < bestDist) { bestDist = d; best = p.chapterIdx }
+    }
+    return best
+  }
+
   function hoverChapter(slotI) {
     // Only the single hovered poster lifts (Issue #13) — not both ring copies.
     const p = posters.find((p) => p.i === slotI)
@@ -731,23 +780,9 @@ export function useChapterScene() {
       vid.play().catch(() => {})
     }
 
-    // Swap txtMesh texture to hovered chapter (Issue #9) — quick crossfade.
-    // The last-hovered chapter's text persists after unhover (matches original).
-    const txtMatRef = groupG.userData.txtMat
-    if (txtMatRef && txtTextures[chIdx] && txtMatRef.map !== txtTextures[chIdx]) {
-      const newTex = txtTextures[chIdx]
-      gsap.killTweensOf(txtMatRef)
-      gsap.to(txtMatRef, {
-        opacity: 0,
-        duration: 0.15,
-        ease: 'power1.out',
-        onComplete: () => {
-          txtMatRef.map = newTex
-          txtMatRef.needsUpdate = true
-          gsap.to(txtMatRef, { opacity: 1.0, duration: 0.25, ease: 'power1.in' })
-        },
-      })
-    }
+    // Swap center text to the hovered chapter (Issue #9). On unhover the animate
+    // loop reverts it to the front-facing card's text (Issue #14).
+    setTxtChapter(chIdx)
   }
 
   function unhoverChapter(slotI) {
