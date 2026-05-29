@@ -251,9 +251,11 @@ export function useChapterScene() {
   const introDistance = 75
   const SELECTED_Y = -70
   // Depth-based opacity falloff (Issue #6): cards nearer than NEAR are fully
-  // opaque, beyond FAR fully transparent — fades the far side of the ring.
+  // opaque, beyond FAR fade to DEPTH_FADE_FLOOR — fades the far side of the ring
+  // toward faint ghosts (the original keeps back cards barely visible, not gone).
   const DEPTH_FADE_NEAR = 95
   const DEPTH_FADE_FAR = 125
+  const DEPTH_FADE_FLOOR = 0.2
 
   let scrollRotationY = 0
   let carouselTargetRot = 0
@@ -664,7 +666,8 @@ export function useChapterScene() {
           const dist = _frontVec.distanceTo(camera.position)
           const t = (dist - DEPTH_FADE_NEAR) / (DEPTH_FADE_FAR - DEPTH_FADE_NEAR)
           const op = 1.0 - Math.min(1, Math.max(0, t))
-          target = op * op * (3 - 2 * op)  // smoothstep
+          const ss = op * op * (3 - 2 * op)  // smoothstep
+          target = DEPTH_FADE_FLOOR + (1 - DEPTH_FADE_FLOOR) * ss
         }
         const cur = p.material.uniforms.uOpacity.value
         p.material.uniforms.uOpacity.value = cur + (target - cur) * 0.1
