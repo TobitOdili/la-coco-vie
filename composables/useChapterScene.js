@@ -392,7 +392,10 @@ export function useChapterScene() {
     const txtMat = new THREE.MeshBasicMaterial({ map: txtTextures[0], transparent: true, opacity: 1.0, depthWrite: false, alphaTest: 0.5 })
     txtMat.toneMapped = false
     const txtMesh = new THREE.Mesh(txtGeo, txtMat)
-    txtMesh.position.set(0, 0, 20) // z=20 matches original (le.position.z = 20)
+    // y=-8 pushes the text lower on screen so it clears the top logo/subtitle
+    // (Issue #11 — at y=0 it projected too high given the camera tilt). z=20
+    // matches original (le.position.z = 20).
+    txtMesh.position.set(0, -8, 20)
     scene.add(txtMesh)
     groupG.userData.txtMesh = txtMesh
     groupG.userData.txtMat = txtMat
