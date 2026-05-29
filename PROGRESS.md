@@ -283,7 +283,7 @@ git add -A && git commit -m "your message" && git push
 ## 🗓 Session Log
 
 ### 2026-05-27 (session 5)
-- **[#13] Fixed mirrored hover** — hover is now keyed by slot index `i` instead of `chapterIdx`. Changes in `composables/useChapterScene.js`:
+- **[#13] Fixed mirrored hover** *(verified live)* — hover is now keyed by slot index `i` instead of `chapterIdx`. Changes in `composables/useChapterScene.js`:
   - `getHoveredPoster` returns the raycast-hit slot `i` (not `chapterIdx`); added `chapterIdxForSlot(i)` helper
   - `onMouseMove` tracks the slot in `hoveredIndex`; resolves chapterIdx for the audio/cursor callback so app.vue still gets 0–3
   - `hoverChapter(slotI)` / `unhoverChapter(slotI)` now act on the single hovered poster (`posters.find(p => p.i === slotI)`); resolve chIdx internally for video + txt swap
