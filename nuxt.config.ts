@@ -10,6 +10,16 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   css: ['~/assets/css/main.css'],
   ssr: false,
+  // Emit a static shell for each chapter route so deep links resolve on static hosts
+  // (GitHub Pages has no SPA rewrite). Vercel doesn't need this but it's harmless.
+  // NOTE: keep this list in sync with the `slug`s in CHAPTERS (composables/
+  // useChapterScene.js). Hardcoded here to avoid importing the Three.js-heavy scene
+  // module into the build config.
+  nitro: {
+    prerender: {
+      routes: ['/', '/eat-marry-love', '/la-storia', '/wine-o-clock', '/amour-getaway'],
+    },
+  },
   vite: {
     plugins: [tailwindcss()],
     server: {

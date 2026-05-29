@@ -6,7 +6,7 @@
     <!-- Custom cursor -->
     <CustomCursor ref="cursorRef" />
 
-    <!-- WebGL Scene -->
+    <!-- WebGL Scene — persistent across routes (never unmounts, so no intro replay) -->
     <WebGLScene
       ref="webglSceneRef"
       @chapter-select="onChapterSelect"
@@ -15,6 +15,10 @@
       @progress="onProgress"
       @chapter-deselect="onChapterDeselect"
     />
+
+    <!-- Routed page content. Empty on '/' (the scene IS the homepage); the chapter
+         inner page renders here on '/{slug}'. -->
+    <NuxtPage />
 
     <!-- Navigation (always visible) -->
     <SiteNav
@@ -32,48 +36,48 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { CHAPTERS } from '~/composables/useChapterScene'
 import { SITE } from '~/site.config'
+
+// ── Routing is the single source of truth for which chapter is open ──────────
+// '/'        → homepage (carousel)
+// '/{slug}'  → that chapter selected + its inner page. The scene runs the
+//              select/deselect animations; the route watcher below drives them.
+const route = useRoute()
+const router = useRouter()
+const slugToIdx = (slug) => (slug ? CHAPTERS.findIndex((c) => c.slug === slug) : -1)
 
 const appRoot = ref(null)
 const cursorRef = ref(null)
 const webglSceneRef = ref(null)
 const aboutOpen = ref(false)
-const selectedChapterIdx = ref(null)
 const soundOn = ref(false)
-const isHome = ref(true)
 const loaded = ref(false)
 const loadProgress = ref(0)
 
-// Audio (lazily initialized on first user interaction)
+// Derived from the route — no manual selection state to keep in sync.
+const selectedChapterIdx = computed(() => {
+  const i = slugToIdx(route.params.slug)
+  return i === -1 ? null : i
+})
+const isHome = computed(() => !route.params.slug)
+const currentChapter = computed(() =>
+  selectedChapterIdx.value !== null ? CHAPTERS[selectedChapterIdx.value] : null
+)
+const currentAccent = computed(() => currentChapter.value?.accent || '#b32c05')
+const chapterClass = computed(() => (currentChapter.value ? `--${currentChapter.value.slug}` : ''))
+
+function onLoaded() { loaded.value = true }
+
+// Real asset-load progress from the scene (Issue #12). Monotonic so it never jumps back.
+function onProgress(pct) { if (pct > loadProgress.value) loadProgress.value = pct }
+
+// ── Audio (lazily initialized on first user interaction) ─────────────────────
 let howlerModule = null
 let sounds = []
 let tickSound = null
 let audioInitialized = false
-
-const currentChapter = computed(() =>
-  selectedChapterIdx.value !== null ? CHAPTERS[selectedChapterIdx.value] : null
-)
-
-const currentAccent = computed(() => currentChapter.value?.accent || '#b32c05')
-
-const chapterClass = computed(() => {
-  if (selectedChapterIdx.value !== null && currentChapter.value) {
-    return `--${currentChapter.value.slug}`
-  }
-  return ''
-})
-
-function onLoaded() {
-  loaded.value = true
-}
-
-// Real asset-load progress from the scene (Issue #12). Keep it monotonic so
-// the counter never visibly jumps backwards.
-function onProgress(pct) {
-  if (pct > loadProgress.value) loadProgress.value = pct
-}
 
 async function initAudio() {
   if (audioInitialized) return
@@ -83,30 +87,22 @@ async function initAudio() {
     howlerModule = Howler
     const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
     tickSound = new Howl({ src: [`${base}/audio/tick.mp3`], volume: 0.4 })
-    sounds = CHAPTERS.map((ch) => new Howl({
-      src: [ch.audio],
-      loop: true,
-      volume: 0,
-      html5: true,
-    }))
+    sounds = CHAPTERS.map((ch) => new Howl({ src: [ch.audio], loop: true, volume: 0, html5: true }))
   } catch (e) {
     console.warn('Audio init failed:', e)
   }
 }
 
+// ── Navigation intents → all funnel through the URL ──────────────────────────
+// Scene fired a click-select → reflect it in the URL. The route watcher sees the
+// scene is already animating and won't re-trigger.
 function onChapterSelect(idx) {
-  selectedChapterIdx.value = idx
-  isHome.value = false
-  if (currentChapter.value) {
-    document.title = `${currentChapter.value.title} ${SITE.titles.chapterSuffix}`
-  }
-  if (soundOn.value && sounds[idx]) {
-    sounds.forEach((s, i) => {
-      if (i === idx) { s.volume(0.5); if (!s.playing()) s.play() }
-      else s.volume(0)
-    })
-  }
+  const slug = CHAPTERS[idx].slug
+  if (route.params.slug !== slug) router.push(`/${slug}`)
 }
+// Scene fired scroll-back exit, or the nav logo / back button was used → go home.
+function onChapterDeselect() { if (route.params.slug) router.push('/') }
+function goHome() { if (route.params.slug) router.push('/') }
 
 function onChapterHover(idx) {
   cursorRef.value?.activate()
@@ -117,55 +113,66 @@ function onChapterHover(idx) {
     })
   }
 }
-
 function onChapterUnhover() {
   cursorRef.value?.deactivate()
   if (sounds.length) sounds.forEach((s) => s.volume(0))
 }
 
-function toggleAbout() {
-  aboutOpen.value = !aboutOpen.value
-}
-
-// Reset the chapter-related UI state (shared by the back button and the
-// scroll-back exit). Does NOT run the scene animation.
-function resetChapterState() {
-  selectedChapterIdx.value = null
-  isHome.value = true
-  document.title = SITE.titles.home
-  sounds.forEach((s) => s.volume(0))
-}
-
-function goHome() {
-  webglSceneRef.value?.scene?.deselectChapter()
-  resetChapterState()
-}
-
-// Scroll-back exit (Issue #7): the scene already ran the reverse animation and
-// notified us — just reset the UI state (don't re-trigger the animation).
-function onChapterDeselect() {
-  resetChapterState()
-}
-
+function toggleAbout() { aboutOpen.value = !aboutOpen.value }
 function toggleSound() {
   soundOn.value = !soundOn.value
   if (howlerModule) howlerModule.mute(!soundOn.value)
 }
+
+// React to chapter changes (title + ambient audio) — driven by the route.
+watch(selectedChapterIdx, (idx) => {
+  document.title = idx !== null ? `${CHAPTERS[idx].title} ${SITE.titles.chapterSuffix}` : SITE.titles.home
+  if (sounds.length) {
+    sounds.forEach((s, i) => {
+      if (idx !== null && i === idx && soundOn.value) { s.volume(0.5); if (!s.playing()) s.play() }
+      else s.volume(0)
+    })
+  }
+})
+
+// Drive the scene to match the URL. Handles browser back/forward and deep links;
+// for an in-app card click the scene is already animating (guarded by getState).
+let pendingIdx = null
+function syncSceneToRoute() {
+  const scene = webglSceneRef.value?.scene
+  if (!scene) return
+  const idx = slugToIdx(route.params.slug)
+  const st = scene.getState()
+  if (idx === -1) {
+    if (st.selectedIndex !== -1 && !st.isDeselecting) scene.deselectChapter()
+  } else if (!st.introComplete) {
+    pendingIdx = idx // defer until the intro finishes (deep link on fresh load)
+  } else if (st.selectedIndex !== idx && !st.isSelecting) {
+    scene.selectChapter(idx)
+  }
+}
+watch(() => route.params.slug, syncSceneToRoute)
 
 const initAudioOnce = () => initAudio()
 
 onMounted(() => {
   window.addEventListener('click', initAudioOnce, { once: true })
   window.addEventListener('touchstart', initAudioOnce, { once: true })
-  // Resolve the noise texture to an ABSOLUTE url against the document URL.
-  // A relative path (e.g. './images/noise.png' when BASE_URL is './') would be
-  // re-resolved by the browser relative to the _nuxt/ CSS bundle that consumes
-  // var(--noise-url) → _nuxt/images/noise.png → 404 → SPA HTML fallback → no grain.
-  // Resolving against location.href yields /images/noise.png (the real PNG) on
-  // Vercel root and /<repo>/images/noise.png on GitHub Pages.
+
+  // Resolve the noise texture to an ABSOLUTE url (see Issue #3 / ARCHITECTURE).
   const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
   const noiseUrl = new URL(`${base}/images/noise.png`, window.location.href).href
   document.documentElement.style.setProperty('--noise-url', `url('${noiseUrl}')`)
+
+  // Apply any deep-linked chapter once the intro finishes (selection is gated until then).
+  const scene = webglSceneRef.value?.scene
+  if (scene) {
+    scene.onReady(() => {
+      if (pendingIdx !== null) { scene.selectChapter(pendingIdx); pendingIdx = null }
+      else syncSceneToRoute()
+    })
+    syncSceneToRoute() // in case we mounted already-ready
+  }
 })
 
 onUnmounted(() => {

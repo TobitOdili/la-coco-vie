@@ -271,6 +271,7 @@ export function useChapterScene() {
   let onSelectCallback = null
   let onHoverCallback = null
   let onDeselectCallback = null
+  let onReadyCallback = null  // fired once when the intro finishes (for deep-link selection)
 
   // Loading progress (Issue #12) — gate the loader on real asset loads.
   // 13 textures load during init(): 1 logo + 4 txt + 8 poster SVGs.
@@ -612,6 +613,8 @@ export function useChapterScene() {
       introComplete = true
       // Sync the center text to whichever card the intro left at front (Issue #14)
       setTxtChapter(frontChapterIdx(), true)
+      // Let the app apply any deep-linked chapter now that selection is allowed (Phase 2)
+      if (onReadyCallback) onReadyCallback()
     })
   }
 
@@ -857,6 +860,7 @@ export function useChapterScene() {
   }
 
   function selectChapter(chIdx) {
+    if (chIdx === selectedIndex) return  // idempotent — safe to call from the route watcher
     selectedIndex = chIdx
     isSelecting = true
     if (onSelectCallback) onSelectCallback(chIdx)
@@ -990,6 +994,7 @@ export function useChapterScene() {
   function onHover(cb) { onHoverCallback = cb }
   function onProgress(cb) { onProgressCallback = cb }
   function onDeselect(cb) { onDeselectCallback = cb }
+  function onReady(cb) { onReadyCallback = cb }
 
   return {
     init,
@@ -1002,7 +1007,9 @@ export function useChapterScene() {
     onHover,
     onProgress,
     onDeselect,
+    onReady,
+    selectChapter,    // exposed so the route watcher can drive selection (Phase 2)
     deselectChapter,
-    getState: () => ({ selectedIndex, hoveredIndex, introComplete }),
+    getState: () => ({ selectedIndex, hoveredIndex, introComplete, isSelecting, isDeselecting }),
   }
 }
