@@ -158,7 +158,8 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 
 **[#9] Center text doesn't change on hover** ✅ (`1ec352e2`, verified live)
 - The center text IS the `txtMesh` (3D texture plane), not HTML — it was hardcoded to `txt-1.png`.
-- Fix: preloaded all 4 `txt-1..4.png` into `txtTextures[]`; `hoverChapter` crossfades the material `.map` to the hovered chapter's txt (0.15s out → swap → 0.25s in). Last-hovered persists.
+- Fix: preloaded all 4 `txt-1..4.png` into `txtTextures[]`; `hoverChapter` crossfades the material `.map` to the hovered chapter's txt (0.15s out → swap → 0.25s in).
+- _Refined by #14 (`e4e80d2e`): the crossfade now lives in `setTxtChapter()`, and unhover reverts to the front card's text instead of persisting the last-hovered (matches original)._
 
 **[#10] Horizontal scroll doesn't rotate carousel** ✅ (`c9562a21`, verified live)
 - Both `vsInstance.on` and the `wheel` fallback in `WebGLScene.vue` now pass `deltaY - deltaX` (was only `deltaY`), matching the original's `(de.y - de.x)`.
@@ -186,10 +187,15 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 - Root cause: `txtMesh.position.set(0, 0, 20)` — world Y=0 projects too high given camera tilt.
 - Fix: moved to `txtMesh.position.set(0, -8, 20)` (~110px lower on screen). Browserless confirms the center text now clears the logo/subtitle with a matching "+" marker gap, like the original.
 
-**[#14] Default center text doesn't match the front-facing card** *(new — 2026-05-27)*
-- On load the center `txtMesh` shows `txtTextures[0]` (txt-1.png) regardless of which card is at front. Browserless: replica front card = Wine O'Clock but text = La Storia ("EMBARK…HEART OF ITALY"); the original shows the front card's matching text ("…JOURNEY THROUGH THE VINEYARDS").
-- Root cause: #9 fixed *hover* swapping, but the initial/default txt is hardcoded and isn't synced to the front-facing card (or to carousel rotation).
-- Fix (later — flagged to revisit): set the initial txt to the front card's chapter on load; ideally keep txt synced as the carousel rotates a new card to front (relates to the `ae()` / scroll-driven system, cf. #7).
+**[#14] Default center text doesn't match the front-facing card** ✅ Fixed (`e4e80d2e`, rest-state verified live)
+- On load the center `txtMesh` showed `txtTextures[0]` regardless of which card was at front (showed La Storia "EMBARK…" while the front card was different).
+- Fix in `useChapterScene.js`:
+  - `setTxtChapter(chIdx, instant)` — centralizes the crossfade (refactored out of #9's `hoverChapter`); no-ops if already showing that chapter
+  - `frontChapterIdx()` — poster **nearest the camera** (robust to group tilt + carousel rotation, which a rotation-angle calc can't be)
+  - animate loop keeps the center text synced to the front card when idle (`introComplete && selectedIndex===-1 && hoveredIndex===-1`); intro completion sets it instantly
+- Verified via Browserless: rest text now reads the front card's copy (Amour Getaway) in the correct pink color — was mismatched before.
+- ⚠️ **Behavior refinement to #9:** unhover now reverts to the **front card's** text (via the animate-loop front-tracking) instead of persisting the last-hovered chapter — this matches the original. Hover-swap logic itself is unchanged (couldn't re-screenshot hover on Browserless — curved cards' flat hitboxes are hard to target remotely; verify manually as #9 was).
+- Note: which card rests at front (Amour vs the original's choice) is the parked rotation/#4 territory; #14 only ensures the text matches *our* front card.
 
 **[#3] Noise texture 404 on GitHub Pages**
 - `_nuxt/images/noise.png` resolves to the wrong path inside the compiled CSS bundle.
@@ -316,6 +322,7 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
 - **Audit accuracy pass:** corrected AUDIT.md #12 (centered light-gray, not bottom-left teal/red). Flagged two likely-stale issues for re-verification before any code change: **#8** (nav/logo looked centered in Browserless) and **#5** (`renderer.toneMapping = NoToneMapping` is already set, line ~331). Noted **#3** is GitHub-Pages-specific and may not reproduce on Vercel.
 - **[#11] Fixed** logo-to-txtMesh spacing (`txtMesh.position.y` 0 → -8); verified live. **[#8] & [#5] closed** after Browserless verification. **[#14] added** (default text ≠ front card).
 - **[#4] investigated → parked.** Matched-parallax capture + scroll-sweep reframed it as a ring viewing-angle (tilt) difference, not card scale. Extracted the original's live params via a `uniformMatrix4fv` GPU hook: **fov 45°, radius 40 already match**; residual is a subtle tilt with no cleanly-extractable target. Not worth risky geometry surgery — parked.
+- **[#14] Fixed** default center text not matching the front card. `frontChapterIdx()` (nearest poster to camera) + `setTxtChapter()` driven from the animate loop; intro completion sets it instantly. Rest-state verified live (text matches front Amour card, pink). Refines #9: unhover now reverts to the front card's text. Hover-swap logic unchanged (Browserless can't reliably hit the curved cards' flat hitboxes to re-screenshot — confirm hover manually).
 - **[#13] Fixed mirrored hover** *(verified live)* — hover is now keyed by slot index `i` instead of `chapterIdx`. Changes in `composables/useChapterScene.js`:
   - `getHoveredPoster` returns the raycast-hit slot `i` (not `chapterIdx`); added `chapterIdxForSlot(i)` helper
   - `onMouseMove` tracks the slot in `hoveredIndex`; resolves chapterIdx for the audio/cursor callback so app.vue still gets 0–3

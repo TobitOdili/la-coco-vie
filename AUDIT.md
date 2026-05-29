@@ -613,6 +613,17 @@ on hover (the `ae()` system is driven by scroll/front-index too).
   ring rotates (overlaps with the `ae()` / scroll-driven work in #7). Resolve front index
   from `carousel.animatedRotationY` → nearest slot → `chapterIdxForSlot()`.
 
+### ✅ Resolved (`e4e80d2e`, 2026-05-27) — Full approach
+Implemented the full version, but front-index is resolved by **world-space proximity**
+rather than rotation angle (the group's 70° Y-tilt makes an angle calc unreliable):
+- `setTxtChapter(chIdx, instant)` centralizes the crossfade (pulled out of `hoverChapter`).
+- `frontChapterIdx()` = poster whose `getWorldPosition()` is nearest `camera.position`.
+- animate loop calls `setTxtChapter(frontChapterIdx())` when idle (`introComplete &&
+  selectedIndex===-1 && hoveredIndex===-1`); `runIntro`'s completion sets it instantly.
+- Side effect (intended): unhover now reverts to the front card's text instead of
+  persisting the last-hovered (supersedes #9's persist behavior; matches original).
+- Verified live (rest state): center text matches the front card in the correct colour.
+
 ---
 
 ## Updated Priority Order (as of 2026-05-27)
@@ -627,7 +638,7 @@ on hover (the `ae()` system is driven by scroll/front-index too).
 | ~~10~~ | ~~Horizontal scroll doesn't rotate carousel — `deltaX` ignored~~ | ~~🔴 High~~ | ✅ Fixed (`c9562a21`) — both `vsInstance.on` and `wheel` fallback now pass `deltaY - deltaX` |
 | ~~8~~ | ~~Center text/logo offset right — container width centering~~ | ~~🔴 High~~ | ✅ Closed — Browserless side-by-side (×2) shows nav/logo centered identically; no shift. Resolved by `59d6d91b`. |
 | ~~11~~ | ~~Logo-to-txtMesh spacing too small — txtMesh world Y=0 too high~~ | ~~🟡 Medium~~ | ✅ Fixed (`55e0b4b1`) — `txtMesh.position.y` 0 → -8 (~110px lower); text now clears the logo/subtitle. Verified live. |
-| 14 | Default center text doesn't match front-facing card (initial txt hardcoded) | 🟡 Medium | Open (new — 2026-05-27) |
+| ~~14~~ | ~~Default center text doesn't match front-facing card (initial txt hardcoded)~~ | ~~🟡 Medium~~ | ✅ Fixed (`e4e80d2e`) — `frontChapterIdx()` (nearest poster to camera) drives `setTxtChapter()` from the animate loop; intro completion sets it instantly. Rest-state verified live. |
 | 3 | Noise texture 404 on GitHub Pages | 🟡 Medium | Open (GH-Pages-specific; may not affect Vercel) |
 | 4 | Card scale → actually ring viewing-angle (tilt) | 🟡 Medium | ⏸️ Parked — GPU extraction confirms fov 45° + radius 40 already match; residual is subtle tilt, no clean target. See §Issue #4. |
 | ~~5~~ | ~~SVG colour saturation~~ | ~~🟡 Medium~~ | ✅ Closed — `NoToneMapping`+`SRGBColorSpace` already set; colours match in side-by-side. |
