@@ -110,6 +110,7 @@ Each doc has **one job** — start with the README, then go deep where needed.
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | **How it works** — scene, shaders, state flow, file-by-file, QA workflow |
 | [`docs/CONTENT-AND-ASSETS.md`](docs/CONTENT-AND-ASSETS.md) | Chapter data model + asset inventory + **how to re-skin** |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Phases (homepage → inner pages → re-skin) + attribution |
+| [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md) | **Next up** — scope & build plan for the chapter inner pages |
 | [`PROGRESS.md`](PROGRESS.md) | **Living status** — what works, resolved/open issues, dev workflow, session log |
 | [`AUDIT.md`](AUDIT.md) | Issue-by-issue **forensic history** (root causes, fixes, commit refs) |
 

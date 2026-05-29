@@ -20,6 +20,10 @@ Remaining homepage polish (optional, low priority):
 
 ## Phase 2 — Chapter inner pages 🔮 (next)
 
+> **Full scope & build plan:** [`PHASE-2-INNER-PAGES.md`](PHASE-2-INNER-PAGES.md) — grounded
+> in a live inspection of the original (`/wine-o-clock`): real `/{slug}` routes, ~10.5 screens
+> of scroll, 3 numbered sub-chapters, galleries/parallax/films, and the dress-tail cards.
+
 Each chapter on the original has a full inner page reached after selection. Not yet built.
 From analysis of the original, an inner page composes roughly these pieces:
 
