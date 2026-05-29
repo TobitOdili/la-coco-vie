@@ -17,16 +17,13 @@
           </svg>
         </div>
         <div class="w-full md:w-10/12 lg:w-8/12 mx-auto mt-4 lg:mt-8">
-          <div class="movie text-accent">
-            IMMERSE YOURSELF into the CINEMATOGRAPHICAL-LIKE EXPERIENCE
-          </div>
-          <div class="movie text-accent mb-6">
-            to DISCOVER our NEWEST COLLECTION "CHAPTER BRIDE".
-          </div>
-          <div class="movie text-accent">
-            the COLLECTION SHOWCASE COMPRISES FOUR DISTINCT FILMS about ITALIAN-INSPIRED WEDDINGS,
-            EACH WITH ITS OWN STORYLINE and WEDDING THEME, yet all CENTERED AROUND the MAIN FOCUS:
-            the BRIDE, who BECOMES the FOCAL POINT of the ENTIRE WEDDING JOURNEY.
+          <div
+            v-for="(p, i) in SITE.about"
+            :key="i"
+            class="movie text-accent"
+            :class="{ 'mb-6': p.gap }"
+          >
+            {{ p.text }}
           </div>
         </div>
       </div>
@@ -42,6 +39,8 @@
 </template>
 
 <script setup>
+import { SITE } from '~/site.config'
+
 defineProps({
   isOpen: { type: Boolean, default: false },
 })

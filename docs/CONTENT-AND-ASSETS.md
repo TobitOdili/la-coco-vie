@@ -138,18 +138,35 @@ change**, not just data — budget time for it and re-verify the intro spin + se
 
 ---
 
-## Hardcoded copy (not data-driven yet)
+## Brand & chrome copy → `site.config.js`
 
-Some text is **not** in `CHAPTERS` and must be edited in components directly:
+All chrome/brand text (everything that isn't per-chapter content) now lives in one file at
+the repo root: **`site.config.js`**. Edit it to re-brand the shell — no component hunting.
 
-| Text | Location |
-|---|---|
-| "MILLA NOVA" logo (SVG) + "Chapter the bride" subtitle | `components/SiteNav.vue` |
-| "About" / "Collection" nav labels + Collection URL | `components/SiteNav.vue` |
-| "Made by Sarakuz" credit + link | `components/SiteNav.vue` |
-| About panel body ("IMMERSE YOURSELF…") | `components/AboutPanel.vue` |
-| `<title>` / meta | `nuxt.config.ts` (and per-chapter title set in `app.vue` on select) |
-| Google Font families | `nuxt.config.ts` |
+```js
+export const SITE = {
+  brand, subtitle,
+  titles:  { home, chapterSuffix },
+  nav:     { aboutLabel, collectionLabel, collectionUrl },
+  credit:  { prefix, name, url },
+  about:   [ { text, gap? }, … ],   // about-panel paragraphs; `gap:true` adds spacing after
+  googleFonts: [ 'Italiana', … ],   // → googleFontsHref() builds the <head> CSS2 URL
+}
+```
 
-A future improvement for the re-skin would be to lift this copy into a small `site.config`
-object so a re-brand is fully data-driven. Noted in [`ROADMAP.md`](ROADMAP.md).
+| Content | Field | Consumed by |
+|---|---|---|
+| Nav subtitle ("Chapter the bride") | `subtitle` | `SiteNav.vue` |
+| Nav labels + Collection URL | `nav.*` | `SiteNav.vue` |
+| Credit ("Made by Sarakuz" + link) | `credit.*` | `SiteNav.vue` |
+| About-panel body | `about[]` | `AboutPanel.vue` |
+| Home `<title>` + per-chapter title suffix | `titles.*` | `nuxt.config.ts`, `app.vue` |
+| Google font families | `googleFonts[]` → `googleFontsHref()` | `nuxt.config.ts` |
+
+### Still edited directly (by design)
+| Item | Where | Why |
+|---|---|---|
+| **"MILLA NOVA" logo wordmark** | `components/SiteNav.vue` (inline `<svg>`) | It's vector art, not a string — clearly marked there as the brand element to swap. |
+| In-shader logo (`logo.png`) | `public/images/logo.png` | Rendered into the 3D scene; replace the asset. |
+| Local fonts (Bague, Movie) + per-chapter `.display` fonts | `assets/css/main.css` | CSS `@font-face` / font-family bindings. |
+| Per-chapter colors | `CHAPTERS` **and** the `.--{slug}` blocks in `main.css` | Keep the two in sync. |

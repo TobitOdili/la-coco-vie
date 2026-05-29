@@ -336,6 +336,18 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
 
 ## 🗓 Session Log
 
+### 2026-05-29 (session 6)
+- **Documentation pass for handoff.** Added `README.md` (front door) + `docs/` set:
+  `ARCHITECTURE.md` (how it works), `CONTENT-AND-ASSETS.md` (data model + re-skin guide),
+  `ROADMAP.md` (phases + attribution). Added doc-map banners to AUDIT.md/PROGRESS.md. Chose
+  in-repo docs over a wiki (travels with the code). Removed the broken tracked `dist` symlink.
+- **Re-skin pre-work: `site.config.js`.** Lifted all brand/chrome copy (subtitle, nav labels +
+  Collection URL, credit, About paragraphs, document titles, Google font families) into one
+  `SITE` object + `googleFontsHref()`. Wired into `nuxt.config.ts`, `app.vue`, `SiteNav.vue`,
+  `AboutPanel.vue`. Zero behavior change — generated font URL is byte-identical; verified
+  strings bundle and `nuxt build` passes. Logo wordmark left as `<svg>` in SiteNav (marked).
+  Documented `useAudio.js` as dead code (left in place).
+
 ### 2026-05-27 (session 5)
 - **[#12] Reworked loading animation (full real-gating)** *(verified live)* — Browserless DOM probe of the live original corrected the audit's description (it's centered light-gray `zinc-200`, not bottom-left teal/red). Wired real asset-load progress scene→app→loader (13 textures), GSAP-eased counter, GSAP fade exit, 12s safety fallback. Touched `useChapterScene.js`, `WebGLScene.vue`, `app.vue`, `LoadingScreen.vue`. Local `nuxt build` passes.
   - **Follow-up (`96e0d083`):** Browserless check caught the absolute `%` covering the number (only "%" visible). Restructured to a relative `.counter` with the number in flow and `%` at `left:100%` — both glyphs now visible side-by-side. Re-verified on Browserless (shows "0%" correctly).

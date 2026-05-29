@@ -6,18 +6,18 @@
         <!-- Left: About -->
         <div>
           <div class="menu-item" @click="$emit('toggle-about')">
-            <span class="hidden md:block">About</span>
+            <span class="hidden md:block">{{ SITE.nav.aboutLabel }}</span>
           </div>
         </div>
         <!-- Right: Collection link -->
         <div>
           <a
-            href="https://millanova.com/collection/chapter-bride"
+            :href="SITE.nav.collectionUrl"
             rel="noopener noreferrer"
             target="_blank"
             class="menu-item"
           >
-            <span>Collection</span>
+            <span>{{ SITE.nav.collectionLabel }}</span>
             <svg
               class="h-[12px] w-[12px] lg:h-[14px] lg:w-[14px]"
               viewBox="0 0 16 16"
@@ -37,6 +37,9 @@
     <div class="!fixed z-20 top-3 w-full pointer-events-none">
       <div class="container flex justify-center mt-2 md:mt-6">
         <div class="text-center pointer-events-auto" @click="$emit('go-home')">
+          <!-- BRAND WORDMARK (vector art). This is the one brand element NOT driven by
+               site.config — replace this <svg> on re-skin. The subtitle below + all other
+               nav/credit text come from site.config.js. -->
           <div class="logo w-[136px] lg:w-[204px] h-[26px] lg:h-[37.5px]">
             <svg
               width="100%"
@@ -68,7 +71,7 @@
             v-if="isHome"
             class="text-accent uppercase text-[11px] lg:text-sm tracking-wider mt-1 lg:mt-2"
           >
-            Chapter the bride
+            {{ SITE.subtitle }}
           </div>
         </div>
       </div>
@@ -79,14 +82,14 @@
       <div class="container flex justify-between pb-2 md:pb-6">
         <!-- Copyright / Sarakuz -->
         <a
-          href="https://sarakuz.com"
+          :href="SITE.credit.url"
           rel="noopener noreferrer"
           target="_blank"
           class="pointer-events-auto"
         >
           <div class="flex items-center menu-item">
             <div class="text-[8px]">
-              <span class="opacity-40">Made by </span>Sarakuz
+              <span class="opacity-40">{{ SITE.credit.prefix }}</span>{{ SITE.credit.name }}
             </div>
           </div>
         </a>
@@ -118,6 +121,8 @@
 </template>
 
 <script setup>
+import { SITE } from '~/site.config'
+
 defineProps({
   isHome: {
     type: Boolean,

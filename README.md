@@ -78,6 +78,7 @@ npm run preview   # preview a production build
 ## Repository map
 
 ```
+site.config.js               ★ Brand/chrome copy — single source of truth for a re-skin
 app.vue                      Root component — state owner (selection, audio, about, loading)
 nuxt.config.ts               Nuxt/Vite/Tailwind config, <head>, base URL, font links
 components/

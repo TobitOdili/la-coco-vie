@@ -107,6 +107,12 @@ Asset-gated counter. Receives `progress` (0–100) from `app.vue`, GSAP-eases th
 number toward it, plays a GSAP fade-out on reaching 100. Light-gray, centered, Italiana
 number + Over-the-Rainbow `%`. 12 s safety timeout so it can never hang. See AUDIT #12.
 
+### `site.config.js`
+Brand/chrome copy in one object (`SITE`) + `googleFontsHref()`. Consumed by `nuxt.config.ts`
+(title, fonts), `app.vue` (titles), `SiteNav.vue` (subtitle/nav/credit), `AboutPanel.vue`
+(about copy). The single file to edit for a re-skin's text — see CONTENT-AND-ASSETS. (Per-
+chapter content stays in `CHAPTERS`; the logo wordmark stays as an `<svg>` in `SiteNav`.)
+
 ### `composables/useChapterScene.js` ★
 The whole 3D experience. Detailed below.
 

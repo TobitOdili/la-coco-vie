@@ -52,12 +52,14 @@ Keep **all functionality and interaction design**, swap **media, content, and br
 a separate project — with full credit to the original creators.
 
 Mechanics are documented in [`CONTENT-AND-ASSETS.md`](CONTENT-AND-ASSETS.md):
-- Most of a re-skin is **data + assets** via the `CHAPTERS` array — not logic.
+- Brand/chrome copy is now centralized in **`site.config.js`** (done as re-skin pre-work) —
+  a re-brand of the shell is data-only.
+- Per-chapter content (titles, colors, posters, films, audio) is **data + assets** via the
+  `CHAPTERS` array — not logic.
 - Changing the **number** of chapters is a logic change (scene geometry: `N`, mirroring,
   slot spacing).
-- Some copy is still hardcoded in components (nav, About, logo). **Recommended pre-work:**
-  lift that copy + brand strings into a single `site.config` object so the re-brand is fully
-  data-driven and the swap is low-risk.
+- Remaining non-config brand elements: the logo wordmark (`<svg>` in `SiteNav.vue`), the
+  in-shader `logo.png`, and the local fonts / per-chapter `.display` fonts in `main.css`.
 
 ---
 

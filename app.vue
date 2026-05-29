@@ -34,6 +34,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { CHAPTERS } from '~/composables/useChapterScene'
+import { SITE } from '~/site.config'
 
 const appRoot = ref(null)
 const cursorRef = ref(null)
@@ -97,7 +98,7 @@ function onChapterSelect(idx) {
   selectedChapterIdx.value = idx
   isHome.value = false
   if (currentChapter.value) {
-    document.title = `${currentChapter.value.title} — Chapter Milla Nova`
+    document.title = `${currentChapter.value.title} ${SITE.titles.chapterSuffix}`
   }
   if (soundOn.value && sounds[idx]) {
     sounds.forEach((s, i) => {
@@ -131,7 +132,7 @@ function toggleAbout() {
 function resetChapterState() {
   selectedChapterIdx.value = null
   isHome.value = true
-  document.title = 'Chapter — Milla Nova'
+  document.title = SITE.titles.home
   sounds.forEach((s) => s.volume(0))
 }
 
