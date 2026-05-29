@@ -85,6 +85,28 @@ public/
     └── Movie.woff               "Movie"-style display font (About copy)
 ```
 
+### Inner-page assets (Phase 2 — Wine O'Clock so far)
+
+Downloaded from the reference as study placeholders (see attribution in [ROADMAP](ROADMAP.md)).
+The reference names gallery photos `{slug}-{sub-chapter}-NN.jpg`, mapping cleanly to the 3
+sub-chapters:
+
+```
+public/images/gallery/
+  wine-the-bride-01.jpg  wine-the-bride-02.jpg     THE BRIDE  (900×1200 / 1400×900)
+  wine-the-wine-01.jpg   …-02.jpg  …-03.jpg        THE WINE   (900×1200)
+  wine-the-people.jpg                              THE PEOPLE (900×1200)
+public/video/
+  {wine,eat,la,amour}-intro.jpg                    video poster frames (1080×1080)
+public/images/dresses/
+  dress-01.jpg  dress-02.jpg                        dress-tail thumbnails (200×300)
+```
+
+TODO when building dress tails: the dress thumbnails came from a CDN with hashed names and
+are renamed generically — map them to the real dress names (Malva, Yaroslava, …) in the
+`DRESSES` model. The other 3 chapters' gallery photos aren't downloaded yet (fetch per the
+same `{slug}-{sub}-NN.jpg` pattern when building them).
+
 Google Fonts (loaded via `<link>` in `nuxt.config.ts`): **Italiana**, **Monoton**,
 **Over the Rainbow** — used by the loader and the per-chapter `.display` styles.
 
