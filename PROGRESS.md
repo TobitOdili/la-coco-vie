@@ -1,6 +1,6 @@
 # La Coco Vie — Project Progress
 
-> Last updated: 2026-05-24
+> Last updated: 2026-05-27
 
 ---
 
@@ -135,7 +135,10 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 - Back button: reverses all animations cleanly
 - About panel toggle (blurs canvas)
 - Sound On/Off toggle
-- Loading screen with progress bar
+- Loading screen — **real asset-gated** counter (gates on 13 textures), GSAP-eased number, GSAP fade exit, light-gray centered styling matching the original
+- Center txt (`txtMesh`) swaps per hovered chapter with a crossfade
+- Hover affects only the single card under the cursor (not its mirrored ring copy)
+- Horizontal trackpad scroll rotates the carousel
 - Per-chapter CSS body classes for background colour transitions
 
 ---
@@ -143,86 +146,67 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 ## ⚠️ Current Issues & Remaining Work
 
 > Full audit with root causes, reproduction steps, and fix options in [`AUDIT.md`](./AUDIT.md)
-> Last full audit: 2026-05-19 | Issues #11–13 added: 2026-05-24
+> Last full audit: 2026-05-19 | Issues #11–13 added: 2026-05-24 | #1,#2,#9,#10,#12,#13 resolved: 2026-05-27
 
-### 🔴 High Priority
+### ✅ Resolved (6)
 
-**[#13] Cards mirrored on hover — both copies lift** ✅ Fixed (2026-05-27)
-- Hovering a front card also raised the mirrored copy directly behind it (opposite side of ring)
-- Root cause: `hoverChapter(chIdx)` filtered by `chapterIdx`, which is shared by both the front and back copy (posters 1–4 and 5–8 map to the same chapters)
-- Fix: `getHoveredPoster` now returns the slot index `i`; added `chapterIdxForSlot(i)` helper; `hoverChapter`/`unhoverChapter` operate on the single slot poster (`p.i === slotI`); `chapterIdx` is resolved internally for video, txt swap (#9), audio callback, and `onClick → selectChapter`. Selection still animates both copies (correct).
+**[#1] Cursor clipping / viewport overflow** ✅ (`59d6d91b`)
+- Switched cursor to top/left direct positioning, set `html { overflow: visible }`, removed the conflicting `.cursor.active` margin.
 
-**[#12] Loading animation broken vs reference** ✅ Fixed (2026-05-27)
-- ⚠️ Live Browserless DOM probe corrected the original's design: it's **centered light-gray `zinc-200` "0%"** (Italiana number + Over the Rainbow cursive %), NOT the bottom-left teal/red the audit first described. Progress is real asset-gated.
-- Root cause: `LoadingScreen.vue` used `requestAnimationFrame` over a fixed 1s with no connection to actual asset loads
-- Fix (full real-gating, 4 files):
-  - `useChapterScene.js`: `onProgress` callback + `reportProgress()` fired after each of 13 texture loads (1 logo + 4 txt + 8 posters; videos `preload='none'`, excluded)
-  - `WebGLScene.vue`: relays progress as a `progress` event; `emit('progress', 100)` safety after init
-  - `app.vue`: monotonic `loadProgress` ref passed to LoadingScreen
-  - `LoadingScreen.vue`: GSAP-eased counter toward real progress, GSAP fade exit, light-gray centered restyle, 12s safety timeout so it can't hang
-- Validated with a local `nuxt build` (all components compile)
+**[#2] Viewport height — wrong height source** ✅ (`59d6d91b`)
+- Now derives height from `#canvas-container` `getBoundingClientRect()` instead of `window.innerHeight` (avoids mobile browser-chrome error).
 
-**[#8] Center text/logo offset to the right**
-- Logo + "Chapter the bride" subtitle appear right-shifted
-- Root cause: `.container` class is `91.67%` wide; `justify-center` centres within that inset, not the true viewport midpoint
-- Fix: Use `w-full flex justify-center` directly (no container class) on the logo row
+**[#9] Center text doesn't change on hover** ✅ (`1ec352e2`, verified live)
+- The center text IS the `txtMesh` (3D texture plane), not HTML — it was hardcoded to `txt-1.png`.
+- Fix: preloaded all 4 `txt-1..4.png` into `txtTextures[]`; `hoverChapter` crossfades the material `.map` to the hovered chapter's txt (0.15s out → swap → 0.25s in). Last-hovered persists.
 
-**[#9] Center text doesn't change on card hover** ✅ Fixed (2026-05-27)
-- The center text IS rendered — it's the `txtMesh` (3D texture plane with `txt-1.png`) in `useChapterScene.js`. It was hardcoded to `txt-1.png` and never swapped on hover.
-- Browserless inspection confirmed: hovering different cards always showed the same `txt-1.png` content
-- Fix: Preloaded all 4 `txt-1..4.png` textures into a `txtTextures` array during init; `hoverChapter(chIdx)` now crossfades the material's `.map` to `txtTextures[chIdx]` (0.15s fade-out → swap → 0.25s fade-in). Last-hovered text persists after unhover (matches original).
+**[#10] Horizontal scroll doesn't rotate carousel** ✅ (`c9562a21`, verified live)
+- Both `vsInstance.on` and the `wheel` fallback in `WebGLScene.vue` now pass `deltaY - deltaX` (was only `deltaY`), matching the original's `(de.y - de.x)`.
 
-**[#10] Horizontal scroll doesn't rotate carousel** ✅ Fixed (2026-05-24)
-- Vertical scroll works perfectly; horizontal trackpad swipe does nothing
-- Root cause: We pass only `event.deltaY`. Original uses `(de.y - de.x) / 2e4` — subtracts deltaX
-- Fix: Changed both `vsInstance.on` and the `wheel` fallback in `WebGLScene.vue` to pass `deltaY - deltaX`
+**[#13] Cards mirrored on hover — both copies lift** ✅ (`e05e638e`, verified live)
+- `hoverChapter` filtered by `chapterIdx`, shared by both ring copies.
+- Fix: `getHoveredPoster` returns slot index `i`; added `chapterIdxForSlot(i)`; `hoverChapter`/`unhoverChapter` act on the single slot poster. `chapterIdx` resolved internally for video/txt/audio, and in `onClick` so selection still animates both copies (correct).
 
-**[#1] Cursor clipping / viewport overflow**
-- Cursor clips at bottom edge, overshoots at top
-- Root cause (3 bugs): transform-based positioning vs original's top/left; html overflow:hidden; conflicting margin on `.cursor.active`
-- Fix: Switch to top/left direct positioning; set html overflow to visible; remove margin conflict
+**[#12] Loading animation broken vs reference** ✅ (`57efe8dd` + `96e0d083`, verified live)
+- ⚠️ **Audit correction:** a live Browserless DOM probe proved the original is **centered light-gray `zinc-200` "0%"** (Italiana number + Over the Rainbow cursive %), NOT the bottom-left teal/red the audit first described. Progress is real asset-gated.
+- Fix (full real-gating, 4 files): `useChapterScene.js` `onProgress` callback fires `reportProgress()` after each of 13 texture loads (1 logo + 4 txt + 8 posters; videos `preload='none'`, excluded); `WebGLScene.vue` relays a `progress` event + `progress:100` safety after init; `app.vue` holds a monotonic `loadProgress`; `LoadingScreen.vue` GSAP-eases the counter, GSAP fade exit, light-gray centered restyle, 12s safety timeout.
+- **Follow-up bug (`96e0d083`):** the absolute `%` initially covered the number (only "%" visible). Restructured to a relative `.counter` wrapping the in-flow number with the `%` at `left:100%` so both glyphs sit side-by-side. Verified on Browserless.
+- Validated with a local `nuxt build`.
 
-**[#2] Viewport height — wrong height source**
-- We use `window.innerHeight`; original uses `canvasContainer.getBoundingClientRect().height`
-- Affects mouse precision on mobile/browsers where innerHeight includes browser chrome
+### 🔴 High Priority (open)
 
-### 🟡 Medium Priority
+**[#8] Center text/logo offset to the right** — ⚠️ *possibly stale, re-verify first*
+- Audit root cause: `.container` is `91.67%` wide; `justify-center` centres within that inset, not the true viewport midpoint. Suggested fix: `w-full flex justify-center` on the logo row.
+- **Observation (2026-05-27):** in the Browserless side-by-side, our nav/logo looked well-centered vs the original — no obvious right-shift. Re-confirm with a fresh capture before changing code; may already be effectively resolved.
 
-**[#11] Logo-to-txtMesh spacing too small** *(new — 2026-05-24)*
-- The vertical gap between the CSS logo and the 3D `txtMesh` (`txt-1.png`) is too tight vs reference
-- Root cause: `txtMesh.position.set(0, 0, 20)` — world Y=0 projects too high on screen given camera tilt. Original likely sets negative Y to push text lower.
-- Fix: Try `txtMesh.position.set(0, -8, 20)` and iterate via Browserless side-by-side screenshots
-- See AUDIT.md Issue #11 for full options
+### 🟡 Medium Priority (open)
+
+**[#11] Logo-to-txtMesh spacing too small**
+- Vertical gap between the CSS logo and the 3D `txtMesh` is too tight vs reference.
+- Root cause: `txtMesh.position.set(0, 0, 20)` — world Y=0 projects too high given camera tilt.
+- Fix: try `txtMesh.position.set(0, -8, 20)`, iterate via Browserless. Now easier to judge since #9 swaps the txt correctly.
 
 **[#3] Noise texture 404 on GitHub Pages**
-- `_nuxt/images/noise.png` resolves to wrong path inside compiled CSS bundle
-- Fix: Move to `assets/images/noise.png`; import via `url('~/assets/images/noise.png')`
+- `_nuxt/images/noise.png` resolves to the wrong path inside the compiled CSS bundle.
+- **Note:** this is GitHub-Pages-specific (path resolution under `_nuxt/`). The primary deploy is now **Vercel** (`la-coco-vie.vercel.app`), where this likely doesn't reproduce — confirm before prioritising.
+- Fix: move to `assets/images/noise.png`; import via `url('~/assets/images/noise.png')`.
 
 **[#4] Card scale slightly too large**
-- Wine O'Clock ~10% too close/large vs original
-- Fix: Try `baseDistance = 44–46` or push camera to `z = 105`
+- Wine O'Clock ~10% too close/large vs original. Fix: try `baseDistance = 44–46` or camera `z = 105`. Needs Browserless comparison to dial in.
 
-**[#5] SVG colour saturation**
-- Poster SVGs ~15% more saturated than original
-- Fix: Add `renderer.toneMapping = THREE.NoToneMapping`
+**[#5] SVG colour saturation** — ⚠️ *possibly already addressed, re-verify first*
+- Audit: poster SVGs ~15% more saturated; suggested fix `renderer.toneMapping = THREE.NoToneMapping`.
+- **Observation (2026-05-27):** `useChapterScene.js` line ~331 **already sets** `renderer.toneMapping = THREE.NoToneMapping` and `outputColorSpace = SRGBColorSpace`. So the documented fix is already in place — if saturation still differs it's a different cause (e.g. SVG rasterised at 512² via canvas, or sRGB handling on the CanvasTexture). Re-verify with Browserless before acting.
 
 ### 🟢 Lower Priority (future phases)
 
-**[#6] Background card opacity falloff**
-- Far-side ring cards too visible; original barely shows them
-- Fix: Opacity falloff based on world Z position
+**[#6] Background card opacity falloff** — far-side ring cards too visible; original barely shows them. Fix: opacity falloff based on world Z.
 
-**[#7] Scroll-driven chapter-exit transition**
-- Only back button works; scrolling back should trigger reverse animation
-- Fix: Implement `setPageProgress` driven by scroll delta when `selectedChapter !== null`
+**[#7] Scroll-driven chapter-exit transition** — only the back button works; scrolling back should reverse. Fix: `setPageProgress` driven by scroll delta when a chapter is selected.
 
-**Chapter inner pages** *(future)*
-- La Storia, Wine O'Clock, Eat Marry Love, Amour Getaway each have full inner pages
-- Uses ScrollTrigger, Mask, Gallery parallax, ImgText, Header, DressTail
+**Chapter inner pages** *(future)* — full inner pages per chapter (ScrollTrigger, Mask, Gallery parallax, ImgText, Header, DressTail).
 
-**Dress tail cards** *(future)*
-- Shows matched dresses per chapter on select
-- Data: 11 dresses (`symphony`, `tasmania`, `sydney`, `markita`, etc.)
+**Dress tail cards** *(future)* — matched dresses per chapter on select (11 dresses: `symphony`, `tasmania`, `sydney`, `markita`, etc.).
 
 ---
 
@@ -234,39 +218,62 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 | `.nuxt/` build artifacts committed to git | Removed from tracking with `git rm --cached .nuxt/` |
 | Asset paths 404 on GitHub Pages (`/images/` at root) | Use `import.meta.env.BASE_URL` via `asset()` helper, baked in at Vite build time |
 | GitHub Pages ignoring `_nuxt/` folder | Added `.nojekyll` in deploy workflow |
+| Loader `%` covered the number (only "%" visible) — absolute span with no offset | Relative `.counter` + `%` at `left:100%` so both glyphs sit side-by-side (`96e0d083`) |
 
 ---
 
 ## 🔧 Dev Setup & Workflow
 
+> **Environment note (2026-05-27):** work now happens locally at
+> `/Users/tobitodili/Documents/GitHub/la-coco-vie` (macOS, Node 23). The primary
+> deploy is **Vercel** (`https://la-coco-vie.vercel.app/`), auto-built from `main`
+> on push. GitHub Pages (`tobitodili.github.io/la-coco-vie/`) still exists as a
+> secondary target. No Cloudflare tunnel is needed for comparison anymore — we
+> compare against the deployed Vercel/GH-Pages URLs directly.
+
 ### Start dev server
 ```bash
-cd /data/.openclaw/workspace/millanova-replica
-node_modules/.bin/nuxt dev --host 0.0.0.0 --port 3002 > /tmp/nuxt-dev.log 2>&1 &
+npm run dev   # nuxt dev on port 3001
 ```
 
-### Start Cloudflare tunnel (so Browserless can reach localhost)
+### Build (local validation)
 ```bash
-/tmp/cloudflared tunnel --url http://localhost:3002 --no-autoupdate > /tmp/cloudflared.log 2>&1 &
-sleep 6 && grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' /tmp/cloudflared.log
+npm run build
 ```
+> ⚠️ `node_modules` was originally installed on Linux, so rollup's native binary
+> is missing on macOS. If `nuxt build` errors with
+> `Cannot find module @rollup/rollup-darwin-arm64`, run once:
+> `npm i -D @rollup/rollup-darwin-arm64 --no-save`. Build artifacts under
+> `.output/` are git-tracked but should NOT be committed with feature work —
+> stage source files explicitly.
 
-### Screenshot & compare via Browserless
+### Screenshot & compare via Browserless (the workflow we use)
+Install helpers in a scratch dir (`/tmp/bless`): `npm i playwright-core sharp`.
+playwright-core is CommonJS, so import its default and destructure:
 ```js
-const { chromium } = require('/data/.openclaw/npm/node_modules/playwright-core');
-const sharp = require('/usr/local/lib/node_modules/openclaw/node_modules/sharp');
-// Connect:
+import pkg from '/tmp/bless/node_modules/playwright-core/index.js'
+const { chromium } = pkg
 const browser = await chromium.connectOverCDP(
-  'wss://production-sfo.browserless.io?token=2UXcw0tWMcqAHH7310b17b71b4d61cda2ce4c9aaee3f60ed3'
-);
-// Wait 10s after page load for WebGL intro animation to complete
-// Stitch side-by-side with sharp → save as comparison-vN.jpg
+  'wss://production-sfo.browserless.io?token=<TOKEN>'   // token is secret — never commit
+)
 ```
+Gotchas learned:
+- **WebGL intro:** wait ~12s after `goto` before the steady-state screenshot.
+- **Loader/early frames:** `page.screenshot()` blocks "waiting for fonts" and
+  times out during load — use raw CDP instead:
+  `await client.send('Page.captureScreenshot', { format: 'jpeg', quality: 85 })`.
+- **Capturing the loader:** throttle the network via
+  `Network.emulateNetworkConditions` (~0.9–1.5 mbps) so the loader stays on
+  screen; poll for `.loader-overlay` then grab the frame + computed styles.
+- **Viewport quirk:** under `connectOverCDP`, `page.evaluate` may report
+  `window.innerWidth/Height` as 800×600 while the screenshot canvas is larger —
+  judge centering by computed `justifyContent/alignItems`, not by raw screenshot x.
+- Stitch side-by-side / contact sheets with `sharp`.
 
 ### Commit & push
 ```bash
-cd /data/.openclaw/workspace/millanova-replica
-git add -A && git commit -m "your message" && git push
+git add <specific source files>   # avoid `git add -A` — keeps .output/ artifacts out
+git commit -m "your message" && git push   # Vercel auto-deploys from main
 ```
 
 ---
@@ -278,15 +285,19 @@ git add -A && git commit -m "your message" && git push
 | v1 | ~5/10 | Basic Three.js carousel, wrong angles |
 | v5 | ~6.5/10 | Shaders added, intro animation |
 | v8 | ~7.2/10 | Correct camera, group tilt |
-| v12 (current) | ~7.8/10 | Hover/select/audio all working |
-| Target | 9-10/10 | Fix scale, saturation, depth order |
+| v12 | ~7.8/10 | Hover/select/audio all working |
+| v17 (current) | ~8.5/10 | Fixed cursor, viewport, hover txt swap, single-card hover, horizontal scroll, real-gated loader |
+| Target | 9-10/10 | Resolve scale (#4), logo-txt spacing (#11), depth-order/opacity (#6); re-verify #5/#8 |
 
 ---
 
 ## 🗓 Session Log
 
 ### 2026-05-27 (session 5)
-- **[#12] Reworked loading animation (full real-gating)** — Browserless DOM probe of the live original corrected the audit's description (it's centered light-gray `zinc-200`, not bottom-left teal/red). Wired real asset-load progress scene→app→loader (13 textures), GSAP-eased counter, GSAP fade exit, 12s safety fallback. Touched `useChapterScene.js`, `WebGLScene.vue`, `app.vue`, `LoadingScreen.vue`. Local `nuxt build` passes. Pending live verification.
+- **[#12] Reworked loading animation (full real-gating)** *(verified live)* — Browserless DOM probe of the live original corrected the audit's description (it's centered light-gray `zinc-200`, not bottom-left teal/red). Wired real asset-load progress scene→app→loader (13 textures), GSAP-eased counter, GSAP fade exit, 12s safety fallback. Touched `useChapterScene.js`, `WebGLScene.vue`, `app.vue`, `LoadingScreen.vue`. Local `nuxt build` passes.
+  - **Follow-up (`96e0d083`):** Browserless check caught the absolute `%` covering the number (only "%" visible). Restructured to a relative `.counter` with the number in flow and `%` at `left:100%` — both glyphs now visible side-by-side. Re-verified on Browserless (shows "0%" correctly).
+  - Noted: under throttle the `%` rendered as a plain glyph (Over the Rainbow Google Font still downloading) — transient, not a layout bug.
+- **Audit accuracy pass:** corrected AUDIT.md #12 (centered light-gray, not bottom-left teal/red). Flagged two likely-stale issues for re-verification before any code change: **#8** (nav/logo looked centered in Browserless) and **#5** (`renderer.toneMapping = NoToneMapping` is already set, line ~331). Noted **#3** is GitHub-Pages-specific and may not reproduce on Vercel.
 - **[#13] Fixed mirrored hover** *(verified live)* — hover is now keyed by slot index `i` instead of `chapterIdx`. Changes in `composables/useChapterScene.js`:
   - `getHoveredPoster` returns the raycast-hit slot `i` (not `chapterIdx`); added `chapterIdxForSlot(i)` helper
   - `onMouseMove` tracks the slot in `hoveredIndex`; resolves chapterIdx for the audio/cursor callback so app.vue still gets 0–3

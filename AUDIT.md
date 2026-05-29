@@ -142,6 +142,15 @@ baseDistance = 42  // ring radius — may be slightly too small (cards appear cl
 
 ## Issue #5 — SVG Colour Saturation 🟡 MEDIUM
 
+> ⚠️ **Likely already addressed (2026-05-27).** `useChapterScene.js` (line ~331)
+> already sets `renderer.toneMapping = THREE.NoToneMapping` and
+> `renderer.outputColorSpace = THREE.SRGBColorSpace` — i.e. the fix below is in
+> place. If saturation still differs from the original, the cause is elsewhere
+> (e.g. SVGs are rasterised to a 512×512 canvas then wrapped in a `CanvasTexture`;
+> check that `CanvasTexture.colorSpace = SRGBColorSpace` and the canvas draw isn't
+> shifting colour). **Re-verify with a Browserless side-by-side before changing code.**
+
+
 ### Symptom
 Poster SVGs render ~15% more saturated than original.
 
@@ -184,6 +193,13 @@ window.setPageProgress = (v) => { ... }
 ---
 
 ## Issue #8 — Center Text/Logo Offset to the Right 🔴 HIGH (new)
+
+> ⚠️ **Possibly stale — re-verify first (2026-05-27).** In the Browserless
+> side-by-side during the #9/#12 work, our top nav + centered logo looked
+> well-aligned vs the original (no obvious right-shift). The cursor/viewport
+> fixes (`59d6d91b`) may have already resolved the visual symptom. Capture a fresh
+> side-by-side and confirm the offset still exists before touching `.container`.
+
 
 ### Symptom
 The center logo + "Chapter the bride" subtitle appear offset to the right instead of being truly centered on the viewport.
@@ -549,7 +565,7 @@ The raycaster's `intersects` array is sorted by distance. The front card (closer
 | # | Issue | Priority | Status |
 |---|---|---|---|
 | ~~13~~ | ~~Cards mirrored on hover — hover key is `chapterIdx`, should be slot `i`~~ | ~~🔴 High~~ | ✅ Fixed (`e05e638e`) — hover now keyed by slot `i`; `getHoveredPoster` returns slot, `chapterIdxForSlot()` resolves chapter for video/txt/audio/select. Only the hovered copy lifts. Verified live. |
-| ~~12~~ | ~~Loading animation broken — fake timer, wrong layout, no GSAP exit~~ | ~~🔴 High~~ | ✅ Fixed — real asset-gated progress (13 textures) wired scene→app→loader; GSAP-eased counter + GSAP fade exit; restyled to match LIVE original (light-gray `zinc-200`, centered). ⚠️ Note: the original's design differs from this audit's earlier description — see correction below. |
+| ~~12~~ | ~~Loading animation broken — fake timer, wrong layout, no GSAP exit~~ | ~~🔴 High~~ | ✅ Fixed (`57efe8dd` + `96e0d083`) — real asset-gated progress (13 textures) wired scene→app→loader; GSAP-eased counter + GSAP fade exit; restyled to match LIVE original (light-gray `zinc-200`, centered); `%` offset right of the number so both show. Verified live. ⚠️ Original's design differs from this audit's earlier description — see correction in §Issue #12. |
 | ~~1~~ | ~~Cursor clipping — wrong positioning method + overflow~~ | ~~🔴 High~~ | ✅ Fixed (`59d6d91b`) |
 | ~~2~~ | ~~Viewport height — use `getBoundingClientRect` not `innerHeight`~~ | ~~🔴 High~~ | ✅ Fixed (`59d6d91b`) |
 | ~~9~~ | ~~Center text doesn't change on hover — `txtMesh` hardcoded to `txt-1.png`~~ | ~~🔴 High~~ | ✅ Fixed (`1ec352e2`) — preloaded all 4 txt textures into `txtTextures[]`; `hoverChapter` crossfades `txtMat.map` to hovered chapter's txt (0.15s out → swap → 0.25s in); last-hovered persists. Verified live. |
