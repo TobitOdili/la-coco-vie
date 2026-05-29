@@ -560,6 +560,35 @@ The raycaster's `intersects` array is sorted by distance. The front card (closer
 
 ---
 
+## Issue #14 — Default Center Text Doesn't Match Front Card 🟡 MEDIUM (new — 2026-05-27)
+
+### Symptom
+On load (no hover), the center `txtMesh` shows the wrong chapter's text relative to
+the front-facing carousel card. Browserless side-by-side: both sites rest with
+**Wine O'Clock** at front, but the original's center text matches it
+("…WEDDING JOURNEY THROUGH THE **VINEYARDS**") while the replica shows La Storia's
+text ("EMBARK ON A FEAST… **HEART OF ITALY**").
+
+### Root Cause
+Issue #9 fixed the *hover* swap (`hoverChapter` crossfades `txtMat.map` to the hovered
+chapter's txt), but the **initial** texture is hardcoded:
+```js
+const txtMat = new THREE.MeshBasicMaterial({ map: txtTextures[0], ... }) // always txt-1
+```
+`txtTextures[0]` is chapter 0 (Eat, Marry, Love → `txt-1.png`), independent of which
+card the intro leaves at front (Wine O'Clock, `startRot = 90°`). The original keeps the
+center text in sync with the front card — i.e. it updates on carousel rotation, not only
+on hover (the `ae()` system is driven by scroll/front-index too).
+
+### Fix Plan (deferred — flagged to revisit)
+- **Minimum:** after `runIntro()` settles, set `txtMat.map` to the front card's chapter
+  txt (Wine O'Clock) so the default state matches.
+- **Full:** drive the txt from the carousel's current front index so it updates as the
+  ring rotates (overlaps with the `ae()` / scroll-driven work in #7). Resolve front index
+  from `carousel.animatedRotationY` → nearest slot → `chapterIdxForSlot()`.
+
+---
+
 ## Updated Priority Order (as of 2026-05-27)
 
 | # | Issue | Priority | Status |
@@ -570,10 +599,11 @@ The raycaster's `intersects` array is sorted by distance. The front card (closer
 | ~~2~~ | ~~Viewport height — use `getBoundingClientRect` not `innerHeight`~~ | ~~🔴 High~~ | ✅ Fixed (`59d6d91b`) |
 | ~~9~~ | ~~Center text doesn't change on hover — `txtMesh` hardcoded to `txt-1.png`~~ | ~~🔴 High~~ | ✅ Fixed (`1ec352e2`) — preloaded all 4 txt textures into `txtTextures[]`; `hoverChapter` crossfades `txtMat.map` to hovered chapter's txt (0.15s out → swap → 0.25s in); last-hovered persists. Verified live. |
 | ~~10~~ | ~~Horizontal scroll doesn't rotate carousel — `deltaX` ignored~~ | ~~🔴 High~~ | ✅ Fixed (`c9562a21`) — both `vsInstance.on` and `wheel` fallback now pass `deltaY - deltaX` |
-| 8 | Center text/logo offset right — container width centering | 🔴 High | Open |
-| 11 | Logo-to-txtMesh spacing too small — txtMesh world Y=0 too high | 🟡 Medium | Open |
-| 3 | Noise texture 404 on GitHub Pages | 🟡 Medium | Open |
-| 4 | Card scale slightly too large | 🟡 Medium | Open |
-| 5 | SVG colour saturation | 🟡 Medium | Open |
+| ~~8~~ | ~~Center text/logo offset right — container width centering~~ | ~~🔴 High~~ | ✅ Closed — Browserless side-by-side (×2) shows nav/logo centered identically; no shift. Resolved by `59d6d91b`. |
+| ~~11~~ | ~~Logo-to-txtMesh spacing too small — txtMesh world Y=0 too high~~ | ~~🟡 Medium~~ | ✅ Fixed (`55e0b4b1`) — `txtMesh.position.y` 0 → -8 (~110px lower); text now clears the logo/subtitle. Verified live. |
+| 14 | Default center text doesn't match front-facing card (initial txt hardcoded) | 🟡 Medium | Open (new — 2026-05-27) |
+| 3 | Noise texture 404 on GitHub Pages | 🟡 Medium | Open (GH-Pages-specific; may not affect Vercel) |
+| 4 | Card scale slightly too large | 🟡 Medium | Open — needs matched-rotation capture |
+| ~~5~~ | ~~SVG colour saturation~~ | ~~🟡 Medium~~ | ✅ Closed — `NoToneMapping`+`SRGBColorSpace` already set; colours match in side-by-side. |
 | 6 | Background card opacity falloff | 🟢 Low | Open |
 | 7 | Scroll-driven chapter exit | 🟢 Low | Open |

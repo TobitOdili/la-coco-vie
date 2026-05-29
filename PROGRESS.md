@@ -173,30 +173,31 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 - **Follow-up bug (`96e0d083`):** the absolute `%` initially covered the number (only "%" visible). Restructured to a relative `.counter` wrapping the in-flow number with the `%` at `left:100%` so both glyphs sit side-by-side. Verified on Browserless.
 - Validated with a local `nuxt build`.
 
-### 🔴 High Priority (open)
+### ✅ Closed after verification (no code change needed)
 
-**[#8] Center text/logo offset to the right** — ⚠️ *possibly stale, re-verify first*
-- Audit root cause: `.container` is `91.67%` wide; `justify-center` centres within that inset, not the true viewport midpoint. Suggested fix: `w-full flex justify-center` on the logo row.
-- **Observation (2026-05-27):** in the Browserless side-by-side, our nav/logo looked well-centered vs the original — no obvious right-shift. Re-confirm with a fresh capture before changing code; may already be effectively resolved.
+**[#8] Center text/logo offset right** — Browserless side-by-side (2026-05-27, captured twice) shows "MILLA NOVA" / "CHAPTER THE BRIDE" centered identically to the original; no right-shift. The cursor/viewport fix (`59d6d91b`) resolved the symptom. Closed.
+
+**[#5] SVG colour saturation** — `renderer.toneMapping = THREE.NoToneMapping` + `outputColorSpace = SRGBColorSpace` are already set (line ~331); poster card colours read the same as the original in the side-by-side. No over-saturation observed. Closed (reopen if a closer colour sample disagrees).
 
 ### 🟡 Medium Priority (open)
 
-**[#11] Logo-to-txtMesh spacing too small**
-- Vertical gap between the CSS logo and the 3D `txtMesh` is too tight vs reference.
+**[#11] Logo-to-txtMesh spacing too small** ✅ Fixed (`55e0b4b1`, verified live)
+- Vertical gap between the CSS logo and the 3D `txtMesh` was too tight vs reference. Confirmed real in the 2026-05-27 side-by-side.
 - Root cause: `txtMesh.position.set(0, 0, 20)` — world Y=0 projects too high given camera tilt.
-- Fix: try `txtMesh.position.set(0, -8, 20)`, iterate via Browserless. Now easier to judge since #9 swaps the txt correctly.
+- Fix: moved to `txtMesh.position.set(0, -8, 20)` (~110px lower on screen). Browserless confirms the center text now clears the logo/subtitle with a matching "+" marker gap, like the original.
+
+**[#14] Default center text doesn't match the front-facing card** *(new — 2026-05-27)*
+- On load the center `txtMesh` shows `txtTextures[0]` (txt-1.png) regardless of which card is at front. Browserless: replica front card = Wine O'Clock but text = La Storia ("EMBARK…HEART OF ITALY"); the original shows the front card's matching text ("…JOURNEY THROUGH THE VINEYARDS").
+- Root cause: #9 fixed *hover* swapping, but the initial/default txt is hardcoded and isn't synced to the front-facing card (or to carousel rotation).
+- Fix (later — flagged to revisit): set the initial txt to the front card's chapter on load; ideally keep txt synced as the carousel rotates a new card to front (relates to the `ae()` / scroll-driven system, cf. #7).
 
 **[#3] Noise texture 404 on GitHub Pages**
 - `_nuxt/images/noise.png` resolves to the wrong path inside the compiled CSS bundle.
 - **Note:** this is GitHub-Pages-specific (path resolution under `_nuxt/`). The primary deploy is now **Vercel** (`la-coco-vie.vercel.app`), where this likely doesn't reproduce — confirm before prioritising.
 - Fix: move to `assets/images/noise.png`; import via `url('~/assets/images/noise.png')`.
 
-**[#4] Card scale slightly too large**
-- Wine O'Clock ~10% too close/large vs original. Fix: try `baseDistance = 44–46` or camera `z = 105`. Needs Browserless comparison to dial in.
-
-**[#5] SVG colour saturation** — ⚠️ *possibly already addressed, re-verify first*
-- Audit: poster SVGs ~15% more saturated; suggested fix `renderer.toneMapping = THREE.NoToneMapping`.
-- **Observation (2026-05-27):** `useChapterScene.js` line ~331 **already sets** `renderer.toneMapping = THREE.NoToneMapping` and `outputColorSpace = SRGBColorSpace`. So the documented fix is already in place — if saturation still differs it's a different cause (e.g. SVG rasterised at 512² via canvas, or sRGB handling on the CanvasTexture). Re-verify with Browserless before acting.
+**[#4] Card scale slightly too large** — ❓ needs a matched-rotation capture
+- Side-by-side shows the replica's cards fanning wider/flatter vs the original's tighter cluster, but the two captures sat at different carousel rotations — inconclusive. Pin both to the same rotation before judging. Candidate fix: `baseDistance = 44–46` or camera `z = 105`.
 
 ### 🟢 Lower Priority (future phases)
 
