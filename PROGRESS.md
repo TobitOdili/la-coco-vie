@@ -1,6 +1,12 @@
 # La Coco Vie — Project Progress
 
-> Last updated: 2026-05-27
+> **Doc map:** new here? Start with [`README.md`](README.md). How it works →
+> [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · assets/re-skin →
+> [`docs/CONTENT-AND-ASSETS.md`](docs/CONTENT-AND-ASSETS.md) · plan →
+> [`docs/ROADMAP.md`](docs/ROADMAP.md) · issue forensics → [`AUDIT.md`](AUDIT.md).
+> **This file is the living status log** (what works, resolved/open issues, dev workflow, sessions).
+
+> Last updated: 2026-05-29
 
 ---
 

@@ -1,7 +1,13 @@
 # Homepage Audit — Replica vs Original
 > Conducted: 2026-05-19  
 > Tools: Browserless (Playwright/CDP), original JS bundle analysis, side-by-side Browserless screenshots  
-> Scope: Homepage only (chapter.millanova.com vs tobitodili.github.io/la-coco-vie/)
+> Scope: Homepage only (chapter.millanova.com vs the replica)
+
+> **Doc map:** this file is the **forensic issue history** — per-issue root causes, fixes,
+> and commit refs (numbered #1–#15). For orientation start at [`README.md`](README.md);
+> how-it-works is [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); live status is
+> [`PROGRESS.md`](PROGRESS.md). The **Priority Order table near the bottom is the quickest
+> index** of every issue and its status.
 
 ---
 
