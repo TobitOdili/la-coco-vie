@@ -143,8 +143,15 @@ const initAudioOnce = () => initAudio()
 onMounted(() => {
   window.addEventListener('click', initAudioOnce, { once: true })
   window.addEventListener('touchstart', initAudioOnce, { once: true })
+  // Resolve the noise texture to an ABSOLUTE url against the document URL.
+  // A relative path (e.g. './images/noise.png' when BASE_URL is './') would be
+  // re-resolved by the browser relative to the _nuxt/ CSS bundle that consumes
+  // var(--noise-url) → _nuxt/images/noise.png → 404 → SPA HTML fallback → no grain.
+  // Resolving against location.href yields /images/noise.png (the real PNG) on
+  // Vercel root and /<repo>/images/noise.png on GitHub Pages.
   const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
-  document.documentElement.style.setProperty('--noise-url', `url('${base}/images/noise.png')`)
+  const noiseUrl = new URL(`${base}/images/noise.png`, window.location.href).href
+  document.documentElement.style.setProperty('--noise-url', `url('${noiseUrl}')`)
 })
 
 onUnmounted(() => {
