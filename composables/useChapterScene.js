@@ -117,6 +117,7 @@ uniform vec3 borderColor;
 uniform float windowWidth;
 uniform float aspectRatio;
 uniform float blendFactor;
+uniform float uOpacity;
 
 vec4 fromLinear(vec4 linearRGB) {
     bvec4 cutoff = lessThan(linearRGB, vec4(0.0031308));
@@ -199,12 +200,16 @@ void main() {
     }
     poster = mix(poster, photo, a);
     vec4 fin = vec4(poster.r, poster.g, poster.b, poster.a);
+    vec4 outColor;
     if (gl_FrontFacing) {
-        gl_FragColor = fin;
+        outColor = fin;
     } else {
         // Original: back face renders as near-white (blends with white background)
-        gl_FragColor = mix(vec4(vec3(.95), poster.a), fin, 0.01);
+        outColor = mix(vec4(vec3(.95), poster.a), fin, 0.01);
     }
+    // Depth-based opacity falloff — far-side ring cards fade out (Issue #6)
+    outColor.a *= uOpacity;
+    gl_FragColor = outColor;
 }
 `
 
@@ -245,6 +250,10 @@ export function useChapterScene() {
   const baseDistance = 40  // original source: ve=40
   const introDistance = 75
   const SELECTED_Y = -70
+  // Depth-based opacity falloff (Issue #6): cards nearer than NEAR are fully
+  // opaque, beyond FAR fully transparent — fades the far side of the ring.
+  const DEPTH_FADE_NEAR = 95
+  const DEPTH_FADE_FAR = 125
 
   let scrollRotationY = 0
   let carouselTargetRot = 0
@@ -477,6 +486,7 @@ export function useChapterScene() {
         aspectRatio: { value: aspectRatio },
         uAngle: { value: 0.0 }, // each poster uses 0 angle; original also passes angle from constructor which defaults to 0 when unset
         blendFactor: { value: 0.0 },
+        uOpacity: { value: 1.0 },
         progress: { value: 0.0 },
         showBorder: { value: false },
         borderColor: { value: hexToVec3(chapter.accent) },
@@ -644,6 +654,20 @@ export function useChapterScene() {
         p.material.uniforms.aspectRatio.value = aspectRatio
         p.material.uniforms.windowWidth.value = width
         p.material.uniforms.uAngle.value = currentUAngle
+
+        // Depth-based opacity falloff (Issue #6) — fade the far side of the ring.
+        // Only in carousel mode; selected/intro cards stay fully opaque. Lerped
+        // so there's no pop when intro completes or as cards rotate through.
+        let target = 1.0
+        if (introComplete && selectedIndex === -1) {
+          p.mesh.getWorldPosition(_frontVec)
+          const dist = _frontVec.distanceTo(camera.position)
+          const t = (dist - DEPTH_FADE_NEAR) / (DEPTH_FADE_FAR - DEPTH_FADE_NEAR)
+          const op = 1.0 - Math.min(1, Math.max(0, t))
+          target = op * op * (3 - 2 * op)  // smoothstep
+        }
+        const cur = p.material.uniforms.uOpacity.value
+        p.material.uniforms.uOpacity.value = cur + (target - cur) * 0.1
       }
     })
 
