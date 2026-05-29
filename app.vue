@@ -68,6 +68,13 @@ const currentChapter = computed(() =>
 const currentAccent = computed(() => currentChapter.value?.accent || '#b32c05')
 const chapterClass = computed(() => (currentChapter.value ? `--${currentChapter.value.slug}` : ''))
 
+// Document title — via useHead so Nuxt's head system manages it (assigning
+// document.title directly gets clobbered by Nuxt's managed <title>).
+const pageTitle = computed(() =>
+  currentChapter.value ? `${currentChapter.value.title} ${SITE.titles.chapterSuffix}` : SITE.titles.home
+)
+useHead({ title: pageTitle })
+
 function onLoaded() { loaded.value = true }
 
 // Real asset-load progress from the scene (Issue #12). Monotonic so it never jumps back.
@@ -124,17 +131,14 @@ function toggleSound() {
   if (howlerModule) howlerModule.mute(!soundOn.value)
 }
 
-// React to chapter changes (title + ambient audio) — driven by the route.
-// immediate:true so a deep-linked /{slug} gets the right <title> on first load.
+// React to chapter changes for ambient audio — driven by the route.
 watch(selectedChapterIdx, (idx) => {
-  document.title = idx !== null ? `${CHAPTERS[idx].title} ${SITE.titles.chapterSuffix}` : SITE.titles.home
-  if (sounds.length) {
-    sounds.forEach((s, i) => {
-      if (idx !== null && i === idx && soundOn.value) { s.volume(0.5); if (!s.playing()) s.play() }
-      else s.volume(0)
-    })
-  }
-}, { immediate: true })
+  if (!sounds.length) return
+  sounds.forEach((s, i) => {
+    if (idx !== null && i === idx && soundOn.value) { s.volume(0.5); if (!s.playing()) s.play() }
+    else s.volume(0)
+  })
+})
 
 // Drive the scene to match the URL. Handles browser back/forward and deep links;
 // for an in-app card click the scene is already animating (guarded by getState).
