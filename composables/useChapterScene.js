@@ -897,18 +897,20 @@ export function useChapterScene() {
     // Flatten groupG
     tl.to(groupG.rotation, { x: 0, y: 0, z: 0, duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
 
-    // Grow ONLY the front-facing copy into the full-bleed hero. (Both ring copies
-    // share a chapterIdx; scaling both made the back copy overlap the front one —
-    // the slight tilt / not-full-width artifact. The hero is a single card.)
-    if (targetPoster) {
-      tl.to(targetPoster.material.uniforms.blendFactor, { value: 1.0, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
-      tl.to(targetPoster.material.uniforms.progress, { value: 1.0, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
+    // Grow the selected chapter's cards into the hero. NOTE: both ring copies are
+    // scaled (one is art-facing/front, the other renders near-white/back). Scaling
+    // only one copy showed the back-facing (near-white) card, so we scale both for
+    // now; the tilt/not-full-width artifact + picking the single art-facing copy is
+    // a known follow-up (needs scene instrumentation to identify the front copy).
+    posters.filter((p) => p.chapterIdx === chIdx).forEach((p) => {
+      tl.to(p.material.uniforms.blendFactor, { value: 1.0, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
+      tl.to(p.material.uniforms.progress, { value: 1.0, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
       const s = aspectRatio * 2.07
-      tl.to(targetPoster.mesh.scale, { x: s, y: s, z: 1, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
-    }
+      tl.to(p.mesh.scale, { x: s, y: s, z: 1, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
+    })
 
-    // Hide every other poster (including the same chapter's back copy)
-    posters.filter((p) => p !== targetPoster).forEach((p, idx) => {
+    // Hide other posters
+    posters.filter((p) => p.chapterIdx !== chIdx).forEach((p, idx) => {
       tl.to(p.mesh.position, { y: -30 - idx * 8, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
     })
   }
