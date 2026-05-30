@@ -285,3 +285,17 @@ reference). Approach chosen: **full WebGL hero coupled to scroll via Lenis** (20
 - **DOM hero handoff** (swap WebGL card → matching DOM hero after the spin): simpler/robust
   native scroll, but risks a visible seam at the WebGL→DOM swap. Rejected for fidelity.
 - **Fix geometry only (incremental)**: smaller, but doesn't deliver scroll-away/reverse.
+
+### Progress log — Step A (hero geometry)
+- ✅ **`SELECTED_Y` -70 → -43**: the card was positioned ~55 units below the camera look-at
+  → rendered low/clipped ("background block"). -43 top-anchors it; the wordmark now reads as
+  an upper hero. (The card already fills viewport *width* via `scale = aspectRatio*2.07`.)
+- ❌ **Single-card hero attempt — reverted**: scaling only `posters.find(chapterIdx===c)`
+  showed a **near-white back-facing** card → that copy is the *back* one; the art-facing front
+  copy is the other. Restored scaling both copies (art shows, but slightly tilted + ~84% width
+  from the back copy overlapping).
+- 🔲 **Open**: identify the front *art-facing* copy (so we hero a single clean card) and fix
+  the tilt/full-width. Both depend on knowing each copy's world orientation after the select
+  rotation — **next step: instrument the scene** (expose poster world matrices / facing to
+  `window` under a debug flag) and read it via Browserless `evaluate`, instead of guessing
+  blind across 2-min deploy cycles.
