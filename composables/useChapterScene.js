@@ -919,28 +919,21 @@ export function useChapterScene() {
       tl.to(groupG.userData.txtMat, { opacity: 0, duration: 1, ease: 'power2.inOut', overwrite: true }, 0)
     }
 
-    // Find the right poster to bring front — chapter copy facing camera.
-    // Spin FROM the current rotation TO the target; remember where we started so
-    // deselect can reverse-spin back (and so the next select spins again — the bug
-    // was that animatedRotationY stayed at the target, making re-select a no-op).
-    const targetPoster = posters.find((p) => p.chapterIdx === chIdx)
-    if (targetPoster) {
-      preSelectRot = carousel.animatedRotationY
-      const targetRot = -(targetPoster.intRotationY * Math.PI / 180)
-      tl.to(carousel, { animatedRotationY: targetRot, duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
-    }
+    // Pick ONE copy as the hero and rotate the carousel so THAT copy faces the camera.
+    // A copy placed at ring angle φ (=intRotationY) sits at the front (local +Z, nearest
+    // camera) when the carousel rotates to (φ − 90)°. The old `-(φ)` only coincidentally
+    // worked for wine — for other chapters it parked the card at the SIDE (z≈0). Deriving
+    // from the chosen copy fixes selection for every chapter.
+    const heroPoster = posters.find((p) => p.chapterIdx === chIdx)
+    preSelectRot = carousel.animatedRotationY
+    const targetRot = (heroPoster.intRotationY - 90) * Math.PI / 180
+    tl.to(carousel, { animatedRotationY: targetRot, duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
 
     // Move carousel down
     tl.to(carousel.position, { y: SELECTED_Y, duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
 
     // Flatten groupG
     tl.to(groupG.rotation, { x: 0, y: 0, z: 0, duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
-
-    // The hero is the SINGLE copy that ends nearest the camera after the rotation.
-    // Instrumentation confirmed that's the higher-intRotationY copy (the i+4 mirror);
-    // posters.find() returns the lower copy, which ends at the BACK (renders near-white).
-    const sameChapter = posters.filter((p) => p.chapterIdx === chIdx)
-    const heroPoster = sameChapter.reduce((a, b) => (b.intRotationY > a.intRotationY ? b : a))
 
     // Scale tuned to the shader's progress=1 content framing (the wordmark/logo sit
     // at a fixed UV; over-scaling pushes them out of the hero). aspectRatio*2.07 is
