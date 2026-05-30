@@ -258,6 +258,7 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 | GitHub Pages ignoring `_nuxt/` folder | Added `.nojekyll` in deploy workflow |
 | Loader `%` covered the number (only "%" visible) — absolute span with no offset | Relative `.counter` + `%` at `left:100%` so both glyphs sit side-by-side (`96e0d083`) |
 | Deep-link `<title>` stuck on home title — manual `document.title` clobbered by Nuxt head (once `pages/` active) | Manage title via reactive `useHead({ title })` instead |
+| Re-selecting a chapter produced no card spin / "floated weirdly" | Deselect never reset `carousel.animatedRotationY` (re-select spun target→target = no-op) + no tween `overwrite` (stacking). Capture `preSelectRot`, reverse-spin to it on deselect, `overwrite:true` on all select/deselect tweens |
 
 ---
 
@@ -365,6 +366,16 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
     gallery photos named `{slug}-{sub}-NN.jpg`, 4 video poster frames, 2 dress thumbnails) per
     the user's download+commit choice. Documented in CONTENT-AND-ASSETS (incl. dress-name TODO).
   - #7 scroll-exit to be re-done at the page level. Full status in `docs/PHASE-2-INNER-PAGES.md`.
+- **Fixed the re-select transition (verified live).** Selecting a chapter a second time
+  produced no card spin and "floated weirdly." Two causes: (1) deselect never reset
+  `carousel.animatedRotationY`, so the second select's rotation tween ran target→target (a
+  no-op); (2) no `overwrite` on tweens, so a re-select during a still-settling deselect stacked
+  conflicting tweens. Fix: capture `preSelectRot` on select and **reverse-spin back to it on
+  deselect** (also matches the reference's spin-back-into-the-ring), `overwrite:true` on all
+  select/deselect tweens, `killTweensOf(carousel)`, and tween `animatedRotationY` directly.
+  Verified via Browserless: both first and second selects animate the card into the hero.
+  ⏳ Still pending: scroll-at-end-of-inner-page → reverse-spin exit (the #7 reimplementation;
+  currently exit is via the nav logo / back button, which does the reverse spin).
 - **Built the Wine O'Clock inner page (content vertical slice, verified live).** New
   `composables/chapterPages.js` (`CHAPTER_PAGES` + `DRESSES`); `components/chapter/`
   `ChapterSection.vue` + `DressTail.vue`; `pages/[slug].vue` renders content when present

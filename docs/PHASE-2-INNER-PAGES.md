@@ -234,8 +234,13 @@ page mount/unmount, slug validation, and document title all correct.
 - **Polish** — match the reference's exact heading typeface and verify copy verbatim.
 - **Scroll-back exit (#7) on inner pages:** the inner-page overlay captures scroll, so the
   *scene's* scroll-exit doesn't fire on a routed chapter. Exit is currently via nav logo /
-  back button / browser-back. Re-implement "scroll up past the top of the inner page → go
-  home" at the page level when building the scroll content.
+  back button / browser-back — which now plays the **reverse-spin** back into the ring.
+  Re-implement "scroll past the *end* of the inner page → `router.push('/')`" at the page
+  level (the reference's exit trigger) when building the scroll content.
+- **Select-spin magnitude:** the re-select bug is fixed (reset `animatedRotationY` +
+  `overwrite` tweens — see PROGRESS Bugs Fixed). The spin currently runs from the post-intro
+  rest rotation (4π), so it's a large multi-turn spin; tune toward the reference's single
+  controlled turn if desired.
 - **Hero fidelity:** the scaffold hero is transparent (shows the filled WebGL card). Confirm
   whether the original's hero is exactly that or a separate treatment when styling.
 - **Keep `nitro.prerender.routes` in sync** with chapter slugs (also hardcoded in nuxt.config).
