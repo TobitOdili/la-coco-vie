@@ -392,21 +392,46 @@ the `__heroDebug`/`__probe` scene instrumentation, and a side-by-side reference 
   content rises (confirmed via scroll filmstrip).
 - **Fix:** B/C — drive the hero card's screen position from the page scroll (Lenis shared clock)
   so the card scrolls away in lockstep with the content. **This is the primary remaining task.**
+  Concretely: introduce Lenis on the inner page; each frame read its scroll value `s`; offset the
+  hero card upward by the world-equivalent of `s` (move `heroPoster.mesh.position.y` or the
+  `carousel` up so the card rises with the DOM content), clamped so it's fully gone by ~1
+  viewport. Make the `.chapter-page` use that same Lenis scroll (one clock = no seam). See the
+  step-by-step in [Card-becomes-the-page rework](#card-becomes-the-page-rework-active) (B + C).
 
 ### 🟡 P2 — Scroll-end reverse not built (step E)
 - Scrolling to the bottom should shrink + reverse-spin the card back into the ring. Not built;
   exit is currently the nav logo / back button only (which already plays the reverse spin).
+- **Fix:** watch the Lenis scroll position; when scrolled to/just past the **last section**
+  (an overscroll threshold at the *end* — the mirror of #7's top-exit), call `router.push('/')`.
+  The route watcher already turns that into `deselectChapter()`, which reverse-spins the card
+  back into the ring (`preSelectRot`). Add a small threshold/debounce so it doesn't fire on a
+  normal scroll-stop at the bottom. Pairs naturally with B/C (the card is already mid-exit as
+  you reach the end).
 
 ### 🟡 P2 — Hover targeting still uses the misaligned raycast
 - Same shader-bend issue as the (now-fixed) click: hovering the visible card can lift a neighbor
-  because `getHoveredPoster` tests flat hitboxes. Apply the front-facing approach to hover too,
-  or align hitboxes to the bent geometry.
+  because `getHoveredPoster` tests flat hitboxes. **Fix options:** (a) cheapest — drive hover off
+  the front-facing card too (lift/text the `frontChapterIdx` card) as we did for click; (b) more
+  faithful — make the hitboxes track the shader bend (raycast against the deformed geometry, or
+  recompute hitbox transforms per frame to match the bent visual). (a) is consistent with the
+  click fix and low-risk; (b) restores true per-card hover for side cards.
+
+### 🟡 P2 — Select-spin magnitude is inconsistent / often >1 full turn
+- The entry spin tweens `animatedRotationY` from the post-intro rest (`4π`) to `(φ-90)°`, so the
+  number of turns varies by chapter and is usually more than one — looser than the reference's
+  single controlled spin.
+- **Fix:** normalize `preSelectRot` (mod 2π) before tweening and/or target a fixed delta (e.g.
+  exactly +1 turn to the front angle) so every select is one consistent rotation. Re-verify the
+  deselect reverse-spin still lands back in the ring.
 
 ### 🟢 P3 — Minor / expected
 - **Unbuilt chapters** (la-storia, eat-marry-love, amour-getaway) render the scaffold (opaque
-  `accentLight`) over the card — expected until their `CHAPTER_PAGES` content is built.
+  `accentLight`) over the card — expected. **Fix:** add their `CHAPTER_PAGES` entries + download
+  galleries (`{slug}-{sub}-NN.jpg` pattern) + dress images (same as Wine). Until then the
+  scaffold is the intended placeholder.
 - **"EXPLORE" position** differs between our SS and the reference — that's the custom *cursor*
-  (follows the mouse), not a layout bug. Confirm it's a non-issue.
+  (follows the mouse), not a layout bug. **Action:** no fix expected; just confirm it's a
+  non-issue when reviewing on a real browser.
 
 ### ℹ️ Verification caveats (tooling, NOT site bugs)
 - **Headless (SwiftShader) does not render the card's textures** — the wordmark/video show blank
