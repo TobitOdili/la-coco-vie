@@ -316,3 +316,19 @@ reference). Approach chosen: **full WebGL hero coupled to scroll via Lenis** (20
   **The real full-bleed look must be confirmed on a real 1.6 browser.** If the hero isn't
   edge-to-edge there, tune `aspectRatio*2.07` / `SELECTED_Y` with that feedback (can't tune
   blind against the 1.33 buffer).
+
+### ✅ Step A complete (2026-05-29)
+Hero is now a clean, straight, centered, **full-bleed** single card (matches the reference's
+static hero — fills top ~50%, content below). The fixes that got there:
+1. **Single front-card hero** — scale only the higher-`intRotationY` mirror copy (the one that
+   ends nearest the camera); hide the rest. (Both-scaled caused the back copy to overlap.)
+2. **Camera recenter on select** — when selected, ease the camera back to base + center lookAt.
+   Parallax was gating off and freezing the camera off-axis → the hero looked skewed. (Real bug,
+   not just a Browserless artifact.)
+3. **Width-fill scale** — `s = (2·dist·tan(fov/2)·aspect / 24)·1.03`. Aspect cancels → full-bleed
+   on any viewport (and verifiable on the 1.33 buffer). Replaced the magic `aspectRatio*2.07`.
+
+Still to do: **B/C** (Lenis scroll-coupling so the hero scrolls away as the page), **E**
+(scroll-end reverse-spin into the ring), strip the temporary `__heroDebug`/`__camDebug`, and
+confirm the real-browser look. `SELECTED_Y=-43` gives a top-~50% hero; nudge if the user wants
+it higher/lower.
