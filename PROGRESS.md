@@ -149,6 +149,7 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 - Far-side ring cards fade to faint ghosts (depth-based opacity falloff)
 - Per-chapter CSS body classes for background colour transitions
 - Real `/{slug}` chapter routes — card-select animates into the page; deep-links, browser back/forward, and per-slug prerender all work (Phase 2 skeleton)
+- Wine O'Clock inner page — data-driven sub-chapters (THE BRIDE / THE WINE / THE PEOPLE) with copy, galleries, dress-tail cards, and scroll reveal (Phase 2 content slice)
 
 ---
 
@@ -241,7 +242,7 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 
 ### 🔮 Future phases (not bugs)
 
-**Chapter inner pages** *(Phase 2 — in progress)* — 🟢 **Routing skeleton + transition landed** (real `/{slug}` routes, persistent WebGL shell, card-select = transition, deep-links/back-forward, per-slug prerender). Inner-page **content** (sub-chapters, gallery/parallax, films, dress tails) is still a scaffold; **assets** TBD. Scope + status: [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md).
+**Chapter inner pages** *(Phase 2 — in progress)* — 🟢 **Routing skeleton + transition + Wine O'Clock content landed.** Real `/{slug}` routes, persistent WebGL shell, card-select = transition, deep-links/back-forward, per-slug prerender; **Wine O'Clock inner page built** (data-driven sub-chapters + galleries + dress tails + scroll reveal). Remaining: richer ScrollTrigger/Lenis parallax, inline films, the other 3 chapters' content/assets, polish. Scope + status: [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md).
 
 **Dress tail cards** *(future)* — matched dresses per chapter on select (11 dresses: `symphony`, `tasmania`, `sydney`, `markita`, etc.).
 
@@ -363,8 +364,14 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
   - **Downloaded + committed Wine O'Clock inner-page assets** from the reference (~2MB: 6
     gallery photos named `{slug}-{sub}-NN.jpg`, 4 video poster frames, 2 dress thumbnails) per
     the user's download+commit choice. Documented in CONTENT-AND-ASSETS (incl. dress-name TODO).
-  - Inner-page **content** still a scaffold; #7 scroll-exit to be re-done at the page level.
-    Full status in `docs/PHASE-2-INNER-PAGES.md`.
+  - #7 scroll-exit to be re-done at the page level. Full status in `docs/PHASE-2-INNER-PAGES.md`.
+- **Built the Wine O'Clock inner page (content vertical slice, verified live).** New
+  `composables/chapterPages.js` (`CHAPTER_PAGES` + `DRESSES`); `components/chapter/`
+  `ChapterSection.vue` + `DressTail.vue`; `pages/[slug].vue` renders content when present
+  (else scaffold). 3 sub-chapters (THE BRIDE / THE WINE / THE PEOPLE) with copy transcribed
+  from the reference, 6 gallery images, 2 dress cards (Malva/Yaroslava), IntersectionObserver
+  fade-up reveal. Copy tails approximated; richer ScrollTrigger/Lenis parallax + inline films
+  + other 3 chapters are the next steps. Also gitignored the stale `dist` symlink.
 
 ### 2026-05-29 (session 6)
 - **Documentation pass for handoff.** Added `README.md` (front door) + `docs/` set:

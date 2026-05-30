@@ -3,11 +3,15 @@
 Scope and build plan for the per-chapter inner pages. Grounded in a live inspection of the
 original (`/wine-o-clock`) on 2026-05-29.
 
-> **Status (2026-05-29):** ✅ **Routing skeleton + transition landed & verified** (build
-> steps 1–2). Real `/{slug}` routes work; the card-select animation is the transition into
-> the page; deep-links + browser back/forward + back-button all work; per-slug static shells
-> prerender for GH-Pages. **Inner-page content (steps 3–8) is still a scaffold** + the
-> **asset question is still open**. See [Skeleton — what landed](#skeleton--what-landed).
+> **Status (2026-05-29):**
+> - ✅ **Routing skeleton + transition** (steps 1–2) — verified.
+> - ✅ **Wine O'Clock content vertical slice** (steps 3, 4-partial, 6) — verified: hero +
+>   3 sub-chapters (THE BRIDE / THE WINE / THE PEOPLE) with copy, galleries, and dress-tail
+>   cards (Malva, Yaroslava), data-driven from `CHAPTER_PAGES` + `DRESSES`, with a
+>   IntersectionObserver fade-up reveal.
+> - 🔲 **Remaining:** richer ScrollTrigger/Lenis parallax (step 4 full + 5), inline films
+>   (step 5), other 3 chapters' content + assets (step 7), and polish (exact heading font,
+>   verbatim copy). See [Skeleton — what landed](#skeleton--what-landed).
 
 - [What an inner page is](#what-an-inner-page-is)
 - [Section breakdown](#section-breakdown)
@@ -208,7 +212,26 @@ Steps 1–2 are done and verified live (Wine O'Clock). Architecture as built:
 Deep-link `/wine-o-clock` → intro → auto-select (card-as-hero) → scroll → back-to-home. URL,
 page mount/unmount, slug validation, and document title all correct.
 
+### Wine O'Clock content — what landed (vertical slice)
+- **Data model**: `composables/chapterPages.js` — `CHAPTER_PAGES['wine-o-clock'].sections[]`
+  ({ num, title, body, images[], dresses[], align }) + `DRESSES` (Yaroslava→`dress-01.jpg`,
+  Malva→`dress-02.jpg`; full 11-dress metadata available from the reference payload for later).
+- **Components**: `components/chapter/ChapterSection.vue` (numbered label + display heading +
+  body + gallery, alternating left/right, IntersectionObserver fade-up) and `DressTail.vue`
+  (photo + name + params + link to millanova.com/dress/…).
+- **Page**: `pages/[slug].vue` renders `CHAPTER_PAGES` content when present, else the scaffold
+  (la-storia / eat-marry-love / amour-getaway still scaffold). Transparent hero shows the
+  WebGL card; content scrolls up over it on the chapter's `--accentLight`.
+- **Verified live**: 3 sections, 6 gallery images, 2 dress cards, scroll + reveal all render.
+
 ### Known follow-ups (content phase)
+- **Richer scroll** — swap the IntersectionObserver reveal for ScrollTrigger + Lenis parallax
+  (gallery depth, pinned headings) to match the reference's motion. `lenis` is already a dep.
+- **Inline films** — the reference embeds chapter videos within sections; the slice uses
+  gallery stills only.
+- **Other 3 chapters** — add their `CHAPTER_PAGES` entries + download galleries (same
+  `{slug}-{sub}-NN.jpg` pattern) + remaining dress images/metadata.
+- **Polish** — match the reference's exact heading typeface and verify copy verbatim.
 - **Scroll-back exit (#7) on inner pages:** the inner-page overlay captures scroll, so the
   *scene's* scroll-exit doesn't fire on a routed chapter. Exit is currently via nav logo /
   back button / browser-back. Re-implement "scroll up past the top of the inner page → go
