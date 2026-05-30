@@ -3,6 +3,10 @@
 Scope and build plan for the per-chapter inner pages. Grounded in a live inspection of the
 original (`/wine-o-clock`) on 2026-05-29.
 
+> **▶ Active work: "card-becomes-the-page" rework — see [that section](#card-becomes-the-page-rework-active).**
+> The current inner page renders the WebGL card as a fixed background block (clipped, low)
+> behind a separate DOM overlay. Reworking so the card *is* the scrolling hero.
+
 > **Status (2026-05-29):**
 > - ✅ **Routing skeleton + transition** (steps 1–2) — verified.
 > - ✅ **Wine O'Clock content vertical slice** (steps 3, 4-partial, 6) — verified: hero +
@@ -245,3 +249,39 @@ page mount/unmount, slug validation, and document title all correct.
   whether the original's hero is exactly that or a separate treatment when styling.
 - **Keep `nitro.prerender.routes` in sync** with chapter slugs (also hardcoded in nuxt.config).
 - **#16** (About gray-on-gray) only affects the homepage; on an inner page the accent is set.
+
+---
+
+## Card-becomes-the-page rework (ACTIVE)
+
+Reworking the inner page so the card literally becomes the scrolling hero (matches the
+reference). Approach chosen: **full WebGL hero coupled to scroll via Lenis** (2026-05-29).
+
+### Reference mechanics (confirmed via Browserless)
+- Fixed full-viewport WebGL canvas (`position:fixed; top:0`) + **native-scrolling DOM** on top
+  (real `scrollHeight` ~6320).
+- Flattened card = full-bleed hero on the chapter's **dark accent**; as you scroll, the card
+  **scrolls away** (coupled to scroll), sub-chapters scroll through, ending in a
+  "Discover dress from the chapter" + disclaimer section.
+- **Scroll past the end → card reverse-spins back into the carousel ring** (the exit).
+
+### Our gaps (what made it look like a clipped background block)
+1. Hero geometry wrong — flattened card renders low/clipped, not full-bleed top-anchored.
+2. No scroll coupling — card is fixed behind a separate DOM overlay; never "becomes the page".
+3. No scroll-end exit — only the back button exits.
+
+### Plan (Wine O'Clock first, then generalizes via data)
+| Step | What |
+|---|---|
+| A. Hero geometry | On select, move the chosen card to a deterministic full-bleed hero transform in front of the camera (not just flatten-in-place). Compute scale to fill the frustum → resolution-independent. |
+| B. Lenis | Inner page becomes a Lenis-driven smooth scroll (Lenis already a dep) — the shared clock. |
+| C. Scroll coupling | Each frame, read Lenis scroll and drive the hero card up/away in lockstep with the DOM content → card scrolls off as content scrolls in. One clock = always in sync, no seam. |
+| D. Entry spin | Deterministic ring → spin → grow-to-hero; normalize rotation to a consistent single turn that always plays (builds on the re-select fix). |
+| E. Exit spin | Scroll past the end → shrink + reverse-spin into the ring → `router.push('/')`. Back button stays as a shortcut. |
+| F. Robustness | Browserless matrix: deep-link, click, re-select, exit-by-scroll, exit-by-button, rapid repeat — all must work. |
+| G. Styling | Section bg alternates dark/light accent like the reference (hero on dark accent). |
+
+### Considered & rejected
+- **DOM hero handoff** (swap WebGL card → matching DOM hero after the spin): simpler/robust
+  native scroll, but risks a visible seam at the WebGL→DOM swap. Rejected for fidelity.
+- **Fix geometry only (incremental)**: smaller, but doesn't deliver scroll-away/reverse.
