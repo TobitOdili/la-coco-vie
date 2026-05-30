@@ -258,6 +258,7 @@ export function useChapterScene() {
   const DEPTH_FADE_FLOOR = 0.2
 
   let scrollRotationY = 0
+  let preSelectRot = 0  // carousel.animatedRotationY before a select — restored on deselect (reverse spin)
   let carouselTargetRot = 0
   let carouselLerpTarget = 0  // smooth lerp target like original f(current, target, .06)
   // Scroll-driven chapter exit (Issue #7): accumulate back-scroll while a chapter
@@ -865,74 +866,80 @@ export function useChapterScene() {
     isSelecting = true
     if (onSelectCallback) onSelectCallback(chIdx)
 
+    // overwrite:true on every tween so a re-select cleanly kills any still-settling
+    // deselect tweens on the same objects (otherwise they stack → "floats weirdly").
+    gsap.killTweensOf(carousel)
     const tl = gsap.timeline({ onComplete: () => { isSelecting = false } })
 
     // Fade out txt mesh
     if (groupG.userData.txtMat) {
-      tl.to(groupG.userData.txtMat, { opacity: 0, duration: 1, ease: 'power2.inOut' }, 0)
+      tl.to(groupG.userData.txtMat, { opacity: 0, duration: 1, ease: 'power2.inOut', overwrite: true }, 0)
     }
 
-    // Find the right poster to bring front — chapter copy facing camera
+    // Find the right poster to bring front — chapter copy facing camera.
+    // Spin FROM the current rotation TO the target; remember where we started so
+    // deselect can reverse-spin back (and so the next select spins again — the bug
+    // was that animatedRotationY stayed at the target, making re-select a no-op).
     const targetPoster = posters.find((p) => p.chapterIdx === chIdx)
     if (targetPoster) {
+      preSelectRot = carousel.animatedRotationY
       const targetRot = -(targetPoster.intRotationY * Math.PI / 180)
-      const proxy = { val: carousel.animatedRotationY }
-      tl.to(proxy, {
-        val: targetRot,
-        duration: 3,
-        ease: 'power3.inOut',
-        onUpdate: () => { carousel.animatedRotationY = proxy.val },
-      }, 0)
+      tl.to(carousel, { animatedRotationY: targetRot, duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
     }
 
     // Move carousel down
-    tl.to(carousel.position, { y: SELECTED_Y, duration: 3, ease: 'power3.inOut' }, 0)
+    tl.to(carousel.position, { y: SELECTED_Y, duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
 
     // Flatten groupG
-    tl.to(groupG.rotation, { x: 0, y: 0, z: 0, duration: 3, ease: 'power3.inOut' }, 0)
+    tl.to(groupG.rotation, { x: 0, y: 0, z: 0, duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
 
     // Animate selected poster to fill screen
     posters.filter((p) => p.chapterIdx === chIdx).forEach((p) => {
-      tl.to(p.material.uniforms.blendFactor, { value: 1.0, duration: 2, ease: 'power3.inOut' }, 0)
-      tl.to(p.material.uniforms.progress, { value: 1.0, duration: 2, ease: 'power3.inOut' }, 0)
+      tl.to(p.material.uniforms.blendFactor, { value: 1.0, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
+      tl.to(p.material.uniforms.progress, { value: 1.0, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
       const s = aspectRatio * 2.07
-      tl.to(p.mesh.scale, { x: s, y: s, z: 1, duration: 2, ease: 'power3.inOut' }, 0)
+      tl.to(p.mesh.scale, { x: s, y: s, z: 1, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
     })
 
     // Hide other posters
     posters.filter((p) => p.chapterIdx !== chIdx).forEach((p, idx) => {
-      tl.to(p.mesh.position, { y: -30 - idx * 8, duration: 2, ease: 'power3.inOut' }, 0)
+      tl.to(p.mesh.position, { y: -30 - idx * 8, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
     })
   }
 
   function deselectChapter() {
     if (selectedIndex === -1 || isDeselecting) return
     isDeselecting = true
+    gsap.killTweensOf(carousel)
     const tl = gsap.timeline({
       onComplete: () => { selectedIndex = -1; isDeselecting = false }
     })
 
     // Restore txt mesh
     if (groupG.userData.txtMat) {
-      tl.to(groupG.userData.txtMat, { opacity: 1, duration: 1, ease: 'power2.inOut' }, 0)
+      tl.to(groupG.userData.txtMat, { opacity: 1, duration: 1, ease: 'power2.inOut', overwrite: true }, 0)
     }
+
+    // Reverse-spin the carousel back to where it was before the select (matches the
+    // reference) — and resets animatedRotationY so the NEXT select spins again.
+    tl.to(carousel, { animatedRotationY: preSelectRot, duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
 
     // Restore groupG
     if (isMobile) {
-      tl.to(groupG.rotation, { x: toRad(22), y: 0, z: 0, duration: 2.5, ease: 'power3.inOut' }, 0)
+      tl.to(groupG.rotation, { x: toRad(22), y: 0, z: 0, duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
     } else {
-      tl.to(groupG.rotation, { x: toRad(25), y: toRad(70), z: toRad(15), duration: 2.5, ease: 'power3.inOut' }, 0)
+      tl.to(groupG.rotation, { x: toRad(25), y: toRad(70), z: toRad(15), duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
     }
 
     // Restore carousel
-    tl.to(carousel.position, { y: 0, duration: 2.5, ease: 'power3.inOut' }, 0)
+    tl.to(carousel.position, { y: 0, duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
 
     // Reset all posters
     posters.forEach((p) => {
-      tl.to(p.material.uniforms.blendFactor, { value: 0, duration: 1.5, ease: 'power3.inOut' }, 0)
-      tl.to(p.material.uniforms.progress, { value: 0, duration: 1.5, ease: 'power3.inOut' }, 0)
-      tl.to(p.mesh.scale, { x: 1, y: 1, z: 1, duration: 1.5, ease: 'power3.inOut' }, 0)
-      tl.to(p.mesh.position, { y: p.baseY, duration: 1.5, ease: 'power3.inOut' }, 0)
+      tl.to(p.material.uniforms.blendFactor, { value: 0, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
+      tl.to(p.material.uniforms.progress, { value: 0, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
+      tl.to(p.mesh.scale, { x: 1, y: 1, z: 1, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
+      tl.to(p.mesh.position, { y: p.baseY, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
     })
 
     hoveredIndex = -1
