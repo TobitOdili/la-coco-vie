@@ -496,6 +496,18 @@ export function useChapterScene() {
         groupRot: { x: +groupG.rotation.x.toFixed(3), y: +groupG.rotation.y.toFixed(3), z: +groupG.rotation.z.toFixed(3) },
         carouselRotY: +carousel.rotation.y.toFixed(3), carouselPosY: +carousel.position.y.toFixed(1),
       })
+      // What does a click at screen (x,y) resolve to, vs the front-facing card?
+      window.__probe = (x, y) => {
+        const slot = getHoveredPoster(x, y)
+        const slugs = CHAPTERS.map((c) => c.slug)
+        const fc = frontChapterIdx()
+        const hc = chapterIdxForSlot(slot)
+        return {
+          frontChapter: fc, frontSlug: slugs[fc],
+          hoverSlot: slot, hoverChapter: hc, hoverSlug: slugs[hc],
+          selectedIndex, carouselRotY: +carousel.rotation.y.toFixed(3),
+        }
+      }
     }
 
     return { renderer, scene, camera }
@@ -894,13 +906,17 @@ export function useChapterScene() {
   function onClick(e) {
     if (!introComplete || selectedIndex !== -1) return
 
-    // getHoveredPoster returns a slot index now — resolve to chapterIdx so
-    // selectChapter still selects the whole chapter (both copies animate).
+    // Select the FRONT-facing card (the active one the center text reflects). The
+    // raycast hitboxes are flat boxes at each card's un-bent origin, but the vertex
+    // shader bends the cards — so a click on the visible front card frequently misses
+    // or hits an offset neighbor ("a different card comes up"). frontChapterIdx() is
+    // visual-accurate (nearest camera). Use a direct raycast hit only if it agrees with
+    // the front card; otherwise default to the front card.
+    const front = frontChapterIdx()
     const slotI = getHoveredPoster(e.clientX, e.clientY)
-    if (slotI !== -1) {
-      const chIdx = chapterIdxForSlot(slotI)
-      if (chIdx !== -1) selectChapter(chIdx)
-    }
+    const hit = slotI !== -1 ? chapterIdxForSlot(slotI) : -1
+    const chIdx = hit === front ? hit : front
+    if (chIdx !== -1) selectChapter(chIdx)
   }
 
   function selectChapter(chIdx) {
