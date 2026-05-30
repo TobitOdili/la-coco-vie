@@ -249,10 +249,11 @@ export function useChapterScene() {
   const N = 8
   const baseDistance = 40  // original source: ve=40
   const introDistance = 75
-  // Selected card resting Y — centered near the camera look-at (-15) so the
-  // camera-derived cover-scale (see selectChapter) makes a full-bleed hero.
+  // Selected card resting Y. The shader's progress=1 layout frames the content into
+  // a sub-region of the plane, so scale/position are hand-tuned (not camera-derived):
+  // scale = aspectRatio*2.07, this Y top-anchors the content band as the hero.
   // (Step A of the card-becomes-the-page rework — see docs/PHASE-2-INNER-PAGES.md.)
-  const SELECTED_Y = -15
+  const SELECTED_Y = -43
   // Depth-based opacity falloff (Issue #6): cards nearer than NEAR are fully
   // opaque, beyond FAR fade to DEPTH_FADE_FLOOR — fades the far side of the ring
   // toward faint ghosts (the original keeps back cards barely visible, not gone).
@@ -933,13 +934,10 @@ export function useChapterScene() {
     const sameChapter = posters.filter((p) => p.chapterIdx === chIdx)
     const heroPoster = sameChapter.reduce((a, b) => (b.intRotationY > a.intRotationY ? b : a))
 
-    // Camera-derived COVER scale → full-bleed hero on ANY viewport aspect (the magic
-    // `aspectRatio*2.07` undershot width and wasn't resolution-independent).
-    const heroPos = new THREE.Vector3(0, SELECTED_Y, baseDistance) // front card resting position
-    const dist = camera.position.distanceTo(heroPos)
-    const visH = 2 * dist * Math.tan((camera.fov / 2) * Math.PI / 180)
-    const visW = visH * camera.aspect
-    const s = Math.max(visW / 24, visH / 32) * 1.04 // plane is 24×32; cover + 4% bleed
+    // Hand-tuned scale that matches the shader's progress=1 content framing (a
+    // camera-derived "cover" scale just blew the plane up and pushed the content
+    // band off-screen — the shader, not the mesh size, frames the hero).
+    const s = aspectRatio * 2.07
 
     tl.to(heroPoster.material.uniforms.blendFactor, { value: 1.0, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
     tl.to(heroPoster.material.uniforms.progress, { value: 1.0, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
