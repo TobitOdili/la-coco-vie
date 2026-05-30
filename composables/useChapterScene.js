@@ -254,6 +254,11 @@ export function useChapterScene() {
   // scale = aspectRatio*2.07, this Y top-anchors the content band as the hero.
   // (Step A of the card-becomes-the-page rework — see docs/PHASE-2-INNER-PAGES.md.)
   const SELECTED_Y = -43
+  // Scroll-coupling (P1, "card-becomes-the-page"): while a chapter is open, the
+  // hero card is moved UP at the same on-screen rate as the inner-page DOM content
+  // scrolls in (1:1 screen-pixel coupling) so the card "scrolls away" with no seam
+  // — the page scroll (Lenis) is the single clock, fed in via setScroll().
+  const HERO_SCROLL_FACTOR = 1.0   // 1.0 = exact lockstep; tune if the seam drifts
   // Depth-based opacity falloff (Issue #6): cards nearer than NEAR are fully
   // opaque, beyond FAR fade to DEPTH_FADE_FLOOR — fades the far side of the ring
   // toward faint ghosts (the original keeps back cards barely visible, not gone).
@@ -262,6 +267,8 @@ export function useChapterScene() {
   const DEPTH_FADE_FLOOR = 0.2
 
   let scrollRotationY = 0
+  let selectedHero = null   // the single poster scaled up as the full-screen hero (P1)
+  let scrollOffsetPx = 0    // inner-page scroll position in px (from Lenis) — drives the hero up/away
   let preSelectRot = 0  // carousel.animatedRotationY before a select — restored on deselect (reverse spin)
   let carouselTargetRot = 0
   let carouselLerpTarget = 0  // smooth lerp target like original f(current, target, .06)
@@ -752,6 +759,20 @@ export function useChapterScene() {
       setTxtChapter(frontChapterIdx())
     }
 
+    // Scroll-couple the hero card to the inner page (P1). Move the card up by the
+    // SAME number of on-screen pixels the page has scrolled, so it rises in lockstep
+    // with the DOM content and scrolls cleanly away (no "purple overlay" seam).
+    // worldPerPx = on-screen px → world-units at the card's depth (so Δworld·camera
+    // projection == scroll px). Gated to the settled selected state; GSAP owns the
+    // hero's Y during the select-in / deselect-out animations.
+    if (selectedIndex !== -1 && selectedHero && !isSelecting && !isDeselecting) {
+      selectedHero.mesh.getWorldPosition(_frontVec)
+      const dz = Math.max(1, camera.position.z - _frontVec.z)
+      const worldPerPx = (2 * dz * Math.tan(toRad(camera.fov / 2))) / height
+      const eff = Math.min(scrollOffsetPx, height * 1.3)  // clamp once it's fully gone
+      selectedHero.mesh.position.y = selectedHero.baseY + eff * worldPerPx * HERO_SCROLL_FACTOR
+    }
+
     renderer.render(scene, camera)
   }
 
@@ -923,6 +944,7 @@ export function useChapterScene() {
     if (chIdx === selectedIndex) return  // idempotent — safe to call from the route watcher
     selectedIndex = chIdx
     isSelecting = true
+    scrollOffsetPx = 0   // start the hero at the top of the inner page (P1)
     if (onSelectCallback) onSelectCallback(chIdx)
 
     // overwrite:true on every tween so a re-select cleanly kills any still-settling
@@ -941,6 +963,7 @@ export function useChapterScene() {
     // worked for wine — for other chapters it parked the card at the SIDE (z≈0). Deriving
     // from the chosen copy fixes selection for every chapter.
     const heroPoster = posters.find((p) => p.chapterIdx === chIdx)
+    selectedHero = heroPoster   // the card the inner-page scroll couples to (P1)
     preSelectRot = carousel.animatedRotationY
     const targetRot = (heroPoster.intRotationY - 90) * Math.PI / 180
     tl.to(carousel, { animatedRotationY: targetRot, duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
@@ -969,9 +992,10 @@ export function useChapterScene() {
   function deselectChapter() {
     if (selectedIndex === -1 || isDeselecting) return
     isDeselecting = true
+    scrollOffsetPx = 0   // stop coupling; GSAP restores the hero's Y below (P1)
     gsap.killTweensOf(carousel)
     const tl = gsap.timeline({
-      onComplete: () => { selectedIndex = -1; isDeselecting = false }
+      onComplete: () => { selectedIndex = -1; isDeselecting = false; selectedHero = null }
     })
 
     // Restore txt mesh
@@ -1027,6 +1051,13 @@ export function useChapterScene() {
     scrollRotationY -= delta * 0.0008
   }
 
+  // Inner-page scroll position (px), pushed in from the page's Lenis instance.
+  // Read by animate() to scroll-couple the hero card (P1). No-op on the homepage
+  // (the coupling block is gated by selectedIndex).
+  function setScroll(px) {
+    scrollOffsetPx = Math.max(0, px || 0)
+  }
+
   function onResize(w, h) {
     const vp = getViewportSize()
     w = vp.w
@@ -1076,6 +1107,7 @@ export function useChapterScene() {
     onReady,
     selectChapter,    // exposed so the route watcher can drive selection (Phase 2)
     deselectChapter,
+    setScroll,        // inner-page scroll → hero card coupling (P1)
     getState: () => ({ selectedIndex, hoveredIndex, introComplete, isSelecting, isDeselecting }),
   }
 }

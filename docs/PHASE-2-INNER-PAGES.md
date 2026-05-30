@@ -273,9 +273,9 @@ reference). Approach chosen: **full WebGL hero coupled to scroll via Lenis** (20
 ### Plan (Wine O'Clock first, then generalizes via data)
 | Step | What |
 |---|---|
-| A. Hero geometry | On select, move the chosen card to a deterministic full-bleed hero transform in front of the camera (not just flatten-in-place). Compute scale to fill the frustum → resolution-independent. |
-| B. Lenis | Inner page becomes a Lenis-driven smooth scroll (Lenis already a dep) — the shared clock. |
-| C. Scroll coupling | Each frame, read Lenis scroll and drive the hero card up/away in lockstep with the DOM content → card scrolls off as content scrolls in. One clock = always in sync, no seam. |
+| A. Hero geometry ✅ | On select, move the chosen card to a deterministic full-bleed hero transform in front of the camera (not just flatten-in-place). Compute scale to fill the frustum → resolution-independent. |
+| B. Lenis ✅ | Inner page becomes a Lenis-driven smooth scroll (Lenis already a dep) — the shared clock. (Shipped 2026-05-30 — see P1 above.) |
+| C. Scroll coupling ✅ | Each frame, read Lenis scroll and drive the hero card up/away in lockstep with the DOM content → card scrolls off as content scrolls in. One clock = always in sync, no seam. (Shipped 2026-05-30 — `scene.setScroll`, 1:1 `worldPerPx`.) |
 | D. Entry spin | Deterministic ring → spin → grow-to-hero; normalize rotation to a consistent single turn that always plays (builds on the re-select fix). |
 | E. Exit spin | Scroll past the end → shrink + reverse-spin into the ring → `router.push('/')`. Back button stays as a shortcut. |
 | F. Robustness | Browserless matrix: deep-link, click, re-select, exit-by-scroll, exit-by-button, rapid repeat — all must work. |
@@ -369,6 +369,26 @@ guessing — then match it.
 
 ---
 
+### ✅ Step B/C complete — scroll-coupling (2026-05-30)
+The hero card now **scrolls away coupled to the inner-page scroll** (fixes P1, the "purple overlay").
+- **Lenis on the inner page** (`pages/[slug].vue`): wrapper `.chapter-page`, content `.chapter-scroll`
+  (content wrapped in one child so Lenis has a single scrolled element), `autoRaf:true`. Each
+  `'scroll'` tick → `scene.setScroll(lenis.scroll)`.
+- **Scene coupling** (`useChapterScene.js`): new `setScroll(px)` stores `scrollOffsetPx`; the
+  `animate()` loop (gated to the settled selected state) sets
+  `selectedHero.mesh.position.y = baseY + min(px, 1.3·vh)·worldPerPx`, where
+  `worldPerPx = 2·dz·tan(fov/2)/height` at the card's depth `dz = camera.z − heroZ`. That's exact
+  1:1 on-screen coupling (`HERO_SCROLL_FACTOR=1`): scroll N px ⇒ card rises N px on screen, so the
+  full-bleed hero is gone by ~1 viewport and its bottom edge stays locked to the content's top edge.
+  `selectedHero` captured in `selectChapter`, cleared on deselect; `scrollOffsetPx` reset on both.
+- **Plumbing**: `app.vue` `provide('webglSceneRef', …)` so the routed page reaches the persistent scene.
+- **Verified** (local real-1.6 Chrome + Browserless reference compare): see the ✅ P1 entry below.
+- **Tuning note**: the reference card may recede slightly *slower* than 1:1 (a gentle parallax) — our
+  1:1 matches the documented P1 spec ("gone by ~1 viewport"); revisit `HERO_SCROLL_FACTOR` / the
+  `.chapter-hero` height during the step-G styling pass if a closer pacing match is wanted.
+- **Next**: P2 **step E** (scroll-*end* → reverse-spin exit) pairs naturally with this — the card is
+  already mid-exit as you reach the bottom.
+
 ## 🔎 Careful audit + ISSUE LIST (2026-05-29)
 
 Investigated with every tool: local real-1.6 Chrome (layout/geometry), JS DOM/z-index probes,
@@ -382,21 +402,32 @@ the `__heroDebug`/`__probe` scene instrumentation, and a side-by-side reference 
   flat and don't follow the shader bend, so trusting them hit empty space / a neighbor.
 - Correct **select rotation for all chapters** (`targetRot = (φ-90)°`); single front-card hero.
 
-### 🔴 P1 — Hero card doesn't scroll; content overlays it  ← the "purple overlay"
-- **Symptom (user SS2):** scrolling the inner page slides a lavender band over the hero card's
+### ✅ P1 — Hero card doesn't scroll; content overlays it  ← the "purple overlay" — FIXED (2026-05-30)
+- **Symptom (user SS2):** scrolling the inner page slid a lavender band over the hero card's
   video — a two-tone seam cutting into it.
-- **Root cause (measured):** the WebGL canvas/card is `position:fixed` at 0–900 and never moves.
-  `.chapter-content` (`accentLight` = `rgb(214,213,232)`) scrolls up to `top:200` **over** the
-  fixed card (`#webgl-canvas` stays 0–900). The card never scrolls away.
-- **Reference:** fixed canvas too, but the **card is coupled to scroll** and scrolls off as the
-  content rises (confirmed via scroll filmstrip).
-- **Fix:** B/C — drive the hero card's screen position from the page scroll (Lenis shared clock)
-  so the card scrolls away in lockstep with the content. **This is the primary remaining task.**
-  Concretely: introduce Lenis on the inner page; each frame read its scroll value `s`; offset the
-  hero card upward by the world-equivalent of `s` (move `heroPoster.mesh.position.y` or the
-  `carousel` up so the card rises with the DOM content), clamped so it's fully gone by ~1
-  viewport. Make the `.chapter-page` use that same Lenis scroll (one clock = no seam). See the
-  step-by-step in [Card-becomes-the-page rework](#card-becomes-the-page-rework-active) (B + C).
+- **Root cause (measured):** the WebGL canvas/card is `position:fixed` at 0–900 and never moved.
+  `.chapter-content` (`accentLight` = `rgb(214,213,232)`) scrolled up to `top:200` **over** the
+  fixed card (`#webgl-canvas` stays 0–900). The card never scrolled away.
+- **Reference (re-confirmed via Browserless 2026-05-30):** the canvas is `position:fixed; top:0`
+  too and never moves — it's the **card *within* the scene** that's coupled to scroll. At scroll 0
+  the wine-accent card is full-bleed (wordmark up top); by ~1 viewport the wordmark has scrolled
+  off and the next section rises from the bottom.
+- **Fix (B + C — shipped):** the inner page (`pages/[slug].vue`) now runs a **Lenis** smooth
+  scroll (wrapper `.chapter-page`, content `.chapter-scroll`); each scroll tick feeds
+  `lenis.scroll` → `scene.setScroll(px)`. The scene's `animate()` loop moves the hero card
+  (`selectedHero.mesh.position.y`) **up by exactly the on-screen pixels scrolled** — computed via
+  `worldPerPx = 2·dz·tan(fov/2)/height` at the card's depth (1:1 screen coupling, `HERO_SCROLL_FACTOR=1`).
+  So a 1-viewport scroll raises the full-bleed card by exactly one viewport → it clears the top
+  cleanly; the card's receding bottom edge stays locked to the content's rising top edge (no seam).
+  Clamped at 1.3 viewports (it's gone by then). `app.vue` `provide`s the scene ref so the routed
+  page can reach the persistent scene. Reset to 0 on select/deselect + page unmount.
+- **Verified:** local real-1.6 Chrome loop (`__heroDebug`, dev build): hero world-Y `-43 → -3.2 →
+  21.6` tracking `scrollTop 0 → 720 → ≥1170` (matches the 1:1 math exactly); clean hero↔content
+  boundary at the transition; no console errors. Browserless reference re-confirm: original canvas
+  is `fixed` + card-coupled — our mechanic matches. ⚠️ The dev build doesn't draw SVG/PNG textures
+  under headless (dev-build quirk — see the corrected caveat below; prod renders them fine), and
+  **video renders in no headless engine** → confirm the fully-textured scroll on a real browser, or
+  by **deploying P1 and Browserless-capturing the prod URL** (SVG/wordmark will render there).
 
 ### 🟡 P2 — Scroll-end reverse not built (step E)
 - Scrolling to the bottom should shrink + reverse-spin the card back into the ring. Not built;
@@ -433,15 +464,22 @@ the `__heroDebug`/`__probe` scene instrumentation, and a side-by-side reference 
   (follows the mouse), not a layout bug. **Action:** no fix expected; just confirm it's a
   non-issue when reviewing on a real browser.
 
-### ℹ️ Verification caveats (tooling, NOT site bugs)
-- **Headless (SwiftShader) does not render the card's textures** — the wordmark/video show blank
-  in headless screenshots but render correctly on real Chrome (user-confirmed via screenshot).
-  → The earlier "wordmark missing at 1.6" was a **headless artifact**; the hero framing
-  (`SELECTED_Y=-43`, `scale=aspectRatio*2.07`) is actually good on real browsers.
+### ℹ️ Verification caveats (tooling, NOT site bugs) — corrected 2026-05-30
+- **The DEV build doesn't render SVG/PNG textures under headless** — under `npm run dev`, the
+  poster SVGs / wordmark / txt PNGs draw blank in headless captures (cards = flat accent frames;
+  selected hero = a plain accent block). This is a **dev-build** quirk, **NOT** a SwiftShader
+  limit. Proven 2026-05-30: the **same local headless Chrome renders those textures against the
+  PROD URL** (`la-coco-vie.vercel.app/wine-o-clock`) — and so does Browserless. So the earlier
+  "wordmark missing at 1.6 = headless/SwiftShader artifact" was mis-attributed; it's dev-vs-prod.
+  The hero framing (`SELECTED_Y=-43`, full-bleed scale) is good (confirmed on prod + real browsers).
+- **Video renders in NO headless engine** (local SwiftShader *or* Browserless), dev or prod —
+  needs a real browser. This is the one thing only the user / a real browser can confirm.
 - **Headless doesn't trigger lazy `<img>` loads** on programmatic scroll → gallery/dress images
   look broken in headless but are served `200` and load fine on real browsers.
-- **Net:** use the local headless loop for **layout/geometry/DOM** only; use a **real browser**
-  (or the user) to verify **WebGL textures, video, and lazy images**.
+- **Net:** local headless dev loop = **layout/geometry/DOM** (via `__heroDebug`). For **SVG/PNG
+  textures**, capture the **prod URL** (local headless or Browserless). For **video** + **lazy
+  images**, use a **real browser** (or the user). Browserless's only real edge is reaching public
+  prod URLs; it renders at 800×600/1.33 so it's worse for geometry framing.
 
 ### 🧹 Tech debt to clear before final handoff
 - Remove the temporary scene instrumentation (`window.__heroDebug` / `__camDebug` / `__probe`)

@@ -283,14 +283,22 @@ Requires Google Chrome installed (it is, at `/Applications/Google Chrome.app`). 
 WebGL (SwiftShader) renders the Three.js scene fine. Helper: `/tmp/bless/local.mjs`.
 
 > ⚠️ **Headless limits (verify these on a REAL browser, not headless):**
-> - **Card textures don't render in headless** — the selected card's poster SVG wordmark and
->   the inline video show **blank** under SwiftShader, but render correctly in real Chrome.
->   (This caused a false "wordmark missing" diagnosis — it was fine all along.)
+> - **The DEV build doesn't render image textures under headless** — under `npm run dev`, the
+>   poster SVGs / txt PNGs draw **blank** in headless screenshots (cards show as flat
+>   accent-colored frames; the selected hero is a plain accent block). This is a **dev-build**
+>   quirk, **not** a SwiftShader limit: the **same local headless Chrome renders those textures
+>   fine against a PROD build** (`la-coco-vie.vercel.app`), as does Browserless. Confirmed
+>   2026-05-30 by capturing the identical Vercel URL with both engines. (This is what caused the
+>   earlier false "wordmark missing / SwiftShader can't render textures" diagnosis.)
+> - **Video renders in NO headless engine** — the inline film shows blank under both local
+>   SwiftShader and Browserless, on dev *and* prod. Video decode needs a **real browser** (or ask
+>   the user).
 > - **Lazy `<img>` don't load on programmatic scroll** in headless → gallery/dress images look
 >   broken in headless screenshots but are served `200` and load fine for real users.
 > - **Conclusion:** trust the headless loop for **layout / geometry / DOM / z-index / scene
->   transforms** (via `__heroDebug`); use a **real browser** (or ask the user) for **textures,
->   video, and lazy images**.
+>   transforms** (via `__heroDebug`) on the **dev** server. To check **SVG/PNG textures** in
+>   headless, point a headless capture at the **deployed (prod) URL**, or use **Browserless**
+>   against prod. Use a **real browser** (or ask the user) for **video** and **lazy images**.
 
 > **Why this matters:** Browserless (below) renders the page at **800×600 / aspect 1.33** under
 > `connectOverCDP` (a CDP quirk), so its screenshots mis-frame WebGL geometry. The local loop

@@ -1,34 +1,39 @@
 <template>
-  <div v-if="chapter" class="chapter-page">
-    <!-- Hero: transparent so the WebGL card (animated to fill the screen by the
-         select transition, in app.vue's persistent scene) reads as the hero. -->
-    <section class="chapter-hero" aria-hidden="true" />
+  <div v-if="chapter" ref="pageEl" class="chapter-page">
+    <!-- Single content child = Lenis's scrolled element (wrapper is .chapter-page). -->
+    <div ref="scrollEl" class="chapter-scroll">
+      <!-- Hero: transparent so the WebGL card (animated to fill the screen by the
+           select transition, in app.vue's persistent scene) reads as the hero. As
+           you scroll, the scene couples the card to the scroll so it rises away. -->
+      <section class="chapter-hero" aria-hidden="true" />
 
-    <!-- Built inner page (data-driven) when content exists for this chapter… -->
-    <div v-if="pageContent" class="chapter-content">
-      <ChapterSection
-        v-for="(section, i) in pageContent.sections"
-        :key="i"
-        :section="section"
-      />
-      <footer class="chapter-end">
-        <button class="back-link" @click="$router.push('/')">↑ Back to chapters</button>
-      </footer>
+      <!-- Built inner page (data-driven) when content exists for this chapter… -->
+      <div v-if="pageContent" class="chapter-content">
+        <ChapterSection
+          v-for="(section, i) in pageContent.sections"
+          :key="i"
+          :section="section"
+        />
+        <footer class="chapter-end">
+          <button class="back-link" @click="$router.push('/')">↑ Back to chapters</button>
+        </footer>
+      </div>
+
+      <!-- …otherwise the scaffold (chapters not yet built: la-storia, eat, amour). -->
+      <section v-else class="chapter-body">
+        <h1 class="chapter-title">{{ chapter.title }}</h1>
+        <p class="chapter-note">
+          Inner-page scaffold. Content for this chapter is not built yet — see
+          <code>docs/PHASE-2-INNER-PAGES.md</code>.
+        </p>
+      </section>
     </div>
-
-    <!-- …otherwise the scaffold (chapters not yet built: la-storia, eat, amour). -->
-    <section v-else class="chapter-body">
-      <h1 class="chapter-title">{{ chapter.title }}</h1>
-      <p class="chapter-note">
-        Inner-page scaffold. Content for this chapter is not built yet — see
-        <code>docs/PHASE-2-INNER-PAGES.md</code>.
-      </p>
-    </section>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onBeforeUnmount, inject, ref } from 'vue'
+import Lenis from 'lenis'
 import { CHAPTERS } from '~/composables/useChapterScene'
 import { CHAPTER_PAGES } from '~/composables/chapterPages'
 import ChapterSection from '~/components/chapter/ChapterSection.vue'
@@ -37,8 +42,37 @@ const route = useRoute()
 const chapter = computed(() => CHAPTERS.find((c) => c.slug === route.params.slug))
 const pageContent = computed(() => CHAPTER_PAGES[route.params.slug])
 
+// Reach the persistent WebGL scene (provided by app.vue) so page scroll can drive
+// the hero-card coupling (P1). It's the same scene instance across all routes.
+const webglSceneRef = inject('webglSceneRef', null)
+
+const pageEl = ref(null)
+const scrollEl = ref(null)
+let lenis = null
+
 onMounted(() => {
-  if (!chapter.value) navigateTo('/')
+  if (!chapter.value) { navigateTo('/'); return }
+
+  const scene = webglSceneRef?.value?.scene
+
+  // Lenis drives the inner page's smooth scroll (the single clock). Each scroll
+  // tick we feed the position to the scene, which moves the hero card up in
+  // lockstep — the card "scrolls away" instead of being overlaid (P1). autoRaf
+  // runs Lenis's own rAF; the scene reads the value in its render loop.
+  lenis = new Lenis({
+    wrapper: pageEl.value,
+    content: scrollEl.value,
+    autoRaf: true,
+  })
+  lenis.on('scroll', (e) => scene?.setScroll(e.scroll))
+  scene?.setScroll(0)
+})
+
+onBeforeUnmount(() => {
+  lenis?.destroy()
+  lenis = null
+  // Leave the hero at the top for the deselect reverse-spin (scene also resets).
+  webglSceneRef?.value?.scene?.setScroll(0)
 })
 </script>
 
@@ -52,6 +86,16 @@ onMounted(() => {
   height: 100dvh;
   overflow-x: hidden;
   overflow-y: auto;
+}
+/* Lenis adds .lenis-smooth to the wrapper — kill native smooth so it doesn't fight. */
+.chapter-page.lenis-smooth {
+  scroll-behavior: auto;
+}
+
+/* The single scrolled content element (Lenis `content`). */
+.chapter-scroll {
+  position: relative;
+  width: 100%;
 }
 
 /* Transparent hero — the WebGL hero shows through here. */

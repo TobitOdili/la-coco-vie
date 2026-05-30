@@ -348,6 +348,26 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
 
 ## 🗓 Session Log
 
+### 2026-05-30 (session 9) — P1 scroll-coupling (card scrolls away)
+- **Fixed P1 — the "purple overlay."** The hero card was effectively fixed (canvas `position:fixed`,
+  scene never moved the hero) while `.chapter-content` scrolled over it → a lavender seam cutting
+  into the card. Now the **card is coupled to the inner-page scroll** and rises away in lockstep
+  (steps B + C of the card-becomes-the-page rework).
+  - `pages/[slug].vue`: wrapped content in a single `.chapter-scroll` child and added a **Lenis**
+    smooth scroll (wrapper `.chapter-page`, `autoRaf`); each `'scroll'` tick → `scene.setScroll(px)`.
+  - `composables/useChapterScene.js`: new `setScroll(px)`; `animate()` moves
+    `selectedHero.mesh.position.y` up by `px·worldPerPx` (`worldPerPx = 2·dz·tan(fov/2)/height` at the
+    card's depth) — **exact 1:1 on-screen coupling**, clamped at 1.3 viewports. `selectedHero`
+    captured on select, reset on select/deselect/unmount.
+  - `app.vue`: `provide('webglSceneRef', …)` so the routed page reaches the persistent scene.
+  - **Verified**: local real-1.6 Chrome (`__heroDebug`) — hero world-Y `-43 → -3.2 → 21.6` exactly
+    tracks `scrollTop 0 → 720 → ≥1170` per the 1:1 math; clean hero↔content boundary mid-scroll;
+    no console errors. Browserless reference re-confirm: original canvas is `fixed` + card-coupled —
+    our mechanic matches. ⚠️ Headless SwiftShader doesn't render card textures/video — **the
+    textured look still needs a real-browser confirm.**
+  - Full write-up + tuning notes: `docs/PHASE-2-INNER-PAGES.md` → P1 entry + "Step B/C complete."
+  - Next: P2 **step E** (scroll-end → reverse-spin exit), then richer parallax + other chapters.
+
 ### 2026-05-29 (session 8) — card-as-page rework + careful audit
 - **Iteration tooling fixed:** local fast loop = `npm run dev` (Bash bg) + Playwright **system
   Chrome** headless at real **1440×900** with WebGL. No deploy wait, no Browserless 1.33 quirk.

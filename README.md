@@ -35,12 +35,13 @@ custom GLSL shaders, GSAP animation, spatial audio, and chapter transitions.
   built** (data-driven sub-chapters, galleries, dress-tail cards, scroll reveal). Other 3
   chapters are scaffolds. See [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md).
 - 🔧 **Active rework — "card becomes the page":** the selected card spins/grows into the inner-page
-  hero. Click→correct-card, camera, and rotation are fixed; **known open issue:** the hero card is
-  fixed and the page content scrolls *over* it (the "purple overlay") — needs scroll-coupling so
-  the card scrolls away (Lenis), plus a scroll-end reverse-spin. **Full issue list:**
+  hero. Click→correct-card, camera, rotation, and **scroll-coupling are done** — the hero card now
+  scrolls away in lockstep with the page (Lenis, 1:1; fixes the old "purple overlay"). **Known open
+  item:** the scroll-*end* reverse-spin back into the ring (step E) isn't built — exit is via the
+  nav logo / back button for now. **Full issue list:**
   [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md) → "Careful audit + ISSUE LIST".
 - ⏸️ **Parked:** ring viewing-angle (#4) — needs the original's exact group tilt; low ROI.
-- 🔮 **Next:** scroll-coupling (B/C) + scroll-end reverse (E) → richer motion → other chapters → re-skin.
+- 🔮 **Next:** scroll-end reverse (E) → richer motion → other chapters → re-skin.
 
 Full live status → [`PROGRESS.md`](PROGRESS.md) · issue history → [`AUDIT.md`](AUDIT.md) · plan → [`docs/ROADMAP.md`](docs/ROADMAP.md)
 

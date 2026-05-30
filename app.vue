@@ -36,7 +36,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, provide } from 'vue'
 import { CHAPTERS } from '~/composables/useChapterScene'
 import { SITE } from '~/site.config'
 
@@ -51,6 +51,9 @@ const slugToIdx = (slug) => (slug ? CHAPTERS.findIndex((c) => c.slug === slug) :
 const appRoot = ref(null)
 const cursorRef = ref(null)
 const webglSceneRef = ref(null)
+// Let the routed inner page reach the persistent scene (e.g. to feed inner-page
+// scroll into the hero-card coupling — P1). The ref resolves once WebGLScene mounts.
+provide('webglSceneRef', webglSceneRef)
 const aboutOpen = ref(false)
 const soundOn = ref(false)
 const loaded = ref(false)
