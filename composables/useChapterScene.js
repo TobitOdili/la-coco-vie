@@ -942,13 +942,10 @@ export function useChapterScene() {
     const sameChapter = posters.filter((p) => p.chapterIdx === chIdx)
     const heroPoster = sameChapter.reduce((a, b) => (b.intRotationY > a.intRotationY ? b : a))
 
-    // WIDTH-fill scale: make the card plane exactly span the viewport width at its
-    // resting distance. (Width-fill is aspect-independent — aspect cancels — unlike a
-    // max()/cover scale, which over-scaled and pushed the content off-screen.)
-    const heroPos = new THREE.Vector3(0, SELECTED_Y, baseDistance)
-    const dist = camera.basePosition.distanceTo(heroPos)
-    const visW = 2 * dist * Math.tan((camera.fov / 2) * Math.PI / 180) * camera.aspect
-    const s = (visW / 24) * 1.03 // plane width is 24; +3% bleed to kill edge gaps
+    // Scale tuned to the shader's progress=1 content framing (the wordmark/logo sit
+    // at a fixed UV; over-scaling pushes them out of the hero). aspectRatio*2.07 is
+    // the reference-tuned value.
+    const s = aspectRatio * 2.07
 
     tl.to(heroPoster.material.uniforms.blendFactor, { value: 1.0, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
     tl.to(heroPoster.material.uniforms.progress, { value: 1.0, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)

@@ -261,11 +261,37 @@ absolute URL. Apply the same pattern for any future CSS-var asset paths.
 
 ---
 
-## QA workflow (Browserless)
+## QA workflow
 
-Visual parity is checked against the live original via **Browserless** (cloud headless
-Chrome over CDP). The token lives only in the local QA scripts under `/tmp/bless/` — **never
-commit it.** Scripts use `playwright-core` + `sharp` to capture and stitch comparisons.
+There are two complementary ways to capture the running site. **For our own
+geometry/layout work, prefer the local one** — it's instant and renders at the real aspect.
+
+### ★ Local fast loop (preferred for iterating our own build)
+Run the dev server and screenshot it with **local system Chrome** via Playwright — real
+1440×900 (aspect 1.6), real WebGL, no deploy wait, no aspect quirk. Edit → Nuxt hot-reloads
+→ re-screenshot in seconds.
+
+```bash
+# 1. dev server (via Bash bg — the Claude Preview MCP fails with EPERM in this sandbox)
+npm run dev                                   # → http://localhost:3001
+# 2. screenshot at a real 1.6 viewport with WebGL (system Chrome, no download):
+#    playwright-core chromium.launch({ channel: 'chrome', headless: true,
+#      args: ['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader'] })
+#    newContext({ viewport: { width: 1440, height: 900 } }) → goto localhost:3001/<route>
+```
+Requires Google Chrome installed (it is, at `/Applications/Google Chrome.app`). Software
+WebGL (SwiftShader) renders the Three.js scene fine. Helper: `/tmp/bless/local.mjs`.
+
+> **Why this matters:** Browserless (below) renders the page at **800×600 / aspect 1.33** under
+> `connectOverCDP` (a CDP quirk), so its screenshots mis-frame WebGL geometry. The local loop
+> renders at the true 1.6 — use it for any hero/scene tuning. (The Preview MCP can't run the
+> dev server here — `EPERM: uv_cwd` — so start it via Bash.)
+
+### Browserless (for comparing against the LIVE original / deployed site)
+Visual parity vs the live original uses **Browserless** (cloud headless Chrome over CDP) —
+needed because it can reach public URLs (`chapter.millanova.com`, the Vercel deploy) that a
+local browser comparison would still need. The token lives only in local scripts under
+`/tmp/bless/` — **never commit it.** Scripts use `playwright-core` + `sharp`.
 
 Hard-won gotchas (keep these in mind):
 - **WebGL intro:** wait ~12–13 s after load before a steady-state screenshot.

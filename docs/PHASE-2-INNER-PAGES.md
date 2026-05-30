@@ -332,3 +332,17 @@ Still to do: **B/C** (Lenis scroll-coupling so the hero scrolls away as the page
 (scroll-end reverse-spin into the ring), strip the temporary `__heroDebug`/`__camDebug`, and
 confirm the real-browser look. `SELECTED_Y=-43` gives a top-~50% hero; nudge if the user wants
 it higher/lower.
+
+### Iteration tooling FIXED (2026-05-29)
+Established a **local fast loop**: `npm run dev` (Bash bg) + Playwright driving **system Chrome**
+headless at real **1440×900 / aspect 1.6** with WebGL (SwiftShader). Edit → hot-reload →
+screenshot in seconds — no deploy wait, no Browserless 1.33-aspect distortion. See
+[ARCHITECTURE → QA workflow](ARCHITECTURE.md#qa-workflow). This unblocks all remaining WebGL tuning.
+
+**First real-1.6 finding:** at the true aspect the hero card fills full width as a top band, but
+the **wordmark ("WINE O'CLOCK") is out of frame** — the shader frames the wordmark/logo at a
+fixed UV (progress=1 layout) that doesn't land in the hero band at 1.6 (it showed only on the
+wrong 1.33 buffer). SELECTED_Y is very sensitive (−43 = blank top band; −15 = card rides off
+the top). **Next hero sub-task:** dial the wordmark into the hero at 1.6 (likely the shader's
+progress=1 logo placement or a paired scale/SELECTED_Y), now fast to iterate. Reverted to the
+`aspectRatio*2.07` / SELECTED_Y=−43 baseline.
