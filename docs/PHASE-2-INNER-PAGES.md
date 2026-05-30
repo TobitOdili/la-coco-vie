@@ -346,3 +346,23 @@ wrong 1.33 buffer). SELECTED_Y is very sensitive (−43 = blank top band; −15 
 the top). **Next hero sub-task:** dial the wordmark into the hero at 1.6 (likely the shader's
 progress=1 logo placement or a paired scale/SELECTED_Y), now fast to iterate. Reverted to the
 `aspectRatio*2.07` / SELECTED_Y=−43 baseline.
+
+### Full check (2026-05-29) — user-reported regressions confirmed
+Ran the local fast loop (real 1.6) clicking from the homepage + deep-linking all 4 chapters:
+1. **"Different card on click" — CONFIRMED, root-caused, FIXED.** `targetRot = -(intRotationY)`
+   only parked WINE at the front; la-storia/eat/amour landed at the ring SIDE (z≈0, x≈40).
+   Fix: a copy at ring angle φ faces the camera at carousel rotation `(φ-90)°` — derive
+   targetRot from the chosen hero copy. Verified all 4 chapters now land front-center
+   (x=0, z=+40, dist=66).
+2. **"Overlay over the card" — CONFIRMED.** Two contributors: (a) unbuilt chapters render the
+   scaffold whose **opaque `--accentLight` bg** covers the card; (b) the hero card itself is
+   currently **blank lavender (wordmark out of frame at 1.6)** so it reads as a plain block.
+3. **"Bottom doesn't wrap back to a card" — CONFIRMED but EXPECTED** — the scroll-end reverse
+   (step E) isn't built yet.
+
+**Hero wordmark at 1.6 is finicky** — the shader frames the wordmark/logo at a fixed UV that
+doesn't land in the hero band at 1.6, and `SELECTED_Y` sweeps behave unintuitively (the plane
+is ~3× the viewport height; parent transforms make projection hard to reason about). **Next:
+extract the reference's exact selected-card transform** (scale + world position) via the same
+`uniformMatrix4fv` GPU instrumentation used for the homepage camera — ground-truth instead of
+guessing — then match it.
