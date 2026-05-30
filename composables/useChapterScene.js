@@ -249,7 +249,11 @@ export function useChapterScene() {
   const N = 8
   const baseDistance = 40  // original source: ve=40
   const introDistance = 75
-  const SELECTED_Y = -70
+  // Selected card resting Y. The card fills the viewport WIDTH at its front-of-ring
+  // distance (scale = aspectRatio*2.07) and overflows in height; -43 top-anchors that
+  // overflow so the card reads as a full-bleed top hero (was -70 → shoved low/clipped).
+  // (Step A of the card-becomes-the-page rework — see docs/PHASE-2-INNER-PAGES.md.)
+  const SELECTED_Y = -43
   // Depth-based opacity falloff (Issue #6): cards nearer than NEAR are fully
   // opaque, beyond FAR fade to DEPTH_FADE_FLOOR — fades the far side of the ring
   // toward faint ghosts (the original keeps back cards barely visible, not gone).
