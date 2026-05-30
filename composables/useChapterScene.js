@@ -942,10 +942,13 @@ export function useChapterScene() {
     const sameChapter = posters.filter((p) => p.chapterIdx === chIdx)
     const heroPoster = sameChapter.reduce((a, b) => (b.intRotationY > a.intRotationY ? b : a))
 
-    // Hand-tuned scale that matches the shader's progress=1 content framing (a
-    // camera-derived "cover" scale just blew the plane up and pushed the content
-    // band off-screen — the shader, not the mesh size, frames the hero).
-    const s = aspectRatio * 2.07
+    // WIDTH-fill scale: make the card plane exactly span the viewport width at its
+    // resting distance. (Width-fill is aspect-independent — aspect cancels — unlike a
+    // max()/cover scale, which over-scaled and pushed the content off-screen.)
+    const heroPos = new THREE.Vector3(0, SELECTED_Y, baseDistance)
+    const dist = camera.basePosition.distanceTo(heroPos)
+    const visW = 2 * dist * Math.tan((camera.fov / 2) * Math.PI / 180) * camera.aspect
+    const s = (visW / 24) * 1.03 // plane width is 24; +3% bleed to kill edge gaps
 
     tl.to(heroPoster.material.uniforms.blendFactor, { value: 1.0, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
     tl.to(heroPoster.material.uniforms.progress, { value: 1.0, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
