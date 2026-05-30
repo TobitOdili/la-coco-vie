@@ -467,6 +467,37 @@ export function useChapterScene() {
     // Intro animation
     runIntro()
 
+    // TEMP debug (Phase 2 hero geometry): expose per-poster world orientation so we
+    // can identify the front art-facing copy + tilt source via Browserless. Remove
+    // once the hero is dialed in.
+    if (typeof window !== 'undefined') {
+      window.__heroDebug = () => {
+        const camPos = camera.position.clone()
+        const v = new THREE.Vector3()
+        const n = new THREE.Vector3()
+        return posters.map((p) => {
+          p.mesh.updateWorldMatrix(true, false)
+          p.mesh.getWorldPosition(v)
+          n.set(0, 0, 1).transformDirection(p.mesh.matrixWorld)
+          const toCam = camPos.clone().sub(v).normalize()
+          return {
+            i: p.i, chapterIdx: p.chapterIdx,
+            x: +v.x.toFixed(1), y: +v.y.toFixed(1), z: +v.z.toFixed(1),
+            dist: +v.distanceTo(camPos).toFixed(1),
+            normalDotCam: +n.dot(toCam).toFixed(2),
+            scaleX: +p.mesh.scale.x.toFixed(2),
+            blend: +p.material.uniforms.blendFactor.value.toFixed(2),
+            progress: +p.material.uniforms.progress.value.toFixed(2),
+          }
+        })
+      }
+      window.__camDebug = () => ({
+        x: +camera.position.x.toFixed(1), y: +camera.position.y.toFixed(1), z: +camera.position.z.toFixed(1),
+        groupRot: { x: +groupG.rotation.x.toFixed(3), y: +groupG.rotation.y.toFixed(3), z: +groupG.rotation.z.toFixed(3) },
+        carouselRotY: +carousel.rotation.y.toFixed(3), carouselPosY: +carousel.position.y.toFixed(1),
+      })
+    }
+
     return { renderer, scene, camera }
   }
 
