@@ -249,11 +249,10 @@ export function useChapterScene() {
   const N = 8
   const baseDistance = 40  // original source: ve=40
   const introDistance = 75
-  // Selected card resting Y. The card fills the viewport WIDTH at its front-of-ring
-  // distance (scale = aspectRatio*2.07) and overflows in height; -43 top-anchors that
-  // overflow so the card reads as a full-bleed top hero (was -70 → shoved low/clipped).
+  // Selected card resting Y — centered near the camera look-at (-15) so the
+  // camera-derived cover-scale (see selectChapter) makes a full-bleed hero.
   // (Step A of the card-becomes-the-page rework — see docs/PHASE-2-INNER-PAGES.md.)
-  const SELECTED_Y = -43
+  const SELECTED_Y = -15
   // Depth-based opacity falloff (Issue #6): cards nearer than NEAR are fully
   // opaque, beyond FAR fade to DEPTH_FADE_FLOOR — fades the far side of the ring
   // toward faint ghosts (the original keeps back cards barely visible, not gone).
@@ -928,20 +927,26 @@ export function useChapterScene() {
     // Flatten groupG
     tl.to(groupG.rotation, { x: 0, y: 0, z: 0, duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
 
-    // Grow the selected chapter's cards into the hero. NOTE: both ring copies are
-    // scaled (one is art-facing/front, the other renders near-white/back). Scaling
-    // only one copy showed the back-facing (near-white) card, so we scale both for
-    // now; the tilt/not-full-width artifact + picking the single art-facing copy is
-    // a known follow-up (needs scene instrumentation to identify the front copy).
-    posters.filter((p) => p.chapterIdx === chIdx).forEach((p) => {
-      tl.to(p.material.uniforms.blendFactor, { value: 1.0, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
-      tl.to(p.material.uniforms.progress, { value: 1.0, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
-      const s = aspectRatio * 2.07
-      tl.to(p.mesh.scale, { x: s, y: s, z: 1, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
-    })
+    // The hero is the SINGLE copy that ends nearest the camera after the rotation.
+    // Instrumentation confirmed that's the higher-intRotationY copy (the i+4 mirror);
+    // posters.find() returns the lower copy, which ends at the BACK (renders near-white).
+    const sameChapter = posters.filter((p) => p.chapterIdx === chIdx)
+    const heroPoster = sameChapter.reduce((a, b) => (b.intRotationY > a.intRotationY ? b : a))
 
-    // Hide other posters
-    posters.filter((p) => p.chapterIdx !== chIdx).forEach((p, idx) => {
+    // Camera-derived COVER scale → full-bleed hero on ANY viewport aspect (the magic
+    // `aspectRatio*2.07` undershot width and wasn't resolution-independent).
+    const heroPos = new THREE.Vector3(0, SELECTED_Y, baseDistance) // front card resting position
+    const dist = camera.position.distanceTo(heroPos)
+    const visH = 2 * dist * Math.tan((camera.fov / 2) * Math.PI / 180)
+    const visW = visH * camera.aspect
+    const s = Math.max(visW / 24, visH / 32) * 1.04 // plane is 24×32; cover + 4% bleed
+
+    tl.to(heroPoster.material.uniforms.blendFactor, { value: 1.0, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
+    tl.to(heroPoster.material.uniforms.progress, { value: 1.0, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
+    tl.to(heroPoster.mesh.scale, { x: s, y: s, z: 1, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
+
+    // Hide every other poster (including the same chapter's back copy)
+    posters.filter((p) => p !== heroPoster).forEach((p, idx) => {
       tl.to(p.mesh.position, { y: -30 - idx * 8, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
     })
   }
