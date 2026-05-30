@@ -677,6 +677,14 @@ export function useChapterScene() {
       camera.position.y += my * (-ne) - dy / oe
       camera.position.z = camera.basePosition.z
       camera.lookAt(new THREE.Vector3(0, camera.basePosition.y, 0))
+    } else {
+      // Selected: ease the camera back to its base (on-axis) position so the hero is
+      // viewed front-on. Without this, parallax leaves the camera off-axis (frozen
+      // wherever the mouse was) → the hero card looks skewed/off-center (Phase 2).
+      camera.position.x += (camera.basePosition.x - camera.position.x) * 0.08
+      camera.position.y += (camera.basePosition.y - camera.position.y) * 0.08
+      camera.position.z = camera.basePosition.z
+      camera.lookAt(new THREE.Vector3(0, camera.basePosition.y, 0))
     }
 
     // Update video textures for active videos
