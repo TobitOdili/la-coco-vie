@@ -299,3 +299,20 @@ reference). Approach chosen: **full WebGL hero coupled to scroll via Lenis** (20
   rotation — **next step: instrument the scene** (expose poster world matrices / facing to
   `window` under a debug flag) and read it via Browserless `evaluate`, instead of guessing
   blind across 2-min deploy cycles.
+
+### Progress log — Step A, cont. (instrumentation results)
+- Added temporary `window.__heroDebug()` / `__camDebug()` (read poster world pos/dist/normal,
+  camera/group/carousel state via Browserless `evaluate`). **Remove before shipping.**
+- **Confirmed**: the front (visible/art-facing) hero is the **higher-`intRotationY` mirror
+  copy** (i+4), not `posters.find()` (which returns the lower copy → ends at the BACK,
+  renders near-white). Group is fully flat; the earlier tilt/wash was purely the back copy
+  overlapping. ✅ **Fix kept**: hero = the single front copy (`heroPoster`); hide the rest.
+- **Dead end**: a camera-derived "cover" scale blew the plane up and pushed the content
+  off-screen — the **fragment shader frames the hero into a sub-region of the plane** at
+  `progress=1`, so mesh scale must match the hand-tuned `aspectRatio*2.07`, not fill the
+  frustum. Reverted scale + `SELECTED_Y=-43`.
+- ⚠️ **Verification blocked in-sandbox**: Browserless renders the page at **800×600 (aspect
+  1.33)** (CDP quirk), not the real 1.6 — so screenshots aren't representative for geometry.
+  **The real full-bleed look must be confirmed on a real 1.6 browser.** If the hero isn't
+  edge-to-edge there, tune `aspectRatio*2.07` / `SELECTED_Y` with that feedback (can't tune
+  blind against the 1.33 buffer).
