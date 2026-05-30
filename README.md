@@ -34,8 +34,13 @@ custom GLSL shaders, GSAP animation, spatial audio, and chapter transitions.
   the page, deep-links + browser back/forward, per-slug prerender. **Wine O'Clock inner page
   built** (data-driven sub-chapters, galleries, dress-tail cards, scroll reveal). Other 3
   chapters are scaffolds. See [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md).
+- 🔧 **Active rework — "card becomes the page":** the selected card spins/grows into the inner-page
+  hero. Click→correct-card, camera, and rotation are fixed; **known open issue:** the hero card is
+  fixed and the page content scrolls *over* it (the "purple overlay") — needs scroll-coupling so
+  the card scrolls away (Lenis), plus a scroll-end reverse-spin. **Full issue list:**
+  [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md) → "Careful audit + ISSUE LIST".
 - ⏸️ **Parked:** ring viewing-angle (#4) — needs the original's exact group tilt; low ROI.
-- 🔮 **Next:** richer scroll motion (ScrollTrigger/Lenis) + inline films → other chapters → re-skin.
+- 🔮 **Next:** scroll-coupling (B/C) + scroll-end reverse (E) → richer motion → other chapters → re-skin.
 
 Full live status → [`PROGRESS.md`](PROGRESS.md) · issue history → [`AUDIT.md`](AUDIT.md) · plan → [`docs/ROADMAP.md`](docs/ROADMAP.md)
 

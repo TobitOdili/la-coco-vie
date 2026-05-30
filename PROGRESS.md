@@ -259,6 +259,7 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 | Loader `%` covered the number (only "%" visible) — absolute span with no offset | Relative `.counter` + `%` at `left:100%` so both glyphs sit side-by-side (`96e0d083`) |
 | Deep-link `<title>` stuck on home title — manual `document.title` clobbered by Nuxt head (once `pages/` active) | Manage title via reactive `useHead({ title })` instead |
 | Re-selecting a chapter produced no card spin / "floated weirdly" | Deselect never reset `carousel.animatedRotationY` (re-select spun target→target = no-op) + no tween `overwrite` (stacking). Capture `preSelectRot`, reverse-spin to it on deselect, `overwrite:true` on all select/deselect tweens |
+| Clicking a card selected the wrong chapter; hero skewed | (a) raycast hitboxes are flat but cards are shader-bent → click missed/hit neighbor → `onClick` selects `frontChapterIdx`; (b) select rotation `-(φ)` only worked for wine → `(φ-90)°`; (c) parallax froze camera off-axis → ease camera to base on select |
 
 ---
 
@@ -346,6 +347,26 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
 ---
 
 ## 🗓 Session Log
+
+### 2026-05-29 (session 8) — card-as-page rework + careful audit
+- **Iteration tooling fixed:** local fast loop = `npm run dev` (Bash bg) + Playwright **system
+  Chrome** headless at real **1440×900** with WebGL. No deploy wait, no Browserless 1.33 quirk.
+  ⚠️ Headless **doesn't render card textures (wordmark/video) or lazy images** — those are fine
+  on real browsers; use headless for layout/geometry only. (See ARCHITECTURE → QA workflow.)
+- **Hero geometry (Step A):** single front-card hero; **camera recenter on select** (fixed the
+  skew — parallax had frozen the camera off-axis); **select rotation fixed for ALL chapters**
+  (`targetRot=(φ-90)°`, was only correct for wine).
+- **"Different card on click" FIXED:** root-caused via JS probe + reference compare — the raycast
+  hitboxes are flat and don't follow the cards' shader bend, so clicking the visible card missed
+  or hit a neighbor. `onClick` now selects the front-facing card (`frontChapterIdx`). Verified.
+- **Careful audit + issue list** (no code changed): the remaining "purple overlay" is the
+  **fixed card + scrolling content overlap** — the WebGL canvas is fixed at 0–900 and
+  `.chapter-content` scrolls over it; the card must scroll away (B/C, Lenis). Full prioritized
+  list + verification caveats in `docs/PHASE-2-INNER-PAGES.md` → "Careful audit + ISSUE LIST".
+- **Correction:** the earlier "wordmark missing at 1.6" was a **headless artifact** — the hero
+  renders correctly on real browsers (user-confirmed).
+- ⚠️ Temp debug instrumentation (`__heroDebug`/`__camDebug`/`__probe`) still in `init()` — remove
+  before final handoff.
 
 ### 2026-05-29 (session 7)
 - **Phase 2 kickoff — routing skeleton + transition (verified live).** Introduced Nuxt `pages/`

@@ -366,3 +366,58 @@ is ~3× the viewport height; parent transforms make projection hard to reason ab
 extract the reference's exact selected-card transform** (scale + world position) via the same
 `uniformMatrix4fv` GPU instrumentation used for the homepage camera — ground-truth instead of
 guessing — then match it.
+
+---
+
+## 🔎 Careful audit + ISSUE LIST (2026-05-29)
+
+Investigated with every tool: local real-1.6 Chrome (layout/geometry), JS DOM/z-index probes,
+the `__heroDebug`/`__probe` scene instrumentation, and a side-by-side reference comparison.
+**No code changed in this audit** — this is the prioritized backlog for the card-as-page rework.
+
+### ✅ Fixed earlier this session
+- Re-select transition (reset `animatedRotationY` + `overwrite` tweens) — repeatable spin.
+- Card **skew** → camera eased back to base on select (parallax had frozen it off-axis).
+- **Wrong card on click** → `onClick` selects the front-facing card; the raycast hitboxes are
+  flat and don't follow the shader bend, so trusting them hit empty space / a neighbor.
+- Correct **select rotation for all chapters** (`targetRot = (φ-90)°`); single front-card hero.
+
+### 🔴 P1 — Hero card doesn't scroll; content overlays it  ← the "purple overlay"
+- **Symptom (user SS2):** scrolling the inner page slides a lavender band over the hero card's
+  video — a two-tone seam cutting into it.
+- **Root cause (measured):** the WebGL canvas/card is `position:fixed` at 0–900 and never moves.
+  `.chapter-content` (`accentLight` = `rgb(214,213,232)`) scrolls up to `top:200` **over** the
+  fixed card (`#webgl-canvas` stays 0–900). The card never scrolls away.
+- **Reference:** fixed canvas too, but the **card is coupled to scroll** and scrolls off as the
+  content rises (confirmed via scroll filmstrip).
+- **Fix:** B/C — drive the hero card's screen position from the page scroll (Lenis shared clock)
+  so the card scrolls away in lockstep with the content. **This is the primary remaining task.**
+
+### 🟡 P2 — Scroll-end reverse not built (step E)
+- Scrolling to the bottom should shrink + reverse-spin the card back into the ring. Not built;
+  exit is currently the nav logo / back button only (which already plays the reverse spin).
+
+### 🟡 P2 — Hover targeting still uses the misaligned raycast
+- Same shader-bend issue as the (now-fixed) click: hovering the visible card can lift a neighbor
+  because `getHoveredPoster` tests flat hitboxes. Apply the front-facing approach to hover too,
+  or align hitboxes to the bent geometry.
+
+### 🟢 P3 — Minor / expected
+- **Unbuilt chapters** (la-storia, eat-marry-love, amour-getaway) render the scaffold (opaque
+  `accentLight`) over the card — expected until their `CHAPTER_PAGES` content is built.
+- **"EXPLORE" position** differs between our SS and the reference — that's the custom *cursor*
+  (follows the mouse), not a layout bug. Confirm it's a non-issue.
+
+### ℹ️ Verification caveats (tooling, NOT site bugs)
+- **Headless (SwiftShader) does not render the card's textures** — the wordmark/video show blank
+  in headless screenshots but render correctly on real Chrome (user-confirmed via screenshot).
+  → The earlier "wordmark missing at 1.6" was a **headless artifact**; the hero framing
+  (`SELECTED_Y=-43`, `scale=aspectRatio*2.07`) is actually good on real browsers.
+- **Headless doesn't trigger lazy `<img>` loads** on programmatic scroll → gallery/dress images
+  look broken in headless but are served `200` and load fine on real browsers.
+- **Net:** use the local headless loop for **layout/geometry/DOM** only; use a **real browser**
+  (or the user) to verify **WebGL textures, video, and lazy images**.
+
+### 🧹 Tech debt to clear before final handoff
+- Remove the temporary scene instrumentation (`window.__heroDebug` / `__camDebug` / `__probe`)
+  in `useChapterScene.js` `init()` (or gate behind a `?debug` flag).

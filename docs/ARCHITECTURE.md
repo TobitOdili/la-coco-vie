@@ -282,6 +282,16 @@ npm run dev                                   # → http://localhost:3001
 Requires Google Chrome installed (it is, at `/Applications/Google Chrome.app`). Software
 WebGL (SwiftShader) renders the Three.js scene fine. Helper: `/tmp/bless/local.mjs`.
 
+> ⚠️ **Headless limits (verify these on a REAL browser, not headless):**
+> - **Card textures don't render in headless** — the selected card's poster SVG wordmark and
+>   the inline video show **blank** under SwiftShader, but render correctly in real Chrome.
+>   (This caused a false "wordmark missing" diagnosis — it was fine all along.)
+> - **Lazy `<img>` don't load on programmatic scroll** in headless → gallery/dress images look
+>   broken in headless screenshots but are served `200` and load fine for real users.
+> - **Conclusion:** trust the headless loop for **layout / geometry / DOM / z-index / scene
+>   transforms** (via `__heroDebug`); use a **real browser** (or ask the user) for **textures,
+>   video, and lazy images**.
+
 > **Why this matters:** Browserless (below) renders the page at **800×600 / aspect 1.33** under
 > `connectOverCDP` (a CDP quirk), so its screenshots mis-frame WebGL geometry. The local loop
 > renders at the true 1.6 — use it for any hero/scene tuning. (The Preview MCP can't run the
