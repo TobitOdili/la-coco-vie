@@ -506,6 +506,18 @@ forward exit, no errors. **Tech debt:** the `virtualscroll` dep is effectively d
 `catch`); the window wheel listener is now the real handler — fine since `onScroll` is gated, but worth
 removing the broken `new VS()`/`.on()` path.
 
+**Fix (2026-06-01) — bottom exit looked broken (sideways shift + a page "underneath").** Captured
+frame-by-frame on prod: at the bottom the hero has scrolled off-screen, and the old sideways content
+slide (`xPercent:110`) cleared the content *before* the ring returned into view → a blank-white gap,
+then the ring reassembled "underneath." Plus a one-frame flicker where the content snapped back to full
+opacity at the very end. **Fixes (`pages/[slug].vue` `doExitForward`):** (1) replaced the sideways
+slide with a **lagged opacity crossfade** — content stays opaque while the cards are still off-screen
+(`progress < 0.30`), then fades as the ring fills the view (gone by `0.88`) → no blank, no sideways
+motion, reads as the page dissolving into the returning ring; (2) **removed the `el.style.opacity = ''`
+reset** in `onComplete` (it flashed the content back to full opacity for one frame before the route
+unmounted it). Verified on prod: opacity fades monotonically `1 → 0.52 → 0.05 → 0` (no flicker), and the
+frame capture shows the ring forming through the fading content → forward spin → rest carousel.
+
 ### 🟡 P2 — Hover targeting still uses the misaligned raycast
 - Same shader-bend issue as the (now-fixed) click: hovering the visible card can lift a neighbor
   because `getHoveredPoster` tests flat hitboxes. **Fix options:** (a) cheapest — drive hover off

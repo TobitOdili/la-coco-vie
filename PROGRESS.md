@@ -348,6 +348,21 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
 
 ## 🗓 Session Log
 
+### 2026-06-01 (session 13) — bottom-exit visual fix (crossfade + flicker)
+- **User:** bottom exit "shifts sideways, then another page underneath does the shrinking." Captured it
+  frame-by-frame on prod (Browserless): the hero has scrolled off-screen at the bottom, so the sideways
+  content slide cleared *before* the ring returned → blank-white gap, then ring reassembled "underneath";
+  plus a one-frame flicker where content snapped back to full opacity at the end.
+- **Fixes** (`pages/[slug].vue` `doExitForward`): (1) replaced the `xPercent` sideways slide with a
+  **lagged opacity crossfade** (opaque until progress 0.30, gone by 0.88) → content dissolves into the
+  returning ring, no blank/no sideways motion; (2) **removed the `el.style.opacity=''` reset** in
+  `onComplete` that flashed content back to full opacity for one frame before navigating.
+- **Verified on prod** (opacity-probe + frame capture): opacity fades monotonically `1→0.52→0.05→0`
+  (no flicker); frames show the ring forming *through* the fading content → forward spin → rest carousel.
+- Tooling note: Browserless `Page.captureScreenshot` latency makes fixed-interval frame timing unreliable
+  for sub-3s animations — use a fast screenshot-free `evaluate` probe (e.g. sample `style.opacity`) to
+  judge monotonicity/flicker, screenshots only for the look.
+
 ### 2026-06-01 (session 12) — edge-gated exits (fix: mid-page up-scroll exited / bottom broke)
 - **User bugs:** (1) scrolling UP anywhere mid-page triggered the reverse exit; (2) reaching the
   bottom "broke." **Stepped back & root-caused both to one thing:** the `virtualscroll` package's API
