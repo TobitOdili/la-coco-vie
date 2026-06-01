@@ -82,7 +82,11 @@ function onWheel(e) {
   }
 }
 
-// Bottom: forward "return from the bottom" — scrub setExitProgress while content slides out.
+// Bottom: forward "return from the bottom". The hero has scrolled off-screen by the
+// time you're at the bottom, so we (a) FRONT-LOAD the return (power2.out → the ring
+// comes back into view early, no blank gap) and (b) CROSSFADE the page content out in
+// lockstep instead of sliding it sideways (the sideways slide read as "another page
+// overlaid" sliding off, revealing a blank before the ring arrived).
 function doExitForward() {
   if (exiting) return
   exiting = true
@@ -90,11 +94,25 @@ function doExitForward() {
   const scene = webglSceneRef?.value?.scene
   if (!scene || typeof scene.beginExit !== 'function' || !scene.beginExit()) { router.push('/'); return }
   forwardActive = true
+  const el = scrollEl.value
   const p = { v: 0 }
-  exitTl = gsap.timeline({ onComplete: () => { forwardActive = false; scene.endExit(); router.push('/') } })
-    .to(p, { v: 1, duration: EXIT_DURATION, ease: 'power4.inOut',
-             onUpdate: () => scene.setExitProgress(p.v) }, 0)
-    .to(scrollEl.value, { xPercent: 110, duration: EXIT_DURATION * 0.45, ease: 'power2.in' }, 0)
+  exitTl = gsap.timeline({
+    onComplete: () => { forwardActive = false; if (el) el.style.opacity = ''; scene.endExit(); router.push('/') },
+  }).to(p, {
+    v: 1,
+    duration: EXIT_DURATION,
+    ease: 'power3.inOut',              // smooth return, like the reference
+    onUpdate: () => {
+      scene.setExitProgress(p.v)       // card shrinks + ring reassembles forward
+      // Crossfade the page out, but LAGGED: stay opaque while the cards are still
+      // off-screen (early), then fade as the ring fills the view → no blank gap, no
+      // sideways slide. (fade 0 until 30%, fully gone by 88%.)
+      if (el) {
+        const fade = Math.min(1, Math.max(0, (p.v - 0.30) / (0.88 - 0.30)))
+        el.style.opacity = String(1 - fade)
+      }
+    },
+  }, 0)
 }
 
 // Top: reverse back into the ring — the existing deselect spin via the route watcher.
