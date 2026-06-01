@@ -348,20 +348,22 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
 
 ## 🗓 Session Log
 
-### 2026-06-01 (session 13) — bottom-exit visual fix (crossfade + flicker)
-- **User:** bottom exit "shifts sideways, then another page underneath does the shrinking." Captured it
-  frame-by-frame on prod (Browserless): the hero has scrolled off-screen at the bottom, so the sideways
-  content slide cleared *before* the ring returned → blank-white gap, then ring reassembled "underneath";
-  plus a one-frame flicker where content snapped back to full opacity at the end.
-- **Fixes** (`pages/[slug].vue` `doExitForward`): (1) replaced the `xPercent` sideways slide with a
-  **lagged opacity crossfade** (opaque until progress 0.30, gone by 0.88) → content dissolves into the
-  returning ring, no blank/no sideways motion; (2) **removed the `el.style.opacity=''` reset** in
-  `onComplete` that flashed content back to full opacity for one frame before navigating.
-- **Verified on prod** (opacity-probe + frame capture): opacity fades monotonically `1→0.52→0.05→0`
-  (no flicker); frames show the ring forming *through* the fading content → forward spin → rest carousel.
-- Tooling note: Browserless `Page.captureScreenshot` latency makes fixed-interval frame timing unreliable
-  for sub-3s animations — use a fast screenshot-free `evaluate` probe (e.g. sample `style.opacity`) to
-  judge monotonicity/flicker, screenshots only for the look.
+### 2026-06-01 (session 13) — bottom-exit visual polish (3 rounds vs prod capture)
+Iterated the forward bottom-exit until it reads as the full-bleed hero shrinking in place + the ring
+reassembling around it, watchable start-to-finish. Each round root-caused by capturing prod:
+- **R1 "shifts sideways, then a page underneath shrinks":** the `xPercent` content slide cleared before
+  the ring arrived → blank-white gap. → replaced with an **opacity crossfade** (no sideways motion).
+- **R2 end flicker:** `onComplete` reset `el.style.opacity=''` → content flashed full-opacity one frame
+  before navigating. → removed the reset.
+- **R3 "it vanishes, then I catch only the tail":** `beginExit` started the hero's return from its
+  *scrolled-off-screen* Y (hidden fly-in) + the crossfade was *lagged* (opaque until 30%). → **snap the
+  hero's return start to ring-centre `baseY`** (hidden under the opaque page) and **reveal early**
+  (`opacity = 1 − min(1, p.v/0.22)`).
+- **Verified on prod** with a combined screenshot-free `evaluate` probe (content `style.opacity` +
+  `__heroDebug` scaleX + `__camDebug` posY): content `1→0` by ~0.4 s while hero still ~2× scale, then
+  `heroScaleX 2.0→1.0` + `carousel.y −25→0` fully visible → forward spin → rest carousel. Frames confirm.
+- **Tooling lesson:** Browserless screenshot latency makes fixed-interval frame timing unreliable for
+  sub-3 s animations — judge timing/monotonicity with the fast `evaluate` probe, screenshots for the look.
 
 ### 2026-06-01 (session 12) — edge-gated exits (fix: mid-page up-scroll exited / bottom broke)
 - **User bugs:** (1) scrolling UP anywhere mid-page triggered the reverse exit; (2) reaching the

@@ -506,17 +506,28 @@ forward exit, no errors. **Tech debt:** the `virtualscroll` dep is effectively d
 `catch`); the window wheel listener is now the real handler — fine since `onScroll` is gated, but worth
 removing the broken `new VS()`/`.on()` path.
 
-**Fix (2026-06-01) — bottom exit looked broken (sideways shift + a page "underneath").** Captured
-frame-by-frame on prod: at the bottom the hero has scrolled off-screen, and the old sideways content
-slide (`xPercent:110`) cleared the content *before* the ring returned into view → a blank-white gap,
-then the ring reassembled "underneath." Plus a one-frame flicker where the content snapped back to full
-opacity at the very end. **Fixes (`pages/[slug].vue` `doExitForward`):** (1) replaced the sideways
-slide with a **lagged opacity crossfade** — content stays opaque while the cards are still off-screen
-(`progress < 0.30`), then fades as the ring fills the view (gone by `0.88`) → no blank, no sideways
-motion, reads as the page dissolving into the returning ring; (2) **removed the `el.style.opacity = ''`
-reset** in `onComplete` (it flashed the content back to full opacity for one frame before the route
-unmounted it). Verified on prod: opacity fades monotonically `1 → 0.52 → 0.05 → 0` (no flicker), and the
-frame capture shows the ring forming through the fading content → forward spin → rest carousel.
+**Bottom-exit visual — final shape (2026-06-01, after three rounds vs prod capture).** The exit must
+read as the full-bleed hero **shrinking in place and the ring reassembling around it** (cards rising
+from below), spinning forward — watchable start-to-finish. Pitfalls hit and fixed along the way:
+- **Sideways slide → blank gap.** The first version slid the opaque content sideways (`xPercent`); it
+  cleared *before* the ring arrived → blank-white flash, then the ring formed "underneath." → replaced
+  with an **opacity crossfade** (no sideways motion).
+- **End flicker.** `onComplete` did `el.style.opacity = ''`, flashing content back to full opacity for
+  one frame before navigating. → removed the reset (leave it faded; the page unmounts on navigate).
+- **You only caught the tail.** Two causes: `beginExit` started the hero's return from its *scrolled-
+  off-screen* Y (a long hidden fly-in), and the crossfade was *lagged* (opaque until 30%) — so by the
+  time content cleared, the card had already shrunk. → **`beginExit` now snaps the hero's return start
+  to its ring-centre `baseY`** (the snap is hidden under the still-opaque page), and the content fades
+  **early** (`opacity = 1 − min(1, p.v/0.22)`, gone by ~22%). Safe to fade fast now because the hero is
+  in-frame under the content (no blank).
+
+Net (verified on prod via a combined `evaluate` probe + frame capture): content fades `1 → 0` by
+~0.4 s while the hero is still ~2× scale, then you watch `heroScaleX 2.0 → 1.0` and `carousel.y −25 → 0`
+as the ring reassembles and spins forward into the rest carousel. `doExitForward` drives it with a
+`power3.inOut` tween (`EXIT_DURATION` 2.6 s) over `scene.setExitProgress(0→1)`.
+**Verification lesson:** Browserless `Page.captureScreenshot` latency makes fixed-interval frame timing
+unreliable for sub-3 s animations — use a fast screenshot-free `evaluate` probe (sample `style.opacity`,
+`__heroDebug` scaleX, `__camDebug` posY) to judge timing/monotonicity; screenshots only for the look.
 
 ### 🟡 P2 — Hover targeting still uses the misaligned raycast
 - Same shader-bend issue as the (now-fixed) click: hovering the visible card can lift a neighbor
