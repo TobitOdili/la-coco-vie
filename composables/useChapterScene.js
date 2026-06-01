@@ -269,6 +269,8 @@ export function useChapterScene() {
   let scrollRotationY = 0
   let selectedHero = null   // the single poster scaled up as the full-screen hero (P1)
   let scrollOffsetPx = 0    // inner-page scroll position in px (from Lenis) — drives the hero up/away
+  let exitStart = null      // captured transforms at the start of a forward scroll-exit (step E)
+  const EXIT_SPIN = toRad(290)  // forward spin during the scroll-end return (matches reference's +290°)
   let preSelectRot = 0  // carousel.animatedRotationY before a select — restored on deselect (reverse spin)
   let carouselTargetRot = 0
   let carouselLerpTarget = 0  // smooth lerp target like original f(current, target, .06)
@@ -1028,6 +1030,70 @@ export function useChapterScene() {
     hoveredIndex = -1
   }
 
+  // ── Forward scroll-end exit (step E) ────────────────────────────────────────
+  // The reference doesn't *rewind* the entry on scroll-end — it scrubs a forward
+  // return: the hero shrinks back into the ring spinning FORWARD (+290°) as the ring
+  // reassembles from the bottom (group re-tilts, carousel rises, content slides away).
+  // This mirrors the reference's window.setPageProgress(0→1). The inner page drives
+  // `de` via a tween; the scene just maps `de` to transforms. Distinct from
+  // deselectChapter() (the back button's reverse-spin).
+  //
+  // beginExit() snapshots the current (selected/scrolled) state and locks out the
+  // scroll-coupling + the route watcher's reverse deselect (via isDeselecting).
+  function beginExit() {
+    if (selectedIndex === -1 || isDeselecting || !selectedHero) return false
+    isDeselecting = true
+    scrollOffsetPx = 0
+    const hero = selectedHero
+    gsap.killTweensOf(carousel)
+    gsap.killTweensOf(carousel.position)
+    gsap.killTweensOf(groupG.rotation)
+    gsap.killTweensOf(hero.mesh.scale)
+    gsap.killTweensOf(hero.mesh.position)
+    gsap.killTweensOf(hero.material.uniforms.blendFactor)
+    gsap.killTweensOf(hero.material.uniforms.progress)
+    exitStart = {
+      rot: carousel.animatedRotationY,
+      cy: carousel.position.y,
+      gx: groupG.rotation.x, gy: groupG.rotation.y, gz: groupG.rotation.z,
+      heroScale: hero.mesh.scale.x,
+      heroY: hero.mesh.position.y,
+      blend: hero.material.uniforms.blendFactor.value,
+      prog: hero.material.uniforms.progress.value,
+      others: posters.filter((p) => p !== hero).map((p) => ({ p, y: p.mesh.position.y })),
+    }
+    return true
+  }
+
+  // de: 0 (full hero) → 1 (back in the ring). Lerps every transform; the driving
+  // tween (power4.inOut on the page) supplies the easing.
+  function setExitProgress(de) {
+    if (!exitStart || !selectedHero) return
+    const t = Math.min(1, Math.max(0, de))
+    const lp = (a, b) => a + (b - a) * t
+    const hero = selectedHero
+    carousel.animatedRotationY = exitStart.rot + EXIT_SPIN * t   // forward, not reverse
+    carousel.position.y = lp(exitStart.cy, 0)
+    const tilt = isMobile ? { x: toRad(22), y: 0, z: 0 } : { x: toRad(25), y: toRad(70), z: toRad(15) }
+    groupG.rotation.x = lp(exitStart.gx, tilt.x)
+    groupG.rotation.y = lp(exitStart.gy, tilt.y)
+    groupG.rotation.z = lp(exitStart.gz, tilt.z)
+    const s = lp(exitStart.heroScale, 1)
+    hero.mesh.scale.set(s, s, 1)
+    hero.mesh.position.y = lp(exitStart.heroY, hero.baseY)
+    hero.material.uniforms.blendFactor.value = lp(exitStart.blend, 0)
+    hero.material.uniforms.progress.value = lp(exitStart.prog, 0)
+    for (const o of exitStart.others) o.p.mesh.position.y = lp(o.y, o.p.baseY)
+  }
+
+  function endExit() {
+    selectedIndex = -1
+    isDeselecting = false
+    selectedHero = null
+    exitStart = null
+    scrollOffsetPx = 0
+  }
+
   function onScroll(delta) {
     if (!introComplete) return
 
@@ -1108,6 +1174,9 @@ export function useChapterScene() {
     selectChapter,    // exposed so the route watcher can drive selection (Phase 2)
     deselectChapter,
     setScroll,        // inner-page scroll → hero card coupling (P1)
+    beginExit,        // forward scroll-end exit (step E) — scrubbed return into the ring
+    setExitProgress,
+    endExit,
     getState: () => ({ selectedIndex, hoveredIndex, introComplete, isSelecting, isDeselecting }),
   }
 }

@@ -36,8 +36,9 @@ custom GLSL shaders, GSAP animation, spatial audio, and chapter transitions.
   chapters are scaffolds. See [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md).
 - 🔧 **Active rework — "card becomes the page":** the selected card spins/grows into the inner-page
   hero. Click→correct-card, camera, rotation, **scroll-coupling** (hero scrolls away 1:1 with the
-  page; fixes the old "purple overlay"), and **scroll-end reverse exit** (overscroll past the bottom
-  spins the card back into the ring) are all done. **Live tracker:**
+  page; fixes the old "purple overlay"), and **scroll-end forward exit** (overscroll past the bottom
+  shrinks the card back into the ring spinning *forward* as the ring reassembles from the bottom —
+  matches the reference, not a rewind) are all done. **Live tracker:**
   [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md) → "Running checklist (the board)".
 - ⏸️ **Parked:** ring viewing-angle (#4) — needs the original's exact group tilt; low ROI.
 - 🔮 **Next:** normalize the entry spin (D) → hover targeting → richer motion → other chapters → re-skin.

@@ -15,7 +15,7 @@ sections below ("card-becomes-the-page rework" step table A–G + the "Careful a
 - [x] **C — Scroll coupling (P1, "purple overlay")**: hero card scrolls away 1:1 with the page. *(live 2026-05-30, `005d849f`)*
 
 **Next up — motion**
-- [x] **E — Scroll-end reverse exit (P2)**: overscroll past the last section → reverse-spin card back into the ring → `/`. *(2026-06-01)*
+- [x] **E — Scroll-end forward exit (P2)**: overscroll past the end → card shrinks back into the ring spinning **forward (+290°)** as the ring reassembles from the bottom + content slides away → `/` (matches reference `setPageProgress`, not a rewind). *(2026-06-01)*
 - [ ] **D — Normalize entry spin (P2)**: pin the select spin to one consistent turn (currently >1, varies per chapter). ◀ *next*
 - [ ] **Hover targeting (P2)**: hovering a side card lifts a neighbor (flat hitboxes vs shader-bent cards) → drive hover off the front card.
 - [ ] **F — Robustness matrix**: deep-link / click / re-select / exit-by-scroll / exit-by-button / rapid-repeat all verified.
@@ -457,20 +457,39 @@ the `__heroDebug`/`__probe` scene instrumentation, and a side-by-side reference 
   **video renders in no headless engine** → confirm the fully-textured scroll on a real browser, or
   by **deploying P1 and Browserless-capturing the prod URL** (SVG/wordmark will render there).
 
-### ✅ P2 — Scroll-end reverse (step E) — FIXED (2026-06-01)
-- Scrolling to the bottom and continuing now exits the chapter; the card reverse-spins back into
-  the ring (was: nav logo / back button only).
-- **Implementation** (`pages/[slug].vue`): a `wheel` listener on `.chapter-page` accumulates
-  downward delta **only while at the Lenis bottom** (`lenis.scroll >= lenis.limit − 2`); past
-  `END_EXIT_THRESHOLD` (800px) it calls `router.push('/')`. app.vue's route watcher turns that into
-  `scene.deselectChapter()` → the existing reverse-spin to `preSelectRot`. Any upward / not-at-end
-  wheel resets the accumulator, so a normal scroll-stop at the bottom doesn't fire. One-shot guard
-  (`exiting`); resets naturally on the page's next mount.
-- **Verified** (local dev, headless): scroll to bottom + overscroll → URL `/wine-o-clock` → `/`,
-  `.chapter-page` unmounts, no console errors. Reverse-spin itself is the same path the back button
-  already uses.
-- **Follow-ups**: touch/mobile (wheel-only today); tune `END_EXIT_THRESHOLD` if trackpad inertia
-  ever over-triggers.
+### ✅ P2 — Scroll-end exit (step E) — FORWARD RETURN (reworked 2026-06-01)
+First pass rewound (`router.push('/')` → `deselectChapter()` reverse-spin); the card snapped to the
+top and the entry played backward. **Reworked to match the reference**, which does NOT rewind.
+
+**Reference mechanism (decoded from `DFxf35Yj.js`):** the exit is a *scrubbed forward return*, not a
+played reverse. `window.setPageProgress(de)` (their `ue`) maps a progress `de` 0→1 onto paused
+`fromTo` timelines:
+- `B.animatedRotationY: X → X + degToRad(290)` — spins **forward** (continues the entry direction)
+- `B.position.y: −70 → 0` (carousel rises to centre), `w.value: 1 → 0` (un-select),
+  `G.rotation: flat → W` (ring re-tilts), camera base → initial,
+  selected card `scale: hero → 1`, `blendFactor/progress: 1 → 0`; other cards `position.y → 0`.
+The inner page's exit `c()` drives it: a 3s `power4.inOut` dummy tween whose `onUpdate` calls
+`setPageProgress(u.progress())` and `onComplete` calls `navigateHome()`, while `.chapter-container`/
+`.tails` slide out (`x:100%`). Net effect (verified frame-by-frame by scrubbing their
+`setPageProgress` 0→1 via Browserless): the hero **shrinks and the ring reassembles from the bottom
+while spinning forward** into the rest carousel.
+
+**Our implementation:**
+- Scene (`useChapterScene.js`): `beginExit()` snapshots state + locks out coupling/route-reverse
+  (sets `isDeselecting`); `setExitProgress(de)` lerps every transform — `animatedRotationY +=
+  EXIT_SPIN(290°)·de`, `carousel.y −43→0`, `group flat→tilt`, hero `scale→1`, `blend/progress→0`,
+  other posters `y→baseY`; `endExit()` finalizes (`selectedIndex=−1`). Distinct from
+  `deselectChapter()` (still the back-button reverse-spin).
+- Page (`pages/[slug].vue`): overscroll past the Lenis bottom (`END_EXIT_THRESHOLD` 800px) →
+  `doExit()`: `lenis.stop()`, `scene.beginExit()`, a `power4.inOut` tween (`EXIT_DURATION` 2.6s)
+  scrubbing `setExitProgress(0→1)` + sliding `.chapter-scroll` out (`xPercent:110`); `onComplete`
+  → `endExit()` + `router.push('/')`. Page stays mounted through the animation (content slides),
+  then unmounts at home.
+- **Verified** (local headless): forward `rotY` delta **+5.06 rad = exactly 290°**, `carousel.y
+  −43→0`, route `/wine-o-clock → /`, page unmounts, no errors. (Visual/textured confirm on prod.)
+- **Follow-ups**: touch/mobile (wheel-only); tune `END_EXIT_THRESHOLD`/`EXIT_DURATION` for feel;
+  consider unifying the back-button exit onto the same forward return (reference uses one exit for
+  both — ours keeps the reverse-spin on the back button).
 
 ### 🟡 P2 — Hover targeting still uses the misaligned raycast
 - Same shader-bend issue as the (now-fixed) click: hovering the visible card can lift a neighbor

@@ -34,6 +34,7 @@
 <script setup>
 import { computed, onMounted, onBeforeUnmount, inject, ref } from 'vue'
 import Lenis from 'lenis'
+import { gsap } from 'gsap'
 import { CHAPTERS } from '~/composables/useChapterScene'
 import { CHAPTER_PAGES } from '~/composables/chapterPages'
 import ChapterSection from '~/components/chapter/ChapterSection.vue'
@@ -51,27 +52,44 @@ const pageEl = ref(null)
 const scrollEl = ref(null)
 let lenis = null
 
-// Scroll-end reverse exit (step E): once you're at the bottom and keep scrolling
-// down past a threshold, leave the chapter. router.push('/') → app.vue's route
-// watcher → scene.deselectChapter(), which reverse-spins the card back into the
-// ring. Mirror of the homepage's top-scroll exit (#7). Wheel-driven (desktop);
-// touch is a follow-up.
+// Scroll-end forward exit (step E): once you're at the bottom and keep scrolling
+// down past a threshold, play a forward "return" — the hero shrinks back into the
+// ring spinning FORWARD as the ring reassembles from the bottom and the content
+// slides away (NOT a rewind). Mirrors the reference's window.setPageProgress: we
+// scrub scene.setExitProgress(0→1) with a power4.inOut tween, then router.push('/').
 const END_EXIT_THRESHOLD = 800   // accumulated overscroll px past the bottom
+const EXIT_DURATION = 2.6        // seconds, matches the reference's ~3s eased return
 let endAccum = 0
 let exiting = false
+let exitTl = null
 
 function onWheel(e) {
   if (exiting || !lenis) return
   const atBottom = lenis.limit > 0 && lenis.scroll >= lenis.limit - 2
   if (atBottom && e.deltaY > 0) {
     endAccum += e.deltaY
-    if (endAccum >= END_EXIT_THRESHOLD) {
-      exiting = true
-      router.push('/')
-    }
+    if (endAccum >= END_EXIT_THRESHOLD) doExit()
   } else {
     endAccum = 0   // moving up / not at the end cancels the gesture
   }
+}
+
+function doExit() {
+  if (exiting) return
+  exiting = true
+  lenis?.stop()
+  const scene = webglSceneRef?.value?.scene
+  // Fallback: no scene / nothing to return → just navigate home.
+  if (!scene || typeof scene.beginExit !== 'function' || !scene.beginExit()) {
+    router.push('/')
+    return
+  }
+  const p = { v: 0 }
+  exitTl = gsap.timeline({ onComplete: () => { scene.endExit(); router.push('/') } })
+    .to(p, { v: 1, duration: EXIT_DURATION, ease: 'power4.inOut',
+             onUpdate: () => scene.setExitProgress(p.v) }, 0)
+    // Slide the page content off to the side as the card returns (reference does this).
+    .to(scrollEl.value, { xPercent: 110, duration: EXIT_DURATION * 0.45, ease: 'power2.in' }, 0)
 }
 
 onMounted(() => {
@@ -96,9 +114,13 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   pageEl.value?.removeEventListener('wheel', onWheel)
+  // If we unmount mid-exit for any other reason, kill the tween and release the
+  // scene's exit lock so it doesn't get stuck in the selected/exiting state.
+  exitTl?.kill()
+  exitTl = null
+  if (exiting) webglSceneRef?.value?.scene?.endExit?.()
   lenis?.destroy()
   lenis = null
-  // Leave the hero at the top for the deselect reverse-spin (scene also resets).
   webglSceneRef?.value?.scene?.setScroll(0)
 })
 </script>

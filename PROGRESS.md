@@ -348,7 +348,26 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
 
 ## 🗓 Session Log
 
-### 2026-06-01 (session 10) — P2 step E (scroll-end reverse exit) + running board
+### 2026-06-01 (session 11) — step E reworked: forward "return from bottom" exit
+- **User feedback:** the first step-E pass *rewound* (snapped the card to the top, played the entry
+  backward). Reworked to the reference's behavior: the card shrinks back into the ring spinning
+  **forward**, the ring reassembling from the bottom, content sliding away — a continuation, not a rewind.
+- **Decoded the reference** (`DFxf35Yj.js`, via Browserless): the exit is a *scrubbed forward return*,
+  `window.setPageProgress(de)` (their `ue`) — `animatedRotationY: X→X+290°`, `carousel.y −70→0`,
+  `w.value 1→0`, `group flat→tilt`, hero `scale→1`, `blend/progress→0`, others `y→0`. Driven by the
+  page's `c()`: a 3s power4.inOut tween (`onUpdate`→setPageProgress, `onComplete`→navigateHome) while
+  `.chapter-container`/`.tails` slide out. Confirmed frame-by-frame by scrubbing their setPageProgress
+  0→1 in Browserless (contact sheet): hero shrinks + ring reassembles from the bottom, spinning forward.
+- **Recreated:** scene `beginExit()/setExitProgress(de)/endExit()` (forward lerp of all transforms,
+  +290°), distinct from `deselectChapter()` (back-button reverse). Page `doExit()` runs a 2.6s
+  power4.inOut tween scrubbing it + slides `.chapter-scroll` out; page stays mounted through the
+  animation, then `router.push('/')`.
+- **Verified** (local headless): forward rotY delta **+5.06 rad = 290°**, `carousel.y −43→0`, route
+  `/wine-o-clock → /`, page unmounts, no errors. Visual/textured confirm on prod via Browserless.
+- Note: the reference's per-chapter exit is finicky on a cold load (works reliably after EML→back→Wine);
+  ours is deterministic since `beginExit()` snapshots live state each time.
+
+### 2026-06-01 (session 10) — P2 step E (scroll-end exit, first pass) + running board
 - **Added a running checklist board** at the top of `docs/PHASE-2-INNER-PAGES.md` (single tracker;
   A–G + P1/P2/P3 with checkboxes) so progress isn't scattered across the doc.
 - **Built step E — scroll-end reverse exit (P2).** `pages/[slug].vue` now has a `wheel` listener
