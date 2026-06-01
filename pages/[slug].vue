@@ -97,7 +97,10 @@ function doExitForward() {
   const el = scrollEl.value
   const p = { v: 0 }
   exitTl = gsap.timeline({
-    onComplete: () => { forwardActive = false; if (el) el.style.opacity = ''; scene.endExit(); router.push('/') },
+    // NOTE: do NOT reset el.style.opacity here — resetting to '' flashes the content
+    // back to full opacity for one frame before the route unmounts it (visible flicker).
+    // Leave it faded; the page unmounts on router.push.
+    onComplete: () => { forwardActive = false; scene.endExit(); router.push('/') },
   }).to(p, {
     v: 1,
     duration: EXIT_DURATION,
