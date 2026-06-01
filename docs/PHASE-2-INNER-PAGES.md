@@ -3,6 +3,34 @@
 Scope and build plan for the per-chapter inner pages. Grounded in a live inspection of the
 original (`/wine-o-clock`) on 2026-05-29.
 
+## ✅ Running checklist (the board)
+
+**This is the live tracker** — check items off here as they land. Detail for each lives in the
+sections below ("card-becomes-the-page rework" step table A–G + the "Careful audit + ISSUE LIST").
+
+**Done**
+- [x] **A — Hero geometry**: selected card → full-bleed, straight, centered hero.
+- [x] Click selects the correct front-facing card (all 4 chapters) + camera recenters (no skew).
+- [x] **B — Lenis** smooth scroll on the inner page.
+- [x] **C — Scroll coupling (P1, "purple overlay")**: hero card scrolls away 1:1 with the page. *(live 2026-05-30, `005d849f`)*
+
+**Next up — motion**
+- [x] **E — Scroll-end reverse exit (P2)**: overscroll past the last section → reverse-spin card back into the ring → `/`. *(2026-06-01)*
+- [ ] **D — Normalize entry spin (P2)**: pin the select spin to one consistent turn (currently >1, varies per chapter). ◀ *next*
+- [ ] **Hover targeting (P2)**: hovering a side card lifts a neighbor (flat hitboxes vs shader-bent cards) → drive hover off the front card.
+- [ ] **F — Robustness matrix**: deep-link / click / re-select / exit-by-scroll / exit-by-button / rapid-repeat all verified.
+
+**Later — content & polish**
+- [ ] **G — Section bg** alternates dark/light accent like the reference.
+- [ ] Richer parallax (ScrollTrigger/Lenis) + inline films in sections.
+- [ ] Other 3 chapters' `CHAPTER_PAGES` content + gallery/dress assets (P3 — currently scaffolds).
+- [ ] Polish: exact heading typeface + verbatim copy.
+
+**Before handoff**
+- [ ] Remove temp scene instrumentation (`window.__heroDebug` / `__camDebug` / `__probe`) or gate behind `?debug`.
+
+---
+
 > **▶ Active work: "card-becomes-the-page" rework — see [that section](#card-becomes-the-page-rework-active).**
 > The current inner page renders the WebGL card as a fixed background block (clipped, low)
 > behind a separate DOM overlay. Reworking so the card *is* the scrolling hero.
@@ -429,15 +457,20 @@ the `__heroDebug`/`__probe` scene instrumentation, and a side-by-side reference 
   **video renders in no headless engine** → confirm the fully-textured scroll on a real browser, or
   by **deploying P1 and Browserless-capturing the prod URL** (SVG/wordmark will render there).
 
-### 🟡 P2 — Scroll-end reverse not built (step E)
-- Scrolling to the bottom should shrink + reverse-spin the card back into the ring. Not built;
-  exit is currently the nav logo / back button only (which already plays the reverse spin).
-- **Fix:** watch the Lenis scroll position; when scrolled to/just past the **last section**
-  (an overscroll threshold at the *end* — the mirror of #7's top-exit), call `router.push('/')`.
-  The route watcher already turns that into `deselectChapter()`, which reverse-spins the card
-  back into the ring (`preSelectRot`). Add a small threshold/debounce so it doesn't fire on a
-  normal scroll-stop at the bottom. Pairs naturally with B/C (the card is already mid-exit as
-  you reach the end).
+### ✅ P2 — Scroll-end reverse (step E) — FIXED (2026-06-01)
+- Scrolling to the bottom and continuing now exits the chapter; the card reverse-spins back into
+  the ring (was: nav logo / back button only).
+- **Implementation** (`pages/[slug].vue`): a `wheel` listener on `.chapter-page` accumulates
+  downward delta **only while at the Lenis bottom** (`lenis.scroll >= lenis.limit − 2`); past
+  `END_EXIT_THRESHOLD` (800px) it calls `router.push('/')`. app.vue's route watcher turns that into
+  `scene.deselectChapter()` → the existing reverse-spin to `preSelectRot`. Any upward / not-at-end
+  wheel resets the accumulator, so a normal scroll-stop at the bottom doesn't fire. One-shot guard
+  (`exiting`); resets naturally on the page's next mount.
+- **Verified** (local dev, headless): scroll to bottom + overscroll → URL `/wine-o-clock` → `/`,
+  `.chapter-page` unmounts, no console errors. Reverse-spin itself is the same path the back button
+  already uses.
+- **Follow-ups**: touch/mobile (wheel-only today); tune `END_EXIT_THRESHOLD` if trackpad inertia
+  ever over-triggers.
 
 ### 🟡 P2 — Hover targeting still uses the misaligned raycast
 - Same shader-bend issue as the (now-fixed) click: hovering the visible card can lift a neighbor

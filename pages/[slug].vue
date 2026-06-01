@@ -39,6 +39,7 @@ import { CHAPTER_PAGES } from '~/composables/chapterPages'
 import ChapterSection from '~/components/chapter/ChapterSection.vue'
 
 const route = useRoute()
+const router = useRouter()
 const chapter = computed(() => CHAPTERS.find((c) => c.slug === route.params.slug))
 const pageContent = computed(() => CHAPTER_PAGES[route.params.slug])
 
@@ -49,6 +50,29 @@ const webglSceneRef = inject('webglSceneRef', null)
 const pageEl = ref(null)
 const scrollEl = ref(null)
 let lenis = null
+
+// Scroll-end reverse exit (step E): once you're at the bottom and keep scrolling
+// down past a threshold, leave the chapter. router.push('/') → app.vue's route
+// watcher → scene.deselectChapter(), which reverse-spins the card back into the
+// ring. Mirror of the homepage's top-scroll exit (#7). Wheel-driven (desktop);
+// touch is a follow-up.
+const END_EXIT_THRESHOLD = 800   // accumulated overscroll px past the bottom
+let endAccum = 0
+let exiting = false
+
+function onWheel(e) {
+  if (exiting || !lenis) return
+  const atBottom = lenis.limit > 0 && lenis.scroll >= lenis.limit - 2
+  if (atBottom && e.deltaY > 0) {
+    endAccum += e.deltaY
+    if (endAccum >= END_EXIT_THRESHOLD) {
+      exiting = true
+      router.push('/')
+    }
+  } else {
+    endAccum = 0   // moving up / not at the end cancels the gesture
+  }
+}
 
 onMounted(() => {
   if (!chapter.value) { navigateTo('/'); return }
@@ -66,9 +90,12 @@ onMounted(() => {
   })
   lenis.on('scroll', (e) => scene?.setScroll(e.scroll))
   scene?.setScroll(0)
+
+  pageEl.value?.addEventListener('wheel', onWheel, { passive: true })
 })
 
 onBeforeUnmount(() => {
+  pageEl.value?.removeEventListener('wheel', onWheel)
   lenis?.destroy()
   lenis = null
   // Leave the hero at the top for the deselect reverse-spin (scene also resets).

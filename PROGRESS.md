@@ -348,6 +348,18 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
 
 ## 🗓 Session Log
 
+### 2026-06-01 (session 10) — P2 step E (scroll-end reverse exit) + running board
+- **Added a running checklist board** at the top of `docs/PHASE-2-INNER-PAGES.md` (single tracker;
+  A–G + P1/P2/P3 with checkboxes) so progress isn't scattered across the doc.
+- **Built step E — scroll-end reverse exit (P2).** `pages/[slug].vue` now has a `wheel` listener
+  that accumulates downward delta **only at the Lenis bottom** (`scroll >= limit−2`); past
+  `END_EXIT_THRESHOLD` (800px) → `router.push('/')` → app.vue route watcher → `deselectChapter()`
+  (the existing reverse-spin back into the ring). Upward/not-at-end wheel resets the accumulator;
+  one-shot `exiting` guard. Mirror of the homepage's #7 top-exit.
+  - **Verified** (local dev headless): scroll to bottom + overscroll → `/wine-o-clock` → `/`,
+    `.chapter-page` unmounts, no console errors. Follow-ups: touch/mobile (wheel-only now), tune
+    threshold if trackpad inertia over-triggers.
+
 ### 2026-05-30 (session 9) — P1 scroll-coupling (card scrolls away)
 - **Fixed P1 — the "purple overlay."** The hero card was effectively fixed (canvas `position:fixed`,
   scene never moved the hero) while `.chapter-content` scrolled over it → a lavender seam cutting
