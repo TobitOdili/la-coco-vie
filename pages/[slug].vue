@@ -106,14 +106,11 @@ function doExitForward() {
     duration: EXIT_DURATION,
     ease: 'power3.inOut',              // smooth return, like the reference
     onUpdate: () => {
-      scene.setExitProgress(p.v)       // card shrinks + ring reassembles forward
-      // Crossfade the page out, but LAGGED: stay opaque while the cards are still
-      // off-screen (early), then fade as the ring fills the view → no blank gap, no
-      // sideways slide. (fade 0 until 30%, fully gone by 88%.)
-      if (el) {
-        const fade = Math.min(1, Math.max(0, (p.v - 0.30) / (0.88 - 0.30)))
-        el.style.opacity = String(1 - fade)
-      }
+      scene.setExitProgress(p.v)       // hero shrinks in place + ring reassembles, forward
+      // Reveal the hero EARLY (content gone by ~22%) so the whole shrink-into-the-ring is
+      // watchable — the hero is snapped to ring-centre under the opaque content, so fading
+      // fast can't show a blank. (Was lagged → you only caught the tail.)
+      if (el) el.style.opacity = String(1 - Math.min(1, p.v / 0.22))
     },
   }, 0)
 }

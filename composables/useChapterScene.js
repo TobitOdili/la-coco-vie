@@ -1055,7 +1055,12 @@ export function useChapterScene() {
       cy: carousel.position.y,
       gx: groupG.rotation.x, gy: groupG.rotation.y, gz: groupG.rotation.z,
       heroScale: hero.mesh.scale.x,
-      heroY: hero.mesh.position.y,
+      // Start the hero's return from its ring-CENTRE (baseY), not its scrolled-off-screen
+      // Y. At the bottom the hero has scrolled far above the frame; returning from there is
+      // a long fly-in that's hidden behind the (briefly opaque) page, so you only catch the
+      // tail. Snapping to baseY (under the still-opaque content) makes the VISIBLE return the
+      // full-bleed hero shrinking in place while the ring reassembles around it. (step E)
+      heroY: hero.baseY,
       blend: hero.material.uniforms.blendFactor.value,
       prog: hero.material.uniforms.progress.value,
       others: posters.filter((p) => p !== hero).map((p) => ({ p, y: p.mesh.position.y })),
