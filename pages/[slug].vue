@@ -52,44 +52,57 @@ const pageEl = ref(null)
 const scrollEl = ref(null)
 let lenis = null
 
-// Scroll-end forward exit (step E): once you're at the bottom and keep scrolling
-// down past a threshold, play a forward "return" — the hero shrinks back into the
-// ring spinning FORWARD as the ring reassembles from the bottom and the content
-// slides away (NOT a rewind). Mirrors the reference's window.setPageProgress: we
-// scrub scene.setExitProgress(0→1) with a power4.inOut tween, then router.push('/').
-const END_EXIT_THRESHOLD = 800   // accumulated overscroll px past the bottom
-const EXIT_DURATION = 2.6        // seconds, matches the reference's ~3s eased return
-let endAccum = 0
+// Exit gestures live ONLY at the page edges — mid-page scrolling is free.
+//  • Bottom edge, keep scrolling DOWN  → forward return (card spins forward back into
+//    the ring as the ring reassembles + content slides away). Reference setPageProgress.
+//  • Top edge,    keep scrolling UP    → reverse (card un-grows back into the ring the
+//    way it entered) via the existing deselect spin.
+// (Previously the scene's global window-wheel handler exited on ANY up-scroll mid-page,
+// and its reverse fired from trackpad bounce at the bottom — both removed in the scene.)
+const END_EXIT_THRESHOLD = 800   // px of overscroll past an edge to trigger
+const EXIT_DURATION = 2.6        // forward return duration (≈ reference's eased return)
+let endAccum = 0                 // bottom overscroll accumulator
+let topAccum = 0                 // top overscroll accumulator
 let exiting = false
+let forwardActive = false        // a forward exit tween is mid-flight (unmount cleanup)
 let exitTl = null
 
 function onWheel(e) {
   if (exiting || !lenis) return
   const atBottom = lenis.limit > 0 && lenis.scroll >= lenis.limit - 2
-  if (atBottom && e.deltaY > 0) {
-    endAccum += e.deltaY
-    if (endAccum >= END_EXIT_THRESHOLD) doExit()
-  } else {
-    endAccum = 0   // moving up / not at the end cancels the gesture
+  const atTop = lenis.scroll <= 2
+  if (atBottom && e.deltaY > 0) {            // bottom edge, pushing down → forward exit
+    endAccum += e.deltaY; topAccum = 0
+    if (endAccum >= END_EXIT_THRESHOLD) doExitForward()
+  } else if (atTop && e.deltaY < 0) {        // top edge, pushing up → reverse exit
+    topAccum += -e.deltaY; endAccum = 0
+    if (topAccum >= END_EXIT_THRESHOLD) doExitReverse()
+  } else {                                   // mid-page → free scroll, no exit
+    endAccum = 0; topAccum = 0
   }
 }
 
-function doExit() {
+// Bottom: forward "return from the bottom" — scrub setExitProgress while content slides out.
+function doExitForward() {
   if (exiting) return
   exiting = true
   lenis?.stop()
   const scene = webglSceneRef?.value?.scene
-  // Fallback: no scene / nothing to return → just navigate home.
-  if (!scene || typeof scene.beginExit !== 'function' || !scene.beginExit()) {
-    router.push('/')
-    return
-  }
+  if (!scene || typeof scene.beginExit !== 'function' || !scene.beginExit()) { router.push('/'); return }
+  forwardActive = true
   const p = { v: 0 }
-  exitTl = gsap.timeline({ onComplete: () => { scene.endExit(); router.push('/') } })
+  exitTl = gsap.timeline({ onComplete: () => { forwardActive = false; scene.endExit(); router.push('/') } })
     .to(p, { v: 1, duration: EXIT_DURATION, ease: 'power4.inOut',
              onUpdate: () => scene.setExitProgress(p.v) }, 0)
-    // Slide the page content off to the side as the card returns (reference does this).
     .to(scrollEl.value, { xPercent: 110, duration: EXIT_DURATION * 0.45, ease: 'power2.in' }, 0)
+}
+
+// Top: reverse back into the ring — the existing deselect spin via the route watcher.
+function doExitReverse() {
+  if (exiting) return
+  exiting = true
+  lenis?.stop()
+  router.push('/')   // app.vue route watcher → scene.deselectChapter() (reverse-spin into ring)
 }
 
 onMounted(() => {
@@ -118,7 +131,9 @@ onBeforeUnmount(() => {
   // scene's exit lock so it doesn't get stuck in the selected/exiting state.
   exitTl?.kill()
   exitTl = null
-  if (exiting) webglSceneRef?.value?.scene?.endExit?.()
+  // Only release the forward-exit lock if a forward tween was actually mid-flight;
+  // the reverse exit uses deselectChapter() and must not be cut short here.
+  if (forwardActive) webglSceneRef?.value?.scene?.endExit?.()
   lenis?.destroy()
   lenis = null
   webglSceneRef?.value?.scene?.setScroll(0)

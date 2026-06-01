@@ -274,13 +274,11 @@ export function useChapterScene() {
   let preSelectRot = 0  // carousel.animatedRotationY before a select — restored on deselect (reverse spin)
   let carouselTargetRot = 0
   let carouselLerpTarget = 0  // smooth lerp target like original f(current, target, .06)
-  // Scroll-driven chapter exit (Issue #7): accumulate back-scroll while a chapter
-  // is open; past the threshold run the reverse animation. The flags gate against
-  // re-triggering during the select-in / deselect-out animations.
-  let scrollExitAccum = 0
+  // Animation gates: prevent re-triggering select/deselect/exit while one is mid-flight.
+  // (The old scroll-driven #7 exit was removed — the inner page now owns scrolling and
+  // triggers exits at its top/bottom edges; the scene ignores wheel while a chapter is open.)
   let isSelecting = false
   let isDeselecting = false
-  const SCROLL_EXIT_THRESHOLD = 500
 
   let onSelectCallback = null
   let onHoverCallback = null
@@ -1096,24 +1094,11 @@ export function useChapterScene() {
 
   function onScroll(delta) {
     if (!introComplete) return
-
-    // Scroll back (up) to exit a selected chapter (Issue #7). Accumulate upward
-    // scroll so a deliberate gesture is needed; ignore while animating in/out.
-    if (selectedIndex !== -1) {
-      if (isSelecting || isDeselecting) return
-      if (delta < 0) {
-        scrollExitAccum += -delta
-        if (scrollExitAccum >= SCROLL_EXIT_THRESHOLD) {
-          scrollExitAccum = 0
-          deselectChapter()
-          if (onDeselectCallback) onDeselectCallback()
-        }
-      } else {
-        scrollExitAccum = 0  // scrolling the other way cancels the gesture
-      }
-      return
-    }
-
+    // While a chapter is open, the inner page (Lenis) owns scrolling AND the exit
+    // gestures (page-level, gated to its top/bottom edges). The scene must NOT react
+    // to wheel here — WebGLScene's scroll handler is a global window listener, so
+    // reacting would fire spurious mid-page exits. Only the homepage carousel scrolls.
+    if (selectedIndex !== -1) return
     scrollRotationY -= delta * 0.0008
   }
 

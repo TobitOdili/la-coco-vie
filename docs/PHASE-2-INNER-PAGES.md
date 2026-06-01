@@ -15,7 +15,7 @@ sections below ("card-becomes-the-page rework" step table A–G + the "Careful a
 - [x] **C — Scroll coupling (P1, "purple overlay")**: hero card scrolls away 1:1 with the page. *(live 2026-05-30, `005d849f`)*
 
 **Next up — motion**
-- [x] **E — Scroll-end forward exit (P2)**: overscroll past the end → card shrinks back into the ring spinning **forward (+290°)** as the ring reassembles from the bottom + content slides away → `/` (matches reference `setPageProgress`, not a rewind). *(2026-06-01)*
+- [x] **E — Edge-gated scroll exits (P2)**: mid-page scroll is **free**; exits only at the edges — **top** overscroll-up → reverse back into the ring, **bottom** overscroll-down → forward return (+290°, ring reassembles from the bottom + content slides). Fixed the global-wheel bug that exited on any mid-page up-scroll / broke at the bottom. *(2026-06-01)*
 - [ ] **D — Normalize entry spin (P2)**: pin the select spin to one consistent turn (currently >1, varies per chapter). ◀ *next*
 - [ ] **Hover targeting (P2)**: hovering a side card lifts a neighbor (flat hitboxes vs shader-bent cards) → drive hover off the front card.
 - [ ] **F — Robustness matrix**: deep-link / click / re-select / exit-by-scroll / exit-by-button / rapid-repeat all verified.
@@ -28,6 +28,7 @@ sections below ("card-becomes-the-page rework" step table A–G + the "Careful a
 
 **Before handoff**
 - [ ] Remove temp scene instrumentation (`window.__heroDebug` / `__camDebug` / `__probe`) or gate behind `?debug`.
+- [ ] Remove the dead `virtualscroll` path in `WebGLScene.vue` (its `.on()` throws → always falls back to the window wheel listener, which is the real handler). Drop the dep or replace with the intended `virtual-scroll`.
 
 ---
 
@@ -490,6 +491,20 @@ while spinning forward** into the rest carousel.
 - **Follow-ups**: touch/mobile (wheel-only); tune `END_EXIT_THRESHOLD`/`EXIT_DURATION` for feel;
   consider unifying the back-button exit onto the same forward return (reference uses one exit for
   both — ours keeps the reverse-spin on the back button).
+
+**Fix (2026-06-01) — mid-page up-scroll exited / bottom broke.** Root cause: the installed
+`virtualscroll` package has a different API, so `WebGLScene.vue`'s `vsInstance.on(...)` throws and the
+`catch` installs a **window-level** wheel listener feeding `scene.onScroll`. That stayed active on the
+inner page, and the scene's old `#7` exit accumulated *any* up-scroll (no page-position awareness) →
+`deselectChapter()` after ~500px (confirmed on prod: 2 up-scrolls mid-page → home). At the bottom,
+trackpad bounce produced brief negative deltas → the same reverse fired and collided with the forward
+exit ("breaks"). **Fix:** the scene's `onScroll` now does nothing while a chapter is open (only the
+homepage carousel scrolls); all exits moved to the **page edges** (Lenis-position-gated): top
+overscroll-up → reverse (`router.push('/')` → `deselectChapter`), bottom overscroll-down → forward
+return. Verified (local headless): mid-page up = free (no exit), top-edge up = exit, bottom-edge down =
+forward exit, no errors. **Tech debt:** the `virtualscroll` dep is effectively dead (always hits the
+`catch`); the window wheel listener is now the real handler — fine since `onScroll` is gated, but worth
+removing the broken `new VS()`/`.on()` path.
 
 ### 🟡 P2 — Hover targeting still uses the misaligned raycast
 - Same shader-bend issue as the (now-fixed) click: hovering the visible card can lift a neighbor

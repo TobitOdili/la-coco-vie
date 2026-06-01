@@ -348,6 +348,23 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
 
 ## 🗓 Session Log
 
+### 2026-06-01 (session 12) — edge-gated exits (fix: mid-page up-scroll exited / bottom broke)
+- **User bugs:** (1) scrolling UP anywhere mid-page triggered the reverse exit; (2) reaching the
+  bottom "broke." **Stepped back & root-caused both to one thing:** the `virtualscroll` package's API
+  doesn't match, so `WebGLScene.vue`'s `vsInstance.on(...)` throws → `catch` installs a **window-level**
+  wheel listener feeding `scene.onScroll`. On the inner page that still fired the scene's old `#7` exit,
+  which accumulated *any* up-scroll (no page-position check) → `deselectChapter()` after ~500px
+  (confirmed on prod: 2 up-scrolls mid-page → home). At the bottom, trackpad bounce → brief negative
+  deltas → same reverse fired, colliding with the forward exit.
+- **Fix:** scene `onScroll` now ignores wheel while a chapter is open (only the homepage carousel
+  scrolls); removed `#7` (`scrollExitAccum`/`SCROLL_EXIT_THRESHOLD`). All exits moved to the **page
+  edges** (Lenis-gated): **top** overscroll-up → reverse (`router.push('/')` → `deselectChapter`),
+  **bottom** overscroll-down → forward return. Mid-page = free scroll.
+- **Verified** (local headless): mid-page up = no exit (scroll 1544→1114), top-edge up = exit,
+  bottom-edge down = forward exit, no console errors. Prod confirm next.
+- **Tech debt noted:** `virtualscroll` dep is dead (always hits the catch) — remove the broken
+  `new VS()`/`.on()` path; the window wheel listener is the real handler.
+
 ### 2026-06-01 (session 11) — step E reworked: forward "return from bottom" exit
 - **User feedback:** the first step-E pass *rewound* (snapped the card to the top, played the entry
   backward). Reworked to the reference's behavior: the card shrinks back into the ring spinning
