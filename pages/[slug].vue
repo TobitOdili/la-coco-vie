@@ -71,10 +71,16 @@ function onWheel(e) {
   if (exiting || !lenis) return
   const atBottom = lenis.limit > 0 && lenis.scroll >= lenis.limit - 2
   const atTop = lenis.scroll <= 2
-  if (atBottom && e.deltaY > 0) {            // bottom edge, pushing down → forward exit
+  if (atBottom && e.deltaY > 0) {            // bottom edge, pushing down → exit
     endAccum += e.deltaY; topAccum = 0
-    if (endAccum >= END_EXIT_THRESHOLD) doExitForward()
-  } else if (atTop && e.deltaY < 0) {        // top edge, pushing up → reverse exit
+    if (endAccum >= END_EXIT_THRESHOLD) {
+      // Wine O'Clock: bottom exit = the SAME reverse-spin as the top edge (option A —
+      // known-good, identical timing/feel). Other chapters: the forward "drop into the
+      // ring" experiment (option B — replicating the reference) lives on doExitForward.
+      if (route.params.slug === 'wine-o-clock') doExitReverse()
+      else doExitForward()
+    }
+  } else if (atTop && e.deltaY < 0) {        // top edge, pushing up → reverse exit (all pages)
     topAccum += -e.deltaY; endAccum = 0
     if (topAccum >= END_EXIT_THRESHOLD) doExitReverse()
   } else {                                   // mid-page → free scroll, no exit

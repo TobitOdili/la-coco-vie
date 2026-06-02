@@ -993,6 +993,12 @@ export function useChapterScene() {
     if (selectedIndex === -1 || isDeselecting) return
     isDeselecting = true
     scrollOffsetPx = 0   // stop coupling; GSAP restores the hero's Y below (P1)
+    // Snap the hero back to its ring-centre pose FIRST so the reverse-spin always starts
+    // from the hero position, regardless of how far the inner page had scrolled (the P1
+    // coupling moves the card off-screen as you read). Without this, exiting from the
+    // bottom — or hitting Back after scrolling — flew the card down from off-screen. With
+    // it, the bottom exit is identical to the (correct) top-edge exit.
+    if (selectedHero) selectedHero.mesh.position.y = selectedHero.baseY
     gsap.killTweensOf(carousel)
     const tl = gsap.timeline({
       onComplete: () => { selectedIndex = -1; isDeselecting = false; selectedHero = null }
