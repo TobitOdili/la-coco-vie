@@ -60,7 +60,8 @@ let lenis = null
 // (Previously the scene's global window-wheel handler exited on ANY up-scroll mid-page,
 // and its reverse fired from trackpad bounce at the bottom — both removed in the scene.)
 const END_EXIT_THRESHOLD = 800   // px of overscroll past an edge to trigger
-const EXIT_DURATION = 2.6        // forward return duration (≈ reference's eased return)
+const EXIT_SPIN_DUR = 3.0        // option B: forward spin/ring-reassemble (reference's 3s tween)
+const EXIT_SLIDE_DUR = 1.0       // option B: content slide-out (reference's 1s)
 let endAccum = 0                 // bottom overscroll accumulator
 let topAccum = 0                 // top overscroll accumulator
 let exiting = false
@@ -88,11 +89,12 @@ function onWheel(e) {
   }
 }
 
-// Bottom: forward "return from the bottom". The hero has scrolled off-screen by the
-// time you're at the bottom, so we (a) FRONT-LOAD the return (power2.out → the ring
-// comes back into view early, no blank gap) and (b) CROSSFADE the page content out in
-// lockstep instead of sliding it sideways (the sideways slide read as "another page
-// overlaid" sliding off, revealing a blank before the ring arrived).
+// OPTION B (non-Wine pages): replicate the reference's `c()` bottom exit — the forward
+// "drop into the spinning ring." A 3s power4.inOut tween drives `setExitProgress` (the
+// +290° forward spin + ring reassemble, mirroring the reference's window.setPageProgress),
+// while the page CONTENT slides out to the side over ~1s (reference slides .chapter-container
+// /.tails to x:100%). The hero is snapped to ring-centre in beginExit, so it's a full-bleed
+// card shrinking in place as the content slides off and the ring spins up around it.
 function doExitForward() {
   if (exiting) return
   exiting = true
@@ -103,22 +105,11 @@ function doExitForward() {
   const el = scrollEl.value
   const p = { v: 0 }
   exitTl = gsap.timeline({
-    // NOTE: do NOT reset el.style.opacity here — resetting to '' flashes the content
-    // back to full opacity for one frame before the route unmounts it (visible flicker).
-    // Leave it faded; the page unmounts on router.push.
     onComplete: () => { forwardActive = false; scene.endExit(); router.push('/') },
-  }).to(p, {
-    v: 1,
-    duration: EXIT_DURATION,
-    ease: 'power3.inOut',              // smooth return, like the reference
-    onUpdate: () => {
-      scene.setExitProgress(p.v)       // hero shrinks in place + ring reassembles, forward
-      // Reveal the hero EARLY (content gone by ~22%) so the whole shrink-into-the-ring is
-      // watchable — the hero is snapped to ring-centre under the opaque content, so fading
-      // fast can't show a blank. (Was lagged → you only caught the tail.)
-      if (el) el.style.opacity = String(1 - Math.min(1, p.v / 0.22))
-    },
-  }, 0)
+  })
+    .to(p, { v: 1, duration: EXIT_SPIN_DUR, ease: 'power4.inOut',
+             onUpdate: () => scene.setExitProgress(p.v) }, 0)
+    .to(el, { xPercent: 110, duration: EXIT_SLIDE_DUR, ease: 'power2.in' }, 0)
 }
 
 // Top: reverse back into the ring — the existing deselect spin via the route watcher.
