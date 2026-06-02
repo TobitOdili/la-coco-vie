@@ -348,6 +348,21 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
 
 ## 🗓 Session Log
 
+### 2026-06-01 (session 14) — Wine bottom exit = top exit (option A); option B parked for reference capture
+- **User insight:** the top-edge exit is the known-correct one; the custom forward bottom-exit felt
+  "detached." Decision: for Wine O'Clock make the bottom exit *identical* to the top (reuse the reverse
+  `deselectChapter`); experiment with the reference's forward "drop into the ring" on a different page.
+- **Change:** `deselectChapter` now **snaps the hero to ring-centre (`baseY`) before the reverse-spin**,
+  so it starts from the hero pose regardless of inner-page scroll (P1 coupling had moved it off-screen).
+  No-op at the top (already baseY) → the correct top exit is unchanged; fixes bottom + Back-after-scroll.
+  `pages/[slug].vue` branches the bottom edge by slug: `wine-o-clock → doExitReverse()` (= top), other
+  chapters → `doExitForward()` (option B slot).
+- **Verified on prod:** captured Wine's top vs bottom exit side-by-side — both start from the full-bleed
+  hero and run the same reverse-spin into the ring. Bottom == top.
+- **Open — option B:** replicate the reference's bottom exit ("cards spinning at the bottom, page drops
+  into the spin"; needs the finicky EML→back→Wine cold-load state). Headless can't scroll/render the
+  reference's video, so a **user screen-recording** of that flow is the best ground truth. Parked pending that.
+
 ### 2026-06-01 (session 13) — bottom-exit visual polish (3 rounds vs prod capture)
 Iterated the forward bottom-exit until it reads as the full-bleed hero shrinking in place + the ring
 reassembling around it, watchable start-to-finish. Each round root-caused by capturing prod:

@@ -15,7 +15,8 @@ sections below ("card-becomes-the-page rework" step table A–G + the "Careful a
 - [x] **C — Scroll coupling (P1, "purple overlay")**: hero card scrolls away 1:1 with the page. *(live 2026-05-30, `005d849f`)*
 
 **Next up — motion**
-- [x] **E — Edge-gated scroll exits (P2)**: mid-page scroll is **free**; exits only at the edges — **top** overscroll-up → reverse back into the ring, **bottom** overscroll-down → forward return (+290°, ring reassembles from the bottom + content slides). Fixed the global-wheel bug that exited on any mid-page up-scroll / broke at the bottom. *(2026-06-01)*
+- [x] **E — Edge-gated scroll exits (P2)**: mid-page scroll is **free**; exits only at the edges. **Wine O'Clock: top AND bottom use the same reverse-spin** (`deselectChapter`, with the hero snapped to ring-centre first so it's clean from any scroll position) — verified top==bottom on prod. Other chapters keep the forward "drop into the ring" path (`doExitForward`) as the **option B** slot for replicating the reference. *(2026-06-01)*
+- [ ] **E (option B) — reference "page drops into the spinning ring"** on a non-Wine page: replicate the reference's bottom exit (cards spinning at the bottom, page drops into the spin). Needs a clean reference capture (the reference's finicky cold-load state + headless can't scroll/render its video) — best via a user screen-recording. ◀ *open*
 - [ ] **D — Normalize entry spin (P2)**: pin the select spin to one consistent turn (currently >1, varies per chapter). ◀ *next*
 - [ ] **Hover targeting (P2)**: hovering a side card lifts a neighbor (flat hitboxes vs shader-bent cards) → drive hover off the front card.
 - [ ] **F — Robustness matrix**: deep-link / click / re-select / exit-by-scroll / exit-by-button / rapid-repeat all verified.
