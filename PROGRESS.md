@@ -359,9 +359,12 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
   chapters → `doExitForward()` (option B slot).
 - **Verified on prod:** captured Wine's top vs bottom exit side-by-side — both start from the full-bleed
   hero and run the same reverse-spin into the ring. Bottom == top.
-- **Open — option B:** replicate the reference's bottom exit ("cards spinning at the bottom, page drops
-  into the spin"; needs the finicky EML→back→Wine cold-load state). Headless can't scroll/render the
-  reference's video, so a **user screen-recording** of that flow is the best ground truth. Parked pending that.
+- **Option B prototyped & live (non-Wine pages):** `doExitForward` now mirrors the reference's `c()` —
+  a 3s `power4.inOut` tween drives the forward +290° spin / ring-reassemble (`setExitProgress`) while the
+  content slides out (`xPercent:110`, ~1s); hero snapped to ring-centre → full-bleed card shrinks in place
+  as the ring spins up around it. Verified on prod (la-storia: card → shrink → spinning ring → carousel).
+  Open polish: white body shows when content slides off (reference keeps chapter colour); refine timing
+  from live feedback. A user screen-recording of the reference's bottom exit would still help nail it.
 
 ### 2026-06-01 (session 13) — bottom-exit visual polish (3 rounds vs prod capture)
 Iterated the forward bottom-exit until it reads as the full-bleed hero shrinking in place + the ring
