@@ -27,9 +27,19 @@ sections below ("card-becomes-the-page rework" step table A–G + the "Careful a
 - [ ] Other 3 chapters' `CHAPTER_PAGES` content + gallery/dress assets (P3 — currently scaffolds).
 - [ ] Polish: exact heading typeface + verbatim copy.
 
+**Re-review fix batch (2026-06-12) — shipped & prod-verified**
+- [x] P1: scroll-then-click parked the hero off-axis (scrollRotationY now compensated; verified exact — hero (0,40), totalRot 0).
+- [x] P1: leaving a page mid-forward-exit froze the scene half-exited (unmount now snaps `setExitProgress(1)`).
+- [x] Interrupt-safety: select AND deselect timelines tracked + killed on interruption; back-then-forward re-selects (prod-verified); `pendingIdx` stale-deep-link bug removed.
+- [x] Restoration: option-B exit restores center txt; hover cleared on select (stuck EXPLORE cursor / lift-pop); films play on deep-link select + pause on every exit (paused-after-exit prod-verified).
+- [x] Input: ready-gating until select settles; Firefox deltaMode normalization; 400ms gesture-gap reset.
+- [x] Robustness: post-intro parallax clamp (background-tab camera drift).
+- [ ] **Real-browser confirms pending**: video-plays-in-hero (headless has no MP4 codec), exit feel/GIFs, reference EML→back→Wine capture.
+
 **Before handoff**
-- [ ] Remove temp scene instrumentation (`window.__heroDebug` / `__camDebug` / `__probe`) or gate behind `?debug`.
-- [ ] Remove the dead `virtualscroll` path in `WebGLScene.vue` (its `.on()` throws → always falls back to the window wheel listener, which is the real handler). Drop the dep or replace with the intended `virtual-scroll`.
+- [x] Scene instrumentation now gated behind `?debug` (+ new `__exitBegin/__exitScrub/__exitEnd`; `__gsdev()` mounts the GSAP DevTools scrubber on demand — do NOT auto-create it: it hijacks the global timeline). ⚠️ Headless probe scripts must load with `?debug` on the initial URL.
+- [ ] Remove the dead `virtualscroll` path in `WebGLScene.vue` (its `.on()` throws → always falls back to the window wheel listener, which is the real handler). Drop the dep or replace with the intended `virtual-scroll`. Note: fallback is wheel-only → **no touch input on the homepage carousel** (mobile).
+- [ ] **Docs-drift pass** (confirmed by the re-review): ARCHITECTURE.md still describes the removed scene-level scroll-exit (#7/SCROLL_EXIT_THRESHOLD), says SELECTED_Y=-70 (code -43), "no routes yet", plural-poster select, and a never-fired onDeselect callback; PROGRESS top sections say baseDistance 42 / tilt -70° (code 40/+70) + scroll-back claims; README lists "scroll-back exit" as shipped.
 
 ---
 

@@ -348,6 +348,30 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
 
 ## 🗓 Session Log
 
+### 2026-06-12 (session 15) — Fable re-review → fix batch → prod-verified
+- **Full re-review** (5-auditor multi-agent sweep, hand-verified, adversarial diff review): 2 P1s,
+  ~7 P2s, ~10 doc-drift items. All code fixes shipped in `36d4384d` + `30e14d46`:
+  - **P1 scroll-then-click**: homepage scrolling before clicking parked the hero off-front by the
+    scrolled amount (`scrollRotationY` never compensated in the select target). Fixed; prod-verified
+    EXACT (hero (0,40), total rot 0.0000).
+  - **P1 unmount mid-forward-exit**: froze the scene half-exited → unmount now snaps `setExitProgress(1)`.
+  - **Interrupt-safety**: both select/deselect timelines tracked & killed on interruption (stale
+    onComplete clobbering); back-then-forward mid-deselect now re-selects (prod-verified); stale
+    `pendingIdx` deep-link yank-back removed (route-derived resync).
+  - **Restoration/fidelity**: option-B exit restores center txt; hover cleared on select (stuck
+    EXPLORE cursor + lift-pop); films play on deep-link select, pause on every exit; resize
+    rescales the hero; ready-gating (Lenis stopped until select settles); Firefox deltaMode;
+    400ms gesture-gap; post-intro parallax clamp (background-tab camera drift).
+- **Debug tooling**: probes gated behind `?debug` (initial-load URL!) + `__exitBegin/__exitScrub/
+  __exitEnd`; `__gsdev()` mounts GSAP DevTools **on demand** — auto-creating it hijacked the global
+  timeline (paused at recorded end → froze selects/exits under ?debug; caught by the prod suite).
+- **Prod regression suite** (Browserless, per-test sessions — plan caps at 60s): T1 hero exact ✅,
+  wine bottom exit ✅, film-paused-after-exit ✅, la-storia forward exit ✅, back-then-forward ✅.
+  Video-plays-in-hero is headless-unverifiable (no MP4 codec: `NotSupportedError`) → real-browser item.
+- **Tooling lessons**: headless fps makes the 0.06 rotation lerp tail visible for seconds (probe late);
+  interleaved CDP probes look like gesture pauses to the 400ms accumulator reset (wheel continuously,
+  probe after); Claude-in-Chrome background tabs suspend rAF entirely (focus the tab before driving).
+
 ### 2026-06-01 (session 14) — Wine bottom exit = top exit (option A); option B parked for reference capture
 - **User insight:** the top-edge exit is the known-correct one; the custom forward bottom-exit felt
   "detached." Decision: for Wine O'Clock make the bottom exit *identical* to the top (reuse the reverse
