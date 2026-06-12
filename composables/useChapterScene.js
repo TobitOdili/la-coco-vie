@@ -488,11 +488,15 @@ export function useChapterScene() {
       window.__exitScrub = (de) => setExitProgress(de)
       window.__exitEnd = () => endExit()
       // GSAP DevTools — on-page scrubber for every tween/timeline (free since 3.13).
-      import('gsap/GSDevTools').then((m) => {
-        const GSDevTools = m.GSDevTools || m.default
-        gsap.registerPlugin(GSDevTools)
-        GSDevTools.create()
-      }).catch(() => {})
+      // OPT-IN via console (`__gsdev()`), NOT auto-created: creating it hijacks the
+      // global timeline (records, then pauses/loops at the recorded end), which froze
+      // selects/exits/delayedCalls on every ?debug page and broke automated runs.
+      window.__gsdev = () =>
+        import('gsap/GSDevTools').then((m) => {
+          const GSDevTools = m.GSDevTools || m.default
+          gsap.registerPlugin(GSDevTools)
+          return GSDevTools.create()
+        })
       window.__heroDebug = () => {
         const camPos = camera.position.clone()
         const v = new THREE.Vector3()
@@ -517,6 +521,7 @@ export function useChapterScene() {
         x: +camera.position.x.toFixed(1), y: +camera.position.y.toFixed(1), z: +camera.position.z.toFixed(1),
         groupRot: { x: +groupG.rotation.x.toFixed(3), y: +groupG.rotation.y.toFixed(3), z: +groupG.rotation.z.toFixed(3) },
         carouselRotY: +carousel.rotation.y.toFixed(3), carouselPosY: +carousel.position.y.toFixed(1),
+        scrollRotY: +scrollRotationY.toFixed(4), animRotY: +(carousel.animatedRotationY || 0).toFixed(4),
       })
       // What does a click at screen (x,y) resolve to, vs the front-facing card?
       window.__probe = (x, y) => {
