@@ -145,18 +145,30 @@ watch(selectedChapterIdx, (idx) => {
 
 // Drive the scene to match the URL. Handles browser back/forward and deep links;
 // for an in-app card click the scene is already animating (guarded by getState).
-let pendingIdx = null
+// Always re-derives the target from the CURRENT route (the old deferred `pendingIdx`
+// went stale: deep-link → navigate home before the intro ended → at intro end the
+// scene force-selected, and force-navigated back to, the abandoned chapter).
+// When an animation is mid-flight, re-sync shortly after instead of dropping the
+// intent (e.g. back-then-forward during the deselect used to strand the chapter
+// page over the idle carousel because the re-select was silently skipped).
+let resyncTimer = null
+function scheduleResync() {
+  if (resyncTimer) return
+  resyncTimer = setTimeout(() => { resyncTimer = null; syncSceneToRoute() }, 300)
+}
 function syncSceneToRoute() {
   const scene = webglSceneRef.value?.scene
   if (!scene) return
   const idx = slugToIdx(route.params.slug)
   const st = scene.getState()
+  if (!st.introComplete) return // onReady re-syncs from the current route at intro end
   if (idx === -1) {
     if (st.selectedIndex !== -1 && !st.isDeselecting) scene.deselectChapter()
-  } else if (!st.introComplete) {
-    pendingIdx = idx // defer until the intro finishes (deep link on fresh load)
-  } else if (st.selectedIndex !== idx && !st.isSelecting) {
-    scene.selectChapter(idx)
+  } else if (st.selectedIndex !== idx) {
+    if (st.isSelecting || st.isDeselecting) scheduleResync()
+    else scene.selectChapter(idx)
+  } else if (st.isDeselecting) {
+    scheduleResync() // same chapter mid-deselect (back-then-forward) — re-select once it lands
   }
 }
 watch(() => route.params.slug, syncSceneToRoute)
@@ -172,18 +184,17 @@ onMounted(() => {
   const noiseUrl = new URL(`${base}/images/noise.png`, window.location.href).href
   document.documentElement.style.setProperty('--noise-url', `url('${noiseUrl}')`)
 
-  // Apply any deep-linked chapter once the intro finishes (selection is gated until then).
+  // Apply any deep-linked chapter once the intro finishes (selection is gated until
+  // then). onReady re-syncs from whatever the route is AT THAT MOMENT — no stale state.
   const scene = webglSceneRef.value?.scene
   if (scene) {
-    scene.onReady(() => {
-      if (pendingIdx !== null) { scene.selectChapter(pendingIdx); pendingIdx = null }
-      else syncSceneToRoute()
-    })
+    scene.onReady(() => syncSceneToRoute())
     syncSceneToRoute() // in case we mounted already-ready
   }
 })
 
 onUnmounted(() => {
+  if (resyncTimer) clearTimeout(resyncTimer)
   sounds.forEach((s) => s.unload())
   tickSound?.unload()
 })

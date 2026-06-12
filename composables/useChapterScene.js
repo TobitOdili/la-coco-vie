@@ -272,6 +272,9 @@ export function useChapterScene() {
   let exitStart = null      // captured transforms at the start of a forward scroll-exit (step E)
   const EXIT_SPIN = toRad(290)  // forward spin during the scroll-end return (matches reference's +290°)
   let preSelectRot = 0  // carousel.animatedRotationY before a select — restored on deselect (reverse spin)
+  let deselectTl = null // live deselect timeline — killed if a new select starts mid-deselect
+  let selectTl = null   // live select timeline — killed by deselect/re-select so its stale
+                        // onComplete can't clear isSelecting early or start the video
   let carouselTargetRot = 0
   let carouselLerpTarget = 0  // smooth lerp target like original f(current, target, .06)
   // Animation gates: prevent re-triggering select/deselect/exit while one is mid-flight.
@@ -474,10 +477,22 @@ export function useChapterScene() {
     // Intro animation
     runIntro()
 
-    // TEMP debug (Phase 2 hero geometry): expose per-poster world orientation so we
-    // can identify the front art-facing copy + tilt source via Browserless. Remove
-    // once the hero is dialed in.
-    if (typeof window !== 'undefined') {
+    // Debug tooling — gated behind ?debug (e.g. /wine-o-clock?debug). Exposes scene
+    // probes (__heroDebug/__camDebug/__probe), deterministic exit scrubbing
+    // (__exitBegin/__exitScrub/__exitEnd — mirrors the reference's setPageProgress),
+    // and the GSDevTools timeline scrubber UI. No-cost in normal sessions.
+    const DEBUG = typeof window !== 'undefined' && /[?&]debug/.test(window.location.search)
+    if (DEBUG) {
+      // Scrub the forward exit by hand: __exitBegin() → __exitScrub(0..1) → __exitEnd()
+      window.__exitBegin = () => beginExit()
+      window.__exitScrub = (de) => setExitProgress(de)
+      window.__exitEnd = () => endExit()
+      // GSAP DevTools — on-page scrubber for every tween/timeline (free since 3.13).
+      import('gsap/GSDevTools').then((m) => {
+        const GSDevTools = m.GSDevTools || m.default
+        gsap.registerPlugin(GSDevTools)
+        GSDevTools.create()
+      }).catch(() => {})
       window.__heroDebug = () => {
         const camPos = camera.position.clone()
         const v = new THREE.Vector3()
@@ -687,8 +702,14 @@ export function useChapterScene() {
       // Original: camera.x += f(de, 0, w=0)*ne - dx/oe = de*ne - dx/oe
       // de = x.x (direct, no smoothing) for camera in original
       // No clamping in original!
-      const mx = isMobile ? 0 : mouse.x   // x.x in original
-      const my = isMobile ? 0 : mouse.y   // x.y in original
+      // Post-intro clamp: if the page loads in a BACKGROUND tab, rAF is suspended and
+      // GSAP lag-smoothing starves the intro's mouse tween — mouse can stay at its
+      // (-10,-10) intro push, and this spring then drags the camera to ±(126,111)
+      // (broken bowl-of-cards view) until the first real mousemove. The intro
+      // intentionally overdrives the value, so only clamp once it completes.
+      const clampM = (v) => (introComplete ? Math.max(-1.2, Math.min(1.2, v)) : v)
+      const mx = isMobile ? 0 : clampM(mouse.x)   // x.x in original
+      const my = isMobile ? 0 : clampM(mouse.y)   // x.y in original
       const ne = 0.7, oe = 18
       const dx = camera.position.x - camera.basePosition.x
       const dy = camera.position.y - camera.basePosition.y
@@ -724,7 +745,9 @@ export function useChapterScene() {
     // angle = x.x*10 - (-0 - 10) = x.x*10 + 10
     // At rest after intro (x.x=0.5): angle = 5 + 10 = 15°
     // During intro (x.x=-10): angle = -100 + 10 = -90°
-    const currentUAngle = mouse.x * 10 + 10  // using mouse.x = x.x equivalent
+    // Same post-intro clamp as the camera parallax (background-tab robustness).
+    const uax = introComplete ? Math.max(-1.2, Math.min(1.2, mouse.x)) : mouse.x
+    const currentUAngle = uax * 10 + 10  // using mouse.x = x.x equivalent
     posters.forEach((p) => {
       if (p.material.uniforms) {
         p.material.uniforms.aspectRatio.value = aspectRatio
@@ -942,6 +965,25 @@ export function useChapterScene() {
 
   function selectChapter(chIdx) {
     if (chIdx === selectedIndex) return  // idempotent — safe to call from the route watcher
+    // A still-running deselect would clobber this selection when its onComplete fired
+    // (it resets selectedIndex/selectedHero mid-select). Kill it and clear its flag.
+    // NOTE: when we interrupt a deselect, do NOT re-capture preSelectRot below — the
+    // carousel is mid-flight; the existing preSelectRot still holds the true resting
+    // rotation (otherwise each interrupted cycle drifts the idle carousel a bit more).
+    const interruptedDeselect = !!deselectTl
+    if (deselectTl) { deselectTl.kill(); deselectTl = null; isDeselecting = false }
+    // Likewise kill a stale select-in (rapid re-select) so ITS onComplete can't fire.
+    if (selectTl) { selectTl.kill(); selectTl = null }
+    // Clear hover BEFORE selecting: hover is gated while selected, so unhover would
+    // never fire — the cursor stayed stuck on "EXPLORE" and the lifted card kept its
+    // +7 hover lift through the whole select (then popped down when the inner-page
+    // scroll-coupling engaged). The reference un-hovers first too.
+    if (hoveredIndex !== -1) {
+      const prevCh = chapterIdxForSlot(hoveredIndex)
+      unhoverChapter(hoveredIndex)
+      if (onHoverCallback) onHoverCallback(prevCh, false)
+      hoveredIndex = -1
+    }
     selectedIndex = chIdx
     isSelecting = true
     scrollOffsetPx = 0   // start the hero at the top of the inner page (P1)
@@ -950,7 +992,20 @@ export function useChapterScene() {
     // overwrite:true on every tween so a re-select cleanly kills any still-settling
     // deselect tweens on the same objects (otherwise they stack → "floats weirdly").
     gsap.killTweensOf(carousel)
-    const tl = gsap.timeline({ onComplete: () => { isSelecting = false } })
+    const tl = gsap.timeline({ onComplete: () => {
+      selectTl = null
+      isSelecting = false
+      // The select scale was baked from aspectRatio at select START — re-apply from the
+      // CURRENT aspect in case the window resized during the 3s entry.
+      const sFinal = aspectRatio * 2.07
+      heroPoster.mesh.scale.set(sFinal, sFinal, 1)
+      // Play the chapter film once the card is parked (matches the reference, which
+      // plays in the select rotation's onComplete). Click-selects had it playing via
+      // hover, but DEEP-LINK selects showed a static hero — this covers both. Guarded:
+      // a deselect that interrupted the select must not start the video afterward.
+      if (selectedIndex === chIdx && !isDeselecting) videoElements[chIdx]?.play().catch(() => {})
+    } })
+    selectTl = tl
 
     // Fade out txt mesh
     if (groupG.userData.txtMat) {
@@ -964,8 +1019,11 @@ export function useChapterScene() {
     // from the chosen copy fixes selection for every chapter.
     const heroPoster = posters.find((p) => p.chapterIdx === chIdx)
     selectedHero = heroPoster   // the card the inner-page scroll couples to (P1)
-    preSelectRot = carousel.animatedRotationY
-    const targetRot = (heroPoster.intRotationY - 90) * Math.PI / 180
+    if (!interruptedDeselect) preSelectRot = carousel.animatedRotationY
+    // The render loop composes rotation as scrollRotationY + animatedRotationY, so the
+    // homepage scroll offset must be SUBTRACTED here — otherwise any pre-click carousel
+    // scrolling parks the hero off-front by exactly that amount (scroll-then-click bug).
+    const targetRot = toRad(heroPoster.intRotationY - 90) - scrollRotationY
     tl.to(carousel, { animatedRotationY: targetRot, duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
 
     // Move carousel down
@@ -993,6 +1051,10 @@ export function useChapterScene() {
     if (selectedIndex === -1 || isDeselecting) return
     isDeselecting = true
     scrollOffsetPx = 0   // stop coupling; GSAP restores the hero's Y below (P1)
+    // Kill a still-running select-in: its onComplete would otherwise clear isSelecting
+    // early and start the video mid-deselect (back-pressed during the 3s entry).
+    if (selectTl) { selectTl.kill(); selectTl = null; isSelecting = false }
+    videoElements[selectedIndex]?.pause()   // reference pauses the film at exit start
     // Snap the hero back to its ring-centre pose FIRST so the reverse-spin always starts
     // from the hero position, regardless of how far the inner page had scrolled (the P1
     // coupling moves the card off-screen as you read). Without this, exiting from the
@@ -1001,8 +1063,9 @@ export function useChapterScene() {
     if (selectedHero) selectedHero.mesh.position.y = selectedHero.baseY
     gsap.killTweensOf(carousel)
     const tl = gsap.timeline({
-      onComplete: () => { selectedIndex = -1; isDeselecting = false; selectedHero = null }
+      onComplete: () => { selectedIndex = -1; isDeselecting = false; selectedHero = null; deselectTl = null }
     })
+    deselectTl = tl
 
     // Restore txt mesh
     if (groupG.userData.txtMat) {
@@ -1045,9 +1108,14 @@ export function useChapterScene() {
   // beginExit() snapshots the current (selected/scrolled) state and locks out the
   // scroll-coupling + the route watcher's reverse deselect (via isDeselecting).
   function beginExit() {
-    if (selectedIndex === -1 || isDeselecting || !selectedHero) return false
+    // isSelecting guard: on short pages the bottom can be reached (and overscrolled)
+    // while the 3s select-in is still running — starting the exit then leaves the
+    // select's non-hero drop tweens fighting the exit lerps. The page also gates
+    // wheel input until settled; this is defense in depth.
+    if (selectedIndex === -1 || isDeselecting || isSelecting || !selectedHero) return false
     isDeselecting = true
     scrollOffsetPx = 0
+    videoElements[selectedIndex]?.pause()   // reference pauses the film at exit start
     const hero = selectedHero
     gsap.killTweensOf(carousel)
     gsap.killTweensOf(carousel.position)
@@ -1056,6 +1124,7 @@ export function useChapterScene() {
     gsap.killTweensOf(hero.mesh.position)
     gsap.killTweensOf(hero.material.uniforms.blendFactor)
     gsap.killTweensOf(hero.material.uniforms.progress)
+    if (groupG.userData.txtMat) gsap.killTweensOf(groupG.userData.txtMat)
     exitStart = {
       rot: carousel.animatedRotationY,
       cy: carousel.position.y,
@@ -1069,7 +1138,13 @@ export function useChapterScene() {
       heroY: hero.baseY,
       blend: hero.material.uniforms.blendFactor.value,
       prog: hero.material.uniforms.progress.value,
-      others: posters.filter((p) => p !== hero).map((p) => ({ p, y: p.mesh.position.y })),
+      // The center txt faded to 0 on select; the forward exit must bring it back
+      // (deselectChapter restores it; this path previously left it invisible).
+      txtOpacity: groupG.userData.txtMat ? groupG.userData.txtMat.opacity : 1,
+      others: posters.filter((p) => p !== hero).map((p) => {
+        gsap.killTweensOf(p.mesh.position)   // select's drop tweens must not fight the lerp
+        return { p, y: p.mesh.position.y }
+      }),
     }
     return true
   }
@@ -1092,6 +1167,7 @@ export function useChapterScene() {
     hero.mesh.position.y = lp(exitStart.heroY, hero.baseY)
     hero.material.uniforms.blendFactor.value = lp(exitStart.blend, 0)
     hero.material.uniforms.progress.value = lp(exitStart.prog, 0)
+    if (groupG.userData.txtMat) groupG.userData.txtMat.opacity = lp(exitStart.txtOpacity, 1)
     for (const o of exitStart.others) o.p.mesh.position.y = lp(o.y, o.p.baseY)
   }
 
@@ -1101,6 +1177,7 @@ export function useChapterScene() {
     selectedHero = null
     exitStart = null
     scrollOffsetPx = 0
+    hoveredIndex = -1   // stale hover would block the idle center-text sync (deselect resets it too)
   }
 
   function onScroll(delta) {
@@ -1131,6 +1208,15 @@ export function useChapterScene() {
     camera.aspect = aspectRatio
     camera.updateProjectionMatrix()
     renderer.setSize(w, h, false)
+
+    // Keep the hero full-bleed across resizes — its scale is aspect-dependent and was
+    // baked at select time (the reference rescales on resize too). Skip while animating:
+    // mid-select the live scale tween would fight this (the select onComplete re-applies
+    // the final scale from the then-current aspect instead).
+    if (selectedIndex !== -1 && selectedHero && !isDeselecting && !isSelecting) {
+      const s = aspectRatio * 2.07
+      selectedHero.mesh.scale.set(s, s, 1)
+    }
 
     if (isMobile && selectedIndex === -1) {
       groupG.rotation.set(toRad(22), 0, 0)

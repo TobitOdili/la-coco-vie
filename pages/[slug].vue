@@ -64,16 +64,28 @@ const EXIT_SPIN_DUR = 3.0        // option B: forward spin/ring-reassemble (refe
 const EXIT_SLIDE_DUR = 1.0       // option B: content slide-out (reference's 1s)
 let endAccum = 0                 // bottom overscroll accumulator
 let topAccum = 0                 // top overscroll accumulator
+let lastWheelT = 0               // last wheel-event time — a gap means a new gesture
 let exiting = false
+let ready = false                // select-in settled — scroll + exit gestures enabled
+let readyPoll = null
 let forwardActive = false        // a forward exit tween is mid-flight (unmount cleanup)
 let exitTl = null
 
 function onWheel(e) {
-  if (exiting || !lenis) return
+  if (!ready || exiting || !lenis) return
+  // Normalize deltas: Firefox fires deltaMode=1 (lines, ~3 per notch) — comparing raw
+  // line counts against a pixel threshold made exits near-unreachable there. ~40px/line
+  // ≈ Chrome's ~120px notch (WebGLScene's VirtualScroll uses firefoxMultiplier 50 too).
+  const dy = e.deltaY * (e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? window.innerHeight : 1)
+  // A pause between events = a new gesture — don't let accumulation span gestures
+  // (slow repeated notches at an edge shouldn't eventually trip the exit).
+  const now = performance.now()
+  if (now - lastWheelT > 400) { endAccum = 0; topAccum = 0 }
+  lastWheelT = now
   const atBottom = lenis.limit > 0 && lenis.scroll >= lenis.limit - 2
   const atTop = lenis.scroll <= 2
-  if (atBottom && e.deltaY > 0) {            // bottom edge, pushing down → exit
-    endAccum += e.deltaY; topAccum = 0
+  if (atBottom && dy > 0) {                  // bottom edge, pushing down → exit
+    endAccum += dy; topAccum = 0
     if (endAccum >= END_EXIT_THRESHOLD) {
       // Wine O'Clock: bottom exit = the SAME reverse-spin as the top edge (option A —
       // known-good, identical timing/feel). Other chapters: the forward "drop into the
@@ -81,8 +93,8 @@ function onWheel(e) {
       if (route.params.slug === 'wine-o-clock') doExitReverse()
       else doExitForward()
     }
-  } else if (atTop && e.deltaY < 0) {        // top edge, pushing up → reverse exit (all pages)
-    topAccum += -e.deltaY; endAccum = 0
+  } else if (atTop && dy < 0) {              // top edge, pushing up → reverse exit (all pages)
+    topAccum += -dy; endAccum = 0
     if (topAccum >= END_EXIT_THRESHOLD) doExitReverse()
   } else {                                   // mid-page → free scroll, no exit
     endAccum = 0; topAccum = 0
@@ -137,18 +149,42 @@ onMounted(() => {
   lenis.on('scroll', (e) => scene?.setScroll(e.scroll))
   scene?.setScroll(0)
 
+  // Hold scrolling until the select-in animation settles. Scrolling mid-select used
+  // to (a) bank scrollOffsetPx that snapped the hero the moment isSelecting cleared
+  // (teleport), and (b) let an accidental up-wheel trigger the top exit during entry.
+  lenis.stop()
+  const waitSettled = () => {
+    const st = webglSceneRef?.value?.scene?.getState?.()
+    // Strict: THIS chapter selected and fully settled. (`selectedIndex !== -1` alone
+    // passes during a mid-flight deselect of the same chapter — back-then-forward —
+    // which would open scrolling/exits during the resync re-select.)
+    if (st && st.introComplete && st.selectedIndex === chapter.value?.index &&
+        !st.isSelecting && !st.isDeselecting) {
+      ready = true
+      lenis?.start()
+    } else {
+      readyPoll = setTimeout(waitSettled, 200)
+    }
+  }
+  waitSettled()
+
   pageEl.value?.addEventListener('wheel', onWheel, { passive: true })
 })
 
 onBeforeUnmount(() => {
   pageEl.value?.removeEventListener('wheel', onWheel)
-  // If we unmount mid-exit for any other reason, kill the tween and release the
-  // scene's exit lock so it doesn't get stuck in the selected/exiting state.
+  if (readyPoll) clearTimeout(readyPoll)
+  // If we unmount mid-forward-exit (e.g. nav/back click during the return), kill the
+  // tween and SNAP the return to its end pose before releasing the lock — otherwise
+  // the homepage is left with a half-exited scene (frozen group tilt / hero scale).
   exitTl?.kill()
   exitTl = null
-  // Only release the forward-exit lock if a forward tween was actually mid-flight;
-  // the reverse exit uses deselectChapter() and must not be cut short here.
-  if (forwardActive) webglSceneRef?.value?.scene?.endExit?.()
+  if (forwardActive) {
+    const scene = webglSceneRef?.value?.scene
+    scene?.setExitProgress?.(1)
+    scene?.endExit?.()
+    forwardActive = false
+  }
   lenis?.destroy()
   lenis = null
   webglSceneRef?.value?.scene?.setScroll(0)
