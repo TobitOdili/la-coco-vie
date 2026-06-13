@@ -281,12 +281,12 @@ export function useChapterScene() {
   //    "catch" the shrinking page.
   const HERO_RETURN_END = 0.45
   const SHRINK_START = 0.30
-  // Phase 1 (drop-into-deck rework): during the bottom exit the WebGL hero card is FADED OUT so
-  // it isn't seen as "a second copy of the page spinning underneath" separate from the DOM page.
-  // It fades back in near the end only to complete the homepage ring (a placeholder until Phase 3
-  // makes the DOM page itself the card). The side cards keep their spin/rise (the user wants it).
-  const HERO_HIDE_OUT = 0.10   // hero fully faded out by this de (quick, covers short pages where it may still show)
-  const HERO_HIDE_BACK = 0.85  // hero fades back in from here → 1 by de=1, filling its ring slot at rest
+  // Phase 1 (drop-into-deck rework): during the bottom exit, BOTH poster copies of the CURRENT
+  // chapter (the hero AND its mirror/back copy) are hidden instantly (uOpacity→0 for any de>0) so
+  // neither is seen as "a version of the page spinning off in the back" separate from the DOM page
+  // — the DOM page represents the chapter's card. They're restored at endExit so the homepage ring
+  // is complete (placeholder until Phase 3 makes the DOM page itself the card). The OTHER chapters'
+  // cards keep their spin/rise from below (the user wants that rotation).
   let preSelectRot = 0  // carousel.animatedRotationY before a select — restored on deselect (reverse spin)
   let deselectTl = null // live deselect timeline — killed if a new select starts mid-deselect
   let selectTl = null   // live select timeline — killed by deselect/re-select so its stale
@@ -1198,7 +1198,11 @@ export function useChapterScene() {
       txtOpacity: groupG.userData.txtMat ? groupG.userData.txtMat.opacity : 1,
       others: posters.filter((p) => p !== hero).map((p) => {
         gsap.killTweensOf(p.mesh.position)   // select's drop tweens must not fight the lerp
-        return { p, y: p.mesh.position.y }
+        return {
+          p, y: p.mesh.position.y,
+          same: p.chapterIdx === hero.chapterIdx,   // the chapter's OTHER copy — hide it too (no wine duplicate)
+          op: p.material.uniforms.uOpacity ? p.material.uniforms.uOpacity.value : 1,
+        }
       }),
     }
     return true
@@ -1228,18 +1232,16 @@ export function useChapterScene() {
     hero.mesh.position.y = lp(exitStart.heroY, hero.baseY, heroT) // return home early, under cover
     hero.material.uniforms.blendFactor.value = lp(exitStart.blend, 0, shrinkT)
     hero.material.uniforms.progress.value = lp(exitStart.prog, 0, shrinkT)
-    // Phase 1: fade the hero OUT fast (so it's never seen as a second card spinning under the
-    // DOM page), then back IN near the end to fill its ring slot at rest. Pure function of de →
-    // reversible (cancelExit calls setExitProgress(0) → heroOpacity restored).
-    if (hero.material.uniforms.uOpacity) {
-      let heroOp
-      if (t < HERO_HIDE_OUT) heroOp = exitStart.heroOpacity * (1 - t / HERO_HIDE_OUT)
-      else if (t < HERO_HIDE_BACK) heroOp = 0
-      else heroOp = (t - HERO_HIDE_BACK) / (1 - HERO_HIDE_BACK)
-      hero.material.uniforms.uOpacity.value = heroOp
-    }
+    // Phase 1: hide the hero INSTANTLY for any de>0 (no start/end fade flash) — the DOM page is
+    // the chapter's card. Restored at de=0 (cancel) and at endExit (homepage ring).
+    if (hero.material.uniforms.uOpacity) hero.material.uniforms.uOpacity.value = t > 0 ? 0 : exitStart.heroOpacity
     if (groupG.userData.txtMat) groupG.userData.txtMat.opacity = lp(exitStart.txtOpacity, 1)
-    for (const o of exitStart.others) o.p.mesh.position.y = lp(o.y, o.p.baseY)  // side cards rise from below
+    for (const o of exitStart.others) {
+      o.p.mesh.position.y = lp(o.y, o.p.baseY)   // other-chapter cards rise from below (kept visible)
+      // The chapter's OTHER copy would show the SAME art rising — hide it too so there's no wine
+      // duplicate; the other chapters' cards keep their opacity (the wrap-in the user liked).
+      if (o.same && o.p.material.uniforms.uOpacity) o.p.material.uniforms.uOpacity.value = t > 0 ? 0 : o.op
+    }
   }
 
   // Abort an in-progress bottom exit (the user scrolled back up before committing). Restore
@@ -1254,6 +1256,12 @@ export function useChapterScene() {
   }
 
   function endExit() {
+    // Restore the chapter's hidden poster copies (both) so the homepage ring is complete; the idle
+    // depth loop takes over their uOpacity next frame. (Placeholder until Phase 3.)
+    if (selectedHero) {
+      const ch = selectedHero.chapterIdx
+      posters.forEach((p) => { if (p.chapterIdx === ch && p.material.uniforms.uOpacity) p.material.uniforms.uOpacity.value = 1 })
+    }
     selectedIndex = -1
     isDeselecting = false
     selectedHero = null
