@@ -111,9 +111,10 @@ owns the inner-page scroll + exit:
 - **Lenis** smooth scroll (wrapper `.chapter-page`, content `.chapter-scroll`); each scroll
   tick → `scene.setScroll(px)` for the 1:1 hero coupling (P1).
 - **Edge-gated exits** via a `wheel` listener (gated until the select-in settles): overscroll
-  past the **top** → `doExitReverse()`; past the **bottom** → `doExitReverse()` on Wine
-  O'Clock (option A) or `doExitForward()` on other chapters (option B). See
-  [Lifecycle → exit](#exit-edge-gated-in-pagesslugvue).
+  past the **top** → `doExitReverse()` (reverse-spin); past the **bottom** → the **scroll-coupled
+  "drop into the deck"** exit (all chapters) — overscroll drives `setExitProgress` 0→1 live, the
+  deck rises from below to catch the shrinking/falling page, auto-completing past `COMMIT_PROGRESS`.
+  See [Lifecycle → exit](#exit-edge-gated-in-pagesslugvue).
 
 ### `composables/chapterPages.js`
 Inner-page content (`CHAPTER_PAGES[slug].sections[]` + the `DRESSES` table). Lightweight data
@@ -178,9 +179,13 @@ isSelecting, isDeselecting }`.
 
 - `selectChapter(chIdx)` / `deselectChapter()` — entry + reverse exit (driven by the route watcher).
 - `setScroll(px)` — inner-page scroll position → 1:1 hero coupling (P1).
-- `beginExit()` / `setExitProgress(0→1)` / `endExit()` — the **scrubbable forward exit** (option B):
-  `beginExit` snapshots state, `setExitProgress` lerps every transform (forward `+EXIT_SPIN`,
-  ring reassembles), `endExit` finalizes. Mirrors the reference's `window.setPageProgress`.
+- `beginExit()` / `setExitProgress(0→1)` / `cancelExit()` / `endExit()` — the **scrubbable bottom
+  exit** (scroll-coupled "drop into the deck"; mirrors the reference's `window.setPageProgress`):
+  `beginExit` snapshots state **without snapping the hero** (keeps its scrolled-off Y, preserves the
+  scroll offset); `setExitProgress` lerps every transform (forward `+EXIT_SPIN`, `carousel.y −43→0`,
+  side cards rise from below) but **re-times the hero** — `heroT` returns it to centre early (under
+  the still-opaque page, so no snap), `shrinkT` un-grows it into the ring late; `cancelExit` restores
+  the selected state if the gesture is aborted before commit; `endExit` finalizes.
 - `onReady(cb)` — fires once at intro end (deep-link selection is deferred until then).
 
 ### Scene graph
@@ -202,7 +207,7 @@ scene
 | `introDistance` | 75 | start radius for the fly-in |
 | `SELECTED_Y` | **-43** | carousel Y when a chapter is selected (top-anchors the full-bleed hero) |
 | hero scale | `aspectRatio * 2.07` | reference-tuned full-bleed scale at `progress=1` |
-| `EXIT_SPIN` | `290°` | forward spin of the option-B scroll-end return (matches the reference) |
+| `EXIT_SPIN` | `290°` | forward spin of the bottom scroll-coupled "drop into the deck" return (matches the reference) |
 | `DEPTH_FADE_NEAR / FAR` | 95 / 125 | distance range for far-card opacity fade (#6) |
 | `DEPTH_FADE_FLOOR` | 0.2 | far cards fade to faint, not invisible |
 | `txtMesh.position` | (0,-8,20) | center text; y=-8 clears the logo (#11) |
@@ -294,16 +299,19 @@ inner page detects overscroll past an edge and triggers one of two animations:
 |---|---|---|
 | **Back button / nav logo** (any time) | reverse-spin into the ring | `router.push('/')` → watcher → `deselectChapter()` |
 | **Top edge**, keep scrolling up (all chapters) | reverse-spin into the ring | `doExitReverse()` → `router.push('/')` → `deselectChapter()` |
-| **Bottom edge**, keep scrolling down — **Wine O'Clock** | same reverse-spin (option A) | `doExitReverse()` |
-| **Bottom edge**, keep scrolling down — **other chapters** | forward "drop into the spinning ring" (option B) | `doExitForward()` → `beginExit`/`setExitProgress`/`endExit` |
+| **Bottom edge**, keep scrolling down (all chapters) | scroll-coupled "drop into the deck" | `startBottomExit` → `beginExit`/`setExitProgress`(live)/`commitExit`→`endExit`, or `cancelExit` |
 
 - **`deselectChapter()`** (~2.5 s, reverse): snaps the hero back to ring-centre (`baseY`) first so
   it's clean from any scroll depth, pauses the film, reverse-spins `animatedRotationY → preSelectRot`,
   and restores group tilt / carousel Y / all poster uniforms+scale+position.
-- **Forward exit (option B)**: a 3 s `power4.inOut` tween scrubs `setExitProgress(0→1)` — hero
-  shrinks in place, `animatedRotationY += EXIT_SPIN (290°)`, the ring reassembles from below — while
-  the page content slides out; on complete it `router.push('/')`. Currently only on non-Wine pages
-  (an in-progress experiment to match the reference — see PHASE-2 board, "option B").
+- **Bottom exit — scroll-coupled "drop into the deck"** (all chapters, reworked 2026-06-13): overscroll
+  past the bottom drives `exitProgress` 0→1 **live** (`EXIT_TRAVEL` 1100 px) into `setExitProgress` —
+  the deck **rises from below to catch** the page (`carousel.y −43→0`, side cards rise, `+EXIT_SPIN
+  290°`) while the hero returns to centre early (under cover, `heroT`) then un-grows into the ring
+  (`shrinkT`), and the DOM page (`.chapter-page`) shrinks toward bottom-centre + falls + fades late.
+  Past `COMMIT_PROGRESS` (0.55) it auto-completes (`commitExit`) then `router.push('/')`; scrolling
+  back up first → `cancelExit()` + `lenis.start()`. **No snap** (the old fixed-tween snapped the hero
+  to `baseY`). Verified on prod via Browserless — see PHASE-2 board, "E (bottom exit)".
 - Mid-page scrolling is **free** in both directions (only the literal edges trigger exits).
 
 ---

@@ -38,9 +38,9 @@ custom GLSL shaders, GSAP animation, spatial audio, and chapter transitions.
   sub-chapters, galleries, dress-tail cards, scroll reveal); other 3 chapters are scaffolds.
 - ✅ **"Card becomes the page":** hero **scroll-coupling** (card scrolls away 1:1 with the page;
   killed the old "purple overlay") + **edge-gated exits** — overscroll past the **top** reverse-spins
-  the card back into the ring; past the **bottom**, Wine O'Clock does the same reverse (option A) while
-  the other chapters run a forward "drop into the spinning ring" (option B, in progress vs the reference).
-  Mid-page scroll is free.
+  the card back into the ring; past the **bottom**, a **scroll-coupled "drop into the deck"** (all
+  chapters): the deck rises from below to catch the page as it shrinks/falls in, auto-completing once
+  you've pulled past the commit point (no snap). Mid-page scroll is free.
 - ✅ **Hardened (2026-06-12 re-review):** scroll-then-click hero alignment, rapid back/forward
   interrupt-safety, video play/pause lifecycle, background-tab robustness, input normalization.
   Verified on prod (Browserless probes) **and** a real browser (video + textures confirmed live).

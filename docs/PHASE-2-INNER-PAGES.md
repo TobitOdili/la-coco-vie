@@ -42,8 +42,8 @@ sections below ("card-becomes-the-page rework" step table A–G + the "Careful a
 - [x] **C — Scroll coupling (P1, "purple overlay")**: hero card scrolls away 1:1 with the page. *(live 2026-05-30, `005d849f`)*
 
 **Next up — motion**
-- [x] **E — Edge-gated scroll exits (P2)**: mid-page scroll is **free**; exits only at the edges. **Wine O'Clock: top AND bottom use the same reverse-spin** (`deselectChapter`, with the hero snapped to ring-centre first so it's clean from any scroll position) — verified top==bottom on prod. Other chapters keep the forward "drop into the ring" path (`doExitForward`) as the **option B** slot for replicating the reference. *(2026-06-01)*
-- [~] **E (option B) — reference "page drops into the spinning ring"** — **prototyped & live on the non-Wine pages** (la-storia / eat-marry-love / amour-getaway). Mirrors the reference's `c()`: a 3s `power4.inOut` tween drives the forward +290° spin / ring-reassemble (`setExitProgress`) while the content slides out (`xPercent:110`, ~1s); the hero is snapped to ring-centre so it's a full-bleed card shrinking in place as the ring spins up around it. Verified on prod (la-storia capture: card → shrink → spinning ring → carousel). **Open polish:** body stays white when the content slides off (reference keeps the chapter colour) — add a bg if it reads badly; refine timing from live feedback (needs video textures). ◀ *iterating*
+- [x] **E — Edge-gated scroll exits (P2)**: mid-page scroll is **free**; exits only at the edges. Top edge, scroll up → reverse-spin (`deselectChapter`). Bottom edge, scroll down → the **scroll-coupled "drop into the deck"** exit (below). *(2026-06-01; bottom reworked 2026-06-13)*
+- [x] **E (bottom exit) — scroll-coupled "drop into the deck"** *(reworked 2026-06-13, `97df22da`)* — **unified for ALL chapters** (dropped the old Wine-reverse / others-forward split + the fixed-tween `doExitForward`). Overscrolling past the bottom drives `setExitProgress` **0→1 live by scroll**; the card deck **rises from below to "catch"** the page, which **shrinks toward bottom-centre + falls + fades late** into it. Past `COMMIT_PROGRESS` (0.55) it auto-completes (`power2.out`) then navigates home; scrolling back up before that **cancels and restores** (`scene.cancelExit()` + `lenis.start()`). **No snap:** `beginExit` keeps the hero at its scrolled-off Y (coupling frozen via `isDeselecting`, offset preserved for clean cancel) and `setExitProgress` returns it to centre **early, under the still-opaque page** (`heroT`), then un-grows it into the ring **late** (`shrinkT`). Fixes the reported "snaps to top, then plays the bottom animation." ◀ *tuning constants on prod (EXIT_TRAVEL / COMMIT_PROGRESS / PAGE_MIN_SCALE / FADE_*)*
 - [x] **D — Normalize entry spin (P2)**: select spin pinned to one consistent FORWARD turn. *(2026-06-12)* The 7s intro rests `animatedRotationY` at `+4π` and the old target `toRad(φ−90)` was a small absolute angle → the entry tweened ~2 turns BACKWARD by a chapter-dependent amount. Now: collapse the accumulated whole turns (subtract the same multiple of 2π from the lerp anchor `rotation.y` so it's invisible — rotation is 2π-periodic), then advance forward to the front angle, clamped into `[180°,540°)`. Verified (local headless CDP, all 4 chapters): forward spins of **315/360/405/450°** (eat-marry-love/la-storia/wine/amour — the 135° spread is the cards' real 45°-apart ring positions), each landing front-centre (`x:0,z:40,dist:66`); select→deselect→reselect cycle lands the ring back at rest (`animRotY 0`) with no drift; zero console errors.
 - [x] **Hover targeting (P2)**: driven off the front card. *(2026-06-12)* The flat hitboxes don't follow the shader bend, so a raw raycast over the visible front card resolved to a neighbour slot and lifted the wrong card. `onMouseMove` now treats any hitbox hit as "cursor over the carousel" and lifts the front copy (`frontPoster().i`), mirroring the click fix; misses unhover. Verified (CDP): at a bug spot whose raw raycast → ch1, the lifted card is now the front ch2 (single slot, `blend:2`); off-carousel unhovers; no errors.
 - [ ] **F — Robustness matrix**: deep-link / click / re-select / exit-by-scroll / exit-by-button / rapid-repeat all verified.
@@ -513,22 +513,47 @@ The inner page's exit `c()` drives it: a 3s `power4.inOut` dummy tween whose `on
 `setPageProgress` 0→1 via Browserless): the hero **shrinks and the ring reassembles from the bottom
 while spinning forward** into the rest carousel.
 
-**Our implementation:**
-- Scene (`useChapterScene.js`): `beginExit()` snapshots state + locks out coupling/route-reverse
-  (sets `isDeselecting`); `setExitProgress(de)` lerps every transform — `animatedRotationY +=
-  EXIT_SPIN(290°)·de`, `carousel.y −43→0`, `group flat→tilt`, hero `scale→1`, `blend/progress→0`,
-  other posters `y→baseY`; `endExit()` finalizes (`selectedIndex=−1`). Distinct from
-  `deselectChapter()` (still the back-button reverse-spin).
-- Page (`pages/[slug].vue`): overscroll past the Lenis bottom (`END_EXIT_THRESHOLD` 800px) →
-  `doExit()`: `lenis.stop()`, `scene.beginExit()`, a `power4.inOut` tween (`EXIT_DURATION` 2.6s)
-  scrubbing `setExitProgress(0→1)` + sliding `.chapter-scroll` out (`xPercent:110`); `onComplete`
-  → `endExit()` + `router.push('/')`. Page stays mounted through the animation (content slides),
-  then unmounts at home.
-- **Verified** (local headless): forward `rotY` delta **+5.06 rad = exactly 290°**, `carousel.y
-  −43→0`, route `/wine-o-clock → /`, page unmounts, no errors. (Visual/textured confirm on prod.)
-- **Follow-ups**: touch/mobile (wheel-only); tune `END_EXIT_THRESHOLD`/`EXIT_DURATION` for feel;
-  consider unifying the back-button exit onto the same forward return (reference uses one exit for
-  both — ours keeps the reverse-spin on the back button).
+**Our implementation (reworked 2026-06-13 → scroll-coupled "drop into the deck", `97df22da`):**
+The first forward-return pass was a *fixed* 2.6–3s tween kicked off after an 800px overscroll, and
+`beginExit` **snapped** the off-screen hero back to ring-centre `baseY` before scrubbing. That snap
+was the user-reported bug: *"overscrolling down at the bottom snaps to the top, then plays the
+animation as if overscrolled from the bottom."* Reworked so the exit is driven by scroll and the
+deck rises from below to **catch** the page (no snap):
+- Scene (`useChapterScene.js`):
+  - `beginExit()` no longer zeros `scrollOffsetPx` or snaps the hero. It captures the hero's
+    **current (scrolled-off) Y**; coupling is frozen via `isDeselecting`, and the offset is preserved
+    so a cancel resumes with no teleport.
+  - `setExitProgress(de)` re-times the parts onto two sub-progresses: **`heroT`** (`de/HERO_RETURN_END`,
+    0.45) returns the hero to centre **early, under the still-opaque page**, so the return is never a
+    visible snap; **`shrinkT`** (`(de−SHRINK_START)/(1−SHRINK_START)`, start 0.30) holds the card
+    full-bleed then un-grows/un-frames it **into** the ring late. `carousel.y −43→0`, side cards
+    `y→baseY` (rising from below), and `animatedRotationY += EXIT_SPIN(290°)·de` run across the whole
+    range, so the ring reassembles upward to catch the page.
+  - `cancelExit()` (new) restores the captured selected/scrolled state if the gesture is aborted.
+- Page (`pages/[slug].vue`): the bottom exit is now **scroll-coupled for ALL chapters** (the
+  Wine-reverse / others-forward split and `doExitForward` are gone). Overscroll past the Lenis bottom
+  accumulates into `exitProgress` (0→1 over `EXIT_TRAVEL` 1100px) fed live to `setExitProgress`. Past
+  `COMMIT_PROGRESS` (0.55) it auto-completes (`power2.out`, proportional) → `endExit()` +
+  `router.push('/')`; scrolling back up before that → `cancelExit()` + `lenis.start()`. The DOM page
+  (`.chapter-page` wrapper) **shrinks toward bottom-centre + falls + fades late** (opaque until
+  `FADE_START` 0.45 to cover the hero's return) — replacing the old sideways `xPercent` slide. Top
+  edge exit unchanged (reverse-spin).
+- **Verified on prod (Browserless, `354f7d65`):**
+  - *No snap* — deterministic scrub from a scrolled-off state (`__setScroll(2200)` → `__exitBegin` →
+    `__exitScrub`): hero world-y = **22 both right before `beginExit` and at `de=0`** (identical; the
+    old code reset it to `baseY` here). `exit-00` frame is blank (hero off-top), not a centred card.
+  - *Deck rises from below* — ring bottom `allMinY` **−121 → −76 → −51 → −24**, `carousel.y −43→0`,
+    other wine copy **−113 → −22.8**; hero scale holds **2.76→2.76→2.01→1** (shrinks after 0.30),
+    `animRotY` **+290°**; `exit-60`/`exit-100` show the carousel reassembling → full homepage ring.
+  - *DOM fall* — mid-hold at de≈0.4: `.chapter-page` `scale 0.76, translateY 36px`, opaque, deck
+    rising behind/around it.
+  - *End-to-end* — a wheel burst to the bottom drove the coupled exit past commit → **navigated to
+    `/`**, scene at homepage rest (`carousel.y 0`, group tilt restored, `animRotY 12.13`). **Zero
+    console errors** across all runs.
+- **Follow-ups**: touch/mobile (still wheel-only); tune feel constants on prod
+  (`EXIT_TRAVEL`/`COMMIT_PROGRESS`/`PAGE_MIN_SCALE`/`PAGE_FALL_VH`/`FADE_*`) + the page-shrink ↔
+  front-card "catch" alignment (best judged on a real browser); the back button still uses the
+  reverse-spin (`deselectChapter`).
 
 **Fix (2026-06-01) — mid-page up-scroll exited / bottom broke.** Root cause: the installed
 `virtualscroll` package has a different API, so `WebGLScene.vue`'s `vsInstance.on(...)` throws and the
@@ -544,9 +569,12 @@ forward exit, no errors. **Tech debt (resolved 2026-06-12):** the broken `new VS
 removed and the `virtualscroll` dep dropped; `WebGLScene.vue` now uses a direct `onWheel` window
 listener (the handler that was always really running).
 
-**Bottom-exit visual — final shape (2026-06-01, after three rounds vs prod capture).** The exit must
-read as the full-bleed hero **shrinking in place and the ring reassembling around it** (cards rising
-from below), spinning forward — watchable start-to-finish. Pitfalls hit and fixed along the way:
+**Bottom-exit visual — earlier "final shape" (2026-06-01) — ⚠️ SUPERSEDED by the 2026-06-13
+scroll-coupled rework above.** Kept for history: this pass was a *fixed tween* that **snapped the
+hero to `baseY`** and faded the content fast. The snap is exactly what the 2026-06-13 rework removed
+(it became the user-visible "snaps to the top" bug once the content no longer fully covered it). The
+"shrink in place" goal below is now achieved by the deck *rising from below to catch* a *shrinking/
+falling* page instead. Pitfalls hit along the way (still informative):
 - **Sideways slide → blank gap.** The first version slid the opaque content sideways (`xPercent`); it
   cleared *before* the ring arrived → blank-white flash, then the ring formed "underneath." → replaced
   with an **opacity crossfade** (no sideways motion).
