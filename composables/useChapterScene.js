@@ -493,7 +493,10 @@ export function useChapterScene() {
     // and the GSDevTools timeline scrubber UI. No-cost in normal sessions.
     const DEBUG = typeof window !== 'undefined' && /[?&]debug/.test(window.location.search)
     if (DEBUG) {
-      // Scrub the forward exit by hand: __exitBegin() → __exitScrub(0..1) → __exitEnd()
+      // Scrub the forward exit by hand: __setScroll(px) to simulate inner-page scroll
+      // (so the hero rises off the top like at the page bottom), then __exitBegin() →
+      // __exitScrub(0..1) → __exitEnd() to verify the deck-rises/no-snap return.
+      window.__setScroll = (px) => setScroll(px)
       window.__exitBegin = () => beginExit()
       window.__exitScrub = (de) => setExitProgress(de)
       window.__exitEnd = () => endExit()
