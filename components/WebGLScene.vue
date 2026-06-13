@@ -20,10 +20,16 @@ const canvasRef = ref(null)
 const hitLayerRef = ref(null)
 const scene = useChapterScene()
 
-let vsInstance = null
-
 function onHitClick(e) {
   scene.onClick(e)
+}
+
+// Wheel → carousel scroll. (The `virtualscroll` dep was dead: the installed package is an
+// unrelated custom-scrollbar widget whose constructor threw on our config, so the code
+// always fell back to this listener anyway. Removed the dead import.) Touch/mobile is a
+// known gap — `wheel` doesn't cover it; revisit with the real `virtual-scroll` lib if needed.
+function onWheel(e) {
+  scene.onScroll(e.deltaY - e.deltaX)
 }
 
 onMounted(async () => {
@@ -60,14 +66,8 @@ onMounted(async () => {
   // Mouse tracking on window (doesn't block events)
   window.addEventListener('mousemove', scene.onMouseMove)
 
-  // VirtualScroll for smooth wheel/touch
-  try {
-    const VS = (await import('virtualscroll')).default
-    vsInstance = new VS({ el: hitLayerRef.value, touchMultiplier: 25, firefoxMultiplier: 50 })
-    vsInstance.on((event) => scene.onScroll(event.deltaY - event.deltaX))
-  } catch (e) {
-    window.addEventListener('wheel', (e) => scene.onScroll(e.deltaY - e.deltaX), { passive: true })
-  }
+  // Wheel drives the homepage carousel scroll.
+  window.addEventListener('wheel', onWheel, { passive: true })
 
   // Resize — listen to both window resize and visualViewport resize (mobile)
   window.addEventListener('resize', handleResize)
@@ -82,11 +82,11 @@ function handleResize() {
 
 onUnmounted(() => {
   window.removeEventListener('mousemove', scene.onMouseMove)
+  window.removeEventListener('wheel', onWheel)
   window.removeEventListener('resize', handleResize)
   if (window.visualViewport) {
     window.visualViewport.removeEventListener('resize', handleResize)
   }
-  vsInstance?.destroy()
   scene.destroy()
 })
 

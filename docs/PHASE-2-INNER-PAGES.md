@@ -21,11 +21,14 @@ original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker*
   Claude extension granted on **`chapter.millanova.com`** (a user action in the extension UI). The
   mechanism is already decoded from its JS (`window.setPageProgress`, +290° forward), so it's a
   fidelity-match, not a mystery.
-- **No mobile/touch on the homepage carousel** — the `virtualscroll` dep is dead (window-wheel fallback).
+- **No mobile/touch on the homepage carousel** — the carousel is wheel-only (the dead `virtualscroll`
+  dep was removed 2026-06-12; wire `virtual-scroll` (hyphen) if touch is wanted).
 
-**Next steps (recommended order)** — pure-code, no permissions needed for the first two:
-**D** normalize the entry-spin magnitude · hover targeting (side-card hover lifts a neighbor) · drop
-the dead `virtualscroll` dep · then option B (needs the grant) · then the other 3 chapters' content.
+**Next steps (recommended order):** ✅ **D** (entry-spin normalized), ✅ hover targeting, and ✅ the
+dead `virtualscroll` dep are all done & verified (2026-06-12). Remaining: **option B** reference match
+(needs the extension grant on `chapter.millanova.com`) · then the **other 3 chapters' content**
+(`CHAPTER_PAGES` entries + galleries/dresses) · plus the pending real-browser confirms (video-in-hero,
+exit feel).
 
 ## ✅ Running checklist (the board)
 
@@ -41,8 +44,8 @@ sections below ("card-becomes-the-page rework" step table A–G + the "Careful a
 **Next up — motion**
 - [x] **E — Edge-gated scroll exits (P2)**: mid-page scroll is **free**; exits only at the edges. **Wine O'Clock: top AND bottom use the same reverse-spin** (`deselectChapter`, with the hero snapped to ring-centre first so it's clean from any scroll position) — verified top==bottom on prod. Other chapters keep the forward "drop into the ring" path (`doExitForward`) as the **option B** slot for replicating the reference. *(2026-06-01)*
 - [~] **E (option B) — reference "page drops into the spinning ring"** — **prototyped & live on the non-Wine pages** (la-storia / eat-marry-love / amour-getaway). Mirrors the reference's `c()`: a 3s `power4.inOut` tween drives the forward +290° spin / ring-reassemble (`setExitProgress`) while the content slides out (`xPercent:110`, ~1s); the hero is snapped to ring-centre so it's a full-bleed card shrinking in place as the ring spins up around it. Verified on prod (la-storia capture: card → shrink → spinning ring → carousel). **Open polish:** body stays white when the content slides off (reference keeps the chapter colour) — add a bg if it reads badly; refine timing from live feedback (needs video textures). ◀ *iterating*
-- [ ] **D — Normalize entry spin (P2)**: pin the select spin to one consistent turn (currently >1, varies per chapter). ◀ *next*
-- [ ] **Hover targeting (P2)**: hovering a side card lifts a neighbor (flat hitboxes vs shader-bent cards) → drive hover off the front card.
+- [x] **D — Normalize entry spin (P2)**: select spin pinned to one consistent FORWARD turn. *(2026-06-12)* The 7s intro rests `animatedRotationY` at `+4π` and the old target `toRad(φ−90)` was a small absolute angle → the entry tweened ~2 turns BACKWARD by a chapter-dependent amount. Now: collapse the accumulated whole turns (subtract the same multiple of 2π from the lerp anchor `rotation.y` so it's invisible — rotation is 2π-periodic), then advance forward to the front angle, clamped into `[180°,540°)`. Verified (local headless CDP, all 4 chapters): forward spins of **315/360/405/450°** (eat-marry-love/la-storia/wine/amour — the 135° spread is the cards' real 45°-apart ring positions), each landing front-centre (`x:0,z:40,dist:66`); select→deselect→reselect cycle lands the ring back at rest (`animRotY 0`) with no drift; zero console errors.
+- [x] **Hover targeting (P2)**: driven off the front card. *(2026-06-12)* The flat hitboxes don't follow the shader bend, so a raw raycast over the visible front card resolved to a neighbour slot and lifted the wrong card. `onMouseMove` now treats any hitbox hit as "cursor over the carousel" and lifts the front copy (`frontPoster().i`), mirroring the click fix; misses unhover. Verified (CDP): at a bug spot whose raw raycast → ch1, the lifted card is now the front ch2 (single slot, `blend:2`); off-carousel unhovers; no errors.
 - [ ] **F — Robustness matrix**: deep-link / click / re-select / exit-by-scroll / exit-by-button / rapid-repeat all verified.
 
 **Later — content & polish**
@@ -62,7 +65,7 @@ sections below ("card-becomes-the-page rework" step table A–G + the "Careful a
 
 **Before handoff**
 - [x] Scene instrumentation now gated behind `?debug` (+ new `__exitBegin/__exitScrub/__exitEnd`; `__gsdev()` mounts the GSAP DevTools scrubber on demand — do NOT auto-create it: it hijacks the global timeline). ⚠️ Headless probe scripts must load with `?debug` on the initial URL.
-- [ ] Remove the dead `virtualscroll` path in `WebGLScene.vue` (its `.on()` throws → always falls back to the window wheel listener, which is the real handler). Drop the dep or replace with the intended `virtual-scroll`. Note: fallback is wheel-only → **no touch input on the homepage carousel** (mobile).
+- [x] Removed the dead `virtualscroll` path in `WebGLScene.vue` + dropped the dep. *(2026-06-12)* The installed `virtualscroll@1.0.7` was an unrelated custom-scrollbar widget whose constructor threw on our config, so the `catch` (a window `wheel` listener) was always the real handler. `WebGLScene.vue` now uses a named `onWheel` listener directly (removed on unmount); dep gone from `package.json` + lockfile. Verified (CDP): wheel ticks still rotate the carousel (`scrollRotY 0→−0.77`), no console errors. Note: still wheel-only → **no touch on the homepage carousel** (mobile) — wire `virtual-scroll` (hyphen) if touch is wanted.
 - [ ] **Docs-drift pass** (confirmed by the re-review): ARCHITECTURE.md still describes the removed scene-level scroll-exit (#7/SCROLL_EXIT_THRESHOLD), says SELECTED_Y=-70 (code -43), "no routes yet", plural-poster select, and a never-fired onDeselect callback; PROGRESS top sections say baseDistance 42 / tilt -70° (code 40/+70) + scroll-back claims; README lists "scroll-back exit" as shipped.
 
 ---
@@ -537,9 +540,9 @@ exit ("breaks"). **Fix:** the scene's `onScroll` now does nothing while a chapte
 homepage carousel scrolls); all exits moved to the **page edges** (Lenis-position-gated): top
 overscroll-up → reverse (`router.push('/')` → `deselectChapter`), bottom overscroll-down → forward
 return. Verified (local headless): mid-page up = free (no exit), top-edge up = exit, bottom-edge down =
-forward exit, no errors. **Tech debt:** the `virtualscroll` dep is effectively dead (always hits the
-`catch`); the window wheel listener is now the real handler — fine since `onScroll` is gated, but worth
-removing the broken `new VS()`/`.on()` path.
+forward exit, no errors. **Tech debt (resolved 2026-06-12):** the broken `new VS()`/`.on()` path was
+removed and the `virtualscroll` dep dropped; `WebGLScene.vue` now uses a direct `onWheel` window
+listener (the handler that was always really running).
 
 **Bottom-exit visual — final shape (2026-06-01, after three rounds vs prod capture).** The exit must
 read as the full-bleed hero **shrinking in place and the ring reassembling around it** (cards rising
@@ -564,21 +567,25 @@ as the ring reassembles and spins forward into the rest carousel. `doExitForward
 unreliable for sub-3 s animations — use a fast screenshot-free `evaluate` probe (sample `style.opacity`,
 `__heroDebug` scaleX, `__camDebug` posY) to judge timing/monotonicity; screenshots only for the look.
 
-### 🟡 P2 — Hover targeting still uses the misaligned raycast
-- Same shader-bend issue as the (now-fixed) click: hovering the visible card can lift a neighbor
-  because `getHoveredPoster` tests flat hitboxes. **Fix options:** (a) cheapest — drive hover off
-  the front-facing card too (lift/text the `frontChapterIdx` card) as we did for click; (b) more
-  faithful — make the hitboxes track the shader bend (raycast against the deformed geometry, or
-  recompute hitbox transforms per frame to match the bent visual). (a) is consistent with the
-  click fix and low-risk; (b) restores true per-card hover for side cards.
+### ✅ P2 — Hover targeting driven off the front card (2026-06-12)
+- Was the same shader-bend issue as the click: `getHoveredPoster` tests flat hitboxes, so hovering
+  the visible front card lifted a neighbour slot. **Fix (option a):** `onMouseMove` now treats any
+  hitbox hit as "cursor over the carousel" and lifts the front copy (`frontPoster().i`) — consistent
+  with the click fix; a ray miss unhovers. Verified (CDP): bug spot whose raw raycast → ch1 now lifts
+  the front ch2 (single slot, `blend:2`); off-carousel unhovers; no errors.
+- *(Not done — option b:* bend-aware hitboxes for true per-card side hover. Front-card hover matches
+  the click model, so this is only worth it if the reference shows independent side-card lift.)
 
-### 🟡 P2 — Select-spin magnitude is inconsistent / often >1 full turn
-- The entry spin tweens `animatedRotationY` from the post-intro rest (`4π`) to `(φ-90)°`, so the
-  number of turns varies by chapter and is usually more than one — looser than the reference's
-  single controlled spin.
-- **Fix:** normalize `preSelectRot` (mod 2π) before tweening and/or target a fixed delta (e.g.
-  exactly +1 turn to the front angle) so every select is one consistent rotation. Re-verify the
-  deselect reverse-spin still lands back in the ring.
+### ✅ P2 — Select-spin magnitude normalized (2026-06-12)
+- **Was:** the entry spun `animatedRotationY` from the post-intro rest (`4π`) to `(φ-90)°` — a
+  small absolute angle — so it actually unwound ~2 turns BACKWARD by a chapter-dependent amount.
+- **Fix (`useChapterScene.js` `selectChapter`):** collapse the accumulated whole turns first
+  (`restTurns = round(animatedRotationY/2π)`; subtract `restTurns·2π` from BOTH `animatedRotationY`
+  and the lerp anchor `rotation.y` so the collapse is invisible), set `preSelectRot` to that
+  normalized rest, then advance forward (`while (targetRot − animatedRotationY < π) targetRot += 2π`)
+  so every chapter spins FORWARD into `[180°,540°)`.
+- **Verified** (local headless CDP): forward 315/360/405/450° per chapter, all front-centre;
+  deselect reverse lands the ring at `animRotY 0`; reselect repeats cleanly; no console errors.
 
 ### 🟢 P3 — Minor / expected
 - **Unbuilt chapters** (la-storia, eat-marry-love, amour-getaway) render the scaffold (opaque

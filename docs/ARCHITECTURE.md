@@ -128,11 +128,12 @@ Thin bridge. Mounts the `<canvas>` inside `#canvas-container`, calls `scene.init
 registers the scene callbacks, and forwards browser events into the scene. Contains
 `#canvas-hit-layer` — a transparent `pointer-events:auto` div at `z-5` that captures clicks
 (the `@click` selection handler lives here).
-> ⚠️ **The `virtualscroll` dep is effectively dead** (its API doesn't match `new VS().on(...)`,
-> which throws) → the `catch` installs a **`window`-level wheel listener** that is the real
-> homepage scroll handler. Consequence: **no touch input on the homepage carousel** (mobile).
-> `scene.onScroll` no-ops while a chapter is open (the inner page owns scrolling), so the global
-> listener is harmless there. Tech-debt: drop the dep or swap in the intended `virtual-scroll`.
+> Homepage scroll is a **`window`-level `onWheel` listener** → `scene.onScroll`. (The old
+> `virtualscroll` dep was dead — an unrelated custom-scrollbar widget whose constructor threw — so a
+> `catch`-installed wheel listener was always the real handler; the dead path + dep were removed
+> 2026-06-12.) Consequence: **no touch input on the homepage carousel** (mobile) — wire the intended
+> `virtual-scroll` (hyphen) if touch is wanted. `scene.onScroll` no-ops while a chapter is open (the
+> inner page owns scrolling), so the global listener is harmless there.
 
 ### `components/CustomCursor.vue`
 Self-contained lerped cursor (rAF loop, lerp 0.2). Rest = 24px ring; `.active` = 140px
@@ -313,7 +314,7 @@ inner page detects overscroll past an edge and triggers one of two animations:
 |---|---|---|
 | Mouse move | `window` → `scene.onMouseMove` | camera parallax + raycast hover detection |
 | Hover card (homepage) | `onMouseMove` → `hoverChapter(slotI)` | lift (`y+7`), flatten (`blendFactor→2`), play film, swap center text, cursor "EXPLORE", audio fade-in |
-| Wheel / trackpad (homepage) | window wheel listener → `scene.onScroll(deltaY − deltaX)` | rotate the carousel (`deltaX` so horizontal swipes rotate too, #10). **No-op while a chapter is open.** Touch isn't wired (dead `virtualscroll`). |
+| Wheel / trackpad (homepage) | `onWheel` window listener → `scene.onScroll(deltaY − deltaX)` | rotate the carousel (`deltaX` so horizontal swipes rotate too, #10). **No-op while a chapter is open.** Touch isn't wired (would need `virtual-scroll`). |
 | Click (homepage) | `#canvas-hit-layer` `@click` → `onClick` → selects the **front-facing** card | The flat hitboxes don't follow the shader bend, so `onClick` selects `frontChapterIdx()` (what the center text shows), not the raw raycast hit. Requires `pointer-events:auto` (AUDIT #15). |
 | Wheel (inner page) | `.chapter-page` (Lenis) + a `wheel` listener | mid-page = smooth scroll (drives the hero coupling); **edge overscroll = exit** (see Lifecycle → exit) |
 | Back / logo click | `SiteNav` → `app.vue goHome` → `router.push('/')` | exit chapter (reverse-spin) |
@@ -336,7 +337,7 @@ absolute URL. Apply the same pattern for any future CSS-var asset paths.
 
 | Item | Notes |
 |---|---|
-| **`virtualscroll` dep is dead** | Its API doesn't match `new VS().on(...)` → throws → `WebGLScene` falls back to a `window` wheel listener (the real handler). Side effect: **no touch input on the homepage carousel** (mobile). Drop the dep or swap in `virtual-scroll`. |
+| **Homepage carousel has no touch input** (mobile) | Scroll is a `window` `onWheel` listener only. (The old `virtualscroll` dep was dead and was removed 2026-06-12.) Wire the intended `virtual-scroll` (hyphen) if touch is wanted. |
 | **`onDeselect` plumbing is dead** | The scene never fires it anymore (old scroll-back exit removed). `WebGLScene`→`app.vue` wiring is harmless but unused. |
 | Debug instrumentation | `__heroDebug` / `__camDebug` / `__probe` / `__exitBegin/Scrub/End` and `__gsdev()` (GSAP DevTools) are gated behind **`?debug` on the initial load URL**. Inert otherwise. Fine to ship; remove if you want them gone. |
 | `composables/useAudio.js` | **Dead code** — never imported; `app.vue` does audio inline. Safe to delete (verify no future import first). |

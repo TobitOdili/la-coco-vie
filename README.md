@@ -45,8 +45,9 @@ custom GLSL shaders, GSAP animation, spatial audio, and chapter transitions.
   interrupt-safety, video play/pause lifecycle, background-tab robustness, input normalization.
   Verified on prod (Browserless probes) **and** a real browser (video + textures confirmed live).
 - ⏸️ **Parked:** ring viewing-angle (#4) — needs the original's exact group tilt; low ROI.
+- ✅ **Done (2026-06-12):** entry-spin normalized (**D**) · hover targeting driven off the front card ·
+  dead `virtualscroll` dep removed (carousel is wheel-only; no mobile touch).
 - 🔧 **Open:** option-B reference match (blocked on a `chapter.millanova.com` extension grant) ·
-  normalize the entry spin (**D**) · hover targeting · drop the dead `virtualscroll` dep (no mobile touch) ·
   other 3 chapters' content · re-skin (Phase 3).
 
 Full live status → [`PROGRESS.md`](PROGRESS.md) · issue history → [`AUDIT.md`](AUDIT.md) · plan → [`docs/ROADMAP.md`](docs/ROADMAP.md)
@@ -83,7 +84,7 @@ npm run preview   # preview a production build
 | 3D / WebGL | **Three.js** + custom GLSL vertex & fragment shaders |
 | Animation | **GSAP** (timelines, eased tweens; `GSDevTools` under `?debug`) |
 | Audio | **Howler.js** (per-chapter ambient loops) |
-| Scroll | **Lenis** (inner pages) · homepage carousel uses a window wheel listener (the `virtualscroll` dep is dead — see ARCHITECTURE tech debt) |
+| Scroll | **Lenis** (inner pages) · homepage carousel uses a window `wheel` listener (no touch yet — see ARCHITECTURE tech debt) |
 | Styling | Tailwind v4 (via `@tailwindcss/vite`) + `assets/css/main.css` |
 | Fonts | Bague & Movie (local `.woff`) + Italiana / Monoton / Over the Rainbow (Google Fonts) |
 | Hosting | **Vercel** (primary, auto-deploys `main`) + GitHub Pages (CI fallback) |

@@ -42,7 +42,7 @@ bottom forward-or-reverse); the **Wine O'Clock** inner page as a full data-drive
 - Hover targeting (side-card hover lifts a neighbor); richer ScrollTrigger/Lenis parallax + inline films.
 - **The other 3 chapters' content + assets** (la-storia / eat-marry-love / amour-getaway are scaffolds) —
   the largest single cost; ~11 dresses shared across chapters (`symphony`, `tasmania`, `sydney`, `markita`, …).
-- Docs/tech-debt: drop the dead `virtualscroll` dep (no mobile touch), remove `useAudio.js`.
+- Docs/tech-debt: ~~drop the dead `virtualscroll` dep~~ (done 2026-06-12 — carousel is wheel-only, no mobile touch); remove `useAudio.js`.
 
 ### QA habit (carried from Phase 1)
 Verify at each step: Browserless probes/geometry on prod + a real-browser pass (Claude-in-Chrome)

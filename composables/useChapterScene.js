@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { gsap } from 'gsap'
 
 const toRad = (deg) => (deg * Math.PI) / 180
+const TWO_PI = Math.PI * 2
 
 // Base URL — Vite injects this at build time (e.g. /la-coco-vie/ on GitHub Pages, / on Vercel)
 const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
@@ -839,22 +840,28 @@ export function useChapterScene() {
 
     if (!introComplete || selectedIndex !== -1) return
 
-    // hoveredIndex now tracks the SLOT index (i) so only the single hovered
-    // poster reacts — not its mirrored copy (Issue #13). chapterIdx is resolved
-    // for the audio/cursor callback so app.vue still receives 0–3.
-    const slotI = getHoveredPoster(e.clientX, e.clientY)
+    // hoveredIndex tracks the SLOT index (i) so only the single hovered poster reacts —
+    // not its mirrored copy (Issue #13). chapterIdx is resolved for the audio/cursor
+    // callback so app.vue still receives 0–3.
+    //
+    // Drive hover off the FRONT-facing card (mirror of the click fix). The flat hitboxes
+    // don't follow the shader bend, so a raw raycast over the visible front card often
+    // lands on a neighbour slot and lifted the WRONG card. Treat any hit as "cursor over
+    // the carousel" and lift the front copy; lift nothing when the ray misses entirely.
+    const overCarousel = getHoveredPoster(e.clientX, e.clientY) !== -1
+    const targetSlot = overCarousel ? (frontPoster()?.i ?? -1) : -1
 
-    if (slotI !== hoveredIndex) {
+    if (targetSlot !== hoveredIndex) {
       if (hoveredIndex !== -1) {
         // Unhover previous slot
         const prevChIdx = chapterIdxForSlot(hoveredIndex)
         unhoverChapter(hoveredIndex)
         if (onHoverCallback) onHoverCallback(prevChIdx, false)
       }
-      hoveredIndex = slotI
-      if (slotI !== -1) {
-        hoverChapter(slotI)
-        if (onHoverCallback) onHoverCallback(chapterIdxForSlot(slotI), true)
+      hoveredIndex = targetSlot
+      if (targetSlot !== -1) {
+        hoverChapter(targetSlot)
+        if (onHoverCallback) onHoverCallback(chapterIdxForSlot(targetSlot), true)
       }
     }
   }
@@ -886,16 +893,22 @@ export function useChapterScene() {
     })
   }
 
-  // Chapter index of the poster currently nearest the camera (front-facing).
-  // Robust to the group tilt + carousel rotation since it reads world positions.
-  function frontChapterIdx() {
-    let best = -1, bestDist = Infinity
+  // The poster slot currently nearest the camera (front-facing). Robust to the group
+  // tilt + carousel rotation since it reads world positions. Returns the poster object
+  // (its `.i` is the slot, `.chapterIdx` the chapter).
+  function frontPoster() {
+    let best = null, bestDist = Infinity
     for (const p of posters) {
       p.mesh.getWorldPosition(_frontVec)
       const d = _frontVec.distanceToSquared(camera.position)
-      if (d < bestDist) { bestDist = d; best = p.chapterIdx }
+      if (d < bestDist) { bestDist = d; best = p }
     }
     return best
+  }
+
+  // Chapter index of the front-facing poster (0–3), or -1 if none.
+  function frontChapterIdx() {
+    return frontPoster()?.chapterIdx ?? -1
   }
 
   function hoverChapter(slotI) {
@@ -1024,11 +1037,25 @@ export function useChapterScene() {
     // from the chosen copy fixes selection for every chapter.
     const heroPoster = posters.find((p) => p.chapterIdx === chIdx)
     selectedHero = heroPoster   // the card the inner-page scroll couples to (P1)
+
+    // D — normalize the entry spin to one consistent FORWARD turn. The 7s intro leaves
+    // animatedRotationY resting at +4π, while the front-facing target toRad(φ−90) is a
+    // small absolute angle — so the old entry tweened ~2 turns BACKWARD by a chapter-
+    // dependent amount (front angles −45/0/45/90° → ~765/720/675/630° spins). First
+    // collapse the accumulated whole turns, subtracting the SAME multiple of 2π from the
+    // lerp anchor (rotation.y) so the collapse is invisible (rotation is 2π-periodic).
+    const restTurns = Math.round(carousel.animatedRotationY / TWO_PI)
+    carousel.animatedRotationY -= restTurns * TWO_PI
+    carousel.rotation.y        -= restTurns * TWO_PI
     if (!interruptedDeselect) preSelectRot = carousel.animatedRotationY
     // The render loop composes rotation as scrollRotationY + animatedRotationY, so the
     // homepage scroll offset must be SUBTRACTED here — otherwise any pre-click carousel
     // scrolling parks the hero off-front by exactly that amount (scroll-then-click bug).
-    const targetRot = toRad(heroPoster.intRotationY - 90) - scrollRotationY
+    // Then advance FORWARD to the front-facing orientation, always landing the spin in
+    // [180°,540°) so every chapter is one controlled ~360° turn in the intro/exit
+    // direction (the residual ±135° spread is the cards' real 45°-apart ring positions).
+    let targetRot = toRad(heroPoster.intRotationY - 90) - scrollRotationY
+    while (targetRot - carousel.animatedRotationY < Math.PI) targetRot += TWO_PI
     tl.to(carousel, { animatedRotationY: targetRot, duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
 
     // Move carousel down
