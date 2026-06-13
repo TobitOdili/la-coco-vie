@@ -272,6 +272,15 @@ export function useChapterScene() {
   let scrollOffsetPx = 0    // inner-page scroll position in px (from Lenis) — drives the hero up/away
   let exitStart = null      // captured transforms at the start of a forward scroll-exit (step E)
   const EXIT_SPIN = toRad(290)  // forward spin during the scroll-end return (matches reference's +290°)
+  // Bottom-exit timing (de = exit progress 0→1, scroll-coupled by the page):
+  //  • HERO_RETURN_END — the hero's POSITION is home by this de, while the page is still
+  //    opaque over the centre, so its return reads as smooth, never a snap.
+  //  • SHRINK_START — the card holds full-bleed (so it matches the page at the reveal),
+  //    then un-grows/un-frames INTO the ring from here to de=1. The ring (carousel rise +
+  //    side cards rising from below + forward spin) reassembles across the whole range to
+  //    "catch" the shrinking page.
+  const HERO_RETURN_END = 0.45
+  const SHRINK_START = 0.30
   let preSelectRot = 0  // carousel.animatedRotationY before a select — restored on deselect (reverse spin)
   let deselectTl = null // live deselect timeline — killed if a new select starts mid-deselect
   let selectTl = null   // live select timeline — killed by deselect/re-select so its stale
@@ -1146,7 +1155,12 @@ export function useChapterScene() {
     // wheel input until settled; this is defense in depth.
     if (selectedIndex === -1 || isDeselecting || isSelecting || !selectedHero) return false
     isDeselecting = true
-    scrollOffsetPx = 0
+    // NOTE: do NOT zero scrollOffsetPx here. The animate() coupling is gated off while
+    // isDeselecting, so the hero's Y is frozen at its current (scrolled-off) position and
+    // setExitProgress lerps it home. Preserving the offset means a cancelExit() (user
+    // scrolls back up before committing) resumes the coupling exactly where it left off —
+    // no teleport. (The old code zeroed it + started the hero's return from baseY, which
+    // teleported the off-screen hero to centre = the visible "snaps to the top" bug.)
     videoElements[selectedIndex]?.pause()   // reference pauses the film at exit start
     const hero = selectedHero
     gsap.killTweensOf(carousel)
@@ -1162,12 +1176,11 @@ export function useChapterScene() {
       cy: carousel.position.y,
       gx: groupG.rotation.x, gy: groupG.rotation.y, gz: groupG.rotation.z,
       heroScale: hero.mesh.scale.x,
-      // Start the hero's return from its ring-CENTRE (baseY), not its scrolled-off-screen
-      // Y. At the bottom the hero has scrolled far above the frame; returning from there is
-      // a long fly-in that's hidden behind the (briefly opaque) page, so you only catch the
-      // tail. Snapping to baseY (under the still-opaque content) makes the VISIBLE return the
-      // full-bleed hero shrinking in place while the ring reassembles around it. (step E)
-      heroY: hero.baseY,
+      // Capture the hero's CURRENT Y (wherever the scroll-coupling left it — off the top of
+      // the frame at the page bottom). setExitProgress lerps it home EARLY (heroT, under the
+      // still-opaque page) so the return is smooth, never a snap. The DOM page only fades to
+      // reveal the scene AFTER the hero is settled at centre and the ring has begun rising.
+      heroY: hero.mesh.position.y,
       blend: hero.material.uniforms.blendFactor.value,
       prog: hero.material.uniforms.progress.value,
       // The center txt faded to 0 on select; the forward exit must bring it back
@@ -1181,26 +1194,43 @@ export function useChapterScene() {
     return true
   }
 
-  // de: 0 (full hero) → 1 (back in the ring). Lerps every transform; the driving
-  // tween (power4.inOut on the page) supplies the easing.
+  // de: 0 (full-bleed hero / page) → 1 (back in the ring). The page drives `de` from
+  // overscroll, so this must be safe to call repeatedly in either direction (coupled).
+  // Two internal sub-progresses re-time the parts so the exit reads as the deck rising
+  // from below to "catch" the shrinking page (no snap, no sideways slide):
+  //   heroT   — hero returns to centre EARLY (under the opaque page)
+  //   shrinkT — card holds full-bleed, then un-grows/un-frames INTO the ring late
   function setExitProgress(de) {
     if (!exitStart || !selectedHero) return
     const t = Math.min(1, Math.max(0, de))
-    const lp = (a, b) => a + (b - a) * t
+    const heroT = Math.min(1, t / HERO_RETURN_END)
+    const shrinkT = Math.max(0, (t - SHRINK_START) / (1 - SHRINK_START))
+    const lp = (a, b, k = t) => a + (b - a) * k
     const hero = selectedHero
     carousel.animatedRotationY = exitStart.rot + EXIT_SPIN * t   // forward, not reverse
-    carousel.position.y = lp(exitStart.cy, 0)
+    carousel.position.y = lp(exitStart.cy, 0)                    // ring lifts to rest centre
     const tilt = isMobile ? { x: toRad(22), y: 0, z: 0 } : { x: toRad(25), y: toRad(70), z: toRad(15) }
     groupG.rotation.x = lp(exitStart.gx, tilt.x)
     groupG.rotation.y = lp(exitStart.gy, tilt.y)
     groupG.rotation.z = lp(exitStart.gz, tilt.z)
-    const s = lp(exitStart.heroScale, 1)
+    const s = lp(exitStart.heroScale, 1, shrinkT)               // hold full-bleed, then shrink in
     hero.mesh.scale.set(s, s, 1)
-    hero.mesh.position.y = lp(exitStart.heroY, hero.baseY)
-    hero.material.uniforms.blendFactor.value = lp(exitStart.blend, 0)
-    hero.material.uniforms.progress.value = lp(exitStart.prog, 0)
+    hero.mesh.position.y = lp(exitStart.heroY, hero.baseY, heroT) // return home early, under cover
+    hero.material.uniforms.blendFactor.value = lp(exitStart.blend, 0, shrinkT)
+    hero.material.uniforms.progress.value = lp(exitStart.prog, 0, shrinkT)
     if (groupG.userData.txtMat) groupG.userData.txtMat.opacity = lp(exitStart.txtOpacity, 1)
-    for (const o of exitStart.others) o.p.mesh.position.y = lp(o.y, o.p.baseY)
+    for (const o of exitStart.others) o.p.mesh.position.y = lp(o.y, o.p.baseY)  // side cards rise from below
+  }
+
+  // Abort an in-progress bottom exit (the user scrolled back up before committing). Restore
+  // the selected/scrolled state captured in beginExit and hand the hero back to the scroll-
+  // coupling. scrollOffsetPx was preserved through beginExit, so re-enabling the coupling
+  // resumes the hero exactly where it was (no snap).
+  function cancelExit() {
+    if (!exitStart) return
+    setExitProgress(0)        // lerp every transform back to the captured start
+    isDeselecting = false     // re-enable animate() scroll-coupling + the route reverse path
+    exitStart = null
   }
 
   function endExit() {
@@ -1289,7 +1319,8 @@ export function useChapterScene() {
     deselectChapter,
     setScroll,        // inner-page scroll → hero card coupling (P1)
     beginExit,        // forward scroll-end exit (step E) — scrubbed return into the ring
-    setExitProgress,
+    setExitProgress,  // de 0→1, scroll-coupled by the page (drop-into-deck)
+    cancelExit,       // abort an uncommitted bottom exit → restore selected state
     endExit,
     getState: () => ({ selectedIndex, hoveredIndex, introComplete, isSelecting, isDeselecting }),
   }

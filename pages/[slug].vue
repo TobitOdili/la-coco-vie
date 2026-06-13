@@ -53,81 +53,131 @@ const scrollEl = ref(null)
 let lenis = null
 
 // Exit gestures live ONLY at the page edges — mid-page scrolling is free.
-//  • Bottom edge, keep scrolling DOWN  → forward return (card spins forward back into
-//    the ring as the ring reassembles + content slides away). Reference setPageProgress.
-//  • Top edge,    keep scrolling UP    → reverse (card un-grows back into the ring the
-//    way it entered) via the existing deselect spin.
+//  • Bottom edge, keep scrolling DOWN → the "drop into the deck" exit: SCROLL-COUPLED.
+//    Overscroll drives exit progress 0→1 live; the card deck rises from below to "catch"
+//    the page, which shrinks + falls + fades into it (scene.setExitProgress). Past
+//    COMMIT_PROGRESS it auto-completes; scroll back up before that cancels + restores.
+//  • Top edge, keep scrolling UP → reverse (card un-grows back into the ring the way it
+//    entered) via the existing deselect spin. (Unchanged — this already feels right.)
 // (Previously the scene's global window-wheel handler exited on ANY up-scroll mid-page,
 // and its reverse fired from trackpad bounce at the bottom — both removed in the scene.)
-const END_EXIT_THRESHOLD = 800   // px of overscroll past an edge to trigger
-const EXIT_SPIN_DUR = 3.0        // option B: forward spin/ring-reassemble (reference's 3s tween)
-const EXIT_SLIDE_DUR = 1.0       // option B: content slide-out (reference's 1s)
-let endAccum = 0                 // bottom overscroll accumulator
+const START_THRESHOLD = 40       // px overscroll past the BOTTOM to begin the coupled exit
+const EXIT_TRAVEL = 1100         // px of overscroll mapped to exit progress 0→1
+const COMMIT_PROGRESS = 0.55     // past this the exit auto-completes (no snap-back)
+const COMMIT_DUR = 0.9           // s to auto-complete from the commit point → home
+const TOP_EXIT_THRESHOLD = 800   // px overscroll past the TOP to reverse-exit
+// DOM "fall into the deck" shape (page = the .chapter-page wrapper; canvas is behind it):
+const PAGE_MIN_SCALE = 0.40      // page shrinks 1 → this, origin bottom-centre
+const PAGE_FALL_VH = 15          // page also drifts down this many vh as it shrinks
+const FADE_START = 0.45          // page stays opaque until here (hero returns under cover),
+const FADE_END = 0.90            //   then fades out by here, revealing the risen deck
+let endAccum = 0                 // bottom overscroll accumulator (before the exit starts)
 let topAccum = 0                 // top overscroll accumulator
+let exitAccum = 0                // overscroll driving exit progress once started
+let exitProgress = 0
 let lastWheelT = 0               // last wheel-event time — a gap means a new gesture
-let exiting = false
+let bottomExiting = false        // coupled bottom exit in progress (cancellable)
+let committing = false           // bottom exit auto-completing to home (input locked)
+let reverseExiting = false       // top reverse exit fired (navigating home)
 let ready = false                // select-in settled — scroll + exit gestures enabled
 let readyPoll = null
-let forwardActive = false        // a forward exit tween is mid-flight (unmount cleanup)
+let forwardActive = false        // commit tween mid-flight (unmount cleanup)
 let exitTl = null
 
+const getScene = () => webglSceneRef?.value?.scene
+
+// Map exit progress onto the scene (deck rises to catch) + the DOM page (shrinks/falls/fades).
+function applyExit(p) {
+  exitProgress = Math.min(1, Math.max(0, p))
+  getScene()?.setExitProgress(exitProgress)
+  const el = pageEl.value
+  if (!el) return
+  const scale = 1 - (1 - PAGE_MIN_SCALE) * exitProgress
+  const fall = PAGE_FALL_VH * exitProgress
+  // Opaque (covering the hero's return) until FADE_START, then fade to 0 by FADE_END.
+  const fade = 1 - Math.max(0, (exitProgress - FADE_START) / (FADE_END - FADE_START))
+  el.style.transformOrigin = '50% 100%'
+  el.style.transform = `translateY(${fall}vh) scale(${scale})`
+  el.style.opacity = String(Math.max(0, Math.min(1, fade)))
+}
+
+function startBottomExit() {
+  const scene = getScene()
+  if (!scene?.beginExit || !scene.beginExit()) { reverseExiting = true; router.push('/'); return }
+  bottomExiting = true
+  committing = false
+  lenis?.stop()
+  exitAccum = endAccum   // carry over the overscroll that tripped the start (no jump)
+  applyExit(exitAccum / EXIT_TRAVEL)
+}
+
+// Past the commit point: animate the remaining progress to 1, then go home. Snappy +
+// proportional so a near-complete pull finishes fast.
+function commitExit() {
+  if (committing) return
+  committing = true
+  forwardActive = true
+  const p = { v: exitProgress }
+  exitTl = gsap.timeline({
+    onComplete: () => { forwardActive = false; bottomExiting = false; getScene()?.endExit(); router.push('/') },
+  }).to(p, {
+    v: 1,
+    duration: Math.max(0.2, COMMIT_DUR * (1 - exitProgress)),
+    ease: 'power2.out',
+    onUpdate: () => applyExit(p.v),
+  })
+}
+
+// Uncommitted exit aborted (scrolled back up): restore the selected/scrolled state.
+function cancelBottomExit() {
+  bottomExiting = false
+  exitAccum = 0; exitProgress = 0; endAccum = 0
+  getScene()?.cancelExit?.()
+  const el = pageEl.value
+  if (el) { el.style.transform = ''; el.style.opacity = ''; el.style.transformOrigin = '' }
+  lenis?.start()
+}
+
 function onWheel(e) {
-  if (!ready || exiting || !lenis) return
-  // Normalize deltas: Firefox fires deltaMode=1 (lines, ~3 per notch) — comparing raw
-  // line counts against a pixel threshold made exits near-unreachable there. ~40px/line
-  // ≈ Chrome's ~120px notch (WebGLScene's VirtualScroll uses firefoxMultiplier 50 too).
+  if (!ready || !lenis || reverseExiting) return
+  // Normalize deltas: Firefox fires deltaMode=1 (lines, ~3 per notch) — comparing raw line
+  // counts against a pixel threshold made exits near-unreachable there. ~40px/line ≈
+  // Chrome's ~120px notch (WebGLScene's VirtualScroll uses firefoxMultiplier 50 too).
   const dy = e.deltaY * (e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? window.innerHeight : 1)
-  // A pause between events = a new gesture — don't let accumulation span gestures
-  // (slow repeated notches at an edge shouldn't eventually trip the exit).
   const now = performance.now()
+
+  // Once the coupled bottom exit is running, EVERY wheel drives progress: down advances,
+  // up rewinds. Reaching 0 cancels; reaching COMMIT auto-completes.
+  if (bottomExiting && !committing) {
+    exitAccum = Math.max(0, exitAccum + dy)
+    const p = exitAccum / EXIT_TRAVEL
+    if (p <= 0) { cancelBottomExit(); return }
+    applyExit(p)
+    if (p >= COMMIT_PROGRESS) commitExit()
+    return
+  }
+  if (committing) return   // auto-completing — ignore input
+
+  // Not exiting yet: a 400ms gap is a new gesture (slow notches at an edge shouldn't add up).
   if (now - lastWheelT > 400) { endAccum = 0; topAccum = 0 }
   lastWheelT = now
   const atBottom = lenis.limit > 0 && lenis.scroll >= lenis.limit - 2
   const atTop = lenis.scroll <= 2
-  if (atBottom && dy > 0) {                  // bottom edge, pushing down → exit
+  if (atBottom && dy > 0) {                  // bottom edge, pushing down → begin coupled exit
     endAccum += dy; topAccum = 0
-    if (endAccum >= END_EXIT_THRESHOLD) {
-      // Wine O'Clock: bottom exit = the SAME reverse-spin as the top edge (option A —
-      // known-good, identical timing/feel). Other chapters: the forward "drop into the
-      // ring" experiment (option B — replicating the reference) lives on doExitForward.
-      if (route.params.slug === 'wine-o-clock') doExitReverse()
-      else doExitForward()
-    }
+    if (endAccum >= START_THRESHOLD) startBottomExit()
   } else if (atTop && dy < 0) {              // top edge, pushing up → reverse exit (all pages)
     topAccum += -dy; endAccum = 0
-    if (topAccum >= END_EXIT_THRESHOLD) doExitReverse()
+    if (topAccum >= TOP_EXIT_THRESHOLD) doExitReverse()
   } else {                                   // mid-page → free scroll, no exit
     endAccum = 0; topAccum = 0
   }
 }
 
-// OPTION B (non-Wine pages): replicate the reference's `c()` bottom exit — the forward
-// "drop into the spinning ring." A 3s power4.inOut tween drives `setExitProgress` (the
-// +290° forward spin + ring reassemble, mirroring the reference's window.setPageProgress),
-// while the page CONTENT slides out to the side over ~1s (reference slides .chapter-container
-// /.tails to x:100%). The hero is snapped to ring-centre in beginExit, so it's a full-bleed
-// card shrinking in place as the content slides off and the ring spins up around it.
-function doExitForward() {
-  if (exiting) return
-  exiting = true
-  lenis?.stop()
-  const scene = webglSceneRef?.value?.scene
-  if (!scene || typeof scene.beginExit !== 'function' || !scene.beginExit()) { router.push('/'); return }
-  forwardActive = true
-  const el = scrollEl.value
-  const p = { v: 0 }
-  exitTl = gsap.timeline({
-    onComplete: () => { forwardActive = false; scene.endExit(); router.push('/') },
-  })
-    .to(p, { v: 1, duration: EXIT_SPIN_DUR, ease: 'power4.inOut',
-             onUpdate: () => scene.setExitProgress(p.v) }, 0)
-    .to(el, { xPercent: 110, duration: EXIT_SLIDE_DUR, ease: 'power2.in' }, 0)
-}
-
 // Top: reverse back into the ring — the existing deselect spin via the route watcher.
 function doExitReverse() {
-  if (exiting) return
-  exiting = true
+  if (reverseExiting) return
+  reverseExiting = true
   lenis?.stop()
   router.push('/')   // app.vue route watcher → scene.deselectChapter() (reverse-spin into ring)
 }
@@ -174,15 +224,16 @@ onMounted(() => {
 onBeforeUnmount(() => {
   pageEl.value?.removeEventListener('wheel', onWheel)
   if (readyPoll) clearTimeout(readyPoll)
-  // If we unmount mid-forward-exit (e.g. nav/back click during the return), kill the
-  // tween and SNAP the return to its end pose before releasing the lock — otherwise
-  // the homepage is left with a half-exited scene (frozen group tilt / hero scale).
+  // If we unmount mid-exit (nav/back click during a coupled OR committing bottom exit),
+  // kill the tween and SNAP the return to its end pose before releasing — otherwise the
+  // homepage is left with a half-exited scene (frozen group tilt / hero scale).
   exitTl?.kill()
   exitTl = null
-  if (forwardActive) {
+  if (bottomExiting || forwardActive) {
     const scene = webglSceneRef?.value?.scene
     scene?.setExitProgress?.(1)
     scene?.endExit?.()
+    bottomExiting = false
     forwardActive = false
   }
   lenis?.destroy()
