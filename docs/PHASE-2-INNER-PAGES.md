@@ -1,7 +1,31 @@
 # Phase 2 — Chapter Inner Pages (Scope)
 
 Scope and build plan for the per-chapter inner pages. Grounded in a live inspection of the
-original (`/wine-o-clock`) on 2026-05-29.
+original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker** — start here.
+
+## 🚀 Pick up from here (cold start)
+
+1. `npm install` → `npm run dev` → http://localhost:3001 (macOS build gotcha + commands in the [README](../README.md)).
+2. Read [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) (reconciled with the code 2026-06-12) before touching
+   `composables/useChapterScene.js`. The exit model lives in `pages/[slug].vue` + the scene's
+   `deselectChapter` / `beginExit`/`setExitProgress`/`endExit`.
+3. **Debug:** load any route with **`?debug`** *on the initial URL* (e.g. `/wine-o-clock?debug`) for
+   `window.__heroDebug()/__camDebug()/__probe()`, deterministic exit scrubbing
+   (`__exitBegin()`→`__exitScrub(0..1)`→`__exitEnd()`), and `__gsdev()` to mount the GSAP timeline scrubber.
+4. **Verify** the way this project does (ARCHITECTURE → QA workflow): Browserless probes on **prod**
+   (deploy first — Vercel auto-builds `main`; check `state:READY` via the Vercel MCP), and a real-browser
+   pass (Claude-in-Chrome, foreground the tab) for **video/textures** (headless renders neither).
+
+**Current roadblocks**
+- **Option B reference match** (below) is blocked: capturing the reference's bottom exit needs the
+  Claude extension granted on **`chapter.millanova.com`** (a user action in the extension UI). The
+  mechanism is already decoded from its JS (`window.setPageProgress`, +290° forward), so it's a
+  fidelity-match, not a mystery.
+- **No mobile/touch on the homepage carousel** — the `virtualscroll` dep is dead (window-wheel fallback).
+
+**Next steps (recommended order)** — pure-code, no permissions needed for the first two:
+**D** normalize the entry-spin magnitude · hover targeting (side-card hover lifts a neighbor) · drop
+the dead `virtualscroll` dep · then option B (needs the grant) · then the other 3 chapters' content.
 
 ## ✅ Running checklist (the board)
 

@@ -18,35 +18,35 @@ Remaining homepage polish (optional, low priority):
 
 ---
 
-## Phase 2 — Chapter inner pages 🔮 (next)
+## Phase 2 — Chapter inner pages 🟢 (in progress — core built & live)
 
-> **Full scope & build plan:** [`PHASE-2-INNER-PAGES.md`](PHASE-2-INNER-PAGES.md) — grounded
-> in a live inspection of the original (`/wine-o-clock`): real `/{slug}` routes, ~10.5 screens
-> of scroll, 3 numbered sub-chapters, galleries/parallax/films, and the dress-tail cards.
+> **Live tracker (state / roadblocks / next steps):**
+> [`PHASE-2-INNER-PAGES.md`](PHASE-2-INNER-PAGES.md) → "Running checklist (the board)".
 
-Each chapter on the original has a full inner page reached after selection. Not yet built.
-From analysis of the original, an inner page composes roughly these pieces:
+**Built & live:** real `/{slug}` routes on a persistent WebGL shell (URL = source of truth,
+deep-links + back/forward, per-slug prerender); the card-select animation *is* the transition;
+the **"card becomes the page"** rework (hero scroll-coupling + edge-gated exits, top reverse /
+bottom forward-or-reverse); the **Wine O'Clock** inner page as a full data-driven vertical slice
+(3 sub-chapters, galleries, dress-tail cards, fade-up reveal); a 2026-06-12 re-review + fix batch
+(interrupt-safety, video lifecycle, input hardening), prod- and real-browser-verified.
 
-- **Header** — chapter title treatment / hero.
-- **ScrollTrigger-driven sequence** — scroll scrubs through sections.
-- **Mask** — masked reveal transitions.
-- **Gallery parallax** — image gallery with depth/parallax on scroll.
-- **ImgText** — alternating image + text blocks.
-- **DressTail** — the dress cards (see Phase 2b).
+**Decisions settled** (were open questions in Phase 1):
+- **Routing**, not an in-place overlay (real shareable URLs; matches the original).
+- Scene **stays mounted** (paused logic via `selectedIndex`) — never re-pays the 7 s intro.
+- Content lives in a **parallel `CHAPTER_PAGES` model** (`composables/chapterPages.js`), not in `CHAPTERS`.
 
-### Phase 2b — Dress-tail cards
-On select, the original shows matched dresses for the chapter. Data set is ~**11 dresses**
-(`symphony`, `tasmania`, `sydney`, `markita`, …). Will need its own data model alongside
-`CHAPTERS`.
+**Remaining (per the board):**
+- **Option B** — match the reference's forward "drop into the spinning ring" bottom exit on the
+  non-Wine pages (blocked on a `chapter.millanova.com` extension grant to capture the reference live).
+- **D** — normalize the entry-spin magnitude (varies per chapter / >1 turn).
+- Hover targeting (side-card hover lifts a neighbor); richer ScrollTrigger/Lenis parallax + inline films.
+- **The other 3 chapters' content + assets** (la-storia / eat-marry-love / amour-getaway are scaffolds) —
+  the largest single cost; ~11 dresses shared across chapters (`symphony`, `tasmania`, `sydney`, `markita`, …).
+- Docs/tech-debt: drop the dead `virtualscroll` dep (no mobile touch), remove `useAudio.js`.
 
-### Suggested approach
-- Introduce real routing (Nuxt pages) for the inner pages, or an in-place scroll section that
-  takes over after `selectChapter` — decide based on how the original transitions.
-- Reuse `CHAPTERS` as the data spine; extend it (or add a parallel `CHAPTER_PAGES` model)
-  rather than hardcoding per-page content.
-- Keep the homepage scene mounted/paused vs unmounted decision explicit (WebGL context cost).
-- Build the QA habit from Phase 1: Browserless side-by-side vs the original at each step
-  (see ARCHITECTURE → QA workflow).
+### QA habit (carried from Phase 1)
+Verify at each step: Browserless probes/geometry on prod + a real-browser pass (Claude-in-Chrome)
+for video/textures/feel. See ARCHITECTURE → QA workflow.
 
 ---
 

@@ -6,7 +6,7 @@
 > [`docs/ROADMAP.md`](docs/ROADMAP.md) · issue forensics → [`AUDIT.md`](AUDIT.md).
 > **This file is the living status log** (what works, resolved/open issues, dev workflow, sessions).
 
-> Last updated: 2026-05-29
+> Last updated: 2026-06-12 (Phase 2 "card becomes the page" built & live; re-review fix batch merged)
 
 ---
 
@@ -17,8 +17,8 @@ A **pixel-perfect replica** of [chapter.millanova.com](https://chapter.millanova
 The original site is a showpiece of interactive 3D web design: a spinning carousel of poster cards built in Three.js, rich GLSL shaders, GSAP animations, spatial audio, and cinematic chapter transitions. Our goal is to match it as closely as possible — visually, technically, and in feel.
 
 **Repo:** https://github.com/TobitOdili/la-coco-vie  
-**Local path:** `/data/.openclaw/workspace/millanova-replica/`  
-**Dev server:** `node_modules/.bin/nuxt dev --host 0.0.0.0 --port 3002`
+**Local path:** `/Users/tobitodili/Documents/GitHub/la-coco-vie` (macOS)  
+**Dev server:** `npm run dev` → http://localhost:3001  · **Live:** https://la-coco-vie.vercel.app/ (auto-deploys `main`)
 
 ---
 
@@ -29,12 +29,11 @@ The original site is a showpiece of interactive 3D web design: a spinning carous
 | Framework | Nuxt 3 (SSR disabled — SPA mode) |
 | UI | Vue 3, TailwindCSS v4 |
 | 3D / WebGL | Three.js with custom GLSL vertex + fragment shaders |
-| Animation | GSAP (timelines, ScrollTrigger) |
+| Animation | GSAP (timelines, eased tweens) |
 | Audio | Howler.js (per-chapter ambient loops, carousel tick SFX) |
-| Scroll | VirtualScroll (`touchMultiplier: 25`) |
+| Scroll | **Lenis** (inner pages) · homepage carousel = window wheel listener (`virtualscroll` dep is dead) |
 | Fonts | Bague (woff), Movie (woff), Italiana, Monoton, Over the Rainbow |
-| Screenshots | Playwright via Browserless (cloud WebGL browser) |
-| Tunnel | Cloudflare tunnel → Browserless can reach local dev server |
+| QA | Browserless (headless geometry/probes, vs the original) + Claude-in-Chrome (real browser: video/textures) |
 
 ---
 
@@ -91,16 +90,18 @@ camera.fov = 45
 
 ### Carousel ring
 ```js
-baseDistance = 42   // ring radius at rest
+baseDistance = 40   // ring radius at rest (= original ve=40)
 introDistance = 75  // start distance for fly-in intro
+SELECTED_Y  = -43   // carousel Y when a chapter is selected
 ```
 
 ### Group tilt (the dramatic diagonal cluster look)
 ```js
-groupG.rotation.order = 'YXZ'
-groupG.rotation.set(toRad(25), toRad(-70), toRad(15))
-// Negative Y intentionally pushes the cluster left
+// uses THREE default 'XYZ' order (matches original)
+groupG.rotation.set(toRad(25), toRad(70), toRad(15))   // desktop; mobile = (22°,0,0)
 ```
+> The exact source values + the full exit model are documented in
+> [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) (the authoritative reference; this section is a quick recap).
 
 ### Intro animation sequence (6 seconds)
 1. Mouse lerps from `(-1, -1)` → `(0, 0)` — power3.inOut
@@ -132,24 +133,21 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 
 ## ✅ What's Working
 
+**Homepage**
 - Custom cursor (lerped, 24px → 140px "EXPLORE", cubic-bezier(`.68,-.6,.32,1.6`))
-- Film grain noise overlay (animated)
-- Scroll-driven carousel rotation (VirtualScroll)
-- Hover: video plays, card flattens (`blendFactor → 2`), card lifts `y+7`
+- Film-grain noise overlay (animated, absolute-resolved asset URL)
+- Scroll rotates the carousel (window wheel listener; horizontal swipes too via `deltaY − deltaX`)
+- Hover: film plays, card flattens (`blendFactor → 2`), card lifts `y+7`, center text swaps — single card only
 - Audio: chapter tracks fade in on hover, louder on select, fade out on unhover
-- Click: carousel rotates chapter to front, body colour changes, card fills screen (hit layer now `pointer-events:auto` — selection was silently broken)
-- Back button **and scroll-back** both exit a chapter (reverse animation)
-- About panel toggle (blurs canvas)
-- Sound On/Off toggle
-- Loading screen — **real asset-gated** counter (gates on 13 textures), GSAP-eased number, GSAP fade exit, light-gray centered styling matching the original
-- Center txt (`txtMesh`) follows the front-facing card and swaps on hover (crossfade)
-- Hover affects only the single card under the cursor (not its mirrored ring copy)
-- Horizontal trackpad scroll rotates the carousel
-- Film-grain noise overlay rendering correctly (absolute-resolved asset URL)
-- Far-side ring cards fade to faint ghosts (depth-based opacity falloff)
-- Per-chapter CSS body classes for background colour transitions
-- Real `/{slug}` chapter routes — card-select animates into the page; deep-links, browser back/forward, and per-slug prerender all work (Phase 2 skeleton)
-- Wine O'Clock inner page — data-driven sub-chapters (THE BRIDE / THE WINE / THE PEOPLE) with copy, galleries, dress-tail cards, and scroll reveal (Phase 2 content slice)
+- Click selects the **front-facing** card → flattens + grows into the hero → URL `/{slug}` (scroll-then-click lands front-centre)
+- Far-side ring cards fade to faint ghosts (depth falloff); per-chapter CSS body classes; About + sound toggles
+- Loading screen — real asset-gated counter (13 textures), GSAP-eased, GSAP fade exit
+
+**Phase 2 — inner pages ("card becomes the page")**
+- Real `/{slug}` routes on a persistent shell; deep-links, browser back/forward, per-slug prerender; URL = source of truth
+- Hero **scroll-coupling** (card scrolls away 1:1 with the page); inner-page content (Wine: THE BRIDE / THE WINE / THE PEOPLE, copy, galleries, dress-tail cards, fade-up reveal)
+- **Edge-gated exits**: top overscroll → reverse-spin into the ring; bottom → reverse (Wine, option A) or forward "drop into the ring" (others, option B); mid-page scroll free; back button = reverse-spin
+- Film plays on select-complete (incl. deep-links) and pauses on every exit; rapid back/forward is interrupt-safe
 
 ---
 
@@ -216,9 +214,9 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 - Far-side ring cards rendered as prominent white rectangles; the original keeps them as faint ghosts.
 - Fix in `useChapterScene.js`: `uOpacity` uniform multiplied into the final fragment alpha; set each frame from the card's distance to camera (`smoothstep` 95→125, floor 0.2), gated to carousel mode and lerped to avoid pops. First pass (fade to 0) over-faded; the 0.2 floor matched the original's faint-back-card look.
 
-**[#7] Scroll-driven chapter-exit transition** ✅ Fixed (`bcc9b342`, verified live)
-- Only the back button exited a chapter; scrolling back should too.
-- Fix in `useChapterScene.js`: while selected, `onScroll` accumulates upward scroll (`delta<0`); past `SCROLL_EXIT_THRESHOLD` (500) it runs the existing `deselectChapter()` + fires `onDeselect`. `isSelecting`/`isDeselecting` flags prevent re-trigger during in/out animations. `WebGLScene` relays `onDeselect` → `chapter-deselect` → `app.vue` `resetChapterState()` (shared with `goHome`).
+**[#7] Scroll-driven chapter-exit transition** ✅ Fixed (`bcc9b342`) → ⚠️ **REMOVED/SUPERSEDED (session 12)**
+- *Historical:* the scene's `onScroll` accumulated upward scroll past `SCROLL_EXIT_THRESHOLD` (500) → `deselectChapter()` + `onDeselect`.
+- **Superseded:** once the inner pages got their own Lenis scroll, this scene-level exit fired on *any* mid-page up-scroll (the homepage wheel listener is global). It was **deleted** — exits now live in `pages/[slug].vue`, gated to the page top/bottom edges (`onDeselect` is no longer fired). See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) → Lifecycle → exit, and session 12.
 
 **[#15] Chapter selection broken — hit layer click-transparent** ✅ Fixed (`bbedb5ec`, verified live) 🔴 *(found while verifying #7)*
 - Clicking a card did nothing — selection never fired. Hover + scroll masked it.
@@ -341,8 +339,9 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
 | v12 | ~7.8/10 | Hover/select/audio all working |
 | v17 | ~8.5/10 | Fixed cursor, viewport, hover txt swap, single-card hover, horizontal scroll, real-gated loader |
 | v22 | ~9/10 | + logo-txt spacing (#11), front-card text (#14), noise texture (#3), far-card opacity falloff (#6); #5/#8 confirmed already-correct |
-| v24 (current) | ~9/10 | + scroll-back exit (#7); fixed broken chapter selection (#15, pointer-events) |
-| Target | 9.5-10/10 | Ring viewing-angle (#4, parked — needs original's exact tilt), then inner pages / dress cards |
+| v24 | ~9/10 | + scroll-back exit (#7, later removed); fixed broken chapter selection (#15, pointer-events) |
+| v-phase2 (current) | ~9/10 homepage + Phase 2 core | Routing + persistent shell, Wine inner page, "card becomes the page" (hero coupling + edge-gated exits), 2026-06-12 re-review fix batch |
+| Target | 9.5-10/10 | Option-B reference match + entry-spin (D) + hover; other 3 chapters' content; then re-skin |
 
 ---
 

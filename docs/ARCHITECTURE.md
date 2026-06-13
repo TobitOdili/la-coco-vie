@@ -17,18 +17,28 @@ How the replica works, end to end. Read this before editing `composables/useChap
 
 ## Mental model
 
-The page is a **single full-screen WebGL canvas** with a thin layer of HTML/Vue chrome
-floating on top (nav, cursor, about panel, loader). There are no routes yet — it's a
-single SPA view (`app.vue`).
+The page is a **persistent full-screen WebGL canvas** with a thin layer of HTML/Vue chrome
+floating on top (nav, cursor, about panel, loader) **plus a routed `<NuxtPage/>`**. `app.vue`
+is the persistent shell (the scene never unmounts → no intro replay); the **URL is the source
+of truth** for which chapter is open (`/` = homepage carousel, `/{slug}` = that chapter selected
++ its inner page).
 
 The 3D scene is a **ring of 8 poster cards** (4 chapters, each duplicated on the opposite
 side of the ring). The ring is tilted dramatically and viewed at an angle, so it reads as
-a diagonal cluster rather than a flat wheel. Scrolling rotates the ring; hovering a card
-lifts/flattens it and plays its film; clicking selects a chapter (card fills the screen);
-scrolling back exits.
+a diagonal cluster rather than a flat wheel. On the homepage: scrolling rotates the ring;
+hovering a card lifts/flattens it and plays its film; **clicking selects the front-facing
+chapter** → the card flattens + grows into the inner-page **hero** and the URL changes to
+`/{slug}`. On the inner page: the hero is **coupled to scroll** (it rises away as you read —
+"card becomes the page"), and the chapter is exited by overscrolling past the **top or bottom
+edge** (see [Lifecycle → exit](#exit-edge-gated-in-pagesslugvue)).
 
 Everything visual is driven by **per-card shader uniforms** animated with GSAP:
 `blendFactor` (curved↔flat↔hover), `progress` (carousel↔fullscreen), `uOpacity` (depth fade).
+
+> ⚠️ This doc was reconciled with the code on **2026-06-12** after the "card-becomes-the-page"
+> rework. If a section disagrees with the code, the code wins — and please fix the doc. The
+> live status/roadblocks/next-steps board lives in
+> [`PHASE-2-INNER-PAGES.md`](PHASE-2-INNER-PAGES.md) (read that first for a cold pickup).
 
 ---
 
@@ -45,9 +55,10 @@ owns 3D state** (rotation, hover, selection internals) and notifies `app.vue` vi
                         │ events (emit)                                  │ props / method calls
             ┌───────────┴───────────────── WebGLScene.vue ───────────────▼────────────┐
             │  mounts canvas · registers scene callbacks · forwards DOM events         │
-            │  scene.onSelect / onHover / onDeselect / onProgress  →  emit(...)         │
+            │  scene.onSelect / onHover / onProgress  →  emit(...)                      │
             │  window mousemove → scene.onMouseMove                                     │
-            │  VirtualScroll / wheel → scene.onScroll(deltaY - deltaX)                  │
+            │  window wheel → scene.onScroll(deltaY − deltaX)  (homepage carousel only) │
+            │  (inner-page scroll is owned by pages/[slug].vue via Lenis → setScroll)   │
             └───────────────────────────────┬─────────────────────────────────────────┘
                                              │
                               ┌──────────────▼───────────────┐
@@ -60,34 +71,68 @@ owns 3D state** (rotation, hover, selection internals) and notifies `app.vue` vi
 
 | Scene callback | Emitted event | `app.vue` handler | Does |
 |---|---|---|---|
-| `onSelect(chIdx)` | `chapter-select` | `onChapterSelect` | sets selected chapter, title, audio |
+| `onSelect(chIdx)` | `chapter-select` | `onChapterSelect` | a click-select happened → push `/{slug}` |
 | `onHover(chIdx, hovering)` | `chapter-hover` / `chapter-unhover` | `onChapterHover` / `onChapterUnhover` | cursor activate + audio fade |
-| `onDeselect()` | `chapter-deselect` | `onChapterDeselect` | resets state (scroll-back exit) |
 | `onProgress(pct)` | `progress` | `onProgress` | drives the loader counter |
+| `onReady(cb)` | — (direct) | — | fires once when the intro ends → app applies any deep-link |
+| `onDeselect()` | `chapter-deselect` | `onChapterDeselect` | **dead path** — the scene no longer fires this (the old scroll-back exit was removed). Plumbing kept; harmless. |
 
-> **Why two exit paths share one reset:** the back button (`goHome`) and scroll-back both
-> need to clear UI state. `goHome` calls `scene.deselectChapter()` (runs the animation) then
-> `resetChapterState()`. Scroll-back runs the animation **inside the scene** and fires
-> `onDeselect` so `app.vue` only does `resetChapterState()` — the animation isn't run twice.
+> **Routing is the single source of truth (the big change from Phase 1).** Selection is no
+> longer app-local state — it's derived from `route.params.slug`. A `watch(route.params.slug)`
+> (`syncSceneToRoute` in `app.vue`) drives `scene.selectChapter` / `deselectChapter` on every
+> URL change (browser back/forward, deep links, in-app pushes). It's guarded by
+> `scene.getState()` so it never double-runs an in-flight animation, and it **re-syncs after a
+> short delay** (`scheduleResync`) if an animation is mid-flight (so back-then-forward lands
+> correctly). On a fresh deep-link load it defers via `scene.onReady()` until the 7 s intro ends.
+> All exit *intents* funnel to `router.push('/')`; the page edges and the back button just push.
 
 ---
 
 ## File-by-file
 
-### `app.vue`
-Root component and state owner. Renders `LoadingScreen`, `CustomCursor`, `WebGLScene`,
-`SiteNav`, `AboutPanel`. Handles:
-- Selection/deselection state + document title + per-chapter body class (`--wine-o-clock`
-  etc., which switches the CSS accent-color variables).
+### `app.vue` — the persistent shell
+Root component + state owner. Renders `LoadingScreen`, `CustomCursor`, `WebGLScene`,
+`<NuxtPage/>` (routed inner page), `SiteNav`, `AboutPanel` — none of which unmount across
+routes (so no intro replay). Handles:
+- **Routing as source of truth**: `selectedChapterIdx` / `isHome` / accent / body class are
+  all *computed* from `route.params.slug`. The route watcher (`syncSceneToRoute`) drives the
+  scene's select/deselect; `provide('webglSceneRef', …)` so the routed page can reach the scene.
+- Document title via `useHead({ title })` (assigning `document.title` directly gets clobbered
+  by Nuxt once `pages/` is active).
 - **Audio inline** via Howler (lazy-initialised on first user gesture). Each chapter has a
   looping ambient track; volume fades up on hover (0.12), louder on select (0.5), out on leave.
 - Sets `--noise-url` to an **absolute** URL (see [Base URL & assets](#base-url--assets)).
 
+### `pages/index.vue` + `pages/[slug].vue`
+`index.vue` is **inert** (the WebGL carousel *is* the homepage; this just renders nothing).
+`[slug].vue` is the chapter inner page: validates the slug against `CHAPTERS` (unknown →
+`navigateTo('/')`), renders `CHAPTER_PAGES[slug]` content when present (else a scaffold), and
+owns the inner-page scroll + exit:
+- **Lenis** smooth scroll (wrapper `.chapter-page`, content `.chapter-scroll`); each scroll
+  tick → `scene.setScroll(px)` for the 1:1 hero coupling (P1).
+- **Edge-gated exits** via a `wheel` listener (gated until the select-in settles): overscroll
+  past the **top** → `doExitReverse()`; past the **bottom** → `doExitReverse()` on Wine
+  O'Clock (option A) or `doExitForward()` on other chapters (option B). See
+  [Lifecycle → exit](#exit-edge-gated-in-pagesslugvue).
+
+### `composables/chapterPages.js`
+Inner-page content (`CHAPTER_PAGES[slug].sections[]` + the `DRESSES` table). Lightweight data
+module — no three/gsap. Only Wine O'Clock is filled in; others fall back to the scaffold.
+
+### `components/chapter/ChapterSection.vue` + `DressTail.vue`
+The inner-page section block (numbered label + display heading + body + gallery, alternating
+left/right, IntersectionObserver fade-up) and the dress card.
+
 ### `components/WebGLScene.vue`
 Thin bridge. Mounts the `<canvas>` inside `#canvas-container`, calls `scene.init()`,
-registers the scene callbacks, and forwards browser events into the scene. Also contains
+registers the scene callbacks, and forwards browser events into the scene. Contains
 `#canvas-hit-layer` — a transparent `pointer-events:auto` div at `z-5` that captures clicks
-(the `@click` selection handler lives here) and hosts the VirtualScroll instance.
+(the `@click` selection handler lives here).
+> ⚠️ **The `virtualscroll` dep is effectively dead** (its API doesn't match `new VS().on(...)`,
+> which throws) → the `catch` installs a **`window`-level wheel listener** that is the real
+> homepage scroll handler. Consequence: **no touch input on the homepage carousel** (mobile).
+> `scene.onScroll` no-ops while a chapter is open (the inner page owns scrolling), so the global
+> listener is harmless there. Tech-debt: drop the dep or swap in the intended `virtual-scroll`.
 
 ### `components/CustomCursor.vue`
 Self-contained lerped cursor (rAF loop, lerp 0.2). Rest = 24px ring; `.active` = 140px
@@ -125,8 +170,17 @@ inline instead. Kept for now but safe to delete — see [Known tech debt](#known
 ## The 3D scene (`useChapterScene.js`)
 
 `useChapterScene()` returns `{ init, onMouseMove, onClick, onScroll, onResize, destroy,
-onSelect, onHover, onProgress, onDeselect, deselectChapter, getState }`. It closes over all
-scene state (renderer, camera, groups, posters, flags).
+onSelect, onHover, onProgress, onDeselect, onReady, selectChapter, deselectChapter, setScroll,
+beginExit, setExitProgress, endExit, getState }`. It closes over all scene state (renderer,
+camera, groups, posters, flags). `getState()` → `{ selectedIndex, hoveredIndex, introComplete,
+isSelecting, isDeselecting }`.
+
+- `selectChapter(chIdx)` / `deselectChapter()` — entry + reverse exit (driven by the route watcher).
+- `setScroll(px)` — inner-page scroll position → 1:1 hero coupling (P1).
+- `beginExit()` / `setExitProgress(0→1)` / `endExit()` — the **scrubbable forward exit** (option B):
+  `beginExit` snapshots state, `setExitProgress` lerps every transform (forward `+EXIT_SPIN`,
+  ring reassembles), `endExit` finalizes. Mirrors the reference's `window.setPageProgress`.
+- `onReady(cb)` — fires once at intro end (deep-link selection is deferred until then).
 
 ### Scene graph
 ```
@@ -145,11 +199,15 @@ scene
 | `N` | 8 | poster slots = 4 chapters × 2 mirror copies |
 | `baseDistance` | 40 | ring radius at rest (**confirmed = original `ve=40`**) |
 | `introDistance` | 75 | start radius for the fly-in |
-| `SELECTED_Y` | -70 | carousel Y when a chapter is selected |
+| `SELECTED_Y` | **-43** | carousel Y when a chapter is selected (top-anchors the full-bleed hero) |
+| hero scale | `aspectRatio * 2.07` | reference-tuned full-bleed scale at `progress=1` |
+| `EXIT_SPIN` | `290°` | forward spin of the option-B scroll-end return (matches the reference) |
 | `DEPTH_FADE_NEAR / FAR` | 95 / 125 | distance range for far-card opacity fade (#6) |
 | `DEPTH_FADE_FLOOR` | 0.2 | far cards fade to faint, not invisible |
-| `SCROLL_EXIT_THRESHOLD` | 500 | accumulated back-scroll to exit a chapter (#7) |
 | `txtMesh.position` | (0,-8,20) | center text; y=-8 clears the logo (#11) |
+
+> The old `SCROLL_EXIT_THRESHOLD` (scene-level scroll-back exit, #7) was **removed** — exits now
+> live in `pages/[slug].vue` at the page edges (`END_EXIT_THRESHOLD = 800` px overscroll there).
 
 ### Poster slots
 Each of the 8 slots is built by `createPoster(i, chapterIdx, logoTexture)`. Slot `i` (1–8)
@@ -204,24 +262,48 @@ multiplied by `uOpacity` for the depth fade (#6).
 
 ### Idle (carousel)
 The `animate()` rAF loop each frame:
-- Lerps camera parallax from the mouse (spring: `mouse*0.7 - displacement/18`).
+- Lerps camera parallax from the mouse (spring: `mouse*0.7 - displacement/18`). The mouse input
+  is **clamped to ±1.2 once `introComplete`** — a background-tab load suspends rAF and starves the
+  intro's mouse tween, which otherwise dragged the camera way off-axis until the first mousemove.
 - Lerps `carousel.rotation.y` toward `scrollRotationY + animatedRotationY` (factor 0.06).
 - Updates per-card `uOpacity` from distance-to-camera (smoothstep 95→125, floor 0.2).
 - Keeps `txtMesh` facing the camera and synced to `frontChapterIdx()`.
+- **While a chapter is open**: drives the hero up from `setScroll`'s value (1:1 screen coupling, P1)
+  — except during the select-in / exit animations, which own the hero transform.
 
 ### Select (`selectChapter(chIdx)`, ~3 s GSAP timeline)
-Rotates the chosen chapter's front copy to camera, drops the carousel to `SELECTED_Y`,
-flattens `groupG` to `(0,0,0)`, and animates the selected posters `blendFactor→1`,
-`progress→1`, `scale→aspectRatio*2.07` (fills screen). Other posters drop away. Sets
-`isSelecting` (gates scroll-exit during the animation). Notifies `app.vue` via `onSelect`.
+The chosen chapter becomes a single full-bleed **hero**:
+- Clears any active hover first (hover is gated while selected, so it could never un-fire).
+- `targetRot = toRad(φ−90) − scrollRotationY` — parks the hero front-centre **regardless of how
+  far the homepage carousel was scrolled** (the `− scrollRotationY` is load-bearing; without it,
+  scroll-then-click parked the card off-axis).
+- Drops the carousel to `SELECTED_Y`, flattens `groupG` to `(0,0,0)`, eases the camera back to
+  its on-axis base, and animates **the single front copy** (`selectedHero`, the higher-`intRotationY`
+  mirror) `blendFactor→1`, `progress→1`, `scale→aspectRatio*2.07`. All other posters drop away.
+- `onComplete`: clears `isSelecting`, re-applies the hero scale from the *current* aspect (resize
+  safety), and **plays the chapter film** (covers deep-link selects that never hovered).
+- The select + deselect timelines are tracked (`selectTl` / `deselectTl`) and killed if interrupted,
+  so rapid back/forward can't leave a stale `onComplete` clobbering state.
 
-### Exit (`deselectChapter`, ~2.5 s)
-Reverses everything: restores group tilt, carousel Y, all poster uniforms/scale/position.
-Sets `isDeselecting`. Two triggers:
-- **Back button** → `app.vue goHome()` → `scene.deselectChapter()` + `resetChapterState()`.
-- **Scroll back** → in `onScroll`, accumulating upward scroll past `SCROLL_EXIT_THRESHOLD`
-  calls `deselectChapter()` + fires `onDeselect()` (which resets app state). Down-scroll
-  resets the accumulator. (#7)
+### Exit (edge-gated, in `pages/[slug].vue`)
+There is **no scene-level scroll-back exit anymore** (`scene.onScroll` no-ops while selected). The
+inner page detects overscroll past an edge and triggers one of two animations:
+
+| Trigger | Animation | Path |
+|---|---|---|
+| **Back button / nav logo** (any time) | reverse-spin into the ring | `router.push('/')` → watcher → `deselectChapter()` |
+| **Top edge**, keep scrolling up (all chapters) | reverse-spin into the ring | `doExitReverse()` → `router.push('/')` → `deselectChapter()` |
+| **Bottom edge**, keep scrolling down — **Wine O'Clock** | same reverse-spin (option A) | `doExitReverse()` |
+| **Bottom edge**, keep scrolling down — **other chapters** | forward "drop into the spinning ring" (option B) | `doExitForward()` → `beginExit`/`setExitProgress`/`endExit` |
+
+- **`deselectChapter()`** (~2.5 s, reverse): snaps the hero back to ring-centre (`baseY`) first so
+  it's clean from any scroll depth, pauses the film, reverse-spins `animatedRotationY → preSelectRot`,
+  and restores group tilt / carousel Y / all poster uniforms+scale+position.
+- **Forward exit (option B)**: a 3 s `power4.inOut` tween scrubs `setExitProgress(0→1)` — hero
+  shrinks in place, `animatedRotationY += EXIT_SPIN (290°)`, the ring reassembles from below — while
+  the page content slides out; on complete it `router.push('/')`. Currently only on non-Wine pages
+  (an in-progress experiment to match the reference — see PHASE-2 board, "option B").
+- Mid-page scrolling is **free** in both directions (only the literal edges trigger exits).
 
 ---
 
@@ -230,11 +312,11 @@ Sets `isDeselecting`. Two triggers:
 | Input | Where handled | Effect |
 |---|---|---|
 | Mouse move | `window` → `scene.onMouseMove` | camera parallax + raycast hover detection |
-| Hover card | `onMouseMove` → `hoverChapter(slotI)` | lift (`y+7`), flatten (`blendFactor→2`), play film, swap center text, cursor "EXPLORE", audio fade-in |
-| Wheel / trackpad | `#canvas-hit-layer` VirtualScroll → `onScroll(deltaY - deltaX)` | rotate carousel (idle) **or** accumulate exit (selected). `deltaX` included so horizontal swipes rotate too (#10) |
-| Click card | `#canvas-hit-layer` `@click` → `onClick` → `selectChapter` | select chapter. **Requires `pointer-events:auto` on the hit layer** (AUDIT #15) |
-| Scroll up (in chapter) | `onScroll` | exit chapter (#7) |
-| Back / logo click | `SiteNav` → `app.vue goHome` | exit chapter |
+| Hover card (homepage) | `onMouseMove` → `hoverChapter(slotI)` | lift (`y+7`), flatten (`blendFactor→2`), play film, swap center text, cursor "EXPLORE", audio fade-in |
+| Wheel / trackpad (homepage) | window wheel listener → `scene.onScroll(deltaY − deltaX)` | rotate the carousel (`deltaX` so horizontal swipes rotate too, #10). **No-op while a chapter is open.** Touch isn't wired (dead `virtualscroll`). |
+| Click (homepage) | `#canvas-hit-layer` `@click` → `onClick` → selects the **front-facing** card | The flat hitboxes don't follow the shader bend, so `onClick` selects `frontChapterIdx()` (what the center text shows), not the raw raycast hit. Requires `pointer-events:auto` (AUDIT #15). |
+| Wheel (inner page) | `.chapter-page` (Lenis) + a `wheel` listener | mid-page = smooth scroll (drives the hero coupling); **edge overscroll = exit** (see Lifecycle → exit) |
+| Back / logo click | `SiteNav` → `app.vue goHome` → `router.push('/')` | exit chapter (reverse-spin) |
 
 ---
 
@@ -254,10 +336,14 @@ absolute URL. Apply the same pattern for any future CSS-var asset paths.
 
 | Item | Notes |
 |---|---|
+| **`virtualscroll` dep is dead** | Its API doesn't match `new VS().on(...)` → throws → `WebGLScene` falls back to a `window` wheel listener (the real handler). Side effect: **no touch input on the homepage carousel** (mobile). Drop the dep or swap in `virtual-scroll`. |
+| **`onDeselect` plumbing is dead** | The scene never fires it anymore (old scroll-back exit removed). `WebGLScene`→`app.vue` wiring is harmless but unused. |
+| Debug instrumentation | `__heroDebug` / `__camDebug` / `__probe` / `__exitBegin/Scrub/End` and `__gsdev()` (GSAP DevTools) are gated behind **`?debug` on the initial load URL**. Inert otherwise. Fine to ship; remove if you want them gone. |
 | `composables/useAudio.js` | **Dead code** — never imported; `app.vue` does audio inline. Safe to delete (verify no future import first). |
-| `dist` symlink | Tracked in git but points to a stale Linux path (`/data/.openclaw/...`). Broken locally; should be `git rm`'d. |
+| `dist` symlink | Was tracked pointing at a stale path; now gitignored. |
 | `#4` ring tilt | Parked — replica reads slightly more face-on than the original. Needs the original's exact group rotation (couldn't extract cleanly). See AUDIT #4. |
-| Hardcoded deselect angles | `deselectChapter` hardcodes `(25°,70°,15°)`; if the group tilt ever changes, update it there too. |
+| Hardcoded deselect angles | `deselectChapter` / `setExitProgress` hardcode the `(25°,70°,15°)` (desktop) / `(22°,0,0)` (mobile) group tilt; if it ever changes, update both. |
+| Doc-drift risk | This file lagged the code badly before the 2026-06-12 reconcile. When you change the scene/exit model, update the affected section here in the same commit. |
 
 ---
 
@@ -326,3 +412,23 @@ Hard-won gotchas (keep these in mind):
 - **Extracting the original's params:** scene objects are in closures, but matrices reach the
   GPU — hook `uniformMatrix4fv` to read camera fov/aspect (force a re-upload via resize). This
   is how #4's "fov 45 / radius 40 already match" was confirmed.
+- **Browserless caps sessions at ~60 s** (per plan) — for multi-step suites, open one connection
+  per test, not one for the whole run. Add `&timeout=59000` to the WS URL.
+- **`Page.captureScreenshot` latency is too coarse to time sub-3 s animations** (frames land
+  unevenly). To judge *timing/monotonicity*, sample state with a fast screenshot-free `evaluate`
+  probe (`style.opacity`, `__heroDebug` scaleX, `__camDebug` posY); use screenshots only for *look*.
+- **The 0.06 rotation lerp tail is visible for seconds at headless fps** — probe the parked hero
+  ~8 s after a select, not immediately, or you'll read a mid-converge value as "off-axis".
+
+### Real browser — Claude in Chrome (textures + video + reference)
+The headless loops can't render **video** (no codec) and Browserless can't scroll the reference's
+inner page. For those, drive the user's real Chrome via the **Claude-in-Chrome extension**
+(`mcp__Claude_in_Chrome__*`) — it shows real WebGL textures + playing films at the true viewport.
+Gotchas learned 2026-06-12:
+- **A background tab suspends rAF** → the scene freezes and screenshots look broken (not real).
+  Use computer-use `open_application("Google Chrome")` to foreground it first (it's granted at
+  "read" tier — visible + screenshottable, but clicks/typing are blocked; the *extension* does the
+  driving, computer-use just screenshots the real pixels).
+- The extension needs a **per-domain grant** — `la-coco-vie.vercel.app` works; the **reference
+  (`chapter.millanova.com`) must be granted by the user** in the extension UI before you can drive it.
+- Load with **`?debug`** to get the probes/scrub hooks in this browser too.

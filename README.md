@@ -25,23 +25,29 @@ custom GLSL shaders, GSAP animation, spatial audio, and chapter transitions.
 
 ## Status
 
-**Homepage complete (~9/10 parity); Phase 2 (chapter inner pages) underway.**
+**Homepage complete (~9/10 parity); Phase 2 (chapter inner pages) — "card becomes the page" is built and live.**
 
-- ✅ **Homepage done:** intro animation, carousel, hover, click-to-select, scroll-back exit,
+> 📋 **The single live tracker is [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md) →
+> "Running checklist (the board)"** — read it first for a cold pickup (current state, roadblocks, next steps).
+
+- ✅ **Homepage:** intro animation, carousel rotate-on-scroll, hover (lift + film), click-to-select,
   audio, loading screen, custom cursor, noise overlay, per-card depth fade, per-chapter center text.
-- 🟢 **Phase 2 — routing + Wine O'Clock content landed:** real `/{slug}` chapter routes,
-  persistent WebGL shell (no intro replay), the card-select animation *is* the transition into
-  the page, deep-links + browser back/forward, per-slug prerender. **Wine O'Clock inner page
-  built** (data-driven sub-chapters, galleries, dress-tail cards, scroll reveal). Other 3
-  chapters are scaffolds. See [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md).
-- 🔧 **Active rework — "card becomes the page":** the selected card spins/grows into the inner-page
-  hero. Click→correct-card, camera, rotation, **scroll-coupling** (hero scrolls away 1:1 with the
-  page; fixes the old "purple overlay"), and **scroll-end forward exit** (overscroll past the bottom
-  shrinks the card back into the ring spinning *forward* as the ring reassembles from the bottom —
-  matches the reference, not a rewind) are all done. **Live tracker:**
-  [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md) → "Running checklist (the board)".
+- ✅ **Phase 2 routing:** real `/{slug}` routes, **persistent WebGL shell** (no intro replay), the
+  card-select animation *is* the transition into the page, URL = source of truth, deep-links +
+  browser back/forward, per-slug prerender. **Wine O'Clock inner page built** (data-driven
+  sub-chapters, galleries, dress-tail cards, scroll reveal); other 3 chapters are scaffolds.
+- ✅ **"Card becomes the page":** hero **scroll-coupling** (card scrolls away 1:1 with the page;
+  killed the old "purple overlay") + **edge-gated exits** — overscroll past the **top** reverse-spins
+  the card back into the ring; past the **bottom**, Wine O'Clock does the same reverse (option A) while
+  the other chapters run a forward "drop into the spinning ring" (option B, in progress vs the reference).
+  Mid-page scroll is free.
+- ✅ **Hardened (2026-06-12 re-review):** scroll-then-click hero alignment, rapid back/forward
+  interrupt-safety, video play/pause lifecycle, background-tab robustness, input normalization.
+  Verified on prod (Browserless probes) **and** a real browser (video + textures confirmed live).
 - ⏸️ **Parked:** ring viewing-angle (#4) — needs the original's exact group tilt; low ROI.
-- 🔮 **Next:** normalize the entry spin (D) → hover targeting → richer motion → other chapters → re-skin.
+- 🔧 **Open:** option-B reference match (blocked on a `chapter.millanova.com` extension grant) ·
+  normalize the entry spin (**D**) · hover targeting · drop the dead `virtualscroll` dep (no mobile touch) ·
+  other 3 chapters' content · re-skin (Phase 3).
 
 Full live status → [`PROGRESS.md`](PROGRESS.md) · issue history → [`AUDIT.md`](AUDIT.md) · plan → [`docs/ROADMAP.md`](docs/ROADMAP.md)
 
@@ -75,13 +81,13 @@ npm run preview   # preview a production build
 | Framework | **Nuxt 3** (SPA mode — `ssr: false`) |
 | UI | Vue 3 `<script setup>` |
 | 3D / WebGL | **Three.js** + custom GLSL vertex & fragment shaders |
-| Animation | **GSAP** (timelines, eased tweens) |
+| Animation | **GSAP** (timelines, eased tweens; `GSDevTools` under `?debug`) |
 | Audio | **Howler.js** (per-chapter ambient loops) |
-| Scroll | `virtualscroll` (smoothed wheel/touch) |
+| Scroll | **Lenis** (inner pages) · homepage carousel uses a window wheel listener (the `virtualscroll` dep is dead — see ARCHITECTURE tech debt) |
 | Styling | Tailwind v4 (via `@tailwindcss/vite`) + `assets/css/main.css` |
 | Fonts | Bague & Movie (local `.woff`) + Italiana / Monoton / Over the Rainbow (Google Fonts) |
 | Hosting | **Vercel** (primary, auto-deploys `main`) + GitHub Pages (CI fallback) |
-| QA tooling | **Browserless** (cloud headless Chrome) for visual diffing vs the original |
+| QA tooling | **Browserless** (cloud headless, geometry/probes) + **Claude-in-Chrome** (real browser: video/textures) — see ARCHITECTURE → QA workflow |
 
 ---
 
@@ -89,24 +95,31 @@ npm run preview   # preview a production build
 
 ```
 site.config.js               ★ Brand/chrome copy — single source of truth for a re-skin
-app.vue                      Root component — state owner (selection, audio, about, loading)
-nuxt.config.ts               Nuxt/Vite/Tailwind config, <head>, base URL, font links
+app.vue                      Persistent shell — routing = source of truth, audio, About, loading
+nuxt.config.ts               Nuxt/Vite/Tailwind config, <head>, base URL, per-slug prerender, font links
+pages/
+  index.vue                  Inert (the WebGL carousel IS the homepage)
+  [slug].vue                 Chapter inner page — Lenis scroll, hero coupling, edge-gated exits
 components/
   WebGLScene.vue             Mounts the Three.js canvas; wires DOM events → scene
   CustomCursor.vue           Lerped custom cursor (24px → 140px "EXPLORE")
   SiteNav.vue                Top nav (About · logo · Collection) + bottom bar (credit · sound)
   AboutPanel.vue             Full-screen About overlay
   LoadingScreen.vue          Asset-gated loading counter (GSAP)
+  chapter/ChapterSection.vue Inner-page section block (heading + copy + gallery, fade-up reveal)
+  chapter/DressTail.vue      Dress card (photo + name + params + link)
 composables/
-  useChapterScene.js         ★ The whole 3D experience: scene, shaders, intro, interactions
+  useChapterScene.js         ★ The whole 3D experience: scene, shaders, intro, select/exit
+  chapterPages.js            Inner-page content: CHAPTER_PAGES + DRESSES (data only)
   useAudio.js                ⚠️ DEAD CODE — superseded by inline audio in app.vue (see ARCHITECTURE)
 assets/css/main.css          Fonts, cursor, noise overlay, container, per-chapter color vars
 public/                      Static assets — posters, videos, audio, fonts (see CONTENT-AND-ASSETS)
 .github/workflows/deploy.yml GitHub Pages CI (npm run generate, base /la-coco-vie/)
 ```
 
-`composables/useChapterScene.js` (~1000 lines) is where ~90% of the project lives. Read
-[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) before editing it.
+`composables/useChapterScene.js` (~1300 lines) is where ~90% of the project lives. Read
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) before editing it. **Debug:** load any route with
+`?debug` (on the initial URL) for scene probes + the GSAP timeline scrubber.
 
 ---
 
