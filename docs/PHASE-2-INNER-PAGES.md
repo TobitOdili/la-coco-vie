@@ -55,24 +55,35 @@ now bounded (~8s deadline → enables scroll + edge-exits) so a failed WebGL ini
 `nuxt generate` passes; **a Vercel deploy is still needed to visually confirm** tab-switch resume + that
 the exits behave. Still queued from the review: split the 1411-line `useChapterScene.js` god-module.
 
-**▶▶ 2026-06-14 BOTTOM-EXIT MECHANISM SOLVED (commit `8eca9bef`, prod-verified).** Approach #6 — the
-forward **ride-into-the-ring**, the faithful reference `setPageProgress`, reusing the dormant
-`beginExit`/`setExitProgress`/`endExit`. `pages/[slug].vue doExit(true)` → `beginExit()` → one GSAP
-`power4.inOut` tween (2.6s) drives `de 0→1` through `setExitProgress()` → `endExit()`+navigate. The DOM
-`.chapter-page` only **cross-fades** opacity 1→0 (FADE 0.45→0.62, **NO transform**) once the real card is
-home; `setExitProgress` no longer hides the hero (the approach-#1 leftover), so the REAL card is what
-rotates into the deck. **Why it's not a 6th dead end:** the prior fails were 2D-DOM-transform-over-scene
-(#1), snapshot-blank (#4), or disappear-then-ring (#3); this keeps the real 3D card visible and rides it
-in while the DOM merely fades — exactly the reference. **Verified via the REAL wheel→DOM path**
-(`/tmp/bless/exitprobe.mjs`, NOT `__exitScrub`): jump `deltaY60000` → settle → overscroll `deltaY2000`,
-then sampled — card rides in (`scaleX 2.76→1`, `blend/progress 1→0`) WHILE the DOM fades, 0 console
-errors, lands on the homepage ring (`+290°`, a different card at front, as the reference does).
-⚠️ **OPEN — the reveal FEEL (needs the user's eye on the live site; video plays there, not in Browserless):**
-the probe shows the card is already ~halfway shrunk + receding (`scaleX~1.47`, `dist 70→116`) when the
-DOM finishes fading (~de 0.6) — it shrinks *during* the reveal. For a cleaner "the article literally
-becomes the card" hand-off, retune so the card **holds full-bleed through the reveal, then shrinks**: set
-`SHRINK_START` (`useChapterScene.js` ~283) ≈ `FADE_END` and `HERO_RETURN_END` ≈ `FADE_START`.
-`exitChapterDrop` is now **unused/dead** (delete with the other dormant-exit cleanup once the feel is locked).
+**✗ 2026-06-14 approach #6 (`8eca9bef`) REJECTED by the user** ("it simply doesn't work"). It was the
+forward ride-into-the-ring (DOM cross-fades → the real poster card rides into the deck). Mechanically
+fine + prod-verified, but the *effect* was wrong: the user wants the PAGE ITSELF to visibly shrink into
+the deck, not an article→poster cross-fade. Kept here as a dead end; superseded by ▼.
+
+**▶▶ 2026-06-14 BOTTOM EXIT = SCROLL-COUPLED "DROP INTO THE DECK" (commit `228c1baf`, prod-verified both
+paths).** Approach #7, to the user's re-spec (confirmed via AskUserQuestion: **scroll-coupled** +
+**catch-low-then-rise**). As you overscroll at the bottom: the deck **rises from below + spins forward
+COUPLED to the scroll** while the chapter's own cards stay **hidden**; the **DOM page visibly SHRINKS**
+toward the rising deck and, at the catch, **hands off** (fades out) to its real card fading in — "the page
+becomes a card that drops into the deck" — which then rises to centre + spins into the homepage ring.
+Reversible (scroll back up → `cancelExit` restores); commits + navigates at de≈0.9.
+- **`pages/[slug].vue`:** `onWheel` engages a coupled scrub after ~160px overscroll; a rAF lerps
+  `deCurrent`→`deTarget` (overscroll-accumulated, `EXIT_TRAVEL=1100`) feeding `scene.setExitProgress(de)`
+  + `applyPageShrink(de)` (CSS `scale 1→0.16` + `translateY +14vh` + fade, origin `50% 58%`). Wheel
+  listener is now `passive:false` so it can `preventDefault()` native scroll while scrubbing.
+- **`setExitProgress` (rewritten):** chapter cards HIDDEN through the shrink (no duplicate), fade in at
+  `HERO_REVEAL_START/END` (0.58/0.82) = the handoff; hero card returns to its slot (`HERO_RETURN_END` 0.45)
+  + shrinks to ring size (`HERO_FIT_END` 0.6); other cards rise from below, deck spins `+EXIT_SPIN` (290°).
+  `__heroDebug` now reports per-card `uOpacity`.
+- **Verified via the REAL wheel→DOM path** (`/tmp/bless/exitprobe.mjs commit|cancel`): COMMIT — DOM
+  `scale 1→0.16` while wine cards `op=0` (hidden) + others rise `y −110→0`, then DOM fades `1→0` as wine
+  cards fade `0→1` (the handoff), cards rise to centre, commit→`/`, **0 console errors**. CANCEL — scrub to
+  0.2 then reverse restores `scale→1` + cards`→1`, stays on `/wine-o-clock`, **0 errors**.
+⚠️ **NEXT — the FEEL is for the user to judge on the live site** (`la-coco-vie.vercel.app/wine-o-clock` →
+scroll to the bottom; the hover film plays in a real browser, not in Browserless). Tuning knobs if needed:
+`EXIT_TRAVEL` (scrub length / sensitivity), `applyPageShrink` scale/drift/fade timing, `HERO_REVEAL_*` /
+`HERO_FIT_END`, and the catch alignment (the DOM shrinks toward `translateY +14vh`; nudge so it lands where
+the rising deck's front card sits). `exitChapterDrop` + the #6 GSAP path are now **dead** (delete on cleanup).
 
 **Other roadblocks**
 - **Option B reference match** is blocked on the Claude extension granted on **`chapter.millanova.com`**
