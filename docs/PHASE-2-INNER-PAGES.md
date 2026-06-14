@@ -46,6 +46,15 @@ cycling back to the exit.
 `build.rollupOptions.external:[]`; base-prefixed the favicon href (was 404ing on the `/la-coco-vie/`
 Pages subpath); gitignored `.claude/settings.local.json`. `nuxt prepare` passes.
 
+**2026-06-14 code-health (done, committed local — `f2749c3a` — not pushed).** Three verified
+lifecycle fixes (normal running path unchanged): `destroy()` now kills the tracked intro tweens +
+select/deselect timelines and traverse-disposes all GPU resources (was renderer-only → leaked every
+geometry/material/texture on teardown/HMR); the render loop pauses on `document.hidden` and resumes on
+visibility (GSAP keeps its own ticker so tweens still complete); `waitSettled` in `pages/[slug].vue` is
+now bounded (~8s deadline → enables scroll + edge-exits) so a failed WebGL init can't freeze the page.
+`nuxt generate` passes; **a Vercel deploy is still needed to visually confirm** tab-switch resume + that
+the exits behave. Still queued from the review: split the 1411-line `useChapterScene.js` god-module.
+
 **Other roadblocks**
 - **Option B reference match** is blocked on the Claude extension granted on **`chapter.millanova.com`**
   (a user action). Mechanism already decoded (`window.setPageProgress`, +290° forward) — a fidelity match.
