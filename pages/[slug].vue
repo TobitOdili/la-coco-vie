@@ -34,6 +34,7 @@
 <script setup>
 import { computed, onMounted, onBeforeUnmount, inject, ref } from 'vue'
 import Lenis from 'lenis'
+import gsap from 'gsap'
 import { CHAPTERS } from '~/composables/useChapterScene'
 import { CHAPTER_PAGES } from '~/composables/chapterPages'
 import ChapterSection from '~/components/chapter/ChapterSection.vue'
@@ -51,15 +52,14 @@ const pageEl = ref(null)
 const scrollEl = ref(null)
 let lenis = null
 
-// Exit gestures live ONLY at the page edges — mid-page scrolling is free. BOTH edges use the
-// SAME clean exit the top has always used: navigate home, and the app.vue route watcher runs
-// scene.deselectChapter() — the hero card shrinks and the ring reverse-spins back into place.
-// Crucially the DOM page UNMOUNTS on navigate, so ONLY the WebGL scene animates — there's no
-// DOM-page-shrinking-over-a-separate-spinning-scene (the "second card in the background").
-//   • Bottom edge, keep scrolling DOWN → exit.   • Top edge, keep scrolling UP → exit.
-// (The earlier scroll-coupled forward "drop into the deck" rework drove a DOM transform over the
-// live scene → two competing layers; reverted to the single-WebGL-motion top animation. A future
-// forward variant should be built the same way: unmount the DOM first, animate purely in WebGL.)
+// Exit gestures live ONLY at the page edges — mid-page scrolling is free.
+//   • Top edge, keep scrolling UP → REVERSE rewind: navigate home, the app.vue route watcher runs
+//     scene.deselectChapter() (hero shrinks, ring reverse-spins back). Seamless because at scroll 0
+//     you're already looking at the WebGL hero through the transparent .chapter-hero.
+//   • Bottom edge, keep scrolling DOWN → FORWARD ride-into-the-ring (the reference's setPageProgress):
+//     the REAL selected card returns from its scrolled-off position and rotates into the deck spinning
+//     forward, while the opaque DOM article CROSS-FADES out (no transform) to reveal it. One WebGL
+//     motion + a fade — NOT a 2D DOM shrink over a separately-spinning scene (the prior dead ends).
 const EXIT_THRESHOLD = 800   // px of overscroll past an edge to trigger the exit
 let endAccum = 0             // bottom overscroll accumulator
 let topAccum = 0             // top overscroll accumulator
@@ -92,24 +92,39 @@ function onWheel(e) {
   }
 }
 
-// TOP edge → reverse rewind via the route watcher (scene.deselectChapter): up there you're looking
-// at the WebGL hero through the transparent hero section, so unmounting the DOM is seamless.
-// BOTTOM edge → the REAL page drops into the deck: at the bottom you're looking at the opaque DOM
-// article, so we shrink THAT (the live page) toward the ring centre + fade it late — it's the front
-// card dropping in. scene.exitChapterDrop reassembles the OTHER cards (forward spin) around it and
-// hides the chapter's own WebGL cards so the page is the only copy (no duplicate). No snapshot, no
-// disappear (the page is visible shrinking the whole time), instant + pixel-perfect (it IS the page).
+// BOTTOM edge → forward ride-into-the-ring, the faithful reference mechanism (window.setPageProgress).
+// scene.beginExit() captures the selected card's current (scrolled-off) pose; a single GSAP tween then
+// drives de 0→1 through scene.setExitProgress(de), which returns the REAL card home, scales it hero→1,
+// and rotates it into the deck spinning forward (+290°) with the other cards rising from below — ONE
+// clock, one coordinate system. The DOM page only CROSS-FADES its opacity out (no transform) once the
+// card is home (~de FADE_START), revealing the real card to ride in; it unmounts on navigate. endExit()
+// finalizes the homepage ring BEFORE router.push so the route watcher sees selectedIndex=-1 and doesn't
+// also fire deselectChapter. (Top edge / back / a scene without beginExit → plain reverse via the watcher.)
 function doExit(fromBottom) {
   if (exiting) return
   exiting = true
   lenis?.stop()
   const scene = webglSceneRef?.value?.scene
-  if (fromBottom && scene?.exitChapterDrop && pageEl.value) {
+  if (fromBottom && scene?.beginExit && scene.beginExit()) {
     const el = pageEl.value
-    el.style.transformOrigin = '50% 42%'   // toward the ring's front-centre on screen
-    el.style.transition = 'transform 2s cubic-bezier(.62,0,.2,1), opacity 0.9s ease-in 1.05s'
-    requestAnimationFrame(() => { el.style.transform = 'scale(0.14)'; el.style.opacity = '0' })
-    scene.exitChapterDrop(() => router.push('/'))
+    const FADE_START = 0.45   // hero is home by here (HERO_RETURN_END) — start revealing the real card
+    const FADE_END = 0.62
+    const driver = { de: 0 }
+    gsap.to(driver, {
+      de: 1,
+      duration: 2.6,
+      ease: 'power4.inOut',
+      onUpdate: () => {
+        scene.setExitProgress(driver.de)
+        if (el) {
+          const o = driver.de <= FADE_START ? 1
+            : driver.de >= FADE_END ? 0
+            : 1 - (driver.de - FADE_START) / (FADE_END - FADE_START)
+          el.style.opacity = String(o)
+        }
+      },
+      onComplete: () => { scene.endExit(); router.push('/') },
+    })
     return
   }
   router.push('/')   // top edge / back → deselectChapter via the watcher

@@ -1294,9 +1294,10 @@ export function useChapterScene() {
     hero.mesh.position.y = lp(exitStart.heroY, hero.baseY, heroT) // return home early, under cover
     hero.material.uniforms.blendFactor.value = lp(exitStart.blend, 0, shrinkT)
     hero.material.uniforms.progress.value = lp(exitStart.prog, 0, shrinkT)
-    // Phase 1: hide the hero INSTANTLY for any de>0 (no start/end fade flash) — the DOM page is
-    // the chapter's card. Restored at de=0 (cancel) and at endExit (homepage ring).
-    if (hero.material.uniforms.uOpacity) hero.material.uniforms.uOpacity.value = t > 0 ? 0 : exitStart.heroOpacity
+    // Keep the hero VISIBLE the whole way (the reference rides the real card into the ring; it stays
+    // hidden under the still-opaque DOM page until the page cross-fades to reveal it). Restored to its
+    // captured opacity at de=0 (cancel). [Was hidden for de>0 under the rejected DOM-over-scene approach.]
+    if (hero.material.uniforms.uOpacity) hero.material.uniforms.uOpacity.value = exitStart.heroOpacity
     if (groupG.userData.txtMat) groupG.userData.txtMat.opacity = lp(exitStart.txtOpacity, 1)
     for (const o of exitStart.others) {
       o.p.mesh.position.y = lp(o.y, o.p.baseY)   // other-chapter cards rise from below (kept visible)
