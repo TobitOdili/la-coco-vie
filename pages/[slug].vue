@@ -92,32 +92,22 @@ function onWheel(e) {
 
 // TOP edge → reverse rewind via the route watcher (scene.deselectChapter): up there you're looking
 // at the WebGL hero through the transparent hero section, so unmounting the DOM is seamless.
-// BOTTOM edge → LITERAL MERGE: at the bottom you're looking at the opaque DOM article, so we
-// snapshot it to a WebGL card (createSnapshotCard) that fills the view, hide the DOM (seamless
-// freeze — the card shows the identical view), then snapshotExitForward shrinks that card into the
-// reassembling ring (forward spin) → the page visibly becomes a card and drops into the deck.
-async function doExit(fromBottom) {
+// BOTTOM edge → the REAL page drops into the deck: at the bottom you're looking at the opaque DOM
+// article, so we shrink THAT (the live page) toward the ring centre + fade it late — it's the front
+// card dropping in. scene.exitChapterDrop reassembles the OTHER cards (forward spin) around it and
+// hides the chapter's own WebGL cards so the page is the only copy (no duplicate). No snapshot, no
+// disappear (the page is visible shrinking the whole time), instant + pixel-perfect (it IS the page).
+function doExit(fromBottom) {
   if (exiting) return
   exiting = true
   lenis?.stop()
   const scene = webglSceneRef?.value?.scene
-  if (fromBottom && scene?.createSnapshotCard && pageEl.value) {
-    try {
-      const { toCanvas } = await import('html-to-image')
-      // skipFonts: don't fetch/inline the cross-origin Google-Fonts stylesheet (it throws a
-      // CORS SecurityError and stalls the capture for seconds). The page's own fonts are already
-      // loaded in the document, and the card shrinks/fades in <2s so glyph fidelity is moot.
-      const canvas = await toCanvas(pageEl.value, { pixelRatio: Math.min(2, window.devicePixelRatio || 1), skipFonts: true })
-      if (scene.createSnapshotCard(canvas)) {
-        pageEl.value.style.visibility = 'hidden'   // the plane now shows the identical view → no disappear
-        scene.snapshotExitForward(() => router.push('/'))
-        return
-      }
-    } catch (e) {
-      // snapshot failed → fall back to the forward-spin exit (still no DOM-over-scene layering)
-      scene.exitChapterForward?.()
-    }
-    router.push('/')
+  if (fromBottom && scene?.exitChapterDrop && pageEl.value) {
+    const el = pageEl.value
+    el.style.transformOrigin = '50% 42%'   // toward the ring's front-centre on screen
+    el.style.transition = 'transform 2s cubic-bezier(.62,0,.2,1), opacity 0.9s ease-in 1.05s'
+    requestAnimationFrame(() => { el.style.transform = 'scale(0.14)'; el.style.opacity = '0' })
+    scene.exitChapterDrop(() => router.push('/'))
     return
   }
   router.push('/')   // top edge / back → deselectChapter via the watcher

@@ -269,7 +269,6 @@ export function useChapterScene() {
 
   let scrollRotationY = 0
   let selectedHero = null   // the single poster scaled up as the full-screen hero (P1)
-  let snapshotMesh = null   // full-bleed plane showing a DOM snapshot of the page (literal-merge exit)
   let scrollOffsetPx = 0    // inner-page scroll position in px (from Lenis) — drives the hero up/away
   let exitStart = null      // captured transforms at the start of a forward scroll-exit (step E)
   const EXIT_SPIN = toRad(290)  // forward spin during the scroll-end return (matches reference's +290°)
@@ -1160,119 +1159,45 @@ export function useChapterScene() {
   //     is invisible — it happens under the still-mounted opaque page) and the timeline
   //     rises it up into the ring. (deselectChapter snapped it to baseY, which from the
   //     bottom read as a jump to the top — the reported bug.)
-  function exitChapterForward() {
-    if (selectedIndex === -1 || isDeselecting) return
-    isDeselecting = true
-    scrollOffsetPx = 0
-    if (selectTl) { selectTl.kill(); selectTl = null; isSelecting = false }
-    videoElements[selectedIndex]?.pause()
-    // Mirror the hero's scrolled-off-TOP offset to off-screen BELOW, so it rises in from the
-    // bottom. Reposition happens this frame, under the still-opaque DOM page → no visible jump.
-    if (selectedHero) {
-      const above = selectedHero.mesh.position.y - selectedHero.baseY   // how far off the top it was
-      selectedHero.mesh.position.y = selectedHero.baseY - Math.max(above, 60)
-    }
-    gsap.killTweensOf(carousel)
-    const tl = gsap.timeline({
-      onComplete: () => { selectedIndex = -1; isDeselecting = false; selectedHero = null; deselectTl = null }
-    })
-    deselectTl = tl
-
-    if (groupG.userData.txtMat) {
-      tl.to(groupG.userData.txtMat, { opacity: 1, duration: 1, ease: 'power2.inOut', overwrite: true }, 0)
-    }
-
-    // FORWARD spin (mirror of the top's reverse) — continue in the entry direction so the
-    // ring never reverses; land EXIT_SPIN (290°) ahead, like the reference's forward return.
-    tl.to(carousel, { animatedRotationY: carousel.animatedRotationY + EXIT_SPIN, duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
-
-    // Restore groupG tilt (same as deselect)
-    if (isMobile) {
-      tl.to(groupG.rotation, { x: toRad(22), y: 0, z: 0, duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
-    } else {
-      tl.to(groupG.rotation, { x: toRad(25), y: toRad(70), z: toRad(15), duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
-    }
-
-    // Carousel back to centre
-    tl.to(carousel.position, { y: 0, duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
-
-    // Reassemble all cards into the ring — the hero rises from below, the others rise from
-    // their dropped (below-frame) select positions; everyone shrinks back to ring size.
-    posters.forEach((p) => {
-      tl.to(p.material.uniforms.blendFactor, { value: 0, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
-      tl.to(p.material.uniforms.progress, { value: 0, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
-      tl.to(p.mesh.scale, { x: 1, y: 1, z: 1, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
-      tl.to(p.mesh.position, { y: p.baseY, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
-    })
-
-    hoveredIndex = -1
-  }
-
-  // ── Literal-merge bottom exit (the page BECOMES a WebGL card) ────────────────
-  // At the bottom you're looking at the opaque DOM article, not the WebGL hero (it scrolled
-  // off the top), so a pure-WebGL exit has nothing to continue from → the page "disappears".
-  // Fix: the page hands a DOM snapshot to createSnapshotCard() — a full-bleed plane parented to
-  // the camera (always fills the view), drawn on top. The page is then hidden, so the plane
-  // shows the identical view (seamless freeze). snapshotExitForward() shrinks that plane toward
-  // the ring centre + fades while the ring reassembles spinning FORWARD behind it — the page
-  // card "drops into the deck". One WebGL layer; mirrors the top exit's cleanliness.
-  function createSnapshotCard(image) {
-    if (!image) return false
-    destroySnapshotCard()
-    const tex = new THREE.CanvasTexture(image)
-    tex.colorSpace = THREE.SRGBColorSpace
-    tex.needsUpdate = true
-    const d = 50                                            // distance in front of the camera
-    const h = 2 * d * Math.tan(toRad(camera.fov / 2))       // frustum height at depth d → full-bleed
-    const w = h * camera.aspect
-    const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false })
-    snapshotMesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat)
-    snapshotMesh.position.set(0, 0, -d)                     // local to the camera → screen-centred
-    snapshotMesh.renderOrder = 9999                         // draw over the whole scene
-    camera.add(snapshotMesh)
-    return true
-  }
-
-  function destroySnapshotCard() {
-    if (!snapshotMesh) return
-    camera.remove(snapshotMesh)
-    snapshotMesh.geometry.dispose()
-    snapshotMesh.material.map?.dispose()
-    snapshotMesh.material.dispose()
-    snapshotMesh = null
-  }
-
-  function snapshotExitForward(onDone) {
-    if (!snapshotMesh) { onDone && onDone(); return }
+  // ── Bottom exit: the REAL page drops into the deck ──────────────────────────
+  // The page (pages/[slug].vue) shrinks the actual DOM article toward the ring centre and fades
+  // it late — it's the front card dropping in. This scene side reassembles the ring spinning
+  // FORWARD (no reversal) around it, and HIDES both WebGL copies of the current chapter so the
+  // DOM page is the only copy (no duplicate spinning behind — the earlier bug). The chapter's
+  // cards fade back in at the end to complete the homepage ring. onDone fires when done (navigate).
+  function exitChapterDrop(onDone) {
+    if (selectedIndex === -1 || isDeselecting) { onDone && onDone(); return }
     isDeselecting = true
     scrollOffsetPx = 0
     if (selectTl) { selectTl.kill(); selectTl = null; isSelecting = false }
     videoElements[selectedIndex]?.pause()
     gsap.killTweensOf(carousel)
+    const chIdx = selectedIndex
+    const chapterCards = posters.filter((p) => p.chapterIdx === chIdx)
+    // Hide BOTH copies of the current chapter NOW (the DOM page represents it) → no duplicate.
+    chapterCards.forEach((p) => { if (p.material.uniforms.uOpacity) { gsap.killTweensOf(p.material.uniforms.uOpacity); p.material.uniforms.uOpacity.value = 0 } })
     const tl = gsap.timeline({
-      onComplete: () => {
-        selectedIndex = -1; isDeselecting = false; selectedHero = null; deselectTl = null
-        destroySnapshotCard()
-        onDone && onDone()
-      },
+      onComplete: () => { selectedIndex = -1; isDeselecting = false; selectedHero = null; deselectTl = null; onDone && onDone() },
     })
     deselectTl = tl
-    // Reassemble the ring behind the plane, spinning FORWARD (continue the entry direction → no
-    // reversal) so the homepage ring is there as the plane shrinks away.
-    tl.to(carousel, { animatedRotationY: carousel.animatedRotationY + EXIT_SPIN, duration: 2.0, ease: 'power3.inOut', overwrite: true }, 0)
+    if (groupG.userData.txtMat) tl.to(groupG.userData.txtMat, { opacity: 1, duration: 1, ease: 'power2.inOut', overwrite: true }, 0)
+    // Spin a full +360° FORWARD (no reversal): the chapter's card returns to the FRONT-centre —
+    // exactly where the DOM page shrinks to — so it fades in there as the page fades out (the page
+    // lands on its own card). A non-360 amount would land a DIFFERENT card under the shrinking page.
+    tl.to(carousel, { animatedRotationY: carousel.animatedRotationY + TWO_PI, duration: 2.0, ease: 'power3.inOut', overwrite: true }, 0)
     tl.to(carousel.position, { y: 0, duration: 2.0, ease: 'power3.inOut', overwrite: true }, 0)
     const tilt = isMobile ? { x: toRad(22), y: 0, z: 0 } : { x: toRad(25), y: toRad(70), z: toRad(15) }
     tl.to(groupG.rotation, { x: tilt.x, y: tilt.y, z: tilt.z, duration: 2.0, ease: 'power3.inOut', overwrite: true }, 0)
-    if (groupG.userData.txtMat) tl.to(groupG.userData.txtMat, { opacity: 1, duration: 1, ease: 'power2.inOut', overwrite: true }, 0)
+    // All cards reassemble into the ring (the OTHER cards visibly; the chapter's cards invisibly).
     posters.forEach((p) => {
       tl.to(p.material.uniforms.blendFactor, { value: 0, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
       tl.to(p.material.uniforms.progress, { value: 0, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
       tl.to(p.mesh.scale, { x: 1, y: 1, z: 1, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
       tl.to(p.mesh.position, { y: p.baseY, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
     })
-    // The page-card shrinks toward the ring centre and fades late — it "drops into the deck".
-    tl.to(snapshotMesh.scale, { x: 0.16, y: 0.16, z: 0.16, duration: 1.8, ease: 'power3.inOut' }, 0)
-    tl.to(snapshotMesh.material, { opacity: 0, duration: 0.7, ease: 'power2.in' }, 1.3)
+    // Fade the chapter's cards back in over the last stretch (as the DOM page fades) so the
+    // homepage ring is complete with no opacity pop.
+    chapterCards.forEach((p) => { if (p.material.uniforms.uOpacity) tl.to(p.material.uniforms.uOpacity, { value: 1, duration: 0.5, ease: 'power2.out' }, 1.5) })
     hoveredIndex = -1
   }
 
@@ -1474,9 +1399,8 @@ export function useChapterScene() {
     onReady,
     selectChapter,    // exposed so the route watcher can drive selection (Phase 2)
     deselectChapter,  // TOP-edge / back-button exit: reverse-spin rewind into the ring
-    exitChapterForward, // BOTTOM-edge exit (fallback): forward-spin mirror, card rises from below
-    createSnapshotCard, // BOTTOM-edge literal merge: full-bleed plane from a DOM snapshot
-    snapshotExitForward,// shrink the snapshot card into the reassembling ring (forward), then onDone
+    exitChapterDrop,  // BOTTOM-edge exit: reassemble the ring (forward) + hide the chapter's cards
+                      // while the DOM page shrinks into the deck (driven by pages/[slug].vue)
     setScroll,        // inner-page scroll → hero card coupling (P1)
     beginExit,        // forward scroll-end exit (step E) — scrubbed return into the ring
     setExitProgress,  // de 0→1, scroll-coupled by the page (drop-into-deck)
