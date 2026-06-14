@@ -79,23 +79,26 @@ function onWheel(e) {
   lastWheelT = now
   const atBottom = lenis.limit > 0 && lenis.scroll >= lenis.limit - 2
   const atTop = lenis.scroll <= 2
-  if (atBottom && dy > 0) {            // bottom edge, pushing down → exit
+  if (atBottom && dy > 0) {            // bottom edge, pushing down → forward "drop into deck"
     endAccum += dy; topAccum = 0
-    if (endAccum >= EXIT_THRESHOLD) doExit()
-  } else if (atTop && dy < 0) {        // top edge, pushing up → exit
+    if (endAccum >= EXIT_THRESHOLD) doExit(true)
+  } else if (atTop && dy < 0) {        // top edge, pushing up → reverse rewind
     topAccum += -dy; endAccum = 0
-    if (topAccum >= EXIT_THRESHOLD) doExit()
+    if (topAccum >= EXIT_THRESHOLD) doExit(false)
   } else {                             // mid-page → free scroll, no exit
     endAccum = 0; topAccum = 0
   }
 }
 
-// Navigate home; app.vue's route watcher runs scene.deselectChapter() (card shrinks + ring
-// reverse-spins back into place). The DOM page unmounts on navigate → only the WebGL animates.
-function doExit() {
+// Both edges navigate home and animate purely in WebGL (the DOM page unmounts on navigate →
+// no second layer). BOTTOM (fromBottom): scene.exitChapterForward() — forward-spin mirror, the
+// card rises in from below. TOP: the route watcher runs scene.deselectChapter() — reverse rewind.
+// (Calling exitChapterForward first sets isDeselecting, so the watcher's deselectChapter no-ops.)
+function doExit(fromBottom) {
   if (exiting) return
   exiting = true
   lenis?.stop()
+  if (fromBottom) webglSceneRef?.value?.scene?.exitChapterForward?.()
   router.push('/')
 }
 

@@ -1147,6 +1147,66 @@ export function useChapterScene() {
     hoveredIndex = -1
   }
 
+  // ── Bottom-edge exit: the mirror of deselectChapter() ───────────────────────
+  // Same clean structure as the top exit (snap the card's start pose, then run ONE ~2.5s
+  // WebGL timeline that reassembles the ring; the inner DOM page unmounts on navigate so
+  // only the scene animates — no second layer). Mirrored for the bottom edge:
+  //   • Spin FORWARD (animatedRotationY += EXIT_SPIN) — continues the entry/homepage
+  //     direction, so there's NO reversal after it lands (the top exit rewinds to
+  //     preSelectRot, which decreases = reverse; we don't).
+  //   • The card comes from the BOTTOM, not the top. At the page bottom the hero scrolled
+  //     off the TOP; we mirror that offset to BELOW the frame (off-screen, so the reposition
+  //     is invisible — it happens under the still-mounted opaque page) and the timeline
+  //     rises it up into the ring. (deselectChapter snapped it to baseY, which from the
+  //     bottom read as a jump to the top — the reported bug.)
+  function exitChapterForward() {
+    if (selectedIndex === -1 || isDeselecting) return
+    isDeselecting = true
+    scrollOffsetPx = 0
+    if (selectTl) { selectTl.kill(); selectTl = null; isSelecting = false }
+    videoElements[selectedIndex]?.pause()
+    // Mirror the hero's scrolled-off-TOP offset to off-screen BELOW, so it rises in from the
+    // bottom. Reposition happens this frame, under the still-opaque DOM page → no visible jump.
+    if (selectedHero) {
+      const above = selectedHero.mesh.position.y - selectedHero.baseY   // how far off the top it was
+      selectedHero.mesh.position.y = selectedHero.baseY - Math.max(above, 60)
+    }
+    gsap.killTweensOf(carousel)
+    const tl = gsap.timeline({
+      onComplete: () => { selectedIndex = -1; isDeselecting = false; selectedHero = null; deselectTl = null }
+    })
+    deselectTl = tl
+
+    if (groupG.userData.txtMat) {
+      tl.to(groupG.userData.txtMat, { opacity: 1, duration: 1, ease: 'power2.inOut', overwrite: true }, 0)
+    }
+
+    // FORWARD spin (mirror of the top's reverse) — continue in the entry direction so the
+    // ring never reverses; land EXIT_SPIN (290°) ahead, like the reference's forward return.
+    tl.to(carousel, { animatedRotationY: carousel.animatedRotationY + EXIT_SPIN, duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
+
+    // Restore groupG tilt (same as deselect)
+    if (isMobile) {
+      tl.to(groupG.rotation, { x: toRad(22), y: 0, z: 0, duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
+    } else {
+      tl.to(groupG.rotation, { x: toRad(25), y: toRad(70), z: toRad(15), duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
+    }
+
+    // Carousel back to centre
+    tl.to(carousel.position, { y: 0, duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
+
+    // Reassemble all cards into the ring — the hero rises from below, the others rise from
+    // their dropped (below-frame) select positions; everyone shrinks back to ring size.
+    posters.forEach((p) => {
+      tl.to(p.material.uniforms.blendFactor, { value: 0, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
+      tl.to(p.material.uniforms.progress, { value: 0, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
+      tl.to(p.mesh.scale, { x: 1, y: 1, z: 1, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
+      tl.to(p.mesh.position, { y: p.baseY, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
+    })
+
+    hoveredIndex = -1
+  }
+
   // ── Forward scroll-end exit (step E) ────────────────────────────────────────
   // The reference doesn't *rewind* the entry on scroll-end — it scrubs a forward
   // return: the hero shrinks back into the ring spinning FORWARD (+290°) as the ring
@@ -1344,7 +1404,8 @@ export function useChapterScene() {
     onDeselect,
     onReady,
     selectChapter,    // exposed so the route watcher can drive selection (Phase 2)
-    deselectChapter,
+    deselectChapter,  // TOP-edge / back-button exit: reverse-spin rewind into the ring
+    exitChapterForward, // BOTTOM-edge exit: forward-spin mirror, card rises in from below
     setScroll,        // inner-page scroll → hero card coupling (P1)
     beginExit,        // forward scroll-end exit (step E) — scrubbed return into the ring
     setExitProgress,  // de 0→1, scroll-coupled by the page (drop-into-deck)
