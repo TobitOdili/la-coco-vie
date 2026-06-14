@@ -158,13 +158,28 @@ async function capturePage() {
   clone.style.width = `${vw}px`
   holder.appendChild(clone)
   document.body.appendChild(holder)
+  const dbg = /[?&]debug/.test(location.search)
   try {
-    return await toCanvas(holder, {
-      fontEmbedCSS: await getFontEmbedCSS(),
+    const css = await getFontEmbedCSS()
+    const canvas = await toCanvas(holder, {
+      // skipFonts avoids html-to-image stalling/erroring on the cross-origin Google-Fonts stylesheet
+      // (which silently blanks the whole capture); we inject our LOCAL fonts via fontEmbedCSS instead.
+      skipFonts: true,
+      fontEmbedCSS: css,
       pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
       filter: (n) => n.tagName !== 'VIDEO',   // no videos in the article, but be safe
     })
-  } catch (e) { console.warn('[exit] page snapshot failed', e); return null }
+    if (dbg) {
+      window.__capInfo = { fontCSSLen: css ? css.length : 0, scrollY, vw, vh, w: canvas && canvas.width, h: canvas && canvas.height }
+      if (canvas) {
+        document.getElementById('__capdbg')?.remove()
+        canvas.id = '__capdbg'
+        canvas.style.cssText = 'position:fixed;top:8px;left:8px;width:220px;height:auto;z-index:99999;border:2px solid red;background:#ccc;'
+        document.body.appendChild(canvas)
+      }
+    }
+    return canvas
+  } catch (e) { if (dbg) window.__capInfo = { error: String(e) }; console.warn('[exit] page snapshot failed', e); return null }
   finally { document.body.removeChild(holder) }
 }
 // Pre-warm the snapshot while the reader sits at the bottom so engaging the exit is instant (no hitch).
