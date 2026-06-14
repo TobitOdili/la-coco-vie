@@ -143,15 +143,29 @@ async function getFontEmbedCSS() {
   return fontEmbedCSS
 }
 async function capturePage() {
-  const el = pageEl.value
-  if (!el) return null
+  const content = scrollEl.value
+  if (!content) return null
+  // Lenis scroll-offsets the content (transform/scrollTop); html-to-image doesn't replicate that and
+  // would capture the transparent TOP (.chapter-hero) → a blank card. So clone the content off-screen,
+  // translate it up by the current scroll, and clip to one viewport — capturing the visible bottom slice.
+  const scrollY = lenis ? lenis.scroll : 0
+  const vw = content.offsetWidth || window.innerWidth
+  const vh = window.innerHeight
+  const holder = document.createElement('div')
+  holder.style.cssText = `position:fixed;top:0;left:-99999px;width:${vw}px;height:${vh}px;overflow:hidden;background:transparent;pointer-events:none;`
+  const clone = content.cloneNode(true)
+  clone.style.transform = `translateY(${-scrollY}px)`
+  clone.style.width = `${vw}px`
+  holder.appendChild(clone)
+  document.body.appendChild(holder)
   try {
-    return await toCanvas(el, {
+    return await toCanvas(holder, {
       fontEmbedCSS: await getFontEmbedCSS(),
       pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
       filter: (n) => n.tagName !== 'VIDEO',   // no videos in the article, but be safe
     })
   } catch (e) { console.warn('[exit] page snapshot failed', e); return null }
+  finally { document.body.removeChild(holder) }
 }
 // Pre-warm the snapshot while the reader sits at the bottom so engaging the exit is instant (no hitch).
 async function prewarmSnapshot() {
