@@ -67,6 +67,8 @@ let lastWheelT = 0           // last wheel-event time — a gap means a new gest
 let exiting = false          // an exit fired (navigating home) — lock out further input
 let ready = false            // select-in settled — scroll + exit gestures enabled
 let readyPoll = null
+let settleTries = 0          // waitSettled attempts — bounded so a failed scene can't freeze the page
+const SETTLE_DEADLINE = 40   // ~8s at 200ms/try before we enable scroll without the select-in handoff
 
 function onWheel(e) {
   if (!ready || !lenis || exiting) return
@@ -139,11 +141,20 @@ onMounted(() => {
     // Strict: THIS chapter selected and fully settled. (`selectedIndex !== -1` alone
     // passes during a mid-flight deselect of the same chapter — back-then-forward —
     // which would open scrolling/exits during the resync re-select.)
-    if (st && st.introComplete && st.selectedIndex === chapter.value?.index &&
-        !st.isSelecting && !st.isDeselecting) {
+    const settled = st && st.introComplete && st.selectedIndex === chapter.value?.index &&
+        !st.isSelecting && !st.isDeselecting
+    if (settled) {
+      ready = true
+      lenis?.start()
+    } else if (settleTries >= SETTLE_DEADLINE) {
+      // Deadline fallback: if the scene never settles (e.g. WebGL init threw, so introComplete
+      // never flips), don't leave the page frozen with Lenis stopped — enable scroll + the
+      // edge-exit gestures so the (DOM) content is readable and the user can navigate home.
+      console.warn('[chapter] scene did not settle in time — enabling scroll without the select-in handoff')
       ready = true
       lenis?.start()
     } else {
+      settleTries += 1
       readyPoll = setTimeout(waitSettled, 200)
     }
   }

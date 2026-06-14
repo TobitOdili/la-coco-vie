@@ -224,6 +224,8 @@ function hexToVec3(hex) {
 export function useChapterScene() {
   let renderer, scene, camera, groupG, carousel
   let animFrame
+  let isDestroyed = false   // set in destroy() — gates the rAF restart + the intro ready callback
+  let introAnims = []       // intro tweens + the ready delayedCall — tracked so destroy() can kill them
   let posters = []
   let videoElements = []
   let videoTextures = []
@@ -489,6 +491,10 @@ export function useChapterScene() {
 
     // Start render loop — use lerped rotation like the original
     animate()
+    // Pause the render loop while the tab is hidden (skips the per-frame WebGL render + the
+    // depth/world-position work). GSAP keeps its own ticker so in-flight tweens still complete —
+    // we just stop drawing while nobody's looking, and resume on return.
+    document.addEventListener('visibilitychange', handleVisibility)
 
     // Intro animation
     runIntro()
@@ -646,15 +652,16 @@ export function useChapterScene() {
     carousel.animatedRotationY = 0
     carousel.rotation.y = 0
     carouselLerpTarget = 0
+    introAnims = []   // track the intro's tweens so destroy() can kill them (no fire into a torn-down scene)
     const rotProxy = { val: 0 }
-    gsap.to(rotProxy, {
+    introAnims.push(gsap.to(rotProxy, {
       val: Math.PI * 4,  // 720° = degToRad(360*2)
       duration: 6,
       ease: 'power3.inOut',
       onUpdate: () => {
         carousel.animatedRotationY = rotProxy.val
       },
-    })
+    }))
 
     // Original: x starts at {x:-10, y:-10} then lerps to {x:.5, y:.5} over 6s
     // Camera parallax = x.x * 0.7 - dx/18
@@ -662,7 +669,7 @@ export function useChapterScene() {
     mouse.set(-10.0, -10.0)
     prevMouse.set(-10.0, -10.0)
     const camMouseProxy = { x: -10.0, y: -10.0 }
-    gsap.to(camMouseProxy, {
+    introAnims.push(gsap.to(camMouseProxy, {
       x: 0.5,
       y: 0.5,
       duration: 6,
@@ -671,14 +678,14 @@ export function useChapterScene() {
         mouse.set(camMouseProxy.x, camMouseProxy.y)
         prevMouse.set(camMouseProxy.x, camMouseProxy.y)
       },
-    })
+    }))
 
     // Posters intro: animate from far (introDistance) to baseDistance
     // by moving mesh positions and updating axisPosition uniform
     posters.forEach((p, idx) => {
       const delay = 0.2 * idx + 3
       const distProxy = { d: introDistance }
-      gsap.to(distProxy, {
+      introAnims.push(gsap.to(distProxy, {
         d: baseDistance,
         duration: 1.5,
         delay,
@@ -698,18 +705,19 @@ export function useChapterScene() {
             p.material.uniforms.axisPosition.value.z = baseDistance
           }
         },
-      })
+      }))
     })
 
     // Mark intro complete
-    gsap.delayedCall(7, () => {
+    introAnims.push(gsap.delayedCall(7, () => {
+      if (isDestroyed) return   // the component unmounted mid-intro — don't touch a torn-down scene
       isIntro = false
       introComplete = true
       // Sync the center text to whichever card the intro left at front (Issue #14)
       setTxtChapter(frontChapterIdx(), true)
       // Let the app apply any deep-linked chapter now that selection is allowed (Phase 2)
       if (onReadyCallback) onReadyCallback()
-    })
+    }))
   }
 
   function animate() {
@@ -1369,14 +1377,68 @@ export function useChapterScene() {
     }
   }
 
+  // Pause/resume the render loop with tab visibility (added in init, removed in destroy).
+  function handleVisibility() {
+    if (isDestroyed) return
+    if (document.hidden) {
+      if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null }
+    } else if (animFrame == null) {
+      animate()   // animate() reschedules animFrame; only restart when nothing is pending
+    }
+  }
+
+  // Dispose a material and any textures it owns (standard maps + ShaderMaterial uniform textures).
+  // dispose() is idempotent, so shared textures disposed via multiple materials are safe.
+  function disposeMaterial(mat) {
+    if (!mat) return
+    for (const k of ['map', 'alphaMap', 'normalMap']) {
+      if (mat[k] && mat[k].dispose) mat[k].dispose()
+    }
+    if (mat.uniforms) {
+      for (const key in mat.uniforms) {
+        const v = mat.uniforms[key] && mat.uniforms[key].value
+        if (v && v.isTexture && v.dispose) v.dispose()
+      }
+    }
+    mat.dispose()
+  }
+
   function destroy() {
-    if (animFrame) cancelAnimationFrame(animFrame)
+    isDestroyed = true
+    if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null }
+    document.removeEventListener('visibilitychange', handleVisibility)
+    // Kill in-flight GSAP work so stale tweens / the ready delayedCall can't fire into a torn-down scene.
+    introAnims.forEach((a) => a && a.kill && a.kill())
+    introAnims = []
+    if (selectTl) { selectTl.kill(); selectTl = null }
+    if (deselectTl) { deselectTl.kill(); deselectTl = null }
+    // Tear down the off-screen video elements.
     videoElements.forEach((v) => {
       v.pause()
       v.src = ''
       if (v.parentNode) v.parentNode.removeChild(v)
     })
+    // renderer.dispose() frees the context's own caches but NOT the per-object geometries/
+    // materials/textures — traverse and dispose those explicitly to release their GPU memory.
+    if (scene) {
+      scene.traverse((obj) => {
+        if (obj.geometry && obj.geometry.dispose) obj.geometry.dispose()
+        const m = obj.material
+        if (Array.isArray(m)) m.forEach(disposeMaterial)
+        else disposeMaterial(m)
+      })
+      scene.clear()
+    }
+    // The hover-swapped txt frames (txtTextures[1..3]) and the video textures aren't reached by
+    // the traverse (only txtTextures[0] is a live map) — dispose them directly.
+    txtTextures.forEach((t) => t && t.dispose && t.dispose())
+    videoTextures.forEach((t) => t && t.dispose && t.dispose())
     renderer?.dispose()
+    posters = []
+    videoElements = []
+    videoTextures = []
+    txtTextures = []
+    selectedHero = null
   }
 
   function onSelect(cb) { onSelectCallback = cb }
