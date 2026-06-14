@@ -55,6 +55,25 @@ now bounded (~8s deadline → enables scroll + edge-exits) so a failed WebGL ini
 `nuxt generate` passes; **a Vercel deploy is still needed to visually confirm** tab-switch resume + that
 the exits behave. Still queued from the review: split the 1411-line `useChapterScene.js` god-module.
 
+**▶▶ 2026-06-14 BOTTOM-EXIT MECHANISM SOLVED (commit `8eca9bef`, prod-verified).** Approach #6 — the
+forward **ride-into-the-ring**, the faithful reference `setPageProgress`, reusing the dormant
+`beginExit`/`setExitProgress`/`endExit`. `pages/[slug].vue doExit(true)` → `beginExit()` → one GSAP
+`power4.inOut` tween (2.6s) drives `de 0→1` through `setExitProgress()` → `endExit()`+navigate. The DOM
+`.chapter-page` only **cross-fades** opacity 1→0 (FADE 0.45→0.62, **NO transform**) once the real card is
+home; `setExitProgress` no longer hides the hero (the approach-#1 leftover), so the REAL card is what
+rotates into the deck. **Why it's not a 6th dead end:** the prior fails were 2D-DOM-transform-over-scene
+(#1), snapshot-blank (#4), or disappear-then-ring (#3); this keeps the real 3D card visible and rides it
+in while the DOM merely fades — exactly the reference. **Verified via the REAL wheel→DOM path**
+(`/tmp/bless/exitprobe.mjs`, NOT `__exitScrub`): jump `deltaY60000` → settle → overscroll `deltaY2000`,
+then sampled — card rides in (`scaleX 2.76→1`, `blend/progress 1→0`) WHILE the DOM fades, 0 console
+errors, lands on the homepage ring (`+290°`, a different card at front, as the reference does).
+⚠️ **OPEN — the reveal FEEL (needs the user's eye on the live site; video plays there, not in Browserless):**
+the probe shows the card is already ~halfway shrunk + receding (`scaleX~1.47`, `dist 70→116`) when the
+DOM finishes fading (~de 0.6) — it shrinks *during* the reveal. For a cleaner "the article literally
+becomes the card" hand-off, retune so the card **holds full-bleed through the reveal, then shrinks**: set
+`SHRINK_START` (`useChapterScene.js` ~283) ≈ `FADE_END` and `HERO_RETURN_END` ≈ `FADE_START`.
+`exitChapterDrop` is now **unused/dead** (delete with the other dormant-exit cleanup once the feel is locked).
+
 **Other roadblocks**
 - **Option B reference match** is blocked on the Claude extension granted on **`chapter.millanova.com`**
   (a user action). Mechanism already decoded (`window.setPageProgress`, +290° forward) — a fidelity match.
