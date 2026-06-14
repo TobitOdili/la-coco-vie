@@ -157,36 +157,29 @@ function sampleCanvas(c) {
   } catch (e) { return { err: String(e) } }   // SecurityError ⇒ tainted canvas (cross-origin content)
 }
 async function capturePage() {
-  const content = scrollEl.value
-  if (!content) return null
-  // Lenis scroll-offsets the content (transform/scrollTop); html-to-image doesn't replicate that and
-  // would capture the transparent TOP (.chapter-hero) → a blank card. So clone the content off-screen,
-  // translate it up by the current scroll, and clip to one viewport — capturing the visible bottom slice.
-  const scrollY = lenis ? lenis.scroll : 0
-  const vw = content.offsetWidth || window.innerWidth
-  const vh = window.innerHeight
-  const holder = document.createElement('div')
-  holder.style.cssText = `position:fixed;top:0;left:-99999px;width:${vw}px;height:${vh}px;overflow:hidden;background:transparent;pointer-events:none;`
-  const clone = content.cloneNode(true)
-  clone.style.transform = `translateY(${-scrollY}px)`
-  clone.style.width = `${vw}px`
-  holder.appendChild(clone)
-  document.body.appendChild(holder)
+  // Capture the LIVE wrapper: its visible sections are already revealed (opacity 1) by the page's
+  // IntersectionObserver — an off-screen clone never fires the observer, so it captures transparent.
+  // skipFonts avoids html-to-image stalling/erroring on the cross-origin Google-Fonts stylesheet (which
+  // silently blanks the capture); the LOCAL article fonts go in via fontEmbedCSS instead.
+  const el = pageEl.value
+  if (!el) return null
   const dbg = /[?&]debug/.test(location.search)
   try {
     const css = await getFontEmbedCSS()
-    const canvas = await toCanvas(holder, {
-      // skipFonts avoids html-to-image stalling/erroring on the cross-origin Google-Fonts stylesheet
-      // (which silently blanks the whole capture); we inject our LOCAL fonts via fontEmbedCSS instead.
+    const canvas = await toCanvas(el, {
       skipFonts: true,
       fontEmbedCSS: css,
+      backgroundColor: '#f3ebe4',           // the chapter's accentLight (the article's bg)
       pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
-      filter: (n) => n.tagName !== 'VIDEO',   // no videos in the article, but be safe
+      filter: (n) => n.tagName !== 'VIDEO', // no videos in the article, but be safe
     })
-    if (dbg) window.__capInfo = { fontCSSLen: css ? css.length : 0, scrollY, vw, vh, w: canvas && canvas.width, h: canvas && canvas.height, sample: sampleCanvas(canvas) }
+    if (dbg) window.__capInfo = {
+      fontCSSLen: css ? css.length : 0, scrollY: lenis ? lenis.scroll : 0,
+      pageScrollTop: el.scrollTop, scrollTransform: scrollEl.value ? getComputedStyle(scrollEl.value).transform : null,
+      w: canvas && canvas.width, h: canvas && canvas.height, sample: sampleCanvas(canvas),
+    }
     return canvas
   } catch (e) { if (dbg) window.__capInfo = { error: String(e) }; console.warn('[exit] page snapshot failed', e); return null }
-  finally { document.body.removeChild(holder) }
 }
 // Pre-warm the snapshot while the reader sits at the bottom so engaging the exit is instant (no hitch).
 async function prewarmSnapshot() {
