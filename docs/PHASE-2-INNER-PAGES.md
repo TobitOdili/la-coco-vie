@@ -26,6 +26,26 @@ that rides the chapter's card into the ring). **Read the `🔁 P2 — Bottom-edg
 section below** for every approach already tried, why each failed, the fundamental constraint, and the
 M1–M3 plan **before touching the exit.**
 
+**⚠️ 2026-06-14 review steer (re-decide before resuming the exit).** A verified repo review concluded
+the snapshot **M1–M3 plan is the highest-risk / lowest-leverage** option. The bottom-exit problem is
+self-inflicted: `animate()`'s scroll-coupling (`useChapterScene.js` ~815-821) deliberately pushes the
+real 3D hero card ~1.3 viewports off-screen, so by the page bottom the opaque DOM is all that's left to
+animate. The **dormant** `beginExit`/`setExitProgress`/`endExit` (`useChapterScene.js` 1214-1325, only
+reachable via `?debug`) is *already* a coupled, cancelable **forward** exit on the REAL hero card — it
+captures the scrolled-off `heroY`, lerps it home early, un-frames it into the ring, and spins forward.
+That's the proven top-exit stability applied forward, reusing ~150 already-debugged lines. The missing
+piece is the hand-off: cross-dissolve the DOM `opacity` → the real 3D card over the first ~30% of the
+gesture (**no** DOM transform), and rework line 1291 (it hard-hides the hero for `de>0` — a leftover
+from rejected approach #1). Cheaper first experiment: a **poster-handoff** (fade the DOM to the
+chapter's poster image and let the real poster card carry it in). Re-evaluate M1–M3 vs. this when
+cycling back to the exit.
+
+**2026-06-14 hygiene (done, committed local — `ced2dac7`, `011aa323` — not pushed).** Untracked
+`node_modules` (18,630 files) + `.output` (33) — both were committed despite `.gitignore` (.git was
+~120M). Removed the dead `virtualscroll` from `nuxt.config.ts` optimizeDeps + the no-op
+`build.rollupOptions.external:[]`; base-prefixed the favicon href (was 404ing on the `/la-coco-vie/`
+Pages subpath); gitignored `.claude/settings.local.json`. `nuxt prepare` passes.
+
 **Other roadblocks**
 - **Option B reference match** is blocked on the Claude extension granted on **`chapter.millanova.com`**
   (a user action). Mechanism already decoded (`window.setPageProgress`, +290° forward) — a fidelity match.
