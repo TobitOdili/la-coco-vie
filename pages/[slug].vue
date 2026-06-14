@@ -90,16 +90,34 @@ function onWheel(e) {
   }
 }
 
-// Both edges navigate home and animate purely in WebGL (the DOM page unmounts on navigate →
-// no second layer). BOTTOM (fromBottom): scene.exitChapterForward() — forward-spin mirror, the
-// card rises in from below. TOP: the route watcher runs scene.deselectChapter() — reverse rewind.
-// (Calling exitChapterForward first sets isDeselecting, so the watcher's deselectChapter no-ops.)
-function doExit(fromBottom) {
+// TOP edge → reverse rewind via the route watcher (scene.deselectChapter): up there you're looking
+// at the WebGL hero through the transparent hero section, so unmounting the DOM is seamless.
+// BOTTOM edge → LITERAL MERGE: at the bottom you're looking at the opaque DOM article, so we
+// snapshot it to a WebGL card (createSnapshotCard) that fills the view, hide the DOM (seamless
+// freeze — the card shows the identical view), then snapshotExitForward shrinks that card into the
+// reassembling ring (forward spin) → the page visibly becomes a card and drops into the deck.
+async function doExit(fromBottom) {
   if (exiting) return
   exiting = true
   lenis?.stop()
-  if (fromBottom) webglSceneRef?.value?.scene?.exitChapterForward?.()
-  router.push('/')
+  const scene = webglSceneRef?.value?.scene
+  if (fromBottom && scene?.createSnapshotCard && pageEl.value) {
+    try {
+      const { toCanvas } = await import('html-to-image')
+      const canvas = await toCanvas(pageEl.value, { pixelRatio: Math.min(2, window.devicePixelRatio || 1), cacheBust: true })
+      if (scene.createSnapshotCard(canvas)) {
+        pageEl.value.style.visibility = 'hidden'   // the plane now shows the identical view → no disappear
+        scene.snapshotExitForward(() => router.push('/'))
+        return
+      }
+    } catch (e) {
+      // snapshot failed → fall back to the forward-spin exit (still no DOM-over-scene layering)
+      scene.exitChapterForward?.()
+    }
+    router.push('/')
+    return
+  }
+  router.push('/')   // top edge / back → deselectChapter via the watcher
 }
 
 onMounted(() => {

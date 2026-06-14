@@ -269,6 +269,7 @@ export function useChapterScene() {
 
   let scrollRotationY = 0
   let selectedHero = null   // the single poster scaled up as the full-screen hero (P1)
+  let snapshotMesh = null   // full-bleed plane showing a DOM snapshot of the page (literal-merge exit)
   let scrollOffsetPx = 0    // inner-page scroll position in px (from Lenis) — drives the hero up/away
   let exitStart = null      // captured transforms at the start of a forward scroll-exit (step E)
   const EXIT_SPIN = toRad(290)  // forward spin during the scroll-end return (matches reference's +290°)
@@ -1207,6 +1208,74 @@ export function useChapterScene() {
     hoveredIndex = -1
   }
 
+  // ── Literal-merge bottom exit (the page BECOMES a WebGL card) ────────────────
+  // At the bottom you're looking at the opaque DOM article, not the WebGL hero (it scrolled
+  // off the top), so a pure-WebGL exit has nothing to continue from → the page "disappears".
+  // Fix: the page hands a DOM snapshot to createSnapshotCard() — a full-bleed plane parented to
+  // the camera (always fills the view), drawn on top. The page is then hidden, so the plane
+  // shows the identical view (seamless freeze). snapshotExitForward() shrinks that plane toward
+  // the ring centre + fades while the ring reassembles spinning FORWARD behind it — the page
+  // card "drops into the deck". One WebGL layer; mirrors the top exit's cleanliness.
+  function createSnapshotCard(image) {
+    if (!image) return false
+    destroySnapshotCard()
+    const tex = new THREE.CanvasTexture(image)
+    tex.colorSpace = THREE.SRGBColorSpace
+    tex.needsUpdate = true
+    const d = 50                                            // distance in front of the camera
+    const h = 2 * d * Math.tan(toRad(camera.fov / 2))       // frustum height at depth d → full-bleed
+    const w = h * camera.aspect
+    const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false })
+    snapshotMesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat)
+    snapshotMesh.position.set(0, 0, -d)                     // local to the camera → screen-centred
+    snapshotMesh.renderOrder = 9999                         // draw over the whole scene
+    camera.add(snapshotMesh)
+    return true
+  }
+
+  function destroySnapshotCard() {
+    if (!snapshotMesh) return
+    camera.remove(snapshotMesh)
+    snapshotMesh.geometry.dispose()
+    snapshotMesh.material.map?.dispose()
+    snapshotMesh.material.dispose()
+    snapshotMesh = null
+  }
+
+  function snapshotExitForward(onDone) {
+    if (!snapshotMesh) { onDone && onDone(); return }
+    isDeselecting = true
+    scrollOffsetPx = 0
+    if (selectTl) { selectTl.kill(); selectTl = null; isSelecting = false }
+    videoElements[selectedIndex]?.pause()
+    gsap.killTweensOf(carousel)
+    const tl = gsap.timeline({
+      onComplete: () => {
+        selectedIndex = -1; isDeselecting = false; selectedHero = null; deselectTl = null
+        destroySnapshotCard()
+        onDone && onDone()
+      },
+    })
+    deselectTl = tl
+    // Reassemble the ring behind the plane, spinning FORWARD (continue the entry direction → no
+    // reversal) so the homepage ring is there as the plane shrinks away.
+    tl.to(carousel, { animatedRotationY: carousel.animatedRotationY + EXIT_SPIN, duration: 2.0, ease: 'power3.inOut', overwrite: true }, 0)
+    tl.to(carousel.position, { y: 0, duration: 2.0, ease: 'power3.inOut', overwrite: true }, 0)
+    const tilt = isMobile ? { x: toRad(22), y: 0, z: 0 } : { x: toRad(25), y: toRad(70), z: toRad(15) }
+    tl.to(groupG.rotation, { x: tilt.x, y: tilt.y, z: tilt.z, duration: 2.0, ease: 'power3.inOut', overwrite: true }, 0)
+    if (groupG.userData.txtMat) tl.to(groupG.userData.txtMat, { opacity: 1, duration: 1, ease: 'power2.inOut', overwrite: true }, 0)
+    posters.forEach((p) => {
+      tl.to(p.material.uniforms.blendFactor, { value: 0, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
+      tl.to(p.material.uniforms.progress, { value: 0, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
+      tl.to(p.mesh.scale, { x: 1, y: 1, z: 1, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
+      tl.to(p.mesh.position, { y: p.baseY, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
+    })
+    // The page-card shrinks toward the ring centre and fades late — it "drops into the deck".
+    tl.to(snapshotMesh.scale, { x: 0.16, y: 0.16, z: 0.16, duration: 1.8, ease: 'power3.inOut' }, 0)
+    tl.to(snapshotMesh.material, { opacity: 0, duration: 0.7, ease: 'power2.in' }, 1.3)
+    hoveredIndex = -1
+  }
+
   // ── Forward scroll-end exit (step E) ────────────────────────────────────────
   // The reference doesn't *rewind* the entry on scroll-end — it scrubs a forward
   // return: the hero shrinks back into the ring spinning FORWARD (+290°) as the ring
@@ -1405,7 +1474,9 @@ export function useChapterScene() {
     onReady,
     selectChapter,    // exposed so the route watcher can drive selection (Phase 2)
     deselectChapter,  // TOP-edge / back-button exit: reverse-spin rewind into the ring
-    exitChapterForward, // BOTTOM-edge exit: forward-spin mirror, card rises in from below
+    exitChapterForward, // BOTTOM-edge exit (fallback): forward-spin mirror, card rises from below
+    createSnapshotCard, // BOTTOM-edge literal merge: full-bleed plane from a DOM snapshot
+    snapshotExitForward,// shrink the snapshot card into the reassembling ring (forward), then onDone
     setScroll,        // inner-page scroll → hero card coupling (P1)
     beginExit,        // forward scroll-end exit (step E) — scrubbed return into the ring
     setExitProgress,  // de 0→1, scroll-coupled by the page (drop-into-deck)
