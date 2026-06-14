@@ -37,10 +37,11 @@ custom GLSL shaders, GSAP animation, spatial audio, and chapter transitions.
   browser back/forward, per-slug prerender. **Wine O'Clock inner page built** (data-driven
   sub-chapters, galleries, dress-tail cards, scroll reveal); other 3 chapters are scaffolds.
 - ✅ **"Card becomes the page":** hero **scroll-coupling** (card scrolls away 1:1 with the page;
-  killed the old "purple overlay") + **edge-gated exits** — overscroll navigates home and the DOM page
-  unmounts so only the WebGL scene animates (one clean motion). **Top** edge reverse-rewinds the card
-  into the ring (`deselectChapter`); **bottom** edge is the mirror (`exitChapterForward`) — a forward
-  spin (no reversal) with the card rising into the ring from below. Mid-page scroll is free.
+  killed the old "purple overlay") + **edge-gated exits** (mid-page scroll free). **Top** edge
+  (stable) reverse-rewinds the card into the ring (`deselectChapter`). **Bottom** edge is **in
+  progress** — the goal is the page becoming a card that drops into the deck; it's been through many
+  approaches (the current build reads as two separate motions) and the next step is a snapshot→3D-card
+  "literal merge." See `docs/PHASE-2-INNER-PAGES.md` → "Bottom-edge exit — the FULL saga".
 - ✅ **Hardened (2026-06-12 re-review):** scroll-then-click hero alignment, rapid back/forward
   interrupt-safety, video play/pause lifecycle, background-tab robustness, input normalization.
   Verified on prod (Browserless probes) **and** a real browser (video + textures confirmed live).
