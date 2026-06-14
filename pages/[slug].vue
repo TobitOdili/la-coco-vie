@@ -34,6 +34,7 @@
 <script setup>
 import { computed, onMounted, onBeforeUnmount, inject, ref } from 'vue'
 import Lenis from 'lenis'
+import { toCanvas } from 'html-to-image'
 import { CHAPTERS } from '~/composables/useChapterScene'
 import { CHAPTER_PAGES } from '~/composables/chapterPages'
 import ChapterSection from '~/components/chapter/ChapterSection.vue'
@@ -78,9 +79,10 @@ const EXIT_TRAVEL = 1100        // px of further overscroll mapped to a full de 
 const COMMIT_DE = 0.9           // de past which the exit commits (navigate home)
 let coupling = false            // a coupled bottom exit is engaged (scrubbing de)
 let deTarget = 0                // overscroll-accumulated target (0..1)
-let deCurrent = 0               // lerped actual de fed to the scene + the page shrink
+let deCurrent = 0               // lerped actual de fed to the scene + the page-card flight
 let coupleRaf = null
-const smooth = (a, b, x) => { const k = Math.min(1, Math.max(0, (x - a) / (b - a))); return k * k * (3 - 2 * k) }
+let capturing = false           // a page snapshot is being taken (guards re-entrant engage)
+let pageSnapshot = null         // pre-warmed snapshot canvas of the visible page (engage uses it)
 
 function onWheel(e) {
   if (!ready || !lenis || exiting) return
@@ -119,15 +121,61 @@ function doExit() {
   router.push('/')
 }
 
+// ── Page snapshot (the bottom exit renders the PAGE onto a real 3D card) ──────────────────────────
+// Embed the LOCAL @font-face fonts (Bague/Movie) as data URLs so the snapshot renders the real fonts
+// without html-to-image stalling on the cross-origin Google-Fonts stylesheet. Computed once.
+let fontEmbedCSS = null
+async function getFontEmbedCSS() {
+  if (fontEmbedCSS !== null) return fontEmbedCSS
+  fontEmbedCSS = ''
+  try {
+    const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
+    const faces = await Promise.all([['Bague', `${base}/fonts/Bague.woff`], ['Movie', `${base}/fonts/Movie.woff`]].map(
+      async ([fam, url]) => {
+        const buf = new Uint8Array(await (await fetch(url)).arrayBuffer())
+        let bin = ''
+        for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i])
+        return `@font-face{font-family:'${fam}';src:url(data:font/woff;base64,${btoa(bin)}) format('woff');font-display:block;}`
+      }
+    ))
+    fontEmbedCSS = faces.join('\n')
+  } catch (e) { /* leave empty — the snapshot falls back to system fonts */ }
+  return fontEmbedCSS
+}
+async function capturePage() {
+  const el = pageEl.value
+  if (!el) return null
+  try {
+    return await toCanvas(el, {
+      fontEmbedCSS: await getFontEmbedCSS(),
+      pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+      filter: (n) => n.tagName !== 'VIDEO',   // no videos in the article, but be safe
+    })
+  } catch (e) { console.warn('[exit] page snapshot failed', e); return null }
+}
+// Pre-warm the snapshot while the reader sits at the bottom so engaging the exit is instant (no hitch).
+async function prewarmSnapshot() {
+  if (capturing || coupling || exiting || pageSnapshot) return
+  capturing = true
+  pageSnapshot = await capturePage()
+  capturing = false
+}
+
 // ── Scroll-coupled "drop into the deck" (bottom edge) ────────────────────────────────────────────
-// Engage once (beginExit captures the selected/scrolled pose), then overscroll scrubs `de`. The scene
-// rises + spins the deck and keeps the chapter's cards hidden (setExitProgress); the DOM page shrinks
-// toward the rising deck and hands off at the catch. Reversible until it commits at de≈1.
-function startCouple(seedPx) {
+// Engage: snapshot the visible page → a real 3D card (scene.beginPageCard) and hide the DOM. Overscroll
+// then scrubs `de`: scene.setPageCardProgress flies that card into the rising/spinning ring (tilting
+// like a card) + reassembles the deck, handing off to the real poster at the catch. Reversible to commit.
+async function startCouple(seedPx) {
+  if (coupling || exiting || capturing) return
   const scene = webglSceneRef?.value?.scene
-  if (coupling || exiting || !scene?.beginExit || !scene.beginExit()) return
+  if (!scene?.beginPageCard) return
+  capturing = true
+  const canvas = pageSnapshot || await capturePage()
+  capturing = false
+  if (!canvas || coupling || exiting || !scene.beginPageCard(canvas)) return
   coupling = true
   lenis?.stop()                                   // we own the wheel now (overscroll scrubs de)
+  if (pageEl.value) pageEl.value.style.opacity = '0'   // DOM hidden — the page-card IS the page now
   deTarget = Math.min(1, (seedPx || 0) / EXIT_TRAVEL)
   deCurrent = 0
   loopCouple()
@@ -136,22 +184,9 @@ function loopCouple() {
   coupleRaf = requestAnimationFrame(loopCouple)
   const scene = webglSceneRef?.value?.scene
   deCurrent += (deTarget - deCurrent) * 0.16      // smooth toward the scrubbed target (coupled feel)
-  scene?.setExitProgress(deCurrent)
-  applyPageShrink(deCurrent)
+  scene?.setPageCardProgress(deCurrent)
   if (deTarget >= COMMIT_DE && deCurrent >= COMMIT_DE - 0.03) commitCouple()
   else if (deTarget <= 0 && deCurrent <= 0.004) cancelCouple()
-}
-// The DOM page shrinks toward the low-rising deck + fades into it at the catch (its fade window matches
-// the scene's HERO_REVEAL_* so the page hands off exactly as the real card fades in).
-function applyPageShrink(de) {
-  const el = pageEl.value
-  if (!el) return
-  const k = smooth(0, 0.62, de)                   // shrink/drift progress
-  const s = 1 - 0.84 * k                          // scale 1 → 0.16 (card-ish)
-  const ty = 14 * k                               // drift DOWN toward the rising deck (vh)
-  el.style.transformOrigin = '50% 58%'
-  el.style.transform = `translateY(${ty}vh) scale(${s})`
-  el.style.opacity = String(1 - smooth(0.5, 0.8, de))   // fade into the deck at the catch
 }
 function commitCouple() {
   if (exiting) return
@@ -159,17 +194,16 @@ function commitCouple() {
   if (coupleRaf) { cancelAnimationFrame(coupleRaf); coupleRaf = null }
   coupling = false
   const scene = webglSceneRef?.value?.scene
-  scene?.setExitProgress(1)
-  scene?.endExit()                                // finalize the homepage ring (selectedIndex=-1)…
+  scene?.setPageCardProgress(1)
+  scene?.endPageCard()                            // dispose the page-card + finalize the ring (idx=-1)…
   router.push('/')                                // …BEFORE navigate so the watcher won't double-deselect
 }
 function cancelCouple() {
   if (coupleRaf) { cancelAnimationFrame(coupleRaf); coupleRaf = null }
   coupling = false
   deTarget = 0; deCurrent = 0
-  webglSceneRef?.value?.scene?.cancelExit()       // restore the selected/scrolled hero (no teleport)
-  const el = pageEl.value
-  if (el) { el.style.transform = ''; el.style.opacity = ''; el.style.transformOrigin = '' }
+  webglSceneRef?.value?.scene?.cancelPageCard()   // dispose the page-card + restore the selected hero
+  if (pageEl.value) pageEl.value.style.opacity = ''   // reveal the DOM page again
   lenis?.start()                                  // resume reading the page
 }
 
@@ -187,7 +221,13 @@ onMounted(() => {
     content: scrollEl.value,
     autoRaf: true,
   })
-  lenis.on('scroll', (e) => scene?.setScroll(e.scroll))
+  lenis.on('scroll', (e) => {
+    scene?.setScroll(e.scroll)
+    // Pre-warm the exit snapshot while the reader sits at the very bottom (invalidate when away),
+    // so engaging the drop-into-deck is instant — no capture hitch.
+    if (lenis && lenis.limit > 0 && e.scroll >= lenis.limit - 4) prewarmSnapshot()
+    else if (!coupling && !capturing) pageSnapshot = null
+  })
   scene?.setScroll(0)
 
   // Hold scrolling until the select-in animation settles. Scrolling mid-select used

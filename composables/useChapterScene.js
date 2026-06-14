@@ -273,6 +273,9 @@ export function useChapterScene() {
   let selectedHero = null   // the single poster scaled up as the full-screen hero (P1)
   let scrollOffsetPx = 0    // inner-page scroll position in px (from Lenis) — drives the hero up/away
   let exitStart = null      // captured transforms at the start of a forward scroll-exit (step E)
+  let pageCardMesh = null   // the inner PAGE snapshot on a WebGL plane (bottom exit "page→card")
+  let pageCardTex = null
+  let pageCardStart = null
   const EXIT_SPIN = toRad(290)  // forward spin during the scroll-end return (matches reference's +290°)
   // Bottom-exit timing (de = exit progress 0→1, scroll-COUPLED by the page = "drop into the deck").
   // The CHAPTER's own cards stay HIDDEN while the DOM page shrinks (the page is the visible chapter
@@ -1342,6 +1345,64 @@ export function useChapterScene() {
     hoveredIndex = -1   // stale hover would block the idle center-text sync (deselect resets it too)
   }
 
+  // ── Bottom exit: the inner PAGE rendered onto a 3D card (snapshot) that drops into the ring ──
+  // This gives the bottom what the top gets for free: a REAL WebGL card to rotate. At the top you
+  // look straight at the hero card through the transparent .chapter-hero; at the bottom you're on the
+  // opaque DOM article, so we rasterise it onto a full-bleed plane (beginPageCard), fly that plane into
+  // the rising ring tilting like a card (setPageCardProgress) while the deck reassembles, then hand off
+  // to the real poster card (it fades in over HERO_REVEAL_* as the page-card fades out).
+  function beginPageCard(canvas) {
+    if (!scene || !canvas) return false
+    if (!beginExit()) return false   // capture the deck state + hide the chapter's own poster cards
+    const tex = new THREE.CanvasTexture(canvas)
+    tex.colorSpace = THREE.SRGBColorSpace
+    tex.minFilter = THREE.LinearFilter
+    tex.magFilter = THREE.LinearFilter
+    const z = 40                                      // same depth as the selected hero sits at
+    const distC = Math.max(1, camera.position.z - z)
+    const h = 2 * distC * Math.tan(toRad(camera.fov / 2))   // world height that fills the frame at z
+    const w = h * aspectRatio
+    const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false })
+    mat.toneMapped = false
+    pageCardMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat)
+    pageCardMesh.position.set(camera.position.x, camera.position.y, z)
+    pageCardMesh.scale.set(w, h, 1)
+    pageCardMesh.renderOrder = 999                    // draw on top (depthTest off) — it's the page
+    pageCardTex = tex
+    pageCardStart = { x: camera.position.x, y: camera.position.y, z, w, h }
+    scene.add(pageCardMesh)
+    return true
+  }
+  function setPageCardProgress(de) {
+    setExitProgress(de)                               // deck rises + spins + reassembles; cards hidden→reveal
+    if (!pageCardMesh || !pageCardStart) return
+    const t = Math.min(1, Math.max(0, de))
+    const k = Math.min(1, t / 0.72)                   // the card's flight finishes by ~the handoff
+    const ks = k * k * (3 - 2 * k)                    // smoothstep
+    const lp = (a, b, kk = ks) => a + (b - a) * kk
+    // Fly the page-card down into the front of the rising ring, tilting into the group's orientation,
+    // shrinking to ring-card size. (Hand-tuned path — refine the targets to seat it in the front slot.)
+    pageCardMesh.position.x = lp(pageCardStart.x, 0)
+    pageCardMesh.position.y = lp(pageCardStart.y, -6)
+    pageCardMesh.position.z = lp(pageCardStart.z, 30)
+    const s = lp(1, 0.16)
+    pageCardMesh.scale.set(pageCardStart.w * s, pageCardStart.h * s, 1)
+    pageCardMesh.rotation.x = lp(0, toRad(25))
+    pageCardMesh.rotation.y = lp(0, toRad(-70))
+    // Hand off: fade the page-card out exactly as the real chapter cards fade in (HERO_REVEAL_*).
+    pageCardMesh.material.opacity = 1 - Math.min(1, Math.max(0, (t - HERO_REVEAL_START) / (HERO_REVEAL_END - HERO_REVEAL_START)))
+  }
+  function disposePageCard() {
+    if (!pageCardMesh) return
+    scene.remove(pageCardMesh)
+    pageCardMesh.geometry.dispose()
+    pageCardMesh.material.dispose()
+    if (pageCardTex) pageCardTex.dispose()
+    pageCardMesh = null; pageCardTex = null; pageCardStart = null
+  }
+  function endPageCard() { disposePageCard(); endExit() }
+  function cancelPageCard() { disposePageCard(); cancelExit() }
+
   function onScroll(delta) {
     if (!introComplete) return
     // While a chapter is open, the inner page (Lenis) owns scrolling AND the exit
@@ -1475,9 +1536,13 @@ export function useChapterScene() {
                       // while the DOM page shrinks into the deck (driven by pages/[slug].vue)
     setScroll,        // inner-page scroll → hero card coupling (P1)
     beginExit,        // forward scroll-end exit (step E) — scrubbed return into the ring
-    setExitProgress,  // de 0→1, scroll-coupled by the page (drop-into-deck)
+    setExitProgress,  // de 0→1, scroll-coupled by the page (deck rise/spin/reassemble)
     cancelExit,       // abort an uncommitted bottom exit → restore selected state
     endExit,
+    beginPageCard,      // BOTTOM exit: snapshot the inner page onto a 3D card (pass a canvas)
+    setPageCardProgress,// de 0→1 — fly the page-card into the ring + reassemble the deck (coupled)
+    cancelPageCard,     // abort → dispose the page-card + restore the selected state
+    endPageCard,        // commit → dispose the page-card + finalize the homepage ring
     getState: () => ({ selectedIndex, hoveredIndex, introComplete, isSelecting, isDeselecting }),
   }
 }
