@@ -274,15 +274,17 @@ export function useChapterScene() {
   let scrollOffsetPx = 0    // inner-page scroll position in px (from Lenis) — drives the hero up/away
   let exitStart = null      // captured transforms at the start of a forward scroll-exit (step E)
   const EXIT_SPIN = toRad(290)  // forward spin during the scroll-end return (matches reference's +290°)
-  // Bottom-exit timing (de = exit progress 0→1, scroll-coupled by the page):
-  //  • HERO_RETURN_END — the hero's POSITION is home by this de, while the page is still
-  //    opaque over the centre, so its return reads as smooth, never a snap.
-  //  • SHRINK_START — the card holds full-bleed (so it matches the page at the reveal),
-  //    then un-grows/un-frames INTO the ring from here to de=1. The ring (carousel rise +
-  //    side cards rising from below + forward spin) reassembles across the whole range to
-  //    "catch" the shrinking page.
+  // Bottom-exit timing (de = exit progress 0→1, scroll-COUPLED by the page = "drop into the deck").
+  // The CHAPTER's own cards stay HIDDEN while the DOM page shrinks (the page is the visible chapter
+  // card); they fade in at the handoff so "the shrinking page becomes a card that drops into the deck."
+  //  • HERO_RETURN_END  — the hero card's POSITION is back at its ring slot by this de (still hidden).
+  //  • HERO_FIT_END     — the hero card has shrunk to ring size (scale/blend/progress → ring) by this de.
+  //  • HERO_REVEAL_*    — chapter cards fade in across this window = the page→card handoff. (Visible at
+  //    de=0 too, so a cancel restores the selected/scrolled hero.)
   const HERO_RETURN_END = 0.45
-  const SHRINK_START = 0.30
+  const HERO_FIT_END = 0.60
+  const HERO_REVEAL_START = 0.58
+  const HERO_REVEAL_END = 0.82
   // Phase 1 (drop-into-deck rework): during the bottom exit, BOTH poster copies of the CURRENT
   // chapter (the hero AND its mirror/back copy) are hidden instantly (uOpacity→0 for any de>0) so
   // neither is seen as "a version of the page spinning off in the back" separate from the DOM page
@@ -539,6 +541,7 @@ export function useChapterScene() {
             scaleX: +p.mesh.scale.x.toFixed(2),
             blend: +p.material.uniforms.blendFactor.value.toFixed(2),
             progress: +p.material.uniforms.progress.value.toFixed(2),
+            opacity: p.material.uniforms.uOpacity ? +p.material.uniforms.uOpacity.value.toFixed(2) : 1,
           }
         })
       }
@@ -1279,31 +1282,37 @@ export function useChapterScene() {
   function setExitProgress(de) {
     if (!exitStart || !selectedHero) return
     const t = Math.min(1, Math.max(0, de))
+    const sstep = (a, b) => { const k = Math.min(1, Math.max(0, (t - a) / (b - a))); return k * k * (3 - 2 * k) }
     const heroT = Math.min(1, t / HERO_RETURN_END)
-    const shrinkT = Math.max(0, (t - SHRINK_START) / (1 - SHRINK_START))
+    const fitT = Math.min(1, t / HERO_FIT_END)
+    // reveal: chapter cards hidden through the page-shrink, fading in at the handoff. =1 at de=0 so a
+    // cancel restores the selected/scrolled hero (it's off-screen-top then, so being visible is unseen).
+    const reveal = t > 0 ? sstep(HERO_REVEAL_START, HERO_REVEAL_END) : 1
     const lp = (a, b, k = t) => a + (b - a) * k
     const hero = selectedHero
+    // The deck rises from below + spins forward + re-tilts, all COUPLED to de — "the card deck shows up
+    // at the bottom of the page, spinning along with the scroll." (Other chapters' cards stay visible.)
     carousel.animatedRotationY = exitStart.rot + EXIT_SPIN * t   // forward, not reverse
     carousel.position.y = lp(exitStart.cy, 0)                    // ring lifts to rest centre
     const tilt = isMobile ? { x: toRad(22), y: 0, z: 0 } : { x: toRad(25), y: toRad(70), z: toRad(15) }
     groupG.rotation.x = lp(exitStart.gx, tilt.x)
     groupG.rotation.y = lp(exitStart.gy, tilt.y)
     groupG.rotation.z = lp(exitStart.gz, tilt.z)
-    const s = lp(exitStart.heroScale, 1, shrinkT)               // hold full-bleed, then shrink in
+    // The chapter's hero card returns to its ring slot (Y by HERO_RETURN_END) and shrinks to ring size
+    // (by HERO_FIT_END) — but WHILE HIDDEN; the shrinking DOM page is the visible chapter card.
+    const s = lp(exitStart.heroScale, 1, fitT)
     hero.mesh.scale.set(s, s, 1)
-    hero.mesh.position.y = lp(exitStart.heroY, hero.baseY, heroT) // return home early, under cover
-    hero.material.uniforms.blendFactor.value = lp(exitStart.blend, 0, shrinkT)
-    hero.material.uniforms.progress.value = lp(exitStart.prog, 0, shrinkT)
-    // Keep the hero VISIBLE the whole way (the reference rides the real card into the ring; it stays
-    // hidden under the still-opaque DOM page until the page cross-fades to reveal it). Restored to its
-    // captured opacity at de=0 (cancel). [Was hidden for de>0 under the rejected DOM-over-scene approach.]
-    if (hero.material.uniforms.uOpacity) hero.material.uniforms.uOpacity.value = exitStart.heroOpacity
+    hero.mesh.position.y = lp(exitStart.heroY, hero.baseY, heroT)
+    hero.material.uniforms.blendFactor.value = lp(exitStart.blend, 0, fitT)
+    hero.material.uniforms.progress.value = lp(exitStart.prog, 0, fitT)
+    // Handoff: fade the chapter's card in as the DOM page fades out — "the page becomes a card that
+    // drops into the deck." Restored to its captured opacity at de=0 (cancel).
+    if (hero.material.uniforms.uOpacity) hero.material.uniforms.uOpacity.value = exitStart.heroOpacity * reveal
     if (groupG.userData.txtMat) groupG.userData.txtMat.opacity = lp(exitStart.txtOpacity, 1)
     for (const o of exitStart.others) {
       o.p.mesh.position.y = lp(o.y, o.p.baseY)   // other-chapter cards rise from below (kept visible)
-      // The chapter's OTHER copy would show the SAME art rising — hide it too so there's no wine
-      // duplicate; the other chapters' cards keep their opacity (the wrap-in the user liked).
-      if (o.same && o.p.material.uniforms.uOpacity) o.p.material.uniforms.uOpacity.value = t > 0 ? 0 : o.op
+      // The chapter's OTHER copy is hidden through the shrink too (no duplicate), fading in at the handoff.
+      if (o.same && o.p.material.uniforms.uOpacity) o.p.material.uniforms.uOpacity.value = o.op * reveal
     }
   }
 

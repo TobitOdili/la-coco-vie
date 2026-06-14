@@ -34,7 +34,6 @@
 <script setup>
 import { computed, onMounted, onBeforeUnmount, inject, ref } from 'vue'
 import Lenis from 'lenis'
-import gsap from 'gsap'
 import { CHAPTERS } from '~/composables/useChapterScene'
 import { CHAPTER_PAGES } from '~/composables/chapterPages'
 import ChapterSection from '~/components/chapter/ChapterSection.vue'
@@ -56,19 +55,32 @@ let lenis = null
 //   • Top edge, keep scrolling UP → REVERSE rewind: navigate home, the app.vue route watcher runs
 //     scene.deselectChapter() (hero shrinks, ring reverse-spins back). Seamless because at scroll 0
 //     you're already looking at the WebGL hero through the transparent .chapter-hero.
-//   • Bottom edge, keep scrolling DOWN → FORWARD ride-into-the-ring (the reference's setPageProgress):
-//     the REAL selected card returns from its scrolled-off position and rotates into the deck spinning
-//     forward, while the opaque DOM article CROSS-FADES out (no transform) to reveal it. One WebGL
-//     motion + a fade — NOT a 2D DOM shrink over a separately-spinning scene (the prior dead ends).
-const EXIT_THRESHOLD = 800   // px of overscroll past an edge to trigger the exit
-let endAccum = 0             // bottom overscroll accumulator
+//   • Bottom edge, keep scrolling DOWN → SCROLL-COUPLED "drop into the deck" (reversible). Continued
+//     overscroll scrubs `de` 0→1: the 3D deck rises from below + spins forward COUPLED to the scroll
+//     (scene.setExitProgress) while the chapter's own cards stay hidden; the DOM page visibly SHRINKS
+//     toward the rising deck and, at the catch, hands off (fades out) to its real card fading in —
+//     "the page becomes a card that drops into sync with the rest of the cards," which then rise to
+//     centre + spin into the homepage ring. Scroll back up to cancel; commit + navigate at de≈1.
+const EXIT_THRESHOLD = 800   // px of overscroll past the TOP edge to trigger the (reverse) exit
+let endAccum = 0             // bottom overscroll accumulator (until the coupled exit engages)
 let topAccum = 0             // top overscroll accumulator
 let lastWheelT = 0           // last wheel-event time — a gap means a new gesture
-let exiting = false          // an exit fired (navigating home) — lock out further input
+let exiting = false          // an exit committed (navigating home) — lock out further input
 let ready = false            // select-in settled — scroll + exit gestures enabled
 let readyPoll = null
 let settleTries = 0          // waitSettled attempts — bounded so a failed scene can't freeze the page
 const SETTLE_DEADLINE = 40   // ~8s at 200ms/try before we enable scroll without the select-in handoff
+
+// Scroll-coupled "drop into the deck" bottom exit (de 0→1, reversible). Engages after a small
+// overscroll, then continued overscroll scrubs de; scroll back up past 0 cancels.
+const ENGAGE_OVERSCROLL = 160   // px of bottom overscroll before the coupled exit engages
+const EXIT_TRAVEL = 1100        // px of further overscroll mapped to a full de 0→1
+const COMMIT_DE = 0.9           // de past which the exit commits (navigate home)
+let coupling = false            // a coupled bottom exit is engaged (scrubbing de)
+let deTarget = 0                // overscroll-accumulated target (0..1)
+let deCurrent = 0               // lerped actual de fed to the scene + the page shrink
+let coupleRaf = null
+const smooth = (a, b, x) => { const k = Math.min(1, Math.max(0, (x - a) / (b - a))); return k * k * (3 - 2 * k) }
 
 function onWheel(e) {
   if (!ready || !lenis || exiting) return
@@ -76,58 +88,89 @@ function onWheel(e) {
   // counts against a pixel threshold made exits near-unreachable there. ~40px/line ≈
   // Chrome's ~120px notch.
   const dy = e.deltaY * (e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? window.innerHeight : 1)
+  // Once the coupled drop-into-deck is engaged we own the wheel: scrub de (down advances, up reverses)
+  // and prevent native scroll so it can't fight the shrink.
+  if (coupling) {
+    e.preventDefault?.()
+    deTarget = Math.max(0, Math.min(1, deTarget + dy / EXIT_TRAVEL))
+    return
+  }
   const now = performance.now()
   if (now - lastWheelT > 400) { endAccum = 0; topAccum = 0 }   // a pause = a new gesture
   lastWheelT = now
   const atBottom = lenis.limit > 0 && lenis.scroll >= lenis.limit - 2
   const atTop = lenis.scroll <= 2
-  if (atBottom && dy > 0) {            // bottom edge, pushing down → forward "drop into deck"
+  if (atBottom && dy > 0) {            // bottom edge, pushing down → engage the coupled drop-into-deck
     endAccum += dy; topAccum = 0
-    if (endAccum >= EXIT_THRESHOLD) doExit(true)
+    if (endAccum >= ENGAGE_OVERSCROLL) startCouple(endAccum - ENGAGE_OVERSCROLL)
   } else if (atTop && dy < 0) {        // top edge, pushing up → reverse rewind
     topAccum += -dy; endAccum = 0
-    if (topAccum >= EXIT_THRESHOLD) doExit(false)
+    if (topAccum >= EXIT_THRESHOLD) doExit()
   } else {                             // mid-page → free scroll, no exit
     endAccum = 0; topAccum = 0
   }
 }
 
-// BOTTOM edge → forward ride-into-the-ring, the faithful reference mechanism (window.setPageProgress).
-// scene.beginExit() captures the selected card's current (scrolled-off) pose; a single GSAP tween then
-// drives de 0→1 through scene.setExitProgress(de), which returns the REAL card home, scales it hero→1,
-// and rotates it into the deck spinning forward (+290°) with the other cards rising from below — ONE
-// clock, one coordinate system. The DOM page only CROSS-FADES its opacity out (no transform) once the
-// card is home (~de FADE_START), revealing the real card to ride in; it unmounts on navigate. endExit()
-// finalizes the homepage ring BEFORE router.push so the route watcher sees selectedIndex=-1 and doesn't
-// also fire deselectChapter. (Top edge / back / a scene without beginExit → plain reverse via the watcher.)
-function doExit(fromBottom) {
+// TOP edge / back button → plain REVERSE: navigate home; app.vue's route watcher runs deselectChapter().
+function doExit() {
   if (exiting) return
   exiting = true
   lenis?.stop()
+  router.push('/')
+}
+
+// ── Scroll-coupled "drop into the deck" (bottom edge) ────────────────────────────────────────────
+// Engage once (beginExit captures the selected/scrolled pose), then overscroll scrubs `de`. The scene
+// rises + spins the deck and keeps the chapter's cards hidden (setExitProgress); the DOM page shrinks
+// toward the rising deck and hands off at the catch. Reversible until it commits at de≈1.
+function startCouple(seedPx) {
   const scene = webglSceneRef?.value?.scene
-  if (fromBottom && scene?.beginExit && scene.beginExit()) {
-    const el = pageEl.value
-    const FADE_START = 0.45   // hero is home by here (HERO_RETURN_END) — start revealing the real card
-    const FADE_END = 0.62
-    const driver = { de: 0 }
-    gsap.to(driver, {
-      de: 1,
-      duration: 2.6,
-      ease: 'power4.inOut',
-      onUpdate: () => {
-        scene.setExitProgress(driver.de)
-        if (el) {
-          const o = driver.de <= FADE_START ? 1
-            : driver.de >= FADE_END ? 0
-            : 1 - (driver.de - FADE_START) / (FADE_END - FADE_START)
-          el.style.opacity = String(o)
-        }
-      },
-      onComplete: () => { scene.endExit(); router.push('/') },
-    })
-    return
-  }
-  router.push('/')   // top edge / back → deselectChapter via the watcher
+  if (coupling || exiting || !scene?.beginExit || !scene.beginExit()) return
+  coupling = true
+  lenis?.stop()                                   // we own the wheel now (overscroll scrubs de)
+  deTarget = Math.min(1, (seedPx || 0) / EXIT_TRAVEL)
+  deCurrent = 0
+  loopCouple()
+}
+function loopCouple() {
+  coupleRaf = requestAnimationFrame(loopCouple)
+  const scene = webglSceneRef?.value?.scene
+  deCurrent += (deTarget - deCurrent) * 0.16      // smooth toward the scrubbed target (coupled feel)
+  scene?.setExitProgress(deCurrent)
+  applyPageShrink(deCurrent)
+  if (deTarget >= COMMIT_DE && deCurrent >= COMMIT_DE - 0.03) commitCouple()
+  else if (deTarget <= 0 && deCurrent <= 0.004) cancelCouple()
+}
+// The DOM page shrinks toward the low-rising deck + fades into it at the catch (its fade window matches
+// the scene's HERO_REVEAL_* so the page hands off exactly as the real card fades in).
+function applyPageShrink(de) {
+  const el = pageEl.value
+  if (!el) return
+  const k = smooth(0, 0.62, de)                   // shrink/drift progress
+  const s = 1 - 0.84 * k                          // scale 1 → 0.16 (card-ish)
+  const ty = 14 * k                               // drift DOWN toward the rising deck (vh)
+  el.style.transformOrigin = '50% 58%'
+  el.style.transform = `translateY(${ty}vh) scale(${s})`
+  el.style.opacity = String(1 - smooth(0.5, 0.8, de))   // fade into the deck at the catch
+}
+function commitCouple() {
+  if (exiting) return
+  exiting = true
+  if (coupleRaf) { cancelAnimationFrame(coupleRaf); coupleRaf = null }
+  coupling = false
+  const scene = webglSceneRef?.value?.scene
+  scene?.setExitProgress(1)
+  scene?.endExit()                                // finalize the homepage ring (selectedIndex=-1)…
+  router.push('/')                                // …BEFORE navigate so the watcher won't double-deselect
+}
+function cancelCouple() {
+  if (coupleRaf) { cancelAnimationFrame(coupleRaf); coupleRaf = null }
+  coupling = false
+  deTarget = 0; deCurrent = 0
+  webglSceneRef?.value?.scene?.cancelExit()       // restore the selected/scrolled hero (no teleport)
+  const el = pageEl.value
+  if (el) { el.style.transform = ''; el.style.opacity = ''; el.style.transformOrigin = '' }
+  lenis?.start()                                  // resume reading the page
 }
 
 onMounted(() => {
@@ -175,12 +218,14 @@ onMounted(() => {
   }
   waitSettled()
 
-  pageEl.value?.addEventListener('wheel', onWheel, { passive: true })
+  // Non-passive so the coupled drop-into-deck can preventDefault() native scroll while scrubbing de.
+  pageEl.value?.addEventListener('wheel', onWheel, { passive: false })
 })
 
 onBeforeUnmount(() => {
   pageEl.value?.removeEventListener('wheel', onWheel)
   if (readyPoll) clearTimeout(readyPoll)
+  if (coupleRaf) cancelAnimationFrame(coupleRaf)
   lenis?.destroy()
   lenis = null
   webglSceneRef?.value?.scene?.setScroll(0)
