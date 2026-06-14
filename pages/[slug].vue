@@ -157,28 +157,35 @@ function sampleCanvas(c) {
   } catch (e) { return { err: String(e) } }   // SecurityError ⇒ tainted canvas (cross-origin content)
 }
 async function capturePage() {
-  // Capture the LIVE wrapper: its visible sections are already revealed (opacity 1) by the page's
-  // IntersectionObserver — an off-screen clone never fires the observer, so it captures transparent.
-  // skipFonts avoids html-to-image stalling/erroring on the cross-origin Google-Fonts stylesheet (which
-  // silently blanks the capture); the LOCAL article fonts go in via fontEmbedCSS instead.
-  const el = pageEl.value
-  if (!el) return null
+  // Capture the LIVE content element (its visible sections are already revealed at opacity 1 by the
+  // page's IntersectionObserver — an off-screen clone never fires the observer → transparent capture).
+  // Lenis scrolls the WRAPPER via native scrollTop (no transform), which html-to-image doesn't replicate,
+  // so capture the FULL content then crop the [scrollTop, scrollTop+vh] visible slice. skipFonts avoids
+  // the Google-Fonts CORS blank; the LOCAL article fonts come in via fontEmbedCSS.
+  const content = scrollEl.value
+  const wrapper = pageEl.value
+  if (!content || !wrapper) return null
   const dbg = /[?&]debug/.test(location.search)
   try {
     const css = await getFontEmbedCSS()
-    const canvas = await toCanvas(el, {
+    const full = await toCanvas(content, {
       skipFonts: true,
       fontEmbedCSS: css,
       backgroundColor: '#f3ebe4',           // the chapter's accentLight (the article's bg)
       pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
-      filter: (n) => n.tagName !== 'VIDEO', // no videos in the article, but be safe
+      filter: (n) => n.tagName !== 'VIDEO',
     })
+    const pr = full.width / (content.offsetWidth || window.innerWidth)
+    const scrollTop = wrapper.scrollTop || (lenis ? lenis.scroll : 0)
+    const slice = document.createElement('canvas')
+    slice.width = full.width
+    slice.height = Math.round(window.innerHeight * pr)
+    slice.getContext('2d').drawImage(full, 0, -Math.round(scrollTop * pr))   // shift the visible slice to the top
     if (dbg) window.__capInfo = {
-      fontCSSLen: css ? css.length : 0, scrollY: lenis ? lenis.scroll : 0,
-      pageScrollTop: el.scrollTop, scrollTransform: scrollEl.value ? getComputedStyle(scrollEl.value).transform : null,
-      w: canvas && canvas.width, h: canvas && canvas.height, sample: sampleCanvas(canvas),
+      fontCSSLen: css ? css.length : 0, scrollTop, scrollTransform: getComputedStyle(content).transform,
+      fullW: full.width, fullH: full.height, sliceW: slice.width, sliceH: slice.height, sample: sampleCanvas(slice),
     }
-    return canvas
+    return slice
   } catch (e) { if (dbg) window.__capInfo = { error: String(e) }; console.warn('[exit] page snapshot failed', e); return null }
 }
 // Pre-warm the snapshot while the reader sits at the bottom so engaging the exit is instant (no hitch).
