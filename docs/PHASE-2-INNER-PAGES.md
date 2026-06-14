@@ -85,6 +85,28 @@ scroll to the bottom; the hover film plays in a real browser, not in Browserless
 `HERO_FIT_END`, and the catch alignment (the DOM shrinks toward `translateY +14vh`; nudge so it lands where
 the rising deck's front card sits). `exitChapterDrop` + the #6 GSAP path are now **dead** (delete on cleanup).
 
+**✗ The `228c1baf` coupled DOM-CSS-shrink was REJECTED** (user): the page "literally just shrinks" as a
+FLAT 2D rectangle next to the tilted 3D cards, and the ring should rise BEFORE the edge. Superseded by ▼.
+
+**▶▶ 2026-06-14 BOTTOM EXIT = PAGE SNAPSHOT → A REAL 3D CARD (commit `990b372a`, capture prod-verified).**
+The user's call (AskUserQuestion): give the bottom what the top gets for free — a real WebGL card to
+rotate. At the bottom you're on the opaque DOM article (the hero card scrolled off-top), so rasterise the
+page onto a plane (`html-to-image`) and fly it into the ring. `pages/[slug].vue capturePage()` →
+`scene.beginPageCard(canvas)` (hide DOM) → overscroll scrubs `scene.setPageCardProgress(de)`: the page-card
+flies down into the rising deck (tilt + shrink) while `setExitProgress` reassembles the ring, fading out
+over `HERO_REVEAL_*` as the real poster fades in. `cancelPageCard`/`endPageCard`. **⚠️ The CAPTURE took 4
+chained fixes** (all verified, page-card now shows the real article + flies in, 0 errors): (1) `skipFonts:true`
+— html-to-image silently blanks on the cross-origin Google-Fonts stylesheet; (2) capture the LIVE element,
+not an off-screen clone — the article sections start `opacity:0` and reveal via IntersectionObserver, which
+never fires off-screen; (3) **Lenis scrolls the wrapper via native `scrollTop` (no transform)**, which
+html-to-image can't replicate → capture the FULL `.chapter-scroll` then `drawImage`-crop the
+`[scrollTop, scrollTop+vh]` slice; (4) pixel-opaque + taint sampling to verify (`?debug` →
+`window.__capInfo`/`__capEngage`; `/tmp/bless/cardprobe.mjs`). Capture is pre-warmed at the bottom.
+**▶ OPEN:** (a) the card FLIGHT PATH (`setPageCardProgress` targets) is hand-tuned — needs the user's eye;
+(b) **pre-edge ring-rise not built yet** (deck should rise as you approach the bottom, before the edge);
+(c) fonts are FALLBACK (`skipFonts` skips `fontEmbedCSS` too) — try `skipFonts:false`+`fontEmbedCSS` for
+real Bague/Movie (verify it doesn't re-blank); (d) clean up the `?debug` capture instrumentation + dead exits.
+
 **Other roadblocks**
 - **Option B reference match** is blocked on the Claude extension granted on **`chapter.millanova.com`**
   (a user action). Mechanism already decoded (`window.setPageProgress`, +290° forward) — a fidelity match.
