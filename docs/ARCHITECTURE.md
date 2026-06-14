@@ -110,11 +110,11 @@ routes (so no intro replay). Handles:
 owns the inner-page scroll + exit:
 - **Lenis** smooth scroll (wrapper `.chapter-page`, content `.chapter-scroll`); each scroll
   tick → `scene.setScroll(px)` for the 1:1 hero coupling (P1).
-- **Edge-gated exits** via a `wheel` listener (gated until the select-in settles): overscroll
-  past the **top OR bottom** past `EXIT_THRESHOLD` → `doExit()` → `router.push('/')` → the route
-  watcher runs `scene.deselectChapter()` (card shrinks + ring reverse-spins). The DOM page
-  unmounts on navigate, so only the WebGL scene animates (one motion, no layering).
-  See [Lifecycle → exit](#exit-edge-gated-in-pagesslugvue).
+- **Edge-gated exits** via a `wheel` listener (gated until the select-in settles): overscroll past
+  an edge past `EXIT_THRESHOLD` → `doExit(fromBottom)` → `router.push('/')`. The DOM page unmounts on
+  navigate, so only the WebGL scene animates (one motion, no layering). **Top** → `deselectChapter()`
+  (reverse rewind, via the route watcher). **Bottom** → `scene.exitChapterForward()` (the mirror:
+  forward spin, card rises in from below). See [Lifecycle → exit](#exit-edge-gated-in-pagesslugvue).
 
 ### `composables/chapterPages.js`
 Inner-page content (`CHAPTER_PAGES[slug].sections[]` + the `DRESSES` table). Lightweight data
@@ -177,10 +177,14 @@ beginExit, setExitProgress, endExit, getState }`. It closes over all scene state
 camera, groups, posters, flags). `getState()` → `{ selectedIndex, hoveredIndex, introComplete,
 isSelecting, isDeselecting }`.
 
-- `selectChapter(chIdx)` / `deselectChapter()` — entry + exit (both driven by the route watcher).
-  `deselectChapter` is the **single exit animation** for the top edge, the bottom edge, AND the
-  back button/nav logo: snaps the hero to `baseY`, reverse-spins `animatedRotationY → preSelectRot`,
-  re-tilts the group, and restores carousel-Y + all poster uniforms/scale/position.
+- `selectChapter(chIdx)` / `deselectChapter()` — entry + the **top/back-button** exit. `deselectChapter`
+  snaps the hero to `baseY`, **reverse**-spins `animatedRotationY → preSelectRot`, re-tilts the group,
+  restores carousel-Y + all poster uniforms/scale/position. (Driven by the route watcher.)
+- `exitChapterForward()` — the **bottom-edge** exit, a mirror of `deselectChapter` (same ~2.5s
+  reassembly timeline): spins **forward** (`animatedRotationY += EXIT_SPIN`, no reversal) and brings
+  the hero in **from below** (mirrors its scrolled-off-top offset to off-screen below, then rises it
+  into the ring) instead of snapping it to centre. Called by the page before `router.push('/')`; it
+  sets `isDeselecting` so the watcher's `deselectChapter` no-ops.
 - `setScroll(px)` — inner-page scroll position → 1:1 hero coupling (P1).
 - `beginExit()` / `setExitProgress(0→1)` / `cancelExit()` / `endExit()` — **DORMANT** scrubbable
   forward-exit primitives (mirror the reference's `window.setPageProgress`). Built for the
@@ -299,19 +303,21 @@ inner page detects overscroll past an edge and triggers ONE animation for everyt
 | Trigger | Animation | Path |
 |---|---|---|
 | **Back button / nav logo** (any time) | reverse-spin into the ring | `router.push('/')` → watcher → `deselectChapter()` |
-| **Top edge**, keep scrolling up (all chapters) | same reverse-spin | `doExit()` → `router.push('/')` → `deselectChapter()` |
-| **Bottom edge**, keep scrolling down (all chapters) | same reverse-spin | `doExit()` → `router.push('/')` → `deselectChapter()` |
+| **Top edge**, keep scrolling up | reverse rewind | `doExit(false)` → `router.push('/')` → `deselectChapter()` |
+| **Bottom edge**, keep scrolling down | forward mirror (card rises from below) | `doExit(true)` → `exitChapterForward()` + `router.push('/')` |
 
-- **`doExit()`** (`pages/[slug].vue`): fires once overscroll past either edge exceeds `EXIT_THRESHOLD`
-  (800 px); stops Lenis and `router.push('/')`. The DOM page **unmounts on navigate**, so during the
-  animation only the WebGL scene is on screen — no DOM-vs-scene layering.
-- **`deselectChapter()`** (~2.5 s): snaps the hero back to ring-centre (`baseY`) first so it's clean
-  from any scroll depth, pauses the film, reverse-spins `animatedRotationY → preSelectRot`, and
-  restores group tilt / carousel Y / all poster uniforms+scale+position. This single animation serves
-  top, bottom, and the back button — verified clean on prod (real wheel-driven exit → DOM unmounts →
-  single WebGL reverse-spin → homepage ring).
-- A scroll-coupled forward "drop into the deck" exit was prototyped then **reverted** (it layered a
-  DOM transform over the scene). See PHASE-2 board, "E (bottom exit) — PARKED" for the rebuild path.
+- **`doExit(fromBottom)`** (`pages/[slug].vue`): fires once overscroll past an edge exceeds
+  `EXIT_THRESHOLD` (800 px); stops Lenis, runs the bottom exit if `fromBottom`, then `router.push('/')`.
+  The DOM page **unmounts on navigate**, so during the animation only the WebGL scene is on screen —
+  no DOM-vs-scene layering.
+- **`deselectChapter()`** (~2.5 s, top/back): snaps the hero to ring-centre (`baseY`), reverse-spins
+  `animatedRotationY → preSelectRot`, restores tilt / carousel-Y / all posters. Smooth from the top
+  (hero already on-screen at scroll 0).
+- **`exitChapterForward()`** (~2.5 s, bottom): the mirror — **forward** spin (`+EXIT_SPIN` 290°, no
+  reversal) and the hero rises **from below** (its scrolled-off-top offset mirrored off-screen-below,
+  hidden under the unmounting page) instead of snapping to centre. Reuses the same reassembly. Prod-
+  verified on the real wheel path (animRotY 7.07→12.13 monotonic forward, carY −43→0, DOM unmounted,
+  no snap, clean homepage).
 - Mid-page scrolling is **free** in both directions (only the literal edges trigger exits).
 
 ---
