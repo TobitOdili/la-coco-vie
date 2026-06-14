@@ -104,7 +104,10 @@ async function doExit(fromBottom) {
   if (fromBottom && scene?.createSnapshotCard && pageEl.value) {
     try {
       const { toCanvas } = await import('html-to-image')
-      const canvas = await toCanvas(pageEl.value, { pixelRatio: Math.min(2, window.devicePixelRatio || 1), cacheBust: true })
+      // skipFonts: don't fetch/inline the cross-origin Google-Fonts stylesheet (it throws a
+      // CORS SecurityError and stalls the capture for seconds). The page's own fonts are already
+      // loaded in the document, and the card shrinks/fades in <2s so glyph fidelity is moot.
+      const canvas = await toCanvas(pageEl.value, { pixelRatio: Math.min(2, window.devicePixelRatio || 1), skipFonts: true })
       if (scene.createSnapshotCard(canvas)) {
         pageEl.value.style.visibility = 'hidden'   // the plane now shows the identical view → no disappear
         scene.snapshotExitForward(() => router.push('/'))
