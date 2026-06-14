@@ -142,6 +142,20 @@ async function getFontEmbedCSS() {
   } catch (e) { /* leave empty — the snapshot falls back to system fonts */ }
   return fontEmbedCSS
 }
+// Debug: count non-transparent pixels in a captured canvas (and surface a taint/SecurityError).
+function sampleCanvas(c) {
+  if (!c) return null
+  try {
+    const ctx = c.getContext('2d')
+    let opaque = 0, total = 0
+    const step = 50
+    for (let y = 0; y < c.height; y += step) for (let x = 0; x < c.width; x += step) {
+      total++
+      if (ctx.getImageData(x, y, 1, 1).data[3] > 8) opaque++
+    }
+    return { total, opaque }
+  } catch (e) { return { err: String(e) } }   // SecurityError ⇒ tainted canvas (cross-origin content)
+}
 async function capturePage() {
   const content = scrollEl.value
   if (!content) return null
@@ -169,15 +183,7 @@ async function capturePage() {
       pixelRatio: Math.min(window.devicePixelRatio || 1, 2),
       filter: (n) => n.tagName !== 'VIDEO',   // no videos in the article, but be safe
     })
-    if (dbg) {
-      window.__capInfo = { fontCSSLen: css ? css.length : 0, scrollY, vw, vh, w: canvas && canvas.width, h: canvas && canvas.height }
-      if (canvas) {
-        document.getElementById('__capdbg')?.remove()
-        canvas.id = '__capdbg'
-        canvas.style.cssText = 'position:fixed;top:8px;left:8px;width:220px;height:auto;z-index:99999;border:2px solid red;background:#ccc;'
-        document.body.appendChild(canvas)
-      }
-    }
+    if (dbg) window.__capInfo = { fontCSSLen: css ? css.length : 0, scrollY, vw, vh, w: canvas && canvas.width, h: canvas && canvas.height, sample: sampleCanvas(canvas) }
     return canvas
   } catch (e) { if (dbg) window.__capInfo = { error: String(e) }; console.warn('[exit] page snapshot failed', e); return null }
   finally { document.body.removeChild(holder) }
@@ -201,6 +207,7 @@ async function startCouple(seedPx) {
   capturing = true
   const canvas = pageSnapshot || await capturePage()
   capturing = false
+  if (/[?&]debug/.test(location.search)) window.__capEngage = { fromPrewarm: !!pageSnapshot, w: canvas && canvas.width, h: canvas && canvas.height, sample: sampleCanvas(canvas) }
   if (!canvas || coupling || exiting || !scene.beginPageCard(canvas)) return
   coupling = true
   lenis?.stop()                                   // we own the wheel now (overscroll scrubs de)
