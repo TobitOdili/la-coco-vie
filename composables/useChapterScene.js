@@ -274,17 +274,14 @@ export function useChapterScene() {
   let scrollOffsetPx = 0    // inner-page scroll position in px (from Lenis) — drives the hero up/away
   let exitStart = null      // captured transforms at the start of a forward scroll-exit (step E)
   const EXIT_SPIN = toRad(290)  // forward spin during the scroll-end return (matches reference's +290°)
-  // Bottom-exit timing (de = exit progress 0→1, scroll-COUPLED by the page = "drop into the deck").
-  // The CHAPTER's own cards stay HIDDEN while the DOM page shrinks (the page is the visible chapter
-  // card); they fade in at the handoff so "the shrinking page becomes a card that drops into the deck."
-  //  • HERO_RETURN_END  — the hero card's POSITION is back at its ring slot by this de (still hidden).
-  //  • HERO_FIT_END     — the hero card has shrunk to ring size (scale/blend/progress → ring) by this de.
-  //  • HERO_REVEAL_*    — chapter cards fade in across this window = the page→card handoff. (Visible at
-  //    de=0 too, so a cancel restores the selected/scrolled hero.)
-  const HERO_RETURN_END = 0.45
-  const HERO_FIT_END = 0.60
-  const HERO_REVEAL_START = 0.58
-  const HERO_REVEAL_END = 0.82
+  // Bottom-exit timing (de = exit progress 0→1, driven by the page's OUTRO-section scroll). The ring rises
+  // + spins + un-tilts to the homepage pose; the hero card descends from off-top into its ring slot (= the
+  // "card drops in from the top"). ALL cards stay VISIBLE the whole time (the reference never hides them).
+  //  • HERO_RETURN_END — the hero card's POSITION is back at its ring slot by this de.
+  //  • HERO_FIT_END    — the hero un-frames + shrinks to ring size by this de (EARLY, mostly while still
+  //    high/off-screen) so the descent reads as a clean ring card, not a full-bleed morph.
+  const HERO_RETURN_END = 0.55
+  const HERO_FIT_END = 0.25
   // Phase 1 (drop-into-deck rework): during the bottom exit, BOTH poster copies of the CURRENT
   // chapter (the hero AND its mirror/back copy) are hidden instantly (uOpacity→0 for any de>0) so
   // neither is seen as "a version of the page spinning off in the back" separate from the DOM page
@@ -1219,46 +1216,35 @@ export function useChapterScene() {
     return true
   }
 
-  // de: 0 (full-bleed hero / page) → 1 (back in the ring). The page drives `de` from
-  // overscroll, so this must be safe to call repeatedly in either direction (coupled).
-  // Two internal sub-progresses re-time the parts so the exit reads as the deck rising
-  // from below to "catch" the shrinking page (no snap, no sideways slide):
-  //   heroT   — hero returns to centre EARLY (under the opaque page)
-  //   shrinkT — card holds full-bleed, then un-grows/un-frames INTO the ring late
+  // de: 0 (selected: hero off-top full-bleed, ring low/flat) → 1 (homepage ring). Driven by the page's
+  // OUTRO-section scroll position (scroll-coupled — safe to call repeatedly in either direction):
+  //   heroT — the hero card descends to its ring slot
+  //   fitT  — the hero un-frames + shrinks to ring size EARLY (mostly while still high/off-screen)
   function setExitProgress(de) {
     if (!exitStart || !selectedHero) return
     const t = Math.min(1, Math.max(0, de))
-    const sstep = (a, b) => { const k = Math.min(1, Math.max(0, (t - a) / (b - a))); return k * k * (3 - 2 * k) }
     const heroT = Math.min(1, t / HERO_RETURN_END)
     const fitT = Math.min(1, t / HERO_FIT_END)
-    // reveal: chapter cards hidden through the page-shrink, fading in at the handoff. =1 at de=0 so a
-    // cancel restores the selected/scrolled hero (it's off-screen-top then, so being visible is unseen).
-    const reveal = t > 0 ? sstep(HERO_REVEAL_START, HERO_REVEAL_END) : 1
     const lp = (a, b, k = t) => a + (b - a) * k
     const hero = selectedHero
-    // The deck rises from below + spins forward + re-tilts, all COUPLED to de — "the card deck shows up
-    // at the bottom of the page, spinning along with the scroll." (Other chapters' cards stay visible.)
+    // The ring rises from below + spins forward + re-tilts to the homepage pose, all COUPLED to de.
     carousel.animatedRotationY = exitStart.rot + EXIT_SPIN * t   // forward, not reverse
     carousel.position.y = lp(exitStart.cy, 0)                    // ring lifts to rest centre
     const tilt = isMobile ? { x: toRad(22), y: 0, z: 0 } : { x: toRad(25), y: toRad(70), z: toRad(15) }
     groupG.rotation.x = lp(exitStart.gx, tilt.x)
     groupG.rotation.y = lp(exitStart.gy, tilt.y)
     groupG.rotation.z = lp(exitStart.gz, tilt.z)
-    // The chapter's hero card returns to its ring slot (Y by HERO_RETURN_END) and shrinks to ring size
-    // (by HERO_FIT_END) — but WHILE HIDDEN; the shrinking DOM page is the visible chapter card.
+    // The hero card un-frames + shrinks to ring size EARLY (fitT), then descends from off-top into its ring
+    // slot (heroT) as a clean ring card — VISIBLE the whole time (the "card drops in from the top").
     const s = lp(exitStart.heroScale, 1, fitT)
     hero.mesh.scale.set(s, s, 1)
     hero.mesh.position.y = lp(exitStart.heroY, hero.baseY, heroT)
     hero.material.uniforms.blendFactor.value = lp(exitStart.blend, 0, fitT)
     hero.material.uniforms.progress.value = lp(exitStart.prog, 0, fitT)
-    // Handoff: fade the chapter's card in as the DOM page fades out — "the page becomes a card that
-    // drops into the deck." Restored to its captured opacity at de=0 (cancel).
-    if (hero.material.uniforms.uOpacity) hero.material.uniforms.uOpacity.value = exitStart.heroOpacity * reveal
+    if (hero.material.uniforms.uOpacity) hero.material.uniforms.uOpacity.value = exitStart.heroOpacity
     if (groupG.userData.txtMat) groupG.userData.txtMat.opacity = lp(exitStart.txtOpacity, 1)
     for (const o of exitStart.others) {
-      o.p.mesh.position.y = lp(o.y, o.p.baseY)   // other-chapter cards rise from below (kept visible)
-      // The chapter's OTHER copy is hidden through the shrink too (no duplicate), fading in at the handoff.
-      if (o.same && o.p.material.uniforms.uOpacity) o.p.material.uniforms.uOpacity.value = o.op * reveal
+      o.p.mesh.position.y = lp(o.y, o.p.baseY)   // the other cards rise from below into the ring (all visible)
     }
   }
 

@@ -27,6 +27,11 @@
           <code>docs/PHASE-2-INNER-PAGES.md</code>.
         </p>
       </section>
+
+      <!-- Scroll-driven exit "outro": transparent, so the WebGL ring shows through as the article scrolls
+           out above it. Scrolling through it drives the ring reassembly (scene.setExitProgress, de 0→1);
+           reaching the bottom navigates home. (Reference: the page scrolls fully out, the ring rises in.) -->
+      <section ref="outroEl" class="chapter-outro" aria-hidden="true" />
     </div>
   </div>
 </template>
@@ -49,6 +54,7 @@ const webglSceneRef = inject('webglSceneRef', null)
 
 const pageEl = ref(null)
 const scrollEl = ref(null)
+const outroEl = ref(null)
 let lenis = null
 
 // Exit gestures (current). TOP edge: overscroll UP past EXIT_THRESHOLD → navigate home, and app.vue's
@@ -65,6 +71,13 @@ let ready = false            // select-in settled — scroll + exit gestures ena
 let readyPoll = null
 let settleTries = 0          // waitSettled attempts — bounded so a failed scene can't freeze the page
 const SETTLE_DEADLINE = 40   // ~8s at 200ms/try before we enable scroll without the select-in handoff
+
+// Scroll-driven BOTTOM exit (the reference's "outro" section). As you scroll past the article into the
+// transparent .chapter-outro, `de` maps the scroll position 0→1 and drives scene.setExitProgress — the
+// ring rises/spins/un-tilts and the hero card descends from off-top into its slot. Reversible (scroll
+// back up → cancelExit restores the article); de→1 (page bottom) commits + navigates home.
+const OUTRO_LEAD = 1.0       // viewports of overlap — the exit begins as the outro scrolls into view
+let exitEngaged = false      // beginExit() has fired (the ring is reassembling under the scroll)
 
 function onWheel(e) {
   if (!ready || !lenis || exiting) return
@@ -90,6 +103,36 @@ function doExit() {
   router.push('/')
 }
 
+// BOTTOM exit — driven by scroll position within the .chapter-outro section.
+function updateExit(scrollY) {
+  if (!ready || exiting || !lenis) return
+  const outro = outroEl.value
+  const scene = webglSceneRef?.value?.scene
+  if (!outro || !scene?.setExitProgress) return
+  const start = outro.offsetTop - window.innerHeight * OUTRO_LEAD   // exit begins as the outro scrolls in
+  const end = lenis.limit                                           // page bottom
+  if (end <= start) return
+  const de = Math.min(1, Math.max(0, (scrollY - start) / (end - start)))
+  if (de <= 0) {
+    if (exitEngaged) { scene.cancelExit?.(); exitEngaged = false }  // scrolled back up into the article
+    return
+  }
+  if (!exitEngaged) {
+    if (!scene.beginExit?.()) return   // capture the selected/scrolled state + start the reassembly
+    exitEngaged = true
+  }
+  scene.setExitProgress(de)
+  if (de >= 0.999) commitExit()
+}
+function commitExit() {
+  if (exiting) return
+  exiting = true
+  const scene = webglSceneRef?.value?.scene
+  scene?.setExitProgress(1)
+  scene?.endExit?.()        // finalize the homepage ring (selectedIndex=-1) BEFORE navigate so the…
+  router.push('/')          // …route watcher won't also fire deselectChapter
+}
+
 onMounted(() => {
   if (!chapter.value) { navigateTo('/'); return }
 
@@ -104,7 +147,7 @@ onMounted(() => {
     content: scrollEl.value,
     autoRaf: true,
   })
-  lenis.on('scroll', (e) => scene?.setScroll(e.scroll))
+  lenis.on('scroll', (e) => { scene?.setScroll(e.scroll); updateExit(e.scroll) })
   scene?.setScroll(0)
 
   // Hold scrolling until the select-in animation settles. Scrolling mid-select used
@@ -141,6 +184,8 @@ onMounted(() => {
 onBeforeUnmount(() => {
   pageEl.value?.removeEventListener('wheel', onWheel)
   if (readyPoll) clearTimeout(readyPoll)
+  // Leaving mid-exit (e.g. the back button while in the outro) → finalize to a clean homepage ring.
+  if (exitEngaged && !exiting) webglSceneRef?.value?.scene?.endExit?.()
   lenis?.destroy()
   lenis = null
   webglSceneRef?.value?.scene?.setScroll(0)
@@ -172,6 +217,12 @@ onBeforeUnmount(() => {
 /* Transparent hero — the WebGL hero shows through here. */
 .chapter-hero {
   height: 100dvh;
+}
+
+/* Scroll-driven exit "outro" — transparent, so the WebGL ring shows through as the article scrolls out
+   above it. Its height sets how much scroll the ring-reassembly spans (tune for feel). */
+.chapter-outro {
+  height: 150vh;
 }
 
 /* Content scrolls up over the (fixed) WebGL hero on the chapter's light accent. */
