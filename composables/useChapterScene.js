@@ -805,8 +805,12 @@ export function useChapterScene() {
           const ss = op * op * (3 - 2 * op)  // smoothstep
           target = DEPTH_FADE_FLOOR + (1 - DEPTH_FADE_FLOOR) * ss
         }
-        const cur = p.material.uniforms.uOpacity.value
-        p.material.uniforms.uOpacity.value = cur + (target - cur) * 0.1
+        // Don't touch uOpacity during the bottom exit — setExitProgress owns it (it hides the wine card
+        // through phase A, then fades it in for the drop); the idle depth-fade would lerp it back to 1.
+        if (!isDeselecting) {
+          const cur = p.material.uniforms.uOpacity.value
+          p.material.uniforms.uOpacity.value = cur + (target - cur) * 0.1
+        }
       }
     })
 
