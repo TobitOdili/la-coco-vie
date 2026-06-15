@@ -1259,8 +1259,11 @@ export function useChapterScene() {
     hero.material.uniforms.progress.value = lp(exitStart.prog, 0, fitT)
     if (hero.material.uniforms.uOpacity) hero.material.uniforms.uOpacity.value = exitStart.heroOpacity
     if (groupG.userData.txtMat) groupG.userData.txtMat.opacity = lp(exitStart.txtOpacity, 1)
+    // The other cards rise from below into their ring slots EARLY (by BOWL_END), so the ring is assembled
+    // in the bowl; then the whole carousel rises (carousel.y above) to the homepage.
+    const cardsT = ss(Math.min(1, t / BOWL_END))
     for (const o of exitStart.others) {
-      o.p.mesh.position.y = lp(o.y, o.p.baseY)   // the other cards rise from below into the ring (all visible)
+      o.p.mesh.position.y = lp(o.y, o.p.baseY, cardsT)
     }
   }
 
