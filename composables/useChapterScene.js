@@ -273,9 +273,6 @@ export function useChapterScene() {
   let selectedHero = null   // the single poster scaled up as the full-screen hero (P1)
   let scrollOffsetPx = 0    // inner-page scroll position in px (from Lenis) — drives the hero up/away
   let exitStart = null      // captured transforms at the start of a forward scroll-exit (step E)
-  let pageCardMesh = null   // the inner PAGE snapshot on a WebGL plane (bottom exit "page→card")
-  let pageCardTex = null
-  let pageCardStart = null
   const EXIT_SPIN = toRad(290)  // forward spin during the scroll-end return (matches reference's +290°)
   // Bottom-exit timing (de = exit progress 0→1, scroll-COUPLED by the page = "drop into the deck").
   // The CHAPTER's own cards stay HIDDEN while the DOM page shrinks (the page is the visible chapter
@@ -1161,60 +1158,6 @@ export function useChapterScene() {
     hoveredIndex = -1
   }
 
-  // ── Bottom-edge exit: the mirror of deselectChapter() ───────────────────────
-  // Same clean structure as the top exit (snap the card's start pose, then run ONE ~2.5s
-  // WebGL timeline that reassembles the ring; the inner DOM page unmounts on navigate so
-  // only the scene animates — no second layer). Mirrored for the bottom edge:
-  //   • Spin FORWARD (animatedRotationY += EXIT_SPIN) — continues the entry/homepage
-  //     direction, so there's NO reversal after it lands (the top exit rewinds to
-  //     preSelectRot, which decreases = reverse; we don't).
-  //   • The card comes from the BOTTOM, not the top. At the page bottom the hero scrolled
-  //     off the TOP; we mirror that offset to BELOW the frame (off-screen, so the reposition
-  //     is invisible — it happens under the still-mounted opaque page) and the timeline
-  //     rises it up into the ring. (deselectChapter snapped it to baseY, which from the
-  //     bottom read as a jump to the top — the reported bug.)
-  // ── Bottom exit: the REAL page drops into the deck ──────────────────────────
-  // The page (pages/[slug].vue) shrinks the actual DOM article toward the ring centre and fades
-  // it late — it's the front card dropping in. This scene side reassembles the ring spinning
-  // FORWARD (no reversal) around it, and HIDES both WebGL copies of the current chapter so the
-  // DOM page is the only copy (no duplicate spinning behind — the earlier bug). The chapter's
-  // cards fade back in at the end to complete the homepage ring. onDone fires when done (navigate).
-  function exitChapterDrop(onDone) {
-    if (selectedIndex === -1 || isDeselecting) { onDone && onDone(); return }
-    isDeselecting = true
-    scrollOffsetPx = 0
-    if (selectTl) { selectTl.kill(); selectTl = null; isSelecting = false }
-    videoElements[selectedIndex]?.pause()
-    gsap.killTweensOf(carousel)
-    const chIdx = selectedIndex
-    const chapterCards = posters.filter((p) => p.chapterIdx === chIdx)
-    // Hide BOTH copies of the current chapter NOW (the DOM page represents it) → no duplicate.
-    chapterCards.forEach((p) => { if (p.material.uniforms.uOpacity) { gsap.killTweensOf(p.material.uniforms.uOpacity); p.material.uniforms.uOpacity.value = 0 } })
-    const tl = gsap.timeline({
-      onComplete: () => { selectedIndex = -1; isDeselecting = false; selectedHero = null; deselectTl = null; onDone && onDone() },
-    })
-    deselectTl = tl
-    if (groupG.userData.txtMat) tl.to(groupG.userData.txtMat, { opacity: 1, duration: 1, ease: 'power2.inOut', overwrite: true }, 0)
-    // Spin a full +360° FORWARD (no reversal): the chapter's card returns to the FRONT-centre —
-    // exactly where the DOM page shrinks to — so it fades in there as the page fades out (the page
-    // lands on its own card). A non-360 amount would land a DIFFERENT card under the shrinking page.
-    tl.to(carousel, { animatedRotationY: carousel.animatedRotationY + TWO_PI, duration: 2.0, ease: 'power3.inOut', overwrite: true }, 0)
-    tl.to(carousel.position, { y: 0, duration: 2.0, ease: 'power3.inOut', overwrite: true }, 0)
-    const tilt = isMobile ? { x: toRad(22), y: 0, z: 0 } : { x: toRad(25), y: toRad(70), z: toRad(15) }
-    tl.to(groupG.rotation, { x: tilt.x, y: tilt.y, z: tilt.z, duration: 2.0, ease: 'power3.inOut', overwrite: true }, 0)
-    // All cards reassemble into the ring (the OTHER cards visibly; the chapter's cards invisibly).
-    posters.forEach((p) => {
-      tl.to(p.material.uniforms.blendFactor, { value: 0, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
-      tl.to(p.material.uniforms.progress, { value: 0, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
-      tl.to(p.mesh.scale, { x: 1, y: 1, z: 1, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
-      tl.to(p.mesh.position, { y: p.baseY, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
-    })
-    // Fade the chapter's cards back in over the last stretch (as the DOM page fades) so the
-    // homepage ring is complete with no opacity pop.
-    chapterCards.forEach((p) => { if (p.material.uniforms.uOpacity) tl.to(p.material.uniforms.uOpacity, { value: 1, duration: 0.5, ease: 'power2.out' }, 1.5) })
-    hoveredIndex = -1
-  }
-
   // ── Forward scroll-end exit (step E) ────────────────────────────────────────
   // The reference doesn't *rewind* the entry on scroll-end — it scrubs a forward
   // return: the hero shrinks back into the ring spinning FORWARD (+290°) as the ring
@@ -1345,64 +1288,6 @@ export function useChapterScene() {
     hoveredIndex = -1   // stale hover would block the idle center-text sync (deselect resets it too)
   }
 
-  // ── Bottom exit: the inner PAGE rendered onto a 3D card (snapshot) that drops into the ring ──
-  // This gives the bottom what the top gets for free: a REAL WebGL card to rotate. At the top you
-  // look straight at the hero card through the transparent .chapter-hero; at the bottom you're on the
-  // opaque DOM article, so we rasterise it onto a full-bleed plane (beginPageCard), fly that plane into
-  // the rising ring tilting like a card (setPageCardProgress) while the deck reassembles, then hand off
-  // to the real poster card (it fades in over HERO_REVEAL_* as the page-card fades out).
-  function beginPageCard(canvas) {
-    if (!scene || !canvas) return false
-    if (!beginExit()) return false   // capture the deck state + hide the chapter's own poster cards
-    const tex = new THREE.CanvasTexture(canvas)
-    tex.colorSpace = THREE.SRGBColorSpace
-    tex.minFilter = THREE.LinearFilter
-    tex.magFilter = THREE.LinearFilter
-    const z = 40                                      // same depth as the selected hero sits at
-    const distC = Math.max(1, camera.position.z - z)
-    const h = 2 * distC * Math.tan(toRad(camera.fov / 2))   // world height that fills the frame at z
-    const w = h * aspectRatio
-    const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false })
-    mat.toneMapped = false
-    pageCardMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), mat)
-    pageCardMesh.position.set(camera.position.x, camera.position.y, z)
-    pageCardMesh.scale.set(w, h, 1)
-    pageCardMesh.renderOrder = 999                    // draw on top (depthTest off) — it's the page
-    pageCardTex = tex
-    pageCardStart = { x: camera.position.x, y: camera.position.y, z, w, h }
-    scene.add(pageCardMesh)
-    return true
-  }
-  function setPageCardProgress(de) {
-    setExitProgress(de)                               // deck rises + spins + reassembles; cards hidden→reveal
-    if (!pageCardMesh || !pageCardStart) return
-    const t = Math.min(1, Math.max(0, de))
-    const k = Math.min(1, t / 0.72)                   // the card's flight finishes by ~the handoff
-    const ks = k * k * (3 - 2 * k)                    // smoothstep
-    const lp = (a, b, kk = ks) => a + (b - a) * kk
-    // Fly the page-card down into the front of the rising ring, tilting into the group's orientation,
-    // shrinking to ring-card size. (Hand-tuned path — refine the targets to seat it in the front slot.)
-    pageCardMesh.position.x = lp(pageCardStart.x, 0)
-    pageCardMesh.position.y = lp(pageCardStart.y, -6)
-    pageCardMesh.position.z = lp(pageCardStart.z, 30)
-    const s = lp(1, 0.16)
-    pageCardMesh.scale.set(pageCardStart.w * s, pageCardStart.h * s, 1)
-    pageCardMesh.rotation.x = lp(0, toRad(25))
-    pageCardMesh.rotation.y = lp(0, toRad(-70))
-    // Hand off: fade the page-card out exactly as the real chapter cards fade in (HERO_REVEAL_*).
-    pageCardMesh.material.opacity = 1 - Math.min(1, Math.max(0, (t - HERO_REVEAL_START) / (HERO_REVEAL_END - HERO_REVEAL_START)))
-  }
-  function disposePageCard() {
-    if (!pageCardMesh) return
-    scene.remove(pageCardMesh)
-    pageCardMesh.geometry.dispose()
-    pageCardMesh.material.dispose()
-    if (pageCardTex) pageCardTex.dispose()
-    pageCardMesh = null; pageCardTex = null; pageCardStart = null
-  }
-  function endPageCard() { disposePageCard(); endExit() }
-  function cancelPageCard() { disposePageCard(); cancelExit() }
-
   function onScroll(delta) {
     if (!introComplete) return
     // While a chapter is open, the inner page (Lenis) owns scrolling AND the exit
@@ -1532,17 +1417,14 @@ export function useChapterScene() {
     onReady,
     selectChapter,    // exposed so the route watcher can drive selection (Phase 2)
     deselectChapter,  // TOP-edge / back-button exit: reverse-spin rewind into the ring
-    exitChapterDrop,  // BOTTOM-edge exit: reassemble the ring (forward) + hide the chapter's cards
-                      // while the DOM page shrinks into the deck (driven by pages/[slug].vue)
     setScroll,        // inner-page scroll → hero card coupling (P1)
-    beginExit,        // forward scroll-end exit (step E) — scrubbed return into the ring
-    setExitProgress,  // de 0→1, scroll-coupled by the page (deck rise/spin/reassemble)
-    cancelExit,       // abort an uncommitted bottom exit → restore selected state
-    endExit,
-    beginPageCard,      // BOTTOM exit: snapshot the inner page onto a 3D card (pass a canvas)
-    setPageCardProgress,// de 0→1 — fly the page-card into the ring + reassemble the deck (coupled)
-    cancelPageCard,     // abort → dispose the page-card + restore the selected state
-    endPageCard,        // commit → dispose the page-card + finalize the homepage ring
+    // Forward ring-reassembly primitives (de 0→1), reserved for the scroll-driven BOTTOM exit rebuild
+    // (page scrolls out → ring "outro" section; see docs/PHASE-2-INNER-PAGES.md). Currently driven only
+    // by the ?debug __exit* hooks.
+    beginExit,        // capture the selected/scrolled state + hide the chapter's own cards
+    setExitProgress,  // de 0→1 — ring rises from below, spins forward, un-tilts; hero returns from off-top
+    cancelExit,       // abort → restore the selected/scrolled state
+    endExit,          // commit → finalize the homepage ring (selectedIndex = -1)
     getState: () => ({ selectedIndex, hoveredIndex, introComplete, isSelecting, isDeselecting }),
   }
 }
