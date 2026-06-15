@@ -276,25 +276,25 @@ export function useChapterScene() {
   // NEGATIVE = the same direction a homepage down-scroll turns the ring (onScroll does scrollRotationY -=
   // delta*0.0008), so the exit flows into the homepage idle with NO spin reversal.
   const EXIT_SPIN = toRad(-300)
-  const DROP_START = 0.45    // de at which the page is fully scrolled out → the wine card starts to drop
+  const DROP_START = 0.45    // de at which the page is fully out → the unfurl + the second wine's drop begin
   const exitBg = new THREE.Color('#ffffff')  // scene background during the exit (set to the chapter accent)
   let exitBgAlpha = 0        // 0 = transparent (homepage) … 1 = opaque accent (selected/exit)
-  // Bottom-exit timing (de = exit progress 0→1, driven by the page's OUTRO-section scroll). The ring rises
-  // + spins + un-tilts to the homepage pose; the hero card descends from off-top into its ring slot (= the
-  // "card drops in from the top"). ALL cards stay VISIBLE the whole time (the reference never hides them).
-  //  • HERO_FIT_END — the wine card un-frames + shrinks to ring size by this de (EARLY, while still hidden)
-  //    so its phase-B descent reads as a clean ring card, not a full-bleed morph.
+  // Bottom-exit timing (de = exit progress 0→1, driven by the page's OUTRO-section scroll). Phase A gathers
+  // the deck into a tight low cluster behind the still-scrolling-out article; phase B unfurls it into the
+  // homepage ring while the SECOND wine copy drops in from the top.
+  //  • HERO_FIT_END — the second wine copy un-frames + shrinks to ring size by this de (EARLY, while still
+  //    off-top + hidden) so its phase-B descent reads as a clean ring card, not a full-bleed morph.
   const HERO_FIT_END = 0.25
-  // Exit "bowl": during phase A the ring assembles LOW + tilted so you look down INTO the cylinder (the
-  // reference view); phase B rises + un-tilts it to the homepage fan.
+  // Exit "bowl": during phase A the ring gathers LOW + steeply tilted + at a small radius so you look down
+  // INTO a tight cluster (the reference view); phase B rises + un-tilts + unfurls it to the homepage fan.
   const BOWL_Y = -58                                           // carousel.y at the bowl (below selected -43)
   const BOWL_TILT = { x: toRad(58), y: toRad(36), z: toRad(4) } // steep look-down (vs homepage 25/70/15)
-  // Phase 1 (drop-into-deck rework): during the bottom exit, BOTH poster copies of the CURRENT
-  // chapter (the hero AND its mirror/back copy) are hidden instantly (uOpacity→0 for any de>0) so
-  // neither is seen as "a version of the page spinning off in the back" separate from the DOM page
-  // — the DOM page represents the chapter's card. They're restored at endExit so the homepage ring
-  // is complete (placeholder until Phase 3 makes the DOM page itself the card). The OTHER chapters'
-  // cards keep their spin/rise from below (the user wants that rotation).
+  // Cluster radius: in phase A the whole deck gathers inward to this small radius (cards bunched/overlapping
+  // = the reference's "tightly squeezed together" look), then unfurls back out to baseDistance over phase B.
+  const CLUSTER_R = 18
+  // The exit keeps ALL cards present + visible (the reference never hides the deck): one wine copy (the
+  // mirror) rides in the cluster from the start; only the SECOND wine copy (the hero) waits off-top and
+  // drops into its slot during the unfurl. endExit restores both to full opacity for the homepage ring.
   let preSelectRot = 0  // carousel.animatedRotationY before a select — restored on deselect (reverse spin)
   let deselectTl = null // live deselect timeline — killed if a new select starts mid-deselect
   let selectTl = null   // live select timeline — killed by deselect/re-select so its stale
@@ -1250,50 +1250,64 @@ export function useChapterScene() {
     const lp = (a, b, k = t) => a + (b - a) * k
     const ss = (k) => { const u = Math.min(1, Math.max(0, k)); return u * u * (3 - 2 * u) }
     const hero = selectedHero
-    // TWO PHASES. A [0..DROP_START]: the page scrolls out while the ring assembles into the low "look into
-    // the cylinder" bowl and SPINS — but the WINE card stays HIDDEN (its slot empty). B [DROP_START..1]:
-    // the page is gone → the wine card descends from the top into its slot (synced to the spin) while the
-    // bowl rises + un-tilts to the homepage fan and the accent background fades out.
-    const a = ss(Math.min(1, t / DROP_START))                       // page-out + bowl-assemble
-    const b = ss(Math.max(0, (t - DROP_START) / (1 - DROP_START)))  // the drop + rise-to-homepage
+    // TWO PHASES. A [0..DROP_START]: behind the still-scrolling-out article, the deck GATHERS into a tight,
+    // low, steeply-tilted cluster (small radius) and starts spinning — ALL cards present incl. ONE wine copy
+    // (the mirror, "already there"); only the SECOND wine copy (the hero) waits off-top. B [DROP_START..1]:
+    // the article is gone → the cluster UNFURLS (radius grows) + rises + un-tilts to the homepage fan while
+    // it spins, and the second wine copy DROPS in from the top into its slot. Card faces stay visible the
+    // whole unfurl (no hide) and the accent background fades to the homepage over the late rise.
+    const a = ss(Math.min(1, t / DROP_START))                       // gather into the cluster (behind the page)
+    const b = ss(Math.max(0, (t - DROP_START) / (1 - DROP_START)))  // unfurl + the drop
 
     // Spin the whole way, in the down-scroll direction (EXIT_SPIN negative) → flows into the homepage idle.
     carousel.animatedRotationY = exitStart.rot + EXIT_SPIN * t
 
-    // Ring height + tilt: into the low bowl over phase A, then rise + un-tilt to the homepage over phase B.
+    // Ring height + tilt + radius: into the low tight cluster over phase A, then rise + un-tilt + unfurl to
+    // the homepage over phase B.
     const homeTilt = isMobile ? { x: toRad(22), y: 0, z: 0 } : { x: toRad(25), y: toRad(70), z: toRad(15) }
     const bowlTilt = isMobile ? { x: toRad(48), y: 0, z: 0 } : BOWL_TILT
-    let cy, tx, ty, tz
+    let cy, tx, ty, tz, radius
     if (t <= DROP_START) {
       cy = lp(exitStart.cy, BOWL_Y, a)
       tx = lp(exitStart.gx, bowlTilt.x, a); ty = lp(exitStart.gy, bowlTilt.y, a); tz = lp(exitStart.gz, bowlTilt.z, a)
+      radius = lp(baseDistance, CLUSTER_R, a)                       // gather inward to the tight cluster
     } else {
       cy = lp(BOWL_Y, 0, b)
       tx = lp(bowlTilt.x, homeTilt.x, b); ty = lp(bowlTilt.y, homeTilt.y, b); tz = lp(bowlTilt.z, homeTilt.z, b)
+      radius = lp(CLUSTER_R, baseDistance, b)                       // unfurl back out to the full ring
     }
     carousel.position.y = cy
     groupG.rotation.set(tx, ty, tz)
+    const rf = radius / baseDistance                                // scale every ring slot by the current radius
 
-    // Phase B sub-progresses for the wine card: descend over most of B, fade in early.
+    // Phase B sub-progresses for the second wine copy: descend over most of B, fade in early.
     const drop = ss(Math.min(1, b / 0.85))
     const reveal = ss(Math.min(1, b / 0.35))
-    const fitT = Math.min(1, t / HERO_FIT_END)                      // shrink to ring size early (while hidden)
+    const fitT = Math.min(1, t / HERO_FIT_END)                      // shrink to ring size early (while off-top)
 
-    // The OTHER cards rise into the ring over phase A (the ring assembles + spins, missing only the wine
-    // slot). The wine card's MIRROR copy (o.same) is hidden in A and fades in with the hero in B.
+    // EVERY other card (incl. the wine MIRROR = the copy that's "already there") gathers into the cluster in
+    // phase A and unfurls in B — present + visible the whole time (no hide). x/z scaled by the radius.
     for (const o of exitStart.others) {
+      o.p.mesh.position.x = o.p.baseX * rf
+      o.p.mesh.position.z = o.p.baseZ * rf
       o.p.mesh.position.y = lp(o.y, o.p.baseY, a)
-      if (o.same && o.p.material.uniforms.uOpacity) o.p.material.uniforms.uOpacity.value = t <= DROP_START ? 0 : o.op * reveal
+      if (o.p.material.uniforms.uOpacity) o.p.material.uniforms.uOpacity.value = 1
     }
 
-    // The WINE hero: hidden + parked off-top through phase A; in phase B it descends from off-top into its
-    // slot and fades in — "the page drops from the top." Ring-sized the whole descent (no full-bleed morph).
+    // The SECOND wine copy (the hero): off-top + hidden through phase A; in phase B it descends from off-top
+    // into its slot and fades in — "drops in from the top." Ring-sized the whole descent (no full-bleed
+    // morph); its x/z track the unfurling radius so it lands cleanly in its slot.
     hero.mesh.scale.set(lp(exitStart.heroScale, 1, fitT), lp(exitStart.heroScale, 1, fitT), 1)
+    hero.mesh.position.x = hero.baseX * rf
+    hero.mesh.position.z = hero.baseZ * rf
     hero.mesh.position.y = t <= DROP_START ? exitStart.heroY : lp(exitStart.heroY, hero.baseY, drop)
     hero.material.uniforms.blendFactor.value = lp(exitStart.blend, 0, fitT)
     hero.material.uniforms.progress.value = lp(exitStart.prog, 0, fitT)
     if (hero.material.uniforms.uOpacity) hero.material.uniforms.uOpacity.value = t <= DROP_START ? 0 : exitStart.heroOpacity * reveal
-    if (groupG.userData.txtMat) groupG.userData.txtMat.opacity = lp(exitStart.txtOpacity, 1)
+
+    // Center wordmark: stays out through the unfurl (the reference shows no floating wordmark mid-exit),
+    // fading in only as the homepage fan settles over the last ~40% of de.
+    if (groupG.userData.txtMat) groupG.userData.txtMat.opacity = lp(exitStart.txtOpacity, 1, ss(Math.max(0, (t - 0.6) / 0.4)))
 
     // Background: opaque chapter accent through the spin, fading to the homepage over the late rise.
     exitBgAlpha = t < 0.7 ? 1 : 1 - ss((t - 0.7) / 0.3)
