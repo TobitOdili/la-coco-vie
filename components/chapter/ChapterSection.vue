@@ -4,44 +4,44 @@
     class="chapter-section"
     :class="[`align-${section.align || 'left'}`, { 'in-view': visible }]"
   >
-    <div class="media">
-      <img
-        v-for="(src, i) in section.images"
-        :key="i"
-        class="shot"
-        :src="src"
-        :alt="`${section.title} ${i + 1}`"
-        loading="lazy"
-      />
-    </div>
+    <div class="split">
+      <div class="media">
+        <img class="shot" :src="sideImage" :alt="`${section.title}`" loading="lazy" />
+      </div>
 
-    <div class="copy">
-      <div class="num">Chapter {{ section.num }}</div>
-      <h2 class="heading">{{ section.title }}</h2>
-      <p class="body">{{ section.body }}</p>
-
-      <div v-if="resolvedDresses.length" class="dresses">
-        <DressTail v-for="d in resolvedDresses" :key="d.title" :dress="d" />
+      <div class="copy">
+        <div class="watermark" aria-hidden="true">{{ section.num }}</div>
+        <div class="num">Chapter {{ section.num }}</div>
+        <h2 class="heading">{{ section.title }}</h2>
+        <p class="body">{{ section.body }}</p>
       </div>
     </div>
+
+    <!-- Full-bleed immersive bands (the reference's big single photos between copy blocks). -->
+    <img
+      v-for="(src, i) in fullImages"
+      :key="i"
+      class="full-shot"
+      :src="src"
+      :alt="`${section.title} ${i + 1}`"
+      loading="lazy"
+    />
   </section>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { DRESSES } from '~/composables/chapterPages'
-import DressTail from '~/components/chapter/DressTail.vue'
 
 const props = defineProps({
   section: { type: Object, required: true },
 })
 
-const resolvedDresses = computed(() =>
-  (props.section.dresses || []).map((slug) => DRESSES[slug]).filter(Boolean)
-)
+// First image leads the split (the side photo); the rest become full-bleed bands.
+const sideImage = computed(() => props.section.images?.[0] || '')
+const fullImages = computed(() => (props.section.images || []).slice(1))
 
-// Lightweight scroll reveal (fade-up on first enter). A richer ScrollTrigger/
-// Lenis parallax pass can replace this later (see docs/PHASE-2-INNER-PAGES.md).
+// Reveal on first enter (latches — content shouldn't re-hide on scroll-up). The
+// dress popups are a separate, page-level concern (they toggle with the active section).
 const root = ref(null)
 const visible = ref(false)
 let observer = null
@@ -62,43 +62,62 @@ onBeforeUnmount(() => observer?.disconnect())
 
 <style scoped>
 .chapter-section {
-  min-height: 100dvh;
-  display: flex;
-  align-items: center;
-  gap: 4vw;
-  padding: 12vh 8vw;
-  box-sizing: border-box;
+  position: relative;
 }
-.align-right { flex-direction: row-reverse; }
+
+/* Immersive split: a full-height photo flush to one edge + the copy on the other. */
+.split {
+  display: flex;
+  min-height: 100dvh;
+  align-items: stretch;
+}
+.align-right .split { flex-direction: row-reverse; }
 
 .media {
-  flex: 1 1 45%;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  flex: 0 0 50%;
+  overflow: hidden;
 }
 .shot {
   width: 100%;
-  height: auto;
+  height: 100dvh;
+  object-fit: cover;
   display: block;
-  border-radius: 2px;
-  /* staggered reveal */
   opacity: 0;
-  transform: translateY(40px);
-  transition: opacity 0.9s ease, transform 0.9s ease;
+  transform: scale(1.05);
+  transition: opacity 1s ease, transform 1.6s ease;
 }
 .in-view .shot { opacity: 1; transform: none; }
-.in-view .shot:nth-child(2) { transition-delay: 0.12s; }
-.in-view .shot:nth-child(3) { transition-delay: 0.24s; }
 
 .copy {
-  flex: 1 1 55%;
+  flex: 1 1 50%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 10vh 7vw;
+  box-sizing: border-box;
   color: var(--accent, #333);
+}
+.copy > :not(.watermark) {
   opacity: 0;
-  transform: translateY(40px);
+  transform: translateY(34px);
   transition: opacity 0.9s ease 0.1s, transform 0.9s ease 0.1s;
 }
-.in-view .copy { opacity: 1; transform: none; }
+.in-view .copy > :not(.watermark) { opacity: 1; transform: none; }
+
+/* Oversized faint section numeral behind the copy. */
+.watermark {
+  position: absolute;
+  top: 4vh;
+  inset-inline-start: 5vw;
+  font-family: 'Bague', sans-serif;
+  font-weight: 700;
+  font-size: 26vh;
+  line-height: 0.8;
+  opacity: 0.06;
+  pointer-events: none;
+  user-select: none;
+}
 
 .num {
   text-transform: uppercase;
@@ -110,28 +129,37 @@ onBeforeUnmount(() => observer?.disconnect())
 .heading {
   font-family: 'Bague', sans-serif;
   font-weight: 700;
-  font-size: clamp(3rem, 9vw, 8rem);
+  font-size: clamp(2.75rem, 8vw, 7rem);
   line-height: 0.92;
   letter-spacing: 0.02em;
   margin: 0 0 1.5rem;
 }
 .body {
-  max-width: 34rem;
+  max-width: 32rem;
   font-size: 1.05rem;
   line-height: 1.7;
   opacity: 0.85;
   margin: 0;
 }
-.dresses {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: 2.5rem;
+
+.full-shot {
+  width: 100%;
+  height: 92dvh;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  transform: scale(1.05);
+  transition: opacity 1.1s ease, transform 1.8s ease;
 }
+.in-view .full-shot { opacity: 1; transform: none; }
 
 @media (max-width: 768px) {
-  .chapter-section,
-  .align-right { flex-direction: column; justify-content: center; }
-  .heading { font-size: clamp(2.5rem, 16vw, 5rem); }
+  .split { flex-direction: column; }
+  .align-right .split { flex-direction: column; }
+  .media { flex: none; }
+  .shot { height: 62dvh; }
+  .copy { padding: 8vh 8vw; }
+  .heading { font-size: clamp(2.5rem, 14vw, 5rem); }
+  .full-shot { height: 70dvh; }
 }
 </style>

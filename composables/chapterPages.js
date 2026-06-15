@@ -40,8 +40,8 @@ export const CHAPTER_PAGES = {
         num: 'I',
         title: 'THE BRIDE',
         body:
-          'Meet Ivy, a self-sufficient and open-minded woman who turned her love for wine ' +
-          'into her career. She wanted to share her passion with closest friends, so she ' +
+          'Meet Ivy, a self-sufficient and open-minded professional sommelier who turned her ' +
+          'love for wine into her career. She wanted to share her passion with closest friends, so she ' +
           'organized an intimate wedding in a picturesque Italian vineyard to enjoy a ' +
           'carefree, fun yet flawless celebration, reflecting her approach to life.',
         images: [

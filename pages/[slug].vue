@@ -12,11 +12,10 @@
         <ChapterSection
           v-for="(section, i) in pageContent.sections"
           :key="i"
+          :data-idx="i"
           :section="section"
         />
-        <footer class="chapter-end">
-          <button class="back-link" @click="$router.push('/')">↑ Back to chapters</button>
-        </footer>
+        <ChapterEnd :chapter="chapter" />
       </div>
 
       <!-- …otherwise the scaffold (chapters not yet built: la-storia, eat, amour). -->
@@ -33,6 +32,14 @@
            reaching the bottom navigates home. (Reference: the page scrolls fully out, the ring rises in.) -->
       <section ref="outroEl" class="chapter-outro" aria-hidden="true" />
     </div>
+
+    <!-- Floating dress popups — pinned to the viewport bottom-center; content is the in-view
+         section's dresses (the reference's scroll-following dress cards), gone at the chapter end. -->
+    <transition name="popups">
+      <div v-if="activeDresses.length" class="dress-popups">
+        <DressTail v-for="d in activeDresses" :key="d.title" :dress="d" />
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -40,13 +47,25 @@
 import { computed, onMounted, onBeforeUnmount, inject, ref } from 'vue'
 import Lenis from 'lenis'
 import { CHAPTERS } from '~/composables/useChapterScene'
-import { CHAPTER_PAGES } from '~/composables/chapterPages'
+import { CHAPTER_PAGES, DRESSES } from '~/composables/chapterPages'
 import ChapterSection from '~/components/chapter/ChapterSection.vue'
+import ChapterEnd from '~/components/chapter/ChapterEnd.vue'
+import DressTail from '~/components/chapter/DressTail.vue'
 
 const route = useRoute()
 const router = useRouter()
 const chapter = computed(() => CHAPTERS.find((c) => c.slug === route.params.slug))
 const pageContent = computed(() => CHAPTER_PAGES[route.params.slug])
+
+// Floating dress popups: the active (most in-view) section's dresses, shown in one fixed
+// overlay at the viewport bottom-center (so they're never affected by the content scroll).
+const activeIdx = ref(-1)
+const sectionRatios = new Map()
+let sectionObserver = null
+const activeDresses = computed(() => {
+  const s = pageContent.value?.sections?.[activeIdx.value]
+  return (s?.dresses || []).map((slug) => DRESSES[slug]).filter(Boolean)
+})
 
 // Reach the persistent WebGL scene (provided by app.vue) so page scroll can drive
 // the hero-card coupling (P1). It's the same scene instance across all routes.
@@ -186,10 +205,25 @@ onMounted(() => {
   waitSettled()
 
   pageEl.value?.addEventListener('wheel', onWheel, { passive: true })
+
+  // Track the active section for the floating dress popups (the most in-view section wins).
+  if (pageContent.value && pageEl.value) {
+    sectionObserver = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) sectionRatios.set(+e.target.dataset.idx, e.intersectionRatio)
+        let best = -1, bestR = 0.45
+        sectionRatios.forEach((r, idx) => { if (r >= bestR) { bestR = r; best = idx } })
+        activeIdx.value = best
+      },
+      { root: pageEl.value, threshold: [0, 0.25, 0.45, 0.7, 1] }
+    )
+    pageEl.value.querySelectorAll('.chapter-section').forEach((el) => sectionObserver.observe(el))
+  }
 })
 
 onBeforeUnmount(() => {
   pageEl.value?.removeEventListener('wheel', onWheel)
+  sectionObserver?.disconnect()
   if (readyPoll) clearTimeout(readyPoll)
   // Leaving mid-exit (e.g. the back button while in the outro) → finalize to a clean homepage ring.
   if (exitEngaged && !exiting) webglSceneRef?.value?.scene?.endExit?.()
@@ -237,25 +271,20 @@ onBeforeUnmount(() => {
   background: var(--accentLight, #f3ebe4);
 }
 
-.chapter-end {
-  min-height: 40vh;
+/* Floating dress popups — fixed to the viewport bottom-center over the content. */
+.dress-popups {
+  position: absolute;
+  bottom: 1.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 15;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--accentLight, #f3ebe4);
+  gap: 0.75rem;
 }
-.back-link {
-  font-family: 'Bague', sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 0.85rem;
-  color: var(--accent, #333);
-  background: none;
-  border: 1px solid currentColor;
-  border-radius: 9999px;
-  padding: 0.75rem 1.5rem;
-  cursor: none;
-}
+.popups-enter-active,
+.popups-leave-active { transition: opacity 0.5s ease, transform 0.5s ease; }
+.popups-enter-from,
+.popups-leave-to { opacity: 0; transform: translate(-50%, 1.5rem); }
 
 /* Scaffold fallback (unbuilt chapters) */
 .chapter-body {
