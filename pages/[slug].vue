@@ -72,11 +72,12 @@ let readyPoll = null
 let settleTries = 0          // waitSettled attempts — bounded so a failed scene can't freeze the page
 const SETTLE_DEADLINE = 40   // ~8s at 200ms/try before we enable scroll without the select-in handoff
 
-// Scroll-driven BOTTOM exit (the reference's "outro" section). As you scroll past the article into the
-// transparent .chapter-outro, `de` maps the scroll position 0→1 and drives scene.setExitProgress — the
-// ring rises/spins/un-tilts and the hero card descends from off-top into its slot. Reversible (scroll
-// back up → cancelExit restores the article); de→1 (page bottom) commits + navigates home.
-const OUTRO_LEAD = 1.0       // viewports of overlap — the exit begins as the outro scrolls into view
+// Scroll-driven BOTTOM exit (the reference's "outro" section). As you scroll the article into the
+// transparent .chapter-outro, scroll position maps to `de` → scene.setExitProgress. The article FULLY
+// scrolls out over [outroTop-vh, outroTop] (de 0→DROP_START) while the ring spins on the accent bg with
+// the wine slot empty; then over [outroTop, limit] (de DROP_START→1) the wine card drops from the top.
+// Reversible (scroll back up → cancelExit restores the article); de→1 (page bottom) commits + navigates.
+const DROP_START = 0.45      // de at which the page is fully out → the drop begins (MATCH useChapterScene.js)
 let exitEngaged = false      // beginExit() has fired (the ring is reassembling under the scroll)
 
 function onWheel(e) {
@@ -109,10 +110,16 @@ function updateExit(scrollY) {
   const outro = outroEl.value
   const scene = webglSceneRef?.value?.scene
   if (!outro || !scene?.setExitProgress) return
-  const start = outro.offsetTop - window.innerHeight * OUTRO_LEAD   // exit begins as the outro scrolls in
-  const end = lenis.limit                                           // page bottom
-  if (end <= start) return
-  const de = Math.min(1, Math.max(0, (scrollY - start) / (end - start)))
+  const vh = window.innerHeight
+  const outroTop = outro.offsetTop      // the article is fully scrolled out at this scroll position
+  const end = lenis.limit               // page bottom
+  let de
+  if (scrollY < outroTop) {
+    de = Math.max(0, (scrollY - (outroTop - vh)) / vh) * DROP_START          // article scrolling out
+  } else {
+    const span = Math.max(1, end - outroTop)
+    de = DROP_START + Math.min(1, (scrollY - outroTop) / span) * (1 - DROP_START)  // the drop
+  }
   if (de <= 0) {
     if (exitEngaged) { scene.cancelExit?.(); exitEngaged = false }  // scrolled back up into the article
     return
@@ -219,10 +226,10 @@ onBeforeUnmount(() => {
   height: 100dvh;
 }
 
-/* Scroll-driven exit "outro" — transparent, so the WebGL ring shows through as the article scrolls out
-   above it. Its height sets how much scroll the ring-reassembly spans (tune for feel). */
+/* Scroll-driven exit "outro" — transparent, so the WebGL ring (on the accent bg) shows through as the
+   article scrolls out above it. ~1 vh of the article scrolls out, then the rest is the drop scroll. */
 .chapter-outro {
-  height: 150vh;
+  height: 250vh;
 }
 
 /* Content scrolls up over the (fixed) WebGL hero on the chapter's light accent. */

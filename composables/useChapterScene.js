@@ -273,18 +273,20 @@ export function useChapterScene() {
   let selectedHero = null   // the single poster scaled up as the full-screen hero (P1)
   let scrollOffsetPx = 0    // inner-page scroll position in px (from Lenis) — drives the hero up/away
   let exitStart = null      // captured transforms at the start of a forward scroll-exit (step E)
-  const EXIT_SPIN = toRad(290)  // forward spin during the scroll-end return (matches reference's +290°)
+  // NEGATIVE = the same direction a homepage down-scroll turns the ring (onScroll does scrollRotationY -=
+  // delta*0.0008), so the exit flows into the homepage idle with NO spin reversal.
+  const EXIT_SPIN = toRad(-300)
+  const DROP_START = 0.45    // de at which the page is fully scrolled out → the wine card starts to drop
+  const exitBg = new THREE.Color('#ffffff')  // scene background during the exit (set to the chapter accent)
+  let exitBgAlpha = 0        // 0 = transparent (homepage) … 1 = opaque accent (selected/exit)
   // Bottom-exit timing (de = exit progress 0→1, driven by the page's OUTRO-section scroll). The ring rises
   // + spins + un-tilts to the homepage pose; the hero card descends from off-top into its ring slot (= the
   // "card drops in from the top"). ALL cards stay VISIBLE the whole time (the reference never hides them).
-  //  • HERO_RETURN_END — the hero card's POSITION is back at its ring slot by this de.
-  //  • HERO_FIT_END    — the hero un-frames + shrinks to ring size by this de (EARLY, mostly while still
-  //    high/off-screen) so the descent reads as a clean ring card, not a full-bleed morph.
-  const HERO_RETURN_END = 0.55
+  //  • HERO_FIT_END — the wine card un-frames + shrinks to ring size by this de (EARLY, while still hidden)
+  //    so its phase-B descent reads as a clean ring card, not a full-bleed morph.
   const HERO_FIT_END = 0.25
-  // Exit "bowl": mid-exit the ring assembles LOW + tilted so you look down INTO the cylinder (the
-  // reference view), holds, then rises + un-tilts to the homepage fan by de=1.
-  const BOWL_END = 0.6                                          // de by which the ring is in the low bowl
+  // Exit "bowl": during phase A the ring assembles LOW + tilted so you look down INTO the cylinder (the
+  // reference view); phase B rises + un-tilts it to the homepage fan.
   const BOWL_Y = -58                                           // carousel.y at the bowl (below selected -43)
   const BOWL_TILT = { x: toRad(58), y: toRad(36), z: toRad(4) } // steep look-down (vs homepage 25/70/15)
   // Phase 1 (drop-into-deck rework): during the bottom exit, BOTH poster copies of the CURRENT
@@ -833,6 +835,9 @@ export function useChapterScene() {
       selectedHero.mesh.position.y = selectedHero.baseY + eff * worldPerPx * HERO_SCROLL_FACTOR
     }
 
+    // Background: transparent on the homepage (shows the body), the chapter accent while a chapter is
+    // open + during its exit (the ring spins on the accent), fading back out as the exit lands home.
+    renderer.setClearColor(exitBg, exitBgAlpha)
     renderer.render(scene, camera)
   }
 
@@ -1056,6 +1061,12 @@ export function useChapterScene() {
     } })
     selectTl = tl
 
+    // Background fades to the chapter accent as it opens (the ring/page sit on the accent; the bottom
+    // exit later reveals the ring spinning on it). Fades back out at the homepage on exit.
+    exitBg.set(CHAPTERS[chIdx].accent)
+    const bgP = { a: exitBgAlpha }
+    tl.to(bgP, { a: 1, duration: 1.4, ease: 'power2.inOut', onUpdate: () => { exitBgAlpha = bgP.a } }, 0)
+
     // Fade out txt mesh
     if (groupG.userData.txtMat) {
       tl.to(groupG.userData.txtMat, { opacity: 0, duration: 1, ease: 'power2.inOut', overwrite: true }, 0)
@@ -1129,6 +1140,10 @@ export function useChapterScene() {
       onComplete: () => { selectedIndex = -1; isDeselecting = false; selectedHero = null; deselectTl = null }
     })
     deselectTl = tl
+
+    // Fade the accent background back out to the homepage (top-edge / back-button reverse exit).
+    const bgP = { a: exitBgAlpha }
+    tl.to(bgP, { a: 0, duration: 1.6, ease: 'power2.inOut', onUpdate: () => { exitBgAlpha = bgP.a } }, 0)
 
     // Restore txt mesh
     if (groupG.userData.txtMat) {
@@ -1228,43 +1243,56 @@ export function useChapterScene() {
   function setExitProgress(de) {
     if (!exitStart || !selectedHero) return
     const t = Math.min(1, Math.max(0, de))
-    const heroT = Math.min(1, t / HERO_RETURN_END)
-    const fitT = Math.min(1, t / HERO_FIT_END)
     const lp = (a, b, k = t) => a + (b - a) * k
+    const ss = (k) => { const u = Math.min(1, Math.max(0, k)); return u * u * (3 - 2 * u) }
     const hero = selectedHero
-    // The ring spins forward the whole way; its HEIGHT + TILT follow a bowl-then-rise path: assemble LOW
-    // + steeply tilted (look down into the cylinder) by BOWL_END, then rise + un-tilt to the homepage fan.
-    carousel.animatedRotationY = exitStart.rot + EXIT_SPIN * t   // forward, not reverse
+    // TWO PHASES. A [0..DROP_START]: the page scrolls out while the ring assembles into the low "look into
+    // the cylinder" bowl and SPINS — but the WINE card stays HIDDEN (its slot empty). B [DROP_START..1]:
+    // the page is gone → the wine card descends from the top into its slot (synced to the spin) while the
+    // bowl rises + un-tilts to the homepage fan and the accent background fades out.
+    const a = ss(Math.min(1, t / DROP_START))                       // page-out + bowl-assemble
+    const b = ss(Math.max(0, (t - DROP_START) / (1 - DROP_START)))  // the drop + rise-to-homepage
+
+    // Spin the whole way, in the down-scroll direction (EXIT_SPIN negative) → flows into the homepage idle.
+    carousel.animatedRotationY = exitStart.rot + EXIT_SPIN * t
+
+    // Ring height + tilt: into the low bowl over phase A, then rise + un-tilt to the homepage over phase B.
     const homeTilt = isMobile ? { x: toRad(22), y: 0, z: 0 } : { x: toRad(25), y: toRad(70), z: toRad(15) }
     const bowlTilt = isMobile ? { x: toRad(48), y: 0, z: 0 } : BOWL_TILT
-    const ss = (k) => { const u = Math.min(1, Math.max(0, k)); return u * u * (3 - 2 * u) }
     let cy, tx, ty, tz
-    if (t <= BOWL_END) {
-      const k = ss(t / BOWL_END)                                // selected pose → bowl
-      cy = lp(exitStart.cy, BOWL_Y, k)
-      tx = lp(exitStart.gx, bowlTilt.x, k); ty = lp(exitStart.gy, bowlTilt.y, k); tz = lp(exitStart.gz, bowlTilt.z, k)
+    if (t <= DROP_START) {
+      cy = lp(exitStart.cy, BOWL_Y, a)
+      tx = lp(exitStart.gx, bowlTilt.x, a); ty = lp(exitStart.gy, bowlTilt.y, a); tz = lp(exitStart.gz, bowlTilt.z, a)
     } else {
-      const k = ss((t - BOWL_END) / (1 - BOWL_END))             // bowl → homepage fan
-      cy = lp(BOWL_Y, 0, k)
-      tx = lp(bowlTilt.x, homeTilt.x, k); ty = lp(bowlTilt.y, homeTilt.y, k); tz = lp(bowlTilt.z, homeTilt.z, k)
+      cy = lp(BOWL_Y, 0, b)
+      tx = lp(bowlTilt.x, homeTilt.x, b); ty = lp(bowlTilt.y, homeTilt.y, b); tz = lp(bowlTilt.z, homeTilt.z, b)
     }
     carousel.position.y = cy
     groupG.rotation.set(tx, ty, tz)
-    // The hero card un-frames + shrinks to ring size EARLY (fitT), then descends from off-top into its ring
-    // slot (heroT) as a clean ring card — VISIBLE the whole time (the "card drops in from the top").
-    const s = lp(exitStart.heroScale, 1, fitT)
-    hero.mesh.scale.set(s, s, 1)
-    hero.mesh.position.y = lp(exitStart.heroY, hero.baseY, heroT)
+
+    // Phase B sub-progresses for the wine card: descend over most of B, fade in early.
+    const drop = ss(Math.min(1, b / 0.85))
+    const reveal = ss(Math.min(1, b / 0.35))
+    const fitT = Math.min(1, t / HERO_FIT_END)                      // shrink to ring size early (while hidden)
+
+    // The OTHER cards rise into the ring over phase A (the ring assembles + spins, missing only the wine
+    // slot). The wine card's MIRROR copy (o.same) is hidden in A and fades in with the hero in B.
+    for (const o of exitStart.others) {
+      o.p.mesh.position.y = lp(o.y, o.p.baseY, a)
+      if (o.same && o.p.material.uniforms.uOpacity) o.p.material.uniforms.uOpacity.value = t <= DROP_START ? 0 : o.op * reveal
+    }
+
+    // The WINE hero: hidden + parked off-top through phase A; in phase B it descends from off-top into its
+    // slot and fades in — "the page drops from the top." Ring-sized the whole descent (no full-bleed morph).
+    hero.mesh.scale.set(lp(exitStart.heroScale, 1, fitT), lp(exitStart.heroScale, 1, fitT), 1)
+    hero.mesh.position.y = t <= DROP_START ? exitStart.heroY : lp(exitStart.heroY, hero.baseY, drop)
     hero.material.uniforms.blendFactor.value = lp(exitStart.blend, 0, fitT)
     hero.material.uniforms.progress.value = lp(exitStart.prog, 0, fitT)
-    if (hero.material.uniforms.uOpacity) hero.material.uniforms.uOpacity.value = exitStart.heroOpacity
+    if (hero.material.uniforms.uOpacity) hero.material.uniforms.uOpacity.value = t <= DROP_START ? 0 : exitStart.heroOpacity * reveal
     if (groupG.userData.txtMat) groupG.userData.txtMat.opacity = lp(exitStart.txtOpacity, 1)
-    // The other cards rise from below into their ring slots EARLY (by BOWL_END), so the ring is assembled
-    // in the bowl; then the whole carousel rises (carousel.y above) to the homepage.
-    const cardsT = ss(Math.min(1, t / BOWL_END))
-    for (const o of exitStart.others) {
-      o.p.mesh.position.y = lp(o.y, o.p.baseY, cardsT)
-    }
+
+    // Background: opaque chapter accent through the spin, fading to the homepage over the late rise.
+    exitBgAlpha = t < 0.7 ? 1 : 1 - ss((t - 0.7) / 0.3)
   }
 
   // Abort an in-progress bottom exit (the user scrolled back up before committing). Restore
@@ -1279,12 +1307,13 @@ export function useChapterScene() {
   }
 
   function endExit() {
-    // Restore the chapter's hidden poster copies (both) so the homepage ring is complete; the idle
-    // depth loop takes over their uOpacity next frame. (Placeholder until Phase 3.)
+    // Restore the chapter's poster copies (both) so the homepage ring is complete; the idle depth loop
+    // takes over their uOpacity next frame.
     if (selectedHero) {
       const ch = selectedHero.chapterIdx
       posters.forEach((p) => { if (p.chapterIdx === ch && p.material.uniforms.uOpacity) p.material.uniforms.uOpacity.value = 1 })
     }
+    exitBgAlpha = 0     // homepage background (transparent → the body shows through)
     selectedIndex = -1
     isDeselecting = false
     selectedHero = null
