@@ -6,7 +6,7 @@
 > [`docs/ROADMAP.md`](docs/ROADMAP.md) · issue forensics → [`AUDIT.md`](AUDIT.md).
 > **This file is the living status log** (what works, resolved/open issues, dev workflow, sessions).
 
-> Last updated: 2026-06-14 (bottom chapter-exit reframed: page scrolls out → ring outro section, being rebuilt scroll-driven; snapshot/page-card machinery removed)
+> Last updated: 2026-06-15 (bottom chapter-exit BUILT scroll-driven — M1 + M2 Chunk A, prod-verified `49df9f17`: page scrolls out → ring outro on the accent bg → wine card drops from the top → homepage; reversible, no spin reversal; feel-tuning M2 Chunk B remaining)
 
 ---
 
@@ -147,7 +147,7 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 - Real `/{slug}` routes on a persistent shell; deep-links, browser back/forward, per-slug prerender; URL = source of truth
 - Inner-page content (Wine: THE BRIDE / THE WINE / THE PEOPLE, copy, galleries, dress-tail cards, fade-up reveal)
 - **Top exit DONE**: top overscroll-up (and back button / nav logo) → `doExit()` → `router.push('/')` → route watcher runs `deselectChapter()` (hero shrinks, ring reverse-spins back into the carousel)
-- **Bottom exit being REBUILT scroll-driven** (2026-06-14 reframe): the page is NOT morphed — the article scrolls out normally and a tall transparent "outro" section below the footer scrolls the WebGL ring in; outro-scroll → `scene.setExitProgress(de)`, navigate `/` at `de`→1. Currently INERT pending the rebuild (top edge / back button / nav logo still go home). See [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md).
+- **Bottom exit BUILT scroll-driven** (M1 + M2 Chunk A, prod-verified `49df9f17`): the page is NOT morphed. A tall transparent `.chapter-outro` (250vh) below the article maps scroll → `de` → `scene.setExitProgress(de)`, reversible (`cancelExit`), committing at `de`→1 (`endExit` + navigate `/`). Two-phase (`DROP_START = 0.45`): phase A = article fully scrolls out + ring assembles into a low bowl and spins on the **accent background** (`setClearColor(exitBg, exitBgAlpha)`, wine `#353454`) with the wine card HIDDEN; phase B = the card descends from off-top + fades in ("drops from the top") + ring rises to the light homepage. `EXIT_SPIN` is negative (−300°) so there's no spin reversal into the homepage idle. Feel-tuning (M2 Chunk B) remaining. See [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md).
 - Film plays on select-complete (incl. deep-links) and pauses on every exit; rapid back/forward is interrupt-safe
 
 ---
@@ -347,6 +347,35 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
 ---
 
 ## 🗓 Session Log
+
+### 2026-06-15 (session 17) — bottom-exit scroll-driven outro: M1 + M2 Chunk A (built, prod-verified)
+- **Built the reference's scroll-driven bottom "outro"** (no page morph/snapshot). A transparent
+  `.chapter-outro` section (250vh) sits below the article in `pages/[slug].vue`; its scroll position
+  maps to a progress `de`, fed to `scene.setExitProgress(de)`. Reversible — scrolling back up into the
+  article fires `cancelExit()`; `de`→1 at the page bottom commits → `endExit()` + `router.push('/')`.
+  Reuses the `beginExit`/`setExitProgress`/`cancelExit`/`endExit` ring primitives (HEAD `49df9f17`).
+- **M1 (`38e2cce2`)** — the outro section + scroll→`de`→`setExitProgress` wiring (ring reassembles
+  under the scroll).
+- **M2 Chunk A** — the *feel* pass, prod-verified:
+  - **Two-phase exit** (`DROP_START = 0.45`, a const duplicated in both `pages/[slug].vue` and
+    `composables/useChapterScene.js`): **phase A** `[0..0.45]` = the article fully scrolls out + the
+    ring assembles into a low "look-into-the-cylinder" bowl and spins **with the wine card HIDDEN**
+    (its slot empty); **phase B** `[0.45..1]` = the wine card descends from off-top + fades in
+    ("drops from the top") + the ring rises to the homepage. (`65dac7ca`, `eebb6611`, `0c1edfee`.)
+  - **Accent background** — `renderer.setClearColor(exitBg, exitBgAlpha)` in `animate()`; `exitBg`
+    is set to the chapter accent on select (wine `#353454`) at `exitBgAlpha = 1`, and during the
+    exit fades to transparent (light homepage) over `de` `0.7→1`. The ring spins on the accent
+    through the outro. (`0c1edfee`.)
+  - **No spin reversal** — `EXIT_SPIN` flipped **negative** (`toRad(-300)`) so the outro spin runs
+    in the homepage down-scroll direction and flows straight into the idle (was reversing). (`0c1edfee`.)
+  - **Bugfix (`49df9f17`)** — `animate()`'s idle depth-fade was lerping `uOpacity` back up and
+    overriding the phase-A wine-card hide; now gated on `!isDeselecting` (the exit owns `uOpacity`
+    via `setExitProgress`).
+- **Handoff — mid-M2, awaiting feel-steers.** Open **M2 Chunk B** steers (4): drop speed/read, bowl
+  depth, bg-fade timing, and the spin↔drop sync. Then the broader remaining work: the **other 3
+  chapters'** inner content (only Wine O'Clock is built), mobile/touch for the outro, and code-health
+  debt (split the ~1430-line `useChapterScene.js` god-module; perf/a11y). Canonical tracker:
+  [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md).
 
 ### 2026-06-14 (session 16) — bottom-exit reframe (page scrolls out → ring outro) + cleanup
 - **Reference decode (chapter.millanova.com screen-capture) reframed the whole bottom exit.** The page

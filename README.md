@@ -25,7 +25,7 @@ custom GLSL shaders, GSAP animation, spatial audio, and chapter transitions.
 
 ## Status
 
-**Homepage complete (~9/10 parity); Phase 2 (chapter inner pages) — "card becomes the page" is built and live. Inner-page exit: top edge done; bottom edge rebuild pending (scroll-driven).**
+**Homepage complete (~9/10 parity); Phase 2 (chapter inner pages) — "card becomes the page" is built and live. Inner-page exit: both edges built — top edge done; bottom edge built as a scroll-driven outro (feel-tuning remaining).**
 
 > 📋 **The single live tracker is [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md) →
 > "Running checklist (the board)"** — read it first for a cold pickup (current state, roadblocks, next steps).
@@ -38,14 +38,16 @@ custom GLSL shaders, GSAP animation, spatial audio, and chapter transitions.
   sub-chapters, galleries, dress-tail cards, scroll reveal); other 3 chapters are scaffolds.
 - ✅ **"Card becomes the page":** hero **scroll-coupling** (card scrolls away 1:1 with the page;
   killed the old "purple overlay") + **edge-gated exits** (mid-page scroll free). **Top** edge
-  (stable, done) reverse-rewinds the card into the ring (`deselectChapter`). **Bottom** edge is a
-  **rebuild pending (scroll-driven)** — 8 "morph the page into a card" approaches (DOM shrink,
-  page-snapshot on a 3D card, …) were tried and rejected; a reference decode showed the page is
-  **never morphed** — it scrolls fully out while a scroll-driven "outro" section scrolls in, reveals
-  the WebGL ring, and a card "drops in from the top" (pure illusion, no morph). The
-  snapshot/overscroll-coupling machinery was removed and the bottom exit is temporarily inert (top
-  edge / back button / nav logo still go home). See
-  `docs/PHASE-2-INNER-PAGES.md` for the rebuild plan and the full bottom-edge saga.
+  (stable, done) reverse-rewinds the card into the ring (`deselectChapter`). **Bottom** edge is
+  **built as a scroll-driven outro** (M1 + M2 Chunk A, prod-verified) — the reference's approach,
+  no morph/snapshot: the page scrolls fully out while a WebGL ring "outro" section scrolls in on
+  the chapter-accent (purple) background, spinning with the chapter's card missing; once the page is
+  out the card descends from the top into its slot, then the ring rises to the homepage. Reversible,
+  and the exit spins in the down-scroll direction (no spin reversal at home). The earlier
+  snapshot/overscroll-coupling machinery (and `html-to-image`) was removed; 8 "morph the page into a
+  card" approaches were tried and rejected before the reference decode confirmed the page is never
+  morphed. Remaining work is **feel-tuning (M2)** — drop speed, bowl depth, bg-fade timing, sync. See
+  `docs/PHASE-2-INNER-PAGES.md` for the build detail and the full bottom-edge saga.
 - ✅ **Hardened (2026-06-12 re-review):** scroll-then-click hero alignment, rapid back/forward
   interrupt-safety, video play/pause lifecycle, background-tab robustness, input normalization.
   Verified on prod (Browserless probes) **and** a real browser (video + textures confirmed live).

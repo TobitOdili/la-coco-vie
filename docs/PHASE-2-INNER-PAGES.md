@@ -20,38 +20,49 @@ original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker*
    (b) Browserless `captureScreenshot` latency can't time a sub-2s animation — use a **screenshot-free
    `evaluate` probe** (sample `transform`/`opacity`/`__camDebug` over time), screenshots for the look only.
 
-**▶ ACTIVE WORK (2026-06-14): bottom-edge exit — REBUILD as a scroll-driven "outro" section.** Many
-"morph the page into a card" approaches were built and rejected. A screen-capture of the reference
-(`chapter.millanova.com`, frames reviewed 2026-06-14) decoded the REAL mechanism — which does **not**
-morph the page at all. Build THIS:
+**▶ ACTIVE WORK (2026-06-15): bottom-edge exit — scroll-driven "outro" REBUILT (M1 + M2-ChunkA done, prod-
+verified, HEAD `49df9f17`). USER HANDED OFF mid-M2 awaiting feel-steers (see ▼ "What's left").** The exit
+is the reference's scroll-driven outro (decoded from `millanova frames/`, gitignored) — NO page morph.
 
 **⭐ Decoded reference mechanism (the north star).** The chapter page is normal scrolling DOM. You scroll
-past its footer ("Discover dress from the chapter" + disclaimer) and the **WHOLE page scrolls up and out**
-of the viewport. Below it is a tall **"outro" section** that scrolls in and reveals the WebGL ring (all 4
-cards) — positioned LOW, viewed from above *into the cylinder* (front cards arc across the bottom, blank
-card-backs at the top). Scrolling **rotates the ring (coupled)**, and a card comes over the top and **drops
-into the front of the ring**. Because the page already scrolled out the top, the brain reads that dropping
-card AS the page becoming a card — **the illusion needs no actual morph.** Keep scrolling → the ring rises
-+ un-tilts into the homepage state (tagline fades in). Fully scroll-coupled + **reversible**.
+past its footer and the **WHOLE page scrolls up and out**. Below it a tall **"outro" section** scrolls in
+and reveals the WebGL ring on the **chapter-accent (purple) background** — positioned LOW, viewed *into the
+cylinder* (front cards arc across the bottom, blank backs at the top), **spinning, with the chapter's own
+card MISSING (slot empty)**. Once the page is fully out, that card **descends from the top of the viewport**
+into its slot, synced to the spin — which (since the page already left the top) reads as the page becoming
+a card (**pure illusion, no morph**). Keep scrolling → the ring rises + un-tilts to the homepage, bg fades
+to light. Scroll-coupled + reversible. The exit spins in the **down-scroll direction** so it flows into the
+homepage idle with **no spin reversal**. (Every prior "morph the page" approach failed — full log in the
+saga below. Top ≠ bottom, and that's fine.)
 
-**Why every prior approach failed:** they all tried to MORPH the visible page into a card (reverse-mirror;
-forward ride-into-ring; DOM CSS-shrink "drop into the deck"; `html-to-image` page snapshot on a 3D card).
-The reference does the OPPOSITE — scroll the page entirely away, show a fresh ring section, let the "card
-drop" be pure illusion. **Top ≠ bottom, and that's fine** (the full rejected log is in the saga below).
+**✅ BUILT & prod-verified (M1 = `38e2cce2`; M2-ChunkA = `0c1edfee`+`49df9f17`):**
+- **Plumbing (M1):** transparent `.chapter-outro` (250vh) below the article in `pages/[slug].vue`;
+  `updateExit(scroll)` maps scroll → `de` → `scene.setExitProgress(de)`; reversible (`cancelExit`); `de`→1
+  commits → `endExit` + navigate `/`. Leaving mid-exit (back button) finalizes to a clean ring.
+- **Background:** `renderer.setClearColor(exitBg, exitBgAlpha)` in `animate()`; `exitBg.set(chapter.accent)`
+  + a fade-in tween on `selectChapter`; faded back out on `deselectChapter`/`endExit`; driven 1→0 over de
+  0.7→1 by `setExitProgress`. The ring spins on the accent during the exit, → light at the homepage.
+- **Two-phase, page-out-before-drop:** `DROP_START` = 0.45 (a const in BOTH `pages/[slug].vue` AND
+  `composables/useChapterScene.js` — keep in sync). Phase A [0..0.45] = article fully scrolls out + ring
+  assembles into the bowl (`BOWL_Y` -58, `BOWL_TILT` 58/36/4°) + spins + **wine card HIDDEN** (op 0, slot
+  empty). Phase B [0.45..1] = wine card **descends from off-top + fades in** + bowl rises/un-tilts to home.
+- **No spin reversal:** `EXIT_SPIN` = `toRad(-300)` (NEGATIVE — matches `onScroll`'s `scrollRotationY -=
+  delta*0.0008` down-scroll). Verified: animRotY 7.07→1.83 (decreasing).
+- **Gotcha fixed:** `animate()`'s idle depth-fade uOpacity lerp was overriding the wine-hide → gated on
+  `!isDeselecting` so `setExitProgress` owns the chapter cards' opacity through the exit.
 
-**The plan (scroll-driven outro):** (1) add a tall transparent **"outro" section** to the bottom of the
-chapter page (below the footer); (2) the article **scrolls out NORMALLY** (no snapshot, no shrink); (3) map
-scroll position within the outro → `de` 0→1, fed to `scene.setExitProgress(de)` (**REUSED**: ring rises from
-below + spins forward + un-tilts; the hero card returns from its scrolled-off-top position = the "card
-drop"); (4) transition the **background** accent (dark during the ring → light at homepage); (5) at `de`→1
-(page bottom) navigate to `/` (scene already in ring state) — seamless; reversible below that.
-
-**🧹 Cleanup done 2026-06-14.** Ripped out the abandoned snapshot/page-card + overscroll-coupling machinery
-(`html-to-image` dep, `capturePage`, `beginPageCard`/`setPageCardProgress`, `exitChapterDrop`, `startCouple`…
-— ~290 net lines). The page is back to **TOP-edge reverse only**; the bottom exit is temporarily **inert**
-pending the rebuild (top edge / back button / nav logo still go home). The ring-reassembly primitives
-`beginExit`/`setExitProgress`/`cancelExit`/`endExit` are **KEPT** — the rebuild reuses them, driven by
-scroll position instead of overscroll/snapshot.
+**▶ WHAT'S LEFT — M2 Chunk B (TUNE THE FEEL with the user's eye on `la-coco-vie.vercel.app/wine-o-clock`).**
+4 open steers the user hasn't answered yet (they handed off): (1) the DROP — reads as dropping from the
+top? good speed? (`drop=ss(b/0.85)`, `reveal=ss(b/0.35)` in `setExitProgress`; lower `HERO_FIT_END`/raise
+the start to emphasize). (2) BOWL depth (`BOWL_Y`/`BOWL_TILT`). (3) BG-fade timing (purple holds to de 0.7
+then fades — hold longer?). (4) the SYNC — empty slot meets the descending card cleanly (couple the spin
+amount so the wine slot is at the drop point when it lands). **Then:** final polish; the OTHER 3 chapters'
+content (only wine-o-clock is built — `CHAPTER_PAGES` in `composables/chapterPages.js`; la-storia / eat-
+marry-love / amour-getaway are scaffolds); mobile/touch (wheel-only); + the review's code-health debt
+(split the 1430-line god-module; perf/a11y — no `prefers-reduced-motion`, 34M MP4s). **VERIFY** changes on
+prod via Browserless (`/tmp/bless/poseprobe.mjs` fast static `__exitScrub` poses; `m1probe.mjs` real
+scroll); `?debug` hooks `__setScroll/__exitBegin/__exitScrub/__exitEnd`, `__heroDebug().opacity`. Needs
+`BLESS_TOKEN` from the user.
 
 **2026-06-14 hygiene (done, pushed + deployed — `ced2dac7`, `011aa323`).** Untracked
 `node_modules` (18,630 files) + `.output` (33) — both were committed despite `.gitignore` (.git was

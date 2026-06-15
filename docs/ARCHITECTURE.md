@@ -29,8 +29,10 @@ a diagonal cluster rather than a flat wheel. On the homepage: scrolling rotates 
 hovering a card lifts/flattens it and plays its film; **clicking selects the front-facing
 chapter** → the card flattens + grows into the inner-page **hero** and the URL changes to
 `/{slug}`. On the inner page: the hero is **coupled to scroll** (it rises away as you read —
-"card becomes the page"), and the chapter is exited by overscrolling past the **top edge** (the
-**bottom-edge** exit is being rebuilt scroll-driven — see [Lifecycle → exit](#exit-edge-gated-in-pagesslugvue)).
+"card becomes the page"), and the chapter is exited two ways — overscrolling past the **top edge**
+(reverse rewind), or scrolling **down** into a transparent `.chapter-outro` "outro" section that maps
+scroll → `de` 0→1 → `setExitProgress(de)`: the page scrolls out, the ring reassembles on the chapter's
+accent background and drops its card back in (see [Lifecycle → exit](#exit-edge-gated-in-pagesslugvue)).
 
 Everything visual is driven by **per-card shader uniforms** animated with GSAP:
 `blendFactor` (curved↔flat↔hover), `progress` (carousel↔fullscreen), `uOpacity` (depth fade).
@@ -109,15 +111,19 @@ routes (so no intro replay). Handles:
 `navigateTo('/')`), renders `CHAPTER_PAGES[slug]` content when present (else a scaffold), and
 owns the inner-page scroll + exit:
 - **Lenis** smooth scroll (wrapper `.chapter-page`, content `.chapter-scroll`); each scroll
-  tick → `scene.setScroll(px)` for the 1:1 hero coupling (P1).
-- **Edge-gated exit** via a `wheel` listener (gated until the select-in settles): overscroll up past
+  tick → `scene.setScroll(px)` for the 1:1 hero coupling (P1), **and** → `updateExit(scroll)`.
+- **Top-edge exit** via a `wheel` listener (gated until the select-in settles): overscroll up past
   the **top** edge past `EXIT_THRESHOLD` (800 px) → `doExit()` → `router.push('/')` → route watcher →
-  `deselectChapter()` (reverse rewind; DOM unmounts on navigate, one WebGL motion). **The bottom edge
-  is currently INERT** — `doExit()` takes no args and only the top edge triggers it. The bottom exit is
-  being **rebuilt scroll-driven** (a tall transparent "outro" section below the footer; the article
-  scrolls fully out, the ring scrolls in, scroll maps `de` 0→1 → `scene.setExitProgress(de)`). The
-  earlier snapshot / page-shrink "literal merge" machinery was removed. **Read [PHASE-2 → Bottom-edge
-  exit saga](PHASE-2-INNER-PAGES.md) before touching it.** See [Lifecycle → exit](#exit-edge-gated-in-pagesslugvue).
+  `deselectChapter()` (reverse rewind; DOM unmounts on navigate, one WebGL motion). `doExit()` takes
+  no args — only the top edge calls it.
+- **Bottom-edge exit (BUILT, scroll-driven)** via a transparent `.chapter-outro` section (250vh)
+  below the article. `updateExit(scrollY)` maps scroll position → `de` 0→1: over the first leg the
+  article scrolls fully out (`de` 0→`DROP_START`), then over the rest the ring's card drops in
+  (`DROP_START`→1), calling `scene.setExitProgress(de)` each tick. Scrolling back up before commit →
+  `cancelExit()` (restores the article); `de`→1 (page bottom) → `commitExit()` → `endExit()` then
+  `router.push('/')`. Fully reversible, no morph/snapshot — the old snapshot / page-shrink "literal
+  merge" machinery is gone. **Feel-tuning is the remaining work — see
+  [PHASE-2-INNER-PAGES.md](PHASE-2-INNER-PAGES.md) (M2 Chunk B).** See [Lifecycle → exit](#exit-edge-gated-in-pagesslugvue).
 
 ### `composables/chapterPages.js`
 Inner-page content (`CHAPTER_PAGES[slug].sections[]` + the `DRESSES` table). Lightweight data
@@ -185,15 +191,18 @@ snapshot export anymore — that machinery was removed.)
   snaps the hero to `baseY`, **reverse**-spins `animatedRotationY → preSelectRot`, re-tilts the group,
   restores carousel-Y + all poster uniforms/scale/position. (Driven by the route watcher.)
 - `setScroll(px)` — inner-page scroll position → 1:1 hero coupling (P1).
-- `beginExit()` / `setExitProgress(0→1)` / `cancelExit()` / `endExit()` — the scrubbable
-  **forward-exit primitives** that reassemble the ring (mirror the reference's `window.setPageProgress`).
-  `beginExit` snapshots the selected/scrolled state and hides the chapter's own two cards; `setExitProgress`
-  maps `de` 0→1 to the ring rising from below + spinning **forward** + un-tilting, with the hero returning
-  from off-top and shrinking back into its slot; `cancelExit` restores the captured state (user scrolled
-  back up before committing); `endExit` finalizes the homepage ring (`selectedIndex = -1`). **These are the
-  primitives the scroll-driven bottom-exit rebuild reuses** — the inner page's "outro" section will drive
-  `de` by scroll position. Currently only the `?debug` `__exitBegin/Scrub/End` hooks call them (the live
-  bottom path is still being built). See [PHASE-2-INNER-PAGES.md](PHASE-2-INNER-PAGES.md).
+- `beginExit()` / `setExitProgress(0→1)` / `cancelExit()` / `endExit()` — the scrubbable **bottom-exit
+  primitives** that reassemble the ring (mirror the reference's scroll-driven "outro", which never morphs
+  the page). `beginExit` captures the selected/scrolled state (`exitStart`) and hides the chapter's own
+  cards; `setExitProgress` is **two-phase** around `DROP_START` (0.45): phase A [0..0.45] the article scrolls
+  out while the ring assembles into a low "look-into-the-cylinder" bowl (`BOWL_Y` −58, `BOWL_TILT`) and
+  spins — with the **chapter's own card hidden** (`uOpacity` 0); phase B [0.45..1] the card descends from
+  off-top into its slot + fades in ("drops from the top") while the bowl rises/un-tilts to the homepage.
+  The spin uses `EXIT_SPIN` (**negative**, −300°) so it turns the same way a homepage down-scroll does
+  → no spin reversal landing on `/`. `cancelExit` lerps every transform back to the captured start (user
+  scrolled back up before committing); `endExit` finalizes the homepage ring (`selectedIndex = −1`). The
+  inner page's `.chapter-outro` section drives `de` by scroll position (`updateExit`); the `?debug`
+  `__exitScrub/__exitEnd` hooks also call them. See [PHASE-2-INNER-PAGES.md](PHASE-2-INNER-PAGES.md).
 - `onReady(cb)` — fires once at intro end (deep-link selection is deferred until then).
 
 ### Scene graph
@@ -215,7 +224,9 @@ scene
 | `introDistance` | 75 | start radius for the fly-in |
 | `SELECTED_Y` | **-43** | carousel Y when a chapter is selected (top-anchors the full-bleed hero) |
 | hero scale | `aspectRatio * 2.07` | reference-tuned full-bleed scale at `progress=1` |
-| `EXIT_SPIN` | `290°` | forward spin for the `setExitProgress` forward-exit primitive (reference's +290°); reused by the scroll-driven bottom-exit rebuild |
+| `EXIT_SPIN` | **`−300°`** | ring spin for the `setExitProgress` bottom-exit; **negative** so it turns the same way a homepage down-scroll does → no spin reversal landing on `/` |
+| `DROP_START` | `0.45` | `de` split between phase A (page-out + bowl-assemble) and phase B (card drop). **Must match the copy in `pages/[slug].vue`.** |
+| `BOWL_Y` / `BOWL_TILT` | −58 / steep | the low "look-into-the-cylinder" bowl the ring assembles into during phase A |
 | `DEPTH_FADE_NEAR / FAR` | 95 / 125 | distance range for far-card opacity fade (#6) |
 | `DEPTH_FADE_FLOOR` | 0.2 | far cards fade to faint, not invisible |
 | `txtMesh.position` | (0,-8,20) | center text; y=-8 clears the logo (#11) |
@@ -299,31 +310,40 @@ The chosen chapter becomes a single full-bleed **hero**:
 - The select + deselect timelines are tracked (`selectTl` / `deselectTl`) and killed if interrupted,
   so rapid back/forward can't leave a stale `onComplete` clobbering state.
 
-### Exit (edge-gated, in `pages/[slug].vue`)
-There is **no scene-level scroll-back exit anymore** (`scene.onScroll` no-ops while selected). The
-inner page detects overscroll past an edge and triggers ONE animation for everything:
+### Exit (in `pages/[slug].vue`)
+There is **no scene-level scroll-back exit** (`scene.onScroll` no-ops while selected). The inner page
+drives two exits — a top-edge reverse rewind and a scroll-driven bottom "outro":
 
 | Trigger | Animation | Path |
 |---|---|---|
 | **Back button / nav logo** (any time) | reverse-spin into the ring | `router.push('/')` → watcher → `deselectChapter()` |
-| **Top edge**, scroll up (STABLE) | reverse rewind | `doExit()` → `router.push('/')` → `deselectChapter()` |
-| **Bottom edge**, scroll down (REBUILDING) | scroll-driven ring reassembly | *inert today* — see below |
+| **Top edge**, overscroll up | reverse rewind | `doExit()` → `router.push('/')` → `deselectChapter()` |
+| **Bottom**, scroll down into `.chapter-outro` (BUILT) | scroll-coupled ring reassembly + card drop | `updateExit` → `setExitProgress(de)` → `commitExit` → `endExit` + `router.push('/')` |
 
 - **`doExit()`** (`pages/[slug].vue`): fires once **top-edge** overscroll exceeds `EXIT_THRESHOLD`
-  (800 px); stops Lenis and `router.push('/')` (DOM unmounts → only WebGL animates). It takes no args
-  now — the bottom edge no longer calls it.
+  (800 px); stops Lenis and `router.push('/')` (DOM unmounts → only WebGL animates). It takes no args —
+  only the top edge calls it.
 - **`deselectChapter()`** (~2.5 s, top/back): snaps the hero to ring-centre (`baseY`), reverse-spins
   `animatedRotationY → preSelectRot`, restores tilt / carousel-Y / all posters. Smooth from the top
   (hero already on-screen at scroll 0).
-- **Bottom edge — being rebuilt scroll-driven.** The earlier approaches (a CSS page-shrink + the
-  removed `exitChapterDrop`, and before that an `html-to-image` page snapshot rendered onto a 3D card)
-  all tried to *morph* the page into a card and were rejected; that machinery is gone and the bottom
-  edge is **inert** for now. The rebuild adds a tall transparent "outro" section below the footer: the
-  article scrolls fully out, the ring scrolls in low, and scroll position maps to `de` 0→1 →
-  `scene.setExitProgress(de)` (the kept `beginExit`/`setExitProgress`/`cancelExit`/`endExit` primitives),
-  navigating `/` at `de`→1 — fully scroll-coupled and reversible, no morph. **See [PHASE-2 →
-  Bottom-edge exit saga](PHASE-2-INNER-PAGES.md)** for the full history, the mechanism decode, and the plan.
-- Mid-page scrolling is **free** in both directions (only the top edge triggers an exit today).
+- **Bottom exit — BUILT, scroll-driven (M1 + M2 Chunk A, prod-verified).** A transparent
+  `.chapter-outro` section (250vh) sits below the article. Each Lenis tick calls `updateExit(scrollY)`,
+  which maps scroll position → `de` 0→1 → `scene.setExitProgress(de)` — fully scroll-coupled and
+  reversible (scroll back up → `cancelExit()` restores the article), no page morph or snapshot. It runs
+  in **two phases** around `DROP_START` (0.45, present in *both* this file and `useChapterScene.js`):
+  phase A [0..0.45] the article scrolls fully out + the ring assembles into the low bowl (`BOWL_Y`,
+  `BOWL_TILT`) and spins with the chapter's **own card hidden**; phase B [0.45..1] that card descends
+  from off-top into its slot + fades in while the bowl rises/un-tilts to the homepage. The spin uses a
+  **negative** `EXIT_SPIN` (−300°) so it matches a homepage down-scroll → no reversal at `/`. Throughout,
+  the scene background is the **chapter accent** (`renderer.setClearColor(exitBg, exitBgAlpha)` in
+  `animate()`; `exitBg` set + faded in by `selectChapter`, driven 1→0 over `de` 0.7→1 by
+  `setExitProgress`, faded out by `deselectChapter`/`endExit`) — the ring spins on e.g. wine `#353454`,
+  fading to the light homepage. `de`→1 → `commitExit()` → `endExit()` (`selectedIndex = −1`) then
+  `router.push('/')`. **Remaining work is feel-tuning (M2 Chunk B) — drop speed/read, bowl depth,
+  bg-fade timing, spin↔drop sync; see [PHASE-2-INNER-PAGES.md](PHASE-2-INNER-PAGES.md).**
+- The select-in's idle depth-fade `uOpacity` lerp in `animate()` is gated on `!isDeselecting` so
+  `setExitProgress` owns the chapter cards' opacity during the bottom exit.
+- Mid-page scrolling is **free**; the bottom exit only engages once you scroll into `.chapter-outro`.
 
 ---
 
@@ -335,7 +355,7 @@ inner page detects overscroll past an edge and triggers ONE animation for everyt
 | Hover card (homepage) | `onMouseMove` → `hoverChapter(slotI)` | lift (`y+7`), flatten (`blendFactor→2`), play film, swap center text, cursor "EXPLORE", audio fade-in |
 | Wheel / trackpad (homepage) | `onWheel` window listener → `scene.onScroll(deltaY − deltaX)` | rotate the carousel (`deltaX` so horizontal swipes rotate too, #10). **No-op while a chapter is open.** Touch isn't wired (would need `virtual-scroll`). |
 | Click (homepage) | `#canvas-hit-layer` `@click` → `onClick` → selects the **front-facing** card | The flat hitboxes don't follow the shader bend, so `onClick` selects `frontChapterIdx()` (what the center text shows), not the raw raycast hit. Requires `pointer-events:auto` (AUDIT #15). |
-| Wheel (inner page) | `.chapter-page` (Lenis) + a `wheel` listener | mid-page = smooth scroll (drives the hero coupling); **edge overscroll = exit** (see Lifecycle → exit) |
+| Wheel (inner page) | `.chapter-page` (Lenis) + a `wheel` listener | mid-page = smooth scroll (drives the hero coupling); **top-edge overscroll** → reverse exit; **scrolling into `.chapter-outro`** → scroll-coupled bottom exit (`updateExit` → `setExitProgress`) (see Lifecycle → exit) |
 | Back / logo click | `SiteNav` → `app.vue goHome` → `router.push('/')` | exit chapter (reverse-spin) |
 
 ---
@@ -362,7 +382,7 @@ absolute URL. Apply the same pattern for any future CSS-var asset paths.
 | `composables/useAudio.js` | **Dead code** — never imported; `app.vue` does audio inline. Safe to delete (verify no future import first). |
 | `dist` symlink | Was tracked pointing at a stale path; now gitignored. |
 | `#4` ring tilt | Parked — replica reads slightly more face-on than the original. Needs the original's exact group rotation (couldn't extract cleanly). See AUDIT #4. |
-| Hardcoded deselect angles | `deselectChapter` / `setExitProgress` hardcode the `(25°,70°,15°)` (desktop) / `(22°,0,0)` (mobile) group tilt; if it ever changes, update both. |
+| Hardcoded exit/deselect angles | `deselectChapter` and `setExitProgress`'s `homeTilt` both hardcode the homepage `(25°,70°,15°)` (desktop) / `(22°,0,0)` (mobile) group tilt; `setExitProgress` also hardcodes `BOWL_TILT` (and `DROP_START` is duplicated in `pages/[slug].vue`). If any changes, update every copy. |
 | Doc-drift risk | This file lagged the code badly before the 2026-06-12 reconcile. When you change the scene/exit model, update the affected section here in the same commit. |
 
 ---
