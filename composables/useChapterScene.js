@@ -282,6 +282,11 @@ export function useChapterScene() {
   //    high/off-screen) so the descent reads as a clean ring card, not a full-bleed morph.
   const HERO_RETURN_END = 0.55
   const HERO_FIT_END = 0.25
+  // Exit "bowl": mid-exit the ring assembles LOW + tilted so you look down INTO the cylinder (the
+  // reference view), holds, then rises + un-tilts to the homepage fan by de=1.
+  const BOWL_END = 0.6                                          // de by which the ring is in the low bowl
+  const BOWL_Y = -58                                           // carousel.y at the bowl (below selected -43)
+  const BOWL_TILT = { x: toRad(58), y: toRad(36), z: toRad(4) } // steep look-down (vs homepage 25/70/15)
   // Phase 1 (drop-into-deck rework): during the bottom exit, BOTH poster copies of the CURRENT
   // chapter (the hero AND its mirror/back copy) are hidden instantly (uOpacity→0 for any de>0) so
   // neither is seen as "a version of the page spinning off in the back" separate from the DOM page
@@ -1227,13 +1232,24 @@ export function useChapterScene() {
     const fitT = Math.min(1, t / HERO_FIT_END)
     const lp = (a, b, k = t) => a + (b - a) * k
     const hero = selectedHero
-    // The ring rises from below + spins forward + re-tilts to the homepage pose, all COUPLED to de.
+    // The ring spins forward the whole way; its HEIGHT + TILT follow a bowl-then-rise path: assemble LOW
+    // + steeply tilted (look down into the cylinder) by BOWL_END, then rise + un-tilt to the homepage fan.
     carousel.animatedRotationY = exitStart.rot + EXIT_SPIN * t   // forward, not reverse
-    carousel.position.y = lp(exitStart.cy, 0)                    // ring lifts to rest centre
-    const tilt = isMobile ? { x: toRad(22), y: 0, z: 0 } : { x: toRad(25), y: toRad(70), z: toRad(15) }
-    groupG.rotation.x = lp(exitStart.gx, tilt.x)
-    groupG.rotation.y = lp(exitStart.gy, tilt.y)
-    groupG.rotation.z = lp(exitStart.gz, tilt.z)
+    const homeTilt = isMobile ? { x: toRad(22), y: 0, z: 0 } : { x: toRad(25), y: toRad(70), z: toRad(15) }
+    const bowlTilt = isMobile ? { x: toRad(48), y: 0, z: 0 } : BOWL_TILT
+    const ss = (k) => { const u = Math.min(1, Math.max(0, k)); return u * u * (3 - 2 * u) }
+    let cy, tx, ty, tz
+    if (t <= BOWL_END) {
+      const k = ss(t / BOWL_END)                                // selected pose → bowl
+      cy = lp(exitStart.cy, BOWL_Y, k)
+      tx = lp(exitStart.gx, bowlTilt.x, k); ty = lp(exitStart.gy, bowlTilt.y, k); tz = lp(exitStart.gz, bowlTilt.z, k)
+    } else {
+      const k = ss((t - BOWL_END) / (1 - BOWL_END))             // bowl → homepage fan
+      cy = lp(BOWL_Y, 0, k)
+      tx = lp(bowlTilt.x, homeTilt.x, k); ty = lp(bowlTilt.y, homeTilt.y, k); tz = lp(bowlTilt.z, homeTilt.z, k)
+    }
+    carousel.position.y = cy
+    groupG.rotation.set(tx, ty, tz)
     // The hero card un-frames + shrinks to ring size EARLY (fitT), then descends from off-top into its ring
     // slot (heroT) as a clean ring card — VISIBLE the whole time (the "card drops in from the top").
     const s = lp(exitStart.heroScale, 1, fitT)
