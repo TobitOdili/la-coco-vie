@@ -1173,7 +1173,9 @@ export function useChapterScene() {
       tl.to(p.material.uniforms.blendFactor, { value: 0, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
       tl.to(p.material.uniforms.progress, { value: 0, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
       tl.to(p.mesh.scale, { x: 1, y: 1, z: 1, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
-      tl.to(p.mesh.position, { y: p.baseY, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
+      // Restore x/z too (the bottom exit moves cards onto the cluster radius); a deselect reached after a
+      // canceled exit would otherwise animate the ring home with cards still collapsed inward.
+      tl.to(p.mesh.position, { x: p.baseX, y: p.baseY, z: p.baseZ, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
     })
 
     hoveredIndex = -1
@@ -1262,22 +1264,24 @@ export function useChapterScene() {
     // Spin the whole way, in the down-scroll direction (EXIT_SPIN negative) → flows into the homepage idle.
     carousel.animatedRotationY = exitStart.rot + EXIT_SPIN * t
 
-    // Ring height + tilt + radius: into the low tight cluster over phase A, then rise + un-tilt + unfurl to
-    // the homepage over phase B.
+    // Ring height + tilt: gather into the low bowl over phase A, then rise + un-tilt to the homepage over B.
+    // (Radius is separate, below — it grows monotonically the whole way; no shrink-first dip.)
     const homeTilt = isMobile ? { x: toRad(22), y: 0, z: 0 } : { x: toRad(25), y: toRad(70), z: toRad(15) }
     const bowlTilt = isMobile ? { x: toRad(48), y: 0, z: 0 } : BOWL_TILT
-    let cy, tx, ty, tz, radius
+    let cy, tx, ty, tz
     if (t <= DROP_START) {
       cy = lp(exitStart.cy, BOWL_Y, a)
       tx = lp(exitStart.gx, bowlTilt.x, a); ty = lp(exitStart.gy, bowlTilt.y, a); tz = lp(exitStart.gz, bowlTilt.z, a)
-      radius = lp(baseDistance, CLUSTER_R, a)                       // gather inward to the tight cluster
     } else {
       cy = lp(BOWL_Y, 0, b)
       tx = lp(bowlTilt.x, homeTilt.x, b); ty = lp(bowlTilt.y, homeTilt.y, b); tz = lp(bowlTilt.z, homeTilt.z, b)
-      radius = lp(CLUSTER_R, baseDistance, b)                       // unfurl back out to the full ring
     }
     carousel.position.y = cy
     groupG.rotation.set(tx, ty, tz)
+    // Radius grows MONOTONICALLY from the tight cluster out to the full ring across the whole exit — the deck
+    // starts small and continuously expands (no shrink-first dip), so the front cards keep coming toward the
+    // camera and the second wine "catches" at the right size as it drops in.
+    const radius = lp(CLUSTER_R, baseDistance, ss(t))
     const rf = radius / baseDistance                                // scale every ring slot by the current radius
 
     // Phase B sub-progresses for the second wine copy: descend over most of B, fade in early.
@@ -1320,17 +1324,30 @@ export function useChapterScene() {
   function cancelExit() {
     if (!exitStart) return
     setExitProgress(0)        // lerp every transform back to the captured start
+    // setExitProgress(0) parks the cards on the small cluster radius; the resumed selected state wants them
+    // back on their ring slots — the hero especially must return to baseX/baseZ so the scroll-coupling
+    // (which only moves .y) keeps it centred full-bleed.
+    for (const o of exitStart.others) { o.p.mesh.position.x = o.p.baseX; o.p.mesh.position.z = o.p.baseZ }
+    if (selectedHero) { selectedHero.mesh.position.x = selectedHero.baseX; selectedHero.mesh.position.z = selectedHero.baseZ }
     isDeselecting = false     // re-enable animate() scroll-coupling + the route reverse path
     exitStart = null
   }
 
   function endExit() {
-    // Restore the chapter's poster copies (both) so the homepage ring is complete; the idle depth loop
-    // takes over their uOpacity next frame.
-    if (selectedHero) {
-      const ch = selectedHero.chapterIdx
-      posters.forEach((p) => { if (p.chapterIdx === ch && p.material.uniforms.uOpacity) p.material.uniforms.uOpacity.value = 1 })
-    }
+    // Finalize the homepage ring from ANY exit progress. commitExit calls setExitProgress(1) first (clean
+    // pose), but a Back pressed mid-scroll calls endExit ALONE — so snap the carousel pose + every poster
+    // back to its homepage slot here, else the ring is left low/tilted/collapsed-inward. (animatedRotationY
+    // is intentionally left at its spun value — EXIT_SPIN is negative so it flows into the idle, no reversal.)
+    carousel.position.y = 0
+    groupG.rotation.set(isMobile ? toRad(22) : toRad(25), isMobile ? 0 : toRad(70), isMobile ? 0 : toRad(15))
+    posters.forEach((p) => {
+      p.mesh.position.set(p.baseX, p.baseY, p.baseZ)
+      p.mesh.scale.set(1, 1, 1)
+      if (p.material.uniforms.uOpacity) p.material.uniforms.uOpacity.value = 1
+      if (p.material.uniforms.blendFactor) p.material.uniforms.blendFactor.value = 0
+      if (p.material.uniforms.progress) p.material.uniforms.progress.value = 0
+    })
+    if (groupG.userData.txtMat) groupG.userData.txtMat.opacity = 1
     exitBgAlpha = 0     // homepage background (transparent → the body shows through)
     selectedIndex = -1
     isDeselecting = false
