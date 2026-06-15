@@ -25,7 +25,7 @@ custom GLSL shaders, GSAP animation, spatial audio, and chapter transitions.
 
 ## Status
 
-**Homepage complete (~9/10 parity); Phase 2 (chapter inner pages) — "card becomes the page" is built and live.**
+**Homepage complete (~9/10 parity); Phase 2 (chapter inner pages) — "card becomes the page" is built and live. Inner-page exit: top edge done; bottom edge rebuild pending (scroll-driven).**
 
 > 📋 **The single live tracker is [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md) →
 > "Running checklist (the board)"** — read it first for a cold pickup (current state, roadblocks, next steps).
@@ -38,10 +38,14 @@ custom GLSL shaders, GSAP animation, spatial audio, and chapter transitions.
   sub-chapters, galleries, dress-tail cards, scroll reveal); other 3 chapters are scaffolds.
 - ✅ **"Card becomes the page":** hero **scroll-coupling** (card scrolls away 1:1 with the page;
   killed the old "purple overlay") + **edge-gated exits** (mid-page scroll free). **Top** edge
-  (stable) reverse-rewinds the card into the ring (`deselectChapter`). **Bottom** edge is **in
-  progress** — the goal is the page becoming a card that drops into the deck; it's been through many
-  approaches (the current build reads as two separate motions) and the next step is a snapshot→3D-card
-  "literal merge." See `docs/PHASE-2-INNER-PAGES.md` → "Bottom-edge exit — the FULL saga".
+  (stable, done) reverse-rewinds the card into the ring (`deselectChapter`). **Bottom** edge is a
+  **rebuild pending (scroll-driven)** — 8 "morph the page into a card" approaches (DOM shrink,
+  page-snapshot on a 3D card, …) were tried and rejected; a reference decode showed the page is
+  **never morphed** — it scrolls fully out while a scroll-driven "outro" section scrolls in, reveals
+  the WebGL ring, and a card "drops in from the top" (pure illusion, no morph). The
+  snapshot/overscroll-coupling machinery was removed and the bottom exit is temporarily inert (top
+  edge / back button / nav logo still go home). See
+  `docs/PHASE-2-INNER-PAGES.md` for the rebuild plan and the full bottom-edge saga.
 - ✅ **Hardened (2026-06-12 re-review):** scroll-then-click hero alignment, rapid back/forward
   interrupt-safety, video play/pause lifecycle, background-tab robustness, input normalization.
   Verified on prod (Browserless probes) **and** a real browser (video + textures confirmed live).

@@ -7,8 +7,9 @@ original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker*
 
 1. `npm install` → `npm run dev` → http://localhost:3001 (macOS build gotcha + commands in the [README](../README.md)).
 2. Read [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) before touching `composables/useChapterScene.js`. The
-   exit model lives in `pages/[slug].vue` (`doExit(fromBottom)`) + the scene's `deselectChapter` (top)
-   / `exitChapterDrop` (bottom, current) / the dormant `beginExit`/`setExitProgress`/`cancelExit`/`endExit`.
+   exit model: TOP edge → `pages/[slug].vue doExit()` → `router.push('/')` → watcher runs the scene's
+   `deselectChapter` (reverse). BOTTOM edge is being REBUILT scroll-driven (see ACTIVE WORK below) and will
+   reuse the dormant `beginExit`/`setExitProgress`/`cancelExit`/`endExit` ring-reassembly primitives.
 3. **Debug:** load any route with **`?debug`** *on the initial URL* (e.g. `/wine-o-clock?debug`) for
    `window.__heroDebug()/__camDebug()/__probe()`, deterministic exit scrubbing
    (`__exitBegin()`→`__exitScrub(0..1)`→`__exitEnd()`, `__setScroll(px)`), and `__gsdev()` (GSAP scrubber).
@@ -19,93 +20,60 @@ original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker*
    (b) Browserless `captureScreenshot` latency can't time a sub-2s animation — use a **screenshot-free
    `evaluate` probe** (sample `transform`/`opacity`/`__camDebug` over time), screenshots for the look only.
 
-**▶ ACTIVE WORK (2026-06-13): bottom-edge exit "page becomes a card in the deck."** The current prod
-build shrinks the real DOM page into the ring but reads as two separate motions (a 2D DOM layer can't
-rotate with the 3D ring). The agreed fix is the **proper literal merge** (snapshot the page → a 3D card
-that rides the chapter's card into the ring). **Read the `🔁 P2 — Bottom-edge exit — the FULL saga`
-section below** for every approach already tried, why each failed, the fundamental constraint, and the
-M1–M3 plan **before touching the exit.**
+**▶ ACTIVE WORK (2026-06-14): bottom-edge exit — REBUILD as a scroll-driven "outro" section.** Many
+"morph the page into a card" approaches were built and rejected. A screen-capture of the reference
+(`chapter.millanova.com`, frames reviewed 2026-06-14) decoded the REAL mechanism — which does **not**
+morph the page at all. Build THIS:
 
-**⚠️ 2026-06-14 review steer (re-decide before resuming the exit).** A verified repo review concluded
-the snapshot **M1–M3 plan is the highest-risk / lowest-leverage** option. The bottom-exit problem is
-self-inflicted: `animate()`'s scroll-coupling (`useChapterScene.js` ~815-821) deliberately pushes the
-real 3D hero card ~1.3 viewports off-screen, so by the page bottom the opaque DOM is all that's left to
-animate. The **dormant** `beginExit`/`setExitProgress`/`endExit` (`useChapterScene.js` 1214-1325, only
-reachable via `?debug`) is *already* a coupled, cancelable **forward** exit on the REAL hero card — it
-captures the scrolled-off `heroY`, lerps it home early, un-frames it into the ring, and spins forward.
-That's the proven top-exit stability applied forward, reusing ~150 already-debugged lines. The missing
-piece is the hand-off: cross-dissolve the DOM `opacity` → the real 3D card over the first ~30% of the
-gesture (**no** DOM transform), and rework line 1291 (it hard-hides the hero for `de>0` — a leftover
-from rejected approach #1). Cheaper first experiment: a **poster-handoff** (fade the DOM to the
-chapter's poster image and let the real poster card carry it in). Re-evaluate M1–M3 vs. this when
-cycling back to the exit.
+**⭐ Decoded reference mechanism (the north star).** The chapter page is normal scrolling DOM. You scroll
+past its footer ("Discover dress from the chapter" + disclaimer) and the **WHOLE page scrolls up and out**
+of the viewport. Below it is a tall **"outro" section** that scrolls in and reveals the WebGL ring (all 4
+cards) — positioned LOW, viewed from above *into the cylinder* (front cards arc across the bottom, blank
+card-backs at the top). Scrolling **rotates the ring (coupled)**, and a card comes over the top and **drops
+into the front of the ring**. Because the page already scrolled out the top, the brain reads that dropping
+card AS the page becoming a card — **the illusion needs no actual morph.** Keep scrolling → the ring rises
++ un-tilts into the homepage state (tagline fades in). Fully scroll-coupled + **reversible**.
 
-**2026-06-14 hygiene (done, committed local — `ced2dac7`, `011aa323` — not pushed).** Untracked
+**Why every prior approach failed:** they all tried to MORPH the visible page into a card (reverse-mirror;
+forward ride-into-ring; DOM CSS-shrink "drop into the deck"; `html-to-image` page snapshot on a 3D card).
+The reference does the OPPOSITE — scroll the page entirely away, show a fresh ring section, let the "card
+drop" be pure illusion. **Top ≠ bottom, and that's fine** (the full rejected log is in the saga below).
+
+**The plan (scroll-driven outro):** (1) add a tall transparent **"outro" section** to the bottom of the
+chapter page (below the footer); (2) the article **scrolls out NORMALLY** (no snapshot, no shrink); (3) map
+scroll position within the outro → `de` 0→1, fed to `scene.setExitProgress(de)` (**REUSED**: ring rises from
+below + spins forward + un-tilts; the hero card returns from its scrolled-off-top position = the "card
+drop"); (4) transition the **background** accent (dark during the ring → light at homepage); (5) at `de`→1
+(page bottom) navigate to `/` (scene already in ring state) — seamless; reversible below that.
+
+**🧹 Cleanup done 2026-06-14.** Ripped out the abandoned snapshot/page-card + overscroll-coupling machinery
+(`html-to-image` dep, `capturePage`, `beginPageCard`/`setPageCardProgress`, `exitChapterDrop`, `startCouple`…
+— ~290 net lines). The page is back to **TOP-edge reverse only**; the bottom exit is temporarily **inert**
+pending the rebuild (top edge / back button / nav logo still go home). The ring-reassembly primitives
+`beginExit`/`setExitProgress`/`cancelExit`/`endExit` are **KEPT** — the rebuild reuses them, driven by
+scroll position instead of overscroll/snapshot.
+
+**2026-06-14 hygiene (done, pushed + deployed — `ced2dac7`, `011aa323`).** Untracked
 `node_modules` (18,630 files) + `.output` (33) — both were committed despite `.gitignore` (.git was
 ~120M). Removed the dead `virtualscroll` from `nuxt.config.ts` optimizeDeps + the no-op
 `build.rollupOptions.external:[]`; base-prefixed the favicon href (was 404ing on the `/la-coco-vie/`
 Pages subpath); gitignored `.claude/settings.local.json`. `nuxt prepare` passes.
 
-**2026-06-14 code-health (done, committed local — `f2749c3a` — not pushed).** Three verified
+**2026-06-14 code-health (done, pushed + deployed + prod-verified — `f2749c3a`).** Three verified
 lifecycle fixes (normal running path unchanged): `destroy()` now kills the tracked intro tweens +
 select/deselect timelines and traverse-disposes all GPU resources (was renderer-only → leaked every
 geometry/material/texture on teardown/HMR); the render loop pauses on `document.hidden` and resumes on
 visibility (GSAP keeps its own ticker so tweens still complete); `waitSettled` in `pages/[slug].vue` is
 now bounded (~8s deadline → enables scroll + edge-exits) so a failed WebGL init can't freeze the page.
-`nuxt generate` passes; **a Vercel deploy is still needed to visually confirm** tab-switch resume + that
-the exits behave. Still queued from the review: split the 1411-line `useChapterScene.js` god-module.
+Browserless-verified on prod (homepage + a chapter deep-link, 0 errors). Still queued from the review:
+split the now-1430-line `useChapterScene.js` god-module.
 
-**✗ 2026-06-14 approach #6 (`8eca9bef`) REJECTED by the user** ("it simply doesn't work"). It was the
-forward ride-into-the-ring (DOM cross-fades → the real poster card rides into the deck). Mechanically
-fine + prod-verified, but the *effect* was wrong: the user wants the PAGE ITSELF to visibly shrink into
-the deck, not an article→poster cross-fade. Kept here as a dead end; superseded by ▼.
-
-**▶▶ 2026-06-14 BOTTOM EXIT = SCROLL-COUPLED "DROP INTO THE DECK" (commit `228c1baf`, prod-verified both
-paths).** Approach #7, to the user's re-spec (confirmed via AskUserQuestion: **scroll-coupled** +
-**catch-low-then-rise**). As you overscroll at the bottom: the deck **rises from below + spins forward
-COUPLED to the scroll** while the chapter's own cards stay **hidden**; the **DOM page visibly SHRINKS**
-toward the rising deck and, at the catch, **hands off** (fades out) to its real card fading in — "the page
-becomes a card that drops into the deck" — which then rises to centre + spins into the homepage ring.
-Reversible (scroll back up → `cancelExit` restores); commits + navigates at de≈0.9.
-- **`pages/[slug].vue`:** `onWheel` engages a coupled scrub after ~160px overscroll; a rAF lerps
-  `deCurrent`→`deTarget` (overscroll-accumulated, `EXIT_TRAVEL=1100`) feeding `scene.setExitProgress(de)`
-  + `applyPageShrink(de)` (CSS `scale 1→0.16` + `translateY +14vh` + fade, origin `50% 58%`). Wheel
-  listener is now `passive:false` so it can `preventDefault()` native scroll while scrubbing.
-- **`setExitProgress` (rewritten):** chapter cards HIDDEN through the shrink (no duplicate), fade in at
-  `HERO_REVEAL_START/END` (0.58/0.82) = the handoff; hero card returns to its slot (`HERO_RETURN_END` 0.45)
-  + shrinks to ring size (`HERO_FIT_END` 0.6); other cards rise from below, deck spins `+EXIT_SPIN` (290°).
-  `__heroDebug` now reports per-card `uOpacity`.
-- **Verified via the REAL wheel→DOM path** (`/tmp/bless/exitprobe.mjs commit|cancel`): COMMIT — DOM
-  `scale 1→0.16` while wine cards `op=0` (hidden) + others rise `y −110→0`, then DOM fades `1→0` as wine
-  cards fade `0→1` (the handoff), cards rise to centre, commit→`/`, **0 console errors**. CANCEL — scrub to
-  0.2 then reverse restores `scale→1` + cards`→1`, stays on `/wine-o-clock`, **0 errors**.
-⚠️ **NEXT — the FEEL is for the user to judge on the live site** (`la-coco-vie.vercel.app/wine-o-clock` →
-scroll to the bottom; the hover film plays in a real browser, not in Browserless). Tuning knobs if needed:
-`EXIT_TRAVEL` (scrub length / sensitivity), `applyPageShrink` scale/drift/fade timing, `HERO_REVEAL_*` /
-`HERO_FIT_END`, and the catch alignment (the DOM shrinks toward `translateY +14vh`; nudge so it lands where
-the rising deck's front card sits). `exitChapterDrop` + the #6 GSAP path are now **dead** (delete on cleanup).
-
-**✗ The `228c1baf` coupled DOM-CSS-shrink was REJECTED** (user): the page "literally just shrinks" as a
-FLAT 2D rectangle next to the tilted 3D cards, and the ring should rise BEFORE the edge. Superseded by ▼.
-
-**▶▶ 2026-06-14 BOTTOM EXIT = PAGE SNAPSHOT → A REAL 3D CARD (commit `990b372a`, capture prod-verified).**
-The user's call (AskUserQuestion): give the bottom what the top gets for free — a real WebGL card to
-rotate. At the bottom you're on the opaque DOM article (the hero card scrolled off-top), so rasterise the
-page onto a plane (`html-to-image`) and fly it into the ring. `pages/[slug].vue capturePage()` →
-`scene.beginPageCard(canvas)` (hide DOM) → overscroll scrubs `scene.setPageCardProgress(de)`: the page-card
-flies down into the rising deck (tilt + shrink) while `setExitProgress` reassembles the ring, fading out
-over `HERO_REVEAL_*` as the real poster fades in. `cancelPageCard`/`endPageCard`. **⚠️ The CAPTURE took 4
-chained fixes** (all verified, page-card now shows the real article + flies in, 0 errors): (1) `skipFonts:true`
-— html-to-image silently blanks on the cross-origin Google-Fonts stylesheet; (2) capture the LIVE element,
-not an off-screen clone — the article sections start `opacity:0` and reveal via IntersectionObserver, which
-never fires off-screen; (3) **Lenis scrolls the wrapper via native `scrollTop` (no transform)**, which
-html-to-image can't replicate → capture the FULL `.chapter-scroll` then `drawImage`-crop the
-`[scrollTop, scrollTop+vh]` slice; (4) pixel-opaque + taint sampling to verify (`?debug` →
-`window.__capInfo`/`__capEngage`; `/tmp/bless/cardprobe.mjs`). Capture is pre-warmed at the bottom.
-**▶ OPEN:** (a) the card FLIGHT PATH (`setPageCardProgress` targets) is hand-tuned — needs the user's eye;
-(b) **pre-edge ring-rise not built yet** (deck should rise as you approach the bottom, before the edge);
-(c) fonts are FALLBACK (`skipFonts` skips `fontEmbedCSS` too) — try `skipFonts:false`+`fontEmbedCSS` for
-real Bague/Movie (verify it doesn't re-blank); (d) clean up the `?debug` capture instrumentation + dead exits.
+**Earlier 2026-06-14 bottom-exit attempts (all prod-verified, then rejected/superseded — full detail in the
+saga below).** #6 forward ride-into-ring (`8eca9bef`, "doesn't work" — article→poster cross-fade); #7
+scroll-coupled DOM CSS-shrink "drop into the deck" (`228c1baf`, "literally just shrinks" as a flat 2D rect);
+#8 page snapshot on a real 3D WebGL card (`990b372a`, capture solved through 4 chained bugs). All abandoned
+once the reference decode showed the page is **never morphed** — see `🔁 P2 — Bottom-edge exit — the FULL
+saga` (approaches 6–8 + the decoded mechanism + the scroll-driven plan).
 
 **Other roadblocks**
 - **Option B reference match** is blocked on the Claude extension granted on **`chapter.millanova.com`**
@@ -130,7 +98,7 @@ sections below ("card-becomes-the-page rework" step table A–G + the "Careful a
 - [x] **C — Scroll coupling (P1, "purple overlay")**: hero card scrolls away 1:1 with the page. *(live 2026-05-30, `005d849f`)*
 
 **Next up — motion**
-- [~] **E — Edge-gated scroll exits (P2)** — mid-page scroll is **free**; exits only at the page edges, past `EXIT_THRESHOLD` (800px) → `doExit(fromBottom)`. **Top edge: DONE & stable** (`deselectChapter` reverse-rewind into the ring; also the back button). **Bottom edge: IN PROGRESS** — many approaches tried; current prod (`9553e44e`, `exitChapterDrop`) shrinks the real DOM page into the reassembling ring but reads as **two separate motions** (a 2D DOM shrink can't rotate *with* the 3D ring). **Next: proper literal merge** (snapshot the page → a 3D card that rides the chapter's card into the ring, in step). 👉 **Full saga + all rejected approaches + the fundamental constraint + the M1–M3 plan + the verification protocol: see the `🔁 P2 — Bottom-edge exit — the FULL saga` section below.**
+- [~] **E — Scroll exits (P2)** — **Top edge: DONE & stable** (overscroll up → `doExit()` → `deselectChapter` reverse-rewind into the ring; also the back button / nav logo). **Bottom edge: REBUILD pending** — 8 "morph the page" approaches were tried + rejected; a reference decode (2026-06-14) showed the page is never morphed: it **scrolls fully out** and a **scroll-driven ring "outro" section** scrolls in (the "card drop" is illusion). The snapshot/coupling machinery was removed; bottom exit is temporarily inert. 👉 **Decoded mechanism + the plan: see the `ACTIVE WORK` banner at the top + the `🔁 P2 — Bottom-edge exit — the FULL saga` section below.**
 - [x] **D — Normalize entry spin (P2)**: select spin pinned to one consistent FORWARD turn. *(2026-06-12)* The 7s intro rests `animatedRotationY` at `+4π` and the old target `toRad(φ−90)` was a small absolute angle → the entry tweened ~2 turns BACKWARD by a chapter-dependent amount. Now: collapse the accumulated whole turns (subtract the same multiple of 2π from the lerp anchor `rotation.y` so it's invisible — rotation is 2π-periodic), then advance forward to the front angle, clamped into `[180°,540°)`. Verified (local headless CDP, all 4 chapters): forward spins of **315/360/405/450°** (eat-marry-love/la-storia/wine/amour — the 135° spread is the cards' real 45°-apart ring positions), each landing front-centre (`x:0,z:40,dist:66`); select→deselect→reselect cycle lands the ring back at rest (`animRotY 0`) with no drift; zero console errors.
 - [x] **Hover targeting (P2)**: driven off the front card. *(2026-06-12)* The flat hitboxes don't follow the shader bend, so a raw raycast over the visible front card resolved to a neighbour slot and lifted the wrong card. `onMouseMove` now treats any hitbox hit as "cursor over the carousel" and lifts the front copy (`frontPoster().i`), mirroring the click fix; misses unhover. Verified (CDP): at a bug spot whose raw raycast → ch1, the lifted card is now the front ch2 (single slot, `blend:2`); off-carousel unhovers; no errors.
 - [ ] **F — Robustness matrix**: deep-link / click / re-select / exit-by-scroll / exit-by-button / rapid-repeat all verified.
@@ -624,7 +592,7 @@ Net: the hero shrinks and the ring reassembles spinning forward into the carouse
    view, because **Lenis scrolls via a CSS `transform`** `html-to-image` didn't replicate — and it was
    **slow** (~1.5s; `skipFonts:true` stopped it stalling on the cross-origin Google-Fonts `cssRules`
    SecurityError, but still slow + blank). Dep removed.
-5. **Real live page drops in `exitChapterDrop`** (`9553e44e`, **CURRENT on prod**): shrink the actual
+5. **Real live page drops in `exitChapterDrop`** (`9553e44e`, since removed): shrink the actual
    `.chapter-page` (CSS `scale 1→0.14` toward centre + late fade) while `scene.exitChapterDrop`
    reassembles the ring forward **+360°** (chapter card returns to front-centre) + **hides both chapter
    copies** during the drop (no duplicate) + fades them back over the last 0.5s. Mechanism prod-verified
@@ -633,33 +601,44 @@ Net: the hero shrinks and the ring reassembles spinning forward into the carouse
    separately."* This is the fundamental constraint above — a 2D shrink can't rotate *with* the 3D ring.
    (The "half of it" = the bottom article scaling from an off-centre origin.)
 
-**▶ Chosen path forward — proper literal merge (snapshot → 3D card riding the hero's path).** The page
-MUST be in the 3D layer (constraint above). User-approved 2026-06-13. Milestones (each user-tested):
-- **M1 — corrected capture (not blank):** capture the *visible bottom* view reliably. `html-to-image`
-  on `.chapter-page` grabs the transparent top because of the Lenis transform. Fix: capture an
-  **off-screen clone** of `.chapter-scroll` with the transform removed (full article from the top), then
-  **crop the visible viewport slice** (`source y = lenis.scroll`, height = viewport) → a viewport-correct
-  canvas. Clone off-screen so the live page doesn't visibly jump during capture.
-- **M2 — ride the card into the ring:** put that image on a plane that follows the **chapter's card along
-  the same path the top exit uses** (full-bleed → ring slot: position + 3D rotation + scale, in step with
-  the forward spin) so it **rotates with the ring**, then **hand off to the poster** (fade the page-plane
-  out as it lands).
-- **M3 — perf + robustness:** **pre-warm** the capture (capture once on reaching the bottom, in the
-  background → exit is instant, no hitch); cancel/reverse symmetry; no pops.
+6. **Forward ride-into-the-ring `setExitProgress`** (`8eca9bef`): the DOM cross-fades out while the REAL
+   poster card returns from off-top and rotates into the ring (faithful to `setPageProgress`). Prod-verified
+   (card rides in while DOM fades, 0 errors). ❌ User: *"it simply doesn't work"* — it's an article→poster
+   cross-fade, not the page becoming a card.
+7. **Scroll-coupled DOM CSS-shrink "drop into the deck"** (`228c1baf`): overscroll scrubs `de`; the deck
+   rises from below + spins while the DOM page shrinks (`scale 1→0.16`) toward it + hands off at the catch.
+   Reversible, prod-verified both ways. ❌ User: the page *"literally just shrinks"* as a FLAT 2D rect next
+   to the tilted 3D cards; and the ring should appear BEFORE the edge.
+8. **Page snapshot on a real 3D card** (`990b372a`): `html-to-image` rasterises the visible page onto a
+   WebGL plane that flies into the ring (fixes the 2D-flat problem). The CAPTURE took 4 chained fixes —
+   Google-Fonts CORS blank (`skipFonts`); off-screen clone captures transparent (sections start `opacity:0`,
+   IntersectionObserver never fires off-screen → capture LIVE); Lenis uses native `scrollTop` not transform
+   (capture full content + `drawImage`-crop the slice); pixel/taint sampling to verify. Page-card
+   prod-verified showing the real article + flying in. ❌ Abandoned anyway — the reference decode (below)
+   showed the page is never morphed at all, so no snapshot is needed.
 
-**Dormant primitives kept for this:** `beginExit / setExitProgress / cancelExit / endExit` in
-`useChapterScene.js` (only the `?debug __exitScrub` hooks call them) — the scrubbable forward-return
-machinery, reserved for the M2 ride-into-ring driver. The scene's current bottom-exit entry point is
-`exitChapterDrop(onDone)`; the page drives it from `doExit(true)` in `pages/[slug].vue`.
+**⭐ THE ACTUAL REFERENCE MECHANISM (decoded from a screen-capture of `chapter.millanova.com`, 2026-06-14
+— supersedes the "fundamental constraint" framing above).** The reference does NOT morph the page. The
+chapter page is normal scrolling DOM; you scroll past its footer and the WHOLE page scrolls up and out.
+Below it a tall **"outro" section** scrolls in and reveals the WebGL ring (positioned LOW, viewed *into*
+the cylinder — front cards arc across the bottom, blank card-backs at the top). Scrolling rotates the ring
+(coupled) and a card **drops in from the top** — which, since the page already scrolled out the top, reads
+as the page becoming a card (**pure illusion, no morph**). Keep scrolling → the ring rises + un-tilts into
+the homepage state. Fully scroll-coupled + reversible. **Every approach 1–8 failed because they tried to
+morph the visible page; the reference scrolls it away instead. Top ≠ bottom, and that's fine.**
 
-**⚠️ Verification protocol (learned the hard way — FOLLOW IT):**
-- Verify exits on the **REAL wheel→DOM path**: dispatch real `wheel` events — one big `deltaY:60000` to
-  jump → wait ~2.6s for Lenis to settle at the bottom → an overscroll `deltaY:2000` push. NOT the
-  `__exitScrub` scene scrub (it bypasses the DOM path — it misled the verification twice).
-- Browserless `Page.captureScreenshot` latency **cannot time a sub-2s animation** (frames land
-  late/faded — it repeatedly missed the mid-drop). Use a **screenshot-free `evaluate` probe** sampling
-  `getComputedStyle(el).transform`/`opacity` + `__camDebug` over time; screenshots only for the static
-  end-state look. Probe scripts live under `/tmp/exit-*.json` driven by `/tmp/bless/exitscrub.mjs`.
+**▶ The plan + the cleanup are in the `ACTIVE WORK` banner at the top of this doc.** In short: add a tall
+transparent outro section below the footer; the article scrolls out normally; map outro-scroll → `de` →
+`scene.setExitProgress(de)` (REUSED — ring rises/spins/un-tilts, hero returns from off-top = the card drop);
+transition the bg; navigate `/` at `de`→1. The snapshot/coupling machinery was removed 2026-06-14; the
+`beginExit`/`setExitProgress`/`cancelExit`/`endExit` primitives are kept for the rebuild (`exitChapterDrop`
+deleted).
+
+**⚠️ Verification protocol (still applies):** drive exits on the **REAL scroll path** (dispatch real `wheel`
+events / scroll Lenis), NOT the `__exitScrub` scene scrub (it bypasses the DOM and misled twice). For
+sub-2s motion use a **screenshot-free `evaluate` probe** sampling transforms/opacity + `__camDebug`/`__heroDebug`
+over time (Browserless screenshot latency can't time it); screenshots for the static look. Probe scripts
+live under `/tmp/bless/*.mjs`.
 
 **Top-edge exit (STABLE).** Overscroll up past `EXIT_THRESHOLD` (800px) → `doExit(false)` →
 `router.push('/')` → route watcher → `deselectChapter()`: snap hero to `baseY`, reverse-spin

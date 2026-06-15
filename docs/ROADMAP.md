@@ -25,10 +25,12 @@ Remaining homepage polish (optional, low priority):
 
 **Built & live:** real `/{slug}` routes on a persistent WebGL shell (URL = source of truth,
 deep-links + back/forward, per-slug prerender); the card-select animation *is* the transition;
-the **"card becomes the page"** rework (hero scroll-coupling + edge-gated exits, top reverse /
-bottom forward-or-reverse); the **Wine O'Clock** inner page as a full data-driven vertical slice
-(3 sub-chapters, galleries, dress-tail cards, fade-up reveal); a 2026-06-12 re-review + fix batch
-(interrupt-safety, video lifecycle, input hardening), prod- and real-browser-verified.
+the **"card becomes the page"** rework (hero scroll-coupling + edge-gated exits — the **top edge
+reverse-spins back into the ring** and is done/stable; the **bottom edge is a scroll-driven "outro"
+section**, rebuild pending — see below); the **Wine O'Clock** inner page as a full data-driven
+vertical slice (3 sub-chapters, galleries, dress-tail cards, fade-up reveal); a 2026-06-12
+re-review + fix batch (interrupt-safety, video lifecycle, input hardening), prod- and
+real-browser-verified.
 
 **Decisions settled** (were open questions in Phase 1):
 - **Routing**, not an in-place overlay (real shareable URLs; matches the original).
@@ -36,8 +38,14 @@ bottom forward-or-reverse); the **Wine O'Clock** inner page as a full data-drive
 - Content lives in a **parallel `CHAPTER_PAGES` model** (`composables/chapterPages.js`), not in `CHAPTERS`.
 
 **Remaining (per the board):**
-- **Option B** — match the reference's forward "drop into the spinning ring" bottom exit on the
-  non-Wine pages (blocked on a `chapter.millanova.com` extension grant to capture the reference live).
+- **Bottom-edge exit — rebuild as a scroll-driven "outro" section.** A 2026-06-14 reference decode
+  (`chapter.millanova.com`) showed the page is **never morphed**: the article scrolls fully out the
+  top and a tall transparent **outro section** below the footer scrolls in, revealing the WebGL ring;
+  outro-scroll drives `scene.setExitProgress(de)` (ring rises/spins/un-tilts, the hero returns from
+  off-top so the "card drop" reads as illusion), then navigates `/` at `de`→1 — scroll-coupled and
+  reversible. The 8 earlier "morph the page into a card" attempts (snapshot, drop-into-deck,
+  per-slug split, …) were **all rejected and removed**; the bottom edge is temporarily inert pending
+  this rebuild. Full mechanism + plan: [`PHASE-2-INNER-PAGES.md`](PHASE-2-INNER-PAGES.md).
 - **D** — normalize the entry-spin magnitude (varies per chapter / >1 turn).
 - Hover targeting (side-card hover lifts a neighbor); richer ScrollTrigger/Lenis parallax + inline films.
 - **The other 3 chapters' content + assets** (la-storia / eat-marry-love / amour-getaway are scaffolds) —

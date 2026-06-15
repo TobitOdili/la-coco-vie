@@ -6,7 +6,7 @@
 > [`docs/ROADMAP.md`](docs/ROADMAP.md) · issue forensics → [`AUDIT.md`](AUDIT.md).
 > **This file is the living status log** (what works, resolved/open issues, dev workflow, sessions).
 
-> Last updated: 2026-06-12 (Phase 2 "card becomes the page" built & live; re-review fix batch merged)
+> Last updated: 2026-06-14 (bottom chapter-exit reframed: page scrolls out → ring outro section, being rebuilt scroll-driven; snapshot/page-card machinery removed)
 
 ---
 
@@ -145,8 +145,9 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 
 **Phase 2 — inner pages ("card becomes the page")**
 - Real `/{slug}` routes on a persistent shell; deep-links, browser back/forward, per-slug prerender; URL = source of truth
-- Hero **scroll-coupling** (card scrolls away 1:1 with the page); inner-page content (Wine: THE BRIDE / THE WINE / THE PEOPLE, copy, galleries, dress-tail cards, fade-up reveal)
-- **Edge-gated exits**: top overscroll → reverse-spin into the ring; bottom → reverse (Wine, option A) or forward "drop into the ring" (others, option B); mid-page scroll free; back button = reverse-spin
+- Inner-page content (Wine: THE BRIDE / THE WINE / THE PEOPLE, copy, galleries, dress-tail cards, fade-up reveal)
+- **Top exit DONE**: top overscroll-up (and back button / nav logo) → `doExit()` → `router.push('/')` → route watcher runs `deselectChapter()` (hero shrinks, ring reverse-spins back into the carousel)
+- **Bottom exit being REBUILT scroll-driven** (2026-06-14 reframe): the page is NOT morphed — the article scrolls out normally and a tall transparent "outro" section below the footer scrolls the WebGL ring in; outro-scroll → `scene.setExitProgress(de)`, navigate `/` at `de`→1. Currently INERT pending the rebuild (top edge / back button / nav logo still go home). See [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md).
 - Film plays on select-complete (incl. deep-links) and pauses on every exit; rapid back/forward is interrupt-safe
 
 ---
@@ -340,12 +341,35 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
 | v17 | ~8.5/10 | Fixed cursor, viewport, hover txt swap, single-card hover, horizontal scroll, real-gated loader |
 | v22 | ~9/10 | + logo-txt spacing (#11), front-card text (#14), noise texture (#3), far-card opacity falloff (#6); #5/#8 confirmed already-correct |
 | v24 | ~9/10 | + scroll-back exit (#7, later removed); fixed broken chapter selection (#15, pointer-events) |
-| v-phase2 (current) | ~9/10 homepage + Phase 2 core | Routing + persistent shell, Wine inner page, "card becomes the page" (hero coupling + edge-gated exits), 2026-06-12 re-review fix batch |
+| v-phase2 (current) | ~9/10 homepage + Phase 2 core | Routing + persistent shell, Wine inner page, top exit done (reverse-spin into ring); bottom exit being rebuilt scroll-driven (page scrolls out → ring outro section) — 2026-06-14 reframe + cleanup |
 | Target | 9.5-10/10 | Option-B reference match + entry-spin (D) + hover; other 3 chapters' content; then re-skin |
 
 ---
 
 ## 🗓 Session Log
+
+### 2026-06-14 (session 16) — bottom-exit reframe (page scrolls out → ring outro) + cleanup
+- **Reference decode (chapter.millanova.com screen-capture) reframed the whole bottom exit.** The page
+  is **never morphed into a card**. You scroll past the article footer and the **whole page scrolls up
+  and out**; below it a scroll-driven "outro" section scrolls in and reveals the WebGL ring; further
+  scroll rotates the ring while a card "drops in from the top" — which, because the page already scrolled
+  out the top, *reads* as the page becoming a card (pure illusion, no morph). Keep scrolling → the ring
+  rises into the homepage state. Scroll-coupled + reversible. Top ≠ bottom, and that's fine.
+- **8 rejected approaches** (all tried to MORPH the visible page into a card): reverse-mirror; forward
+  ride-into-ring; DOM CSS-shrink "drop into the deck"; an `html-to-image` page-snapshot rendered on a
+  3D WebGL card; `exitChapterDrop`; and overscroll-coupling variants. None matched the reference feel.
+- **New plan (scroll-driven, not yet built):** a tall transparent "outro" section below the footer; the
+  article scrolls out normally; outro-scroll → `scene.setExitProgress(de)`; navigate `/` at `de`→1. Reuses
+  the kept `beginExit`/`setExitProgress`/`cancelExit`/`endExit` ring-reassembly primitives.
+- **Cleanup (committed `c2b8b0c5`):** ripped out the snapshot/page-card + overscroll-coupling machinery —
+  `html-to-image` dependency gone; `capturePage`/`beginPageCard`/`setPageCardProgress`/`exitChapterDrop`/
+  `startCouple` deleted (~290 net lines). `pages/[slug].vue` is back to **TOP-edge reverse exit only**
+  (`doExit()` → `router.push('/')` → watcher runs `scene.deselectChapter()`); bottom exit temporarily
+  **INERT** (top edge / back button / nav logo still go home).
+- **Also done 2026-06-14** (pushed + deployed + prod-verified): repo hygiene (untracked `node_modules`/
+  `.output`, removed dead `virtualscroll` config, base-prefixed favicon); code-health (full `destroy()`
+  disposal, render-loop visibility gate, bounded `waitSettled`).
+- Canonical live tracker updated: [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md).
 
 ### 2026-06-12 (session 15) — Fable re-review → fix batch → prod-verified
 - **Full re-review** (5-auditor multi-agent sweep, hand-verified, adversarial diff review): 2 P1s,
