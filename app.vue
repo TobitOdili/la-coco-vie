@@ -3,8 +3,8 @@
     <!-- Loading screen -->
     <LoadingScreen v-if="!loaded" :progress="loadProgress" @complete="onLoaded" />
 
-    <!-- Custom cursor -->
-    <CustomCursor ref="cursorRef" />
+    <!-- Custom cursor / explore circle — tinted to whichever card it sits over. -->
+    <CustomCursor ref="cursorRef" :accent="cursorAccent" />
 
     <!-- WebGL Scene — persistent across routes (never unmounts, so no intro replay) -->
     <WebGLScene
@@ -14,6 +14,7 @@
       @chapter-unhover="onChapterUnhover"
       @progress="onProgress"
       @chapter-deselect="onChapterDeselect"
+      @chapter-front="onChapterFront"
     />
 
     <!-- Routed page content. Empty on '/' (the scene IS the homepage); the chapter
@@ -69,6 +70,15 @@ const currentChapter = computed(() =>
   selectedChapterIdx.value !== null ? CHAPTERS[selectedChapterIdx.value] : null
 )
 const currentAccent = computed(() => currentChapter.value?.accent || '#b32c05')
+
+// The FRONT-facing card on the carousel (scene-reported). On the homepage no chapter is
+// route-selected, so this is what the explore circle tints itself to — matching the reference,
+// where the circle reflects the card beneath it.
+const frontChapterIdx = ref(-1)
+function onChapterFront(idx) { frontChapterIdx.value = idx }
+const cursorAccent = computed(
+  () => currentChapter.value?.accent || CHAPTERS[frontChapterIdx.value]?.accent || '#b32c05'
+)
 const chapterClass = computed(() => (currentChapter.value ? `--${currentChapter.value.slug}` : ''))
 
 // Document title — via useHead so Nuxt's head system manages it (assigning

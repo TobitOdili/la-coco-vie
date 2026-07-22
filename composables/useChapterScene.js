@@ -311,6 +311,10 @@ export function useChapterScene() {
   let onHoverCallback = null
   let onDeselectCallback = null
   let onReadyCallback = null  // fired once when the intro finishes (for deep-link selection)
+  // Fired whenever the FRONT-facing chapter changes (the one the centre text tracks). The
+  // explore cursor uses it to tint itself to the card it's sitting over — on the homepage no
+  // chapter is "selected", so the route-derived accent isn't enough.
+  let onFrontChapterCallback = null
 
   // Loading progress (Issue #12) — gate the loader on real asset loads.
   // 13 textures load during init(): 1 logo + 4 txt + 8 poster SVGs.
@@ -914,6 +918,7 @@ export function useChapterScene() {
     const newTex = txtTextures[chIdx]
     if (!txtMat || !newTex) return
     currentTxtChapter = chIdx
+    if (onFrontChapterCallback) onFrontChapterCallback(chIdx)
     gsap.killTweensOf(txtMat)
     if (instant) {
       txtMat.map = newTex
@@ -1468,6 +1473,7 @@ export function useChapterScene() {
 
   function onSelect(cb) { onSelectCallback = cb }
   function onHover(cb) { onHoverCallback = cb }
+  function onFrontChapter(cb) { onFrontChapterCallback = cb }
   function onProgress(cb) { onProgressCallback = cb }
   function onDeselect(cb) { onDeselectCallback = cb }
   function onReady(cb) { onReadyCallback = cb }
@@ -1481,6 +1487,7 @@ export function useChapterScene() {
     destroy,
     onSelect,
     onHover,
+    onFrontChapter,
     onProgress,
     onDeselect,
     onReady,

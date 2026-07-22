@@ -14,7 +14,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useChapterScene } from '~/composables/useChapterScene'
 
-const emit = defineEmits(['chapter-select', 'chapter-hover', 'chapter-unhover', 'progress', 'chapter-deselect'])
+const emit = defineEmits(['chapter-select', 'chapter-hover', 'chapter-unhover', 'progress', 'chapter-deselect', 'chapter-front'])
 
 const canvasRef = ref(null)
 const hitLayerRef = ref(null)
@@ -88,6 +88,11 @@ onMounted(async () => {
 
   scene.onSelect((idx) => {
     emit('chapter-select', idx)
+  })
+
+  // Which card is currently front-facing → lets the explore cursor tint to it.
+  scene.onFrontChapter((idx) => {
+    emit('chapter-front', idx)
   })
 
   scene.onHover((idx, hovering) => {
