@@ -21,6 +21,9 @@ const hitLayerRef = ref(null)
 const scene = useChapterScene()
 
 function onHitClick(e) {
+  // Ignore the click a swipe leaves behind (see onTouchEnd) — otherwise rotating the
+  // carousel on a phone would also select whatever card you scrolled past.
+  if (performance.now() < suppressClickUntil) return
   scene.onClick(e)
 }
 
@@ -38,14 +41,18 @@ function onWheel(e) {
 // chapter page (z-10) covers it. `touch-action: none` on that layer stops the browser
 // hijacking the gesture for scroll/zoom, which is why these can stay passive.
 const TOUCH_SCALE = 2.5
+const TAP_SLOP = 12          // px of travel below which a touch still counts as a tap
 let touchLastX = 0
 let touchLastY = 0
+let touchTravel = 0          // accumulated travel this gesture — distinguishes swipe from tap
+let suppressClickUntil = 0
 let touching = false
 function onTouchStart(e) {
   const t = e.touches[0]
   if (!t) return
   touchLastX = t.clientX
   touchLastY = t.clientY
+  touchTravel = 0
   touching = true
 }
 function onTouchMove(e) {
@@ -56,10 +63,14 @@ function onTouchMove(e) {
   const dx = touchLastX - t.clientX
   touchLastX = t.clientX
   touchLastY = t.clientY
+  touchTravel += Math.abs(dy) + Math.abs(dx)
   scene.onScroll((dy - dx) * TOUCH_SCALE)
 }
 function onTouchEnd() {
   touching = false
+  // Browsers synthesize a click after a touch even when it travelled — so a swipe would
+  // otherwise ALSO select a card. Swallow the trailing click after a real drag.
+  if (touchTravel > TAP_SLOP) suppressClickUntil = performance.now() + 400
 }
 
 onMounted(async () => {
