@@ -6,7 +6,10 @@
         <!-- Left: About -->
         <div>
           <div class="menu-item" @click="$emit('toggle-about')">
-            <span class="hidden md:block">{{ SITE.nav.aboutLabel }}</span>
+            <!-- Was `hidden md:block`: on a phone that left an invisible click target and no
+                 way into About at all. The reference shows this label at mobile widths too,
+                 and it fits (ABOUT + the 136px centre logo + COLLECTION inside 390px). -->
+            <span>{{ SITE.nav.aboutLabel }}</span>
           </div>
         </div>
         <!-- Right: Collection link -->
