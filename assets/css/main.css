@@ -199,6 +199,9 @@ body::after {
   z-index: 5;
   cursor: none;
   pointer-events: auto;
+  /* Mobile: the carousel is driven by our own touch handlers (WebGLScene). Without this the
+     browser claims the gesture for scroll/pinch and the ring never turns. */
+  touch-action: none;
 }
 
 /* ===== Menu Item ===== */

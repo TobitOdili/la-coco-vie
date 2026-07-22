@@ -115,6 +115,32 @@ function onWheel(e) {
   }
 }
 
+// Touch equivalent of the TOP-edge exit (mobile) — without this the only way off a chapter
+// on a phone was the nav logo. A finger-pull needs a much smaller threshold than a wheel's
+// 800px to feel deliberate. (The BOTTOM exit needs nothing extra: it's driven by Lenis
+// scroll position, which native touch scrolling already produces.)
+const EXIT_THRESHOLD_TOUCH = 180
+let touchLastY = 0
+function onTouchStart(e) {
+  const t = e.touches[0]
+  if (!t) return
+  touchLastY = t.clientY
+  topAccum = 0                                // each touch is a fresh gesture
+}
+function onTouchMove(e) {
+  if (!ready || !lenis || exiting) return
+  const t = e.touches[0]
+  if (!t) return
+  const dy = touchLastY - t.clientY           // negative ⇒ dragging the page DOWN (scrolling up)
+  touchLastY = t.clientY
+  if (lenis.scroll <= 2 && dy < 0) {
+    topAccum += -dy
+    if (topAccum >= EXIT_THRESHOLD_TOUCH) doExit()
+  } else {
+    topAccum = 0
+  }
+}
+
 // TOP edge / back button → navigate home; app.vue's route watcher runs deselectChapter() (reverse).
 function doExit() {
   if (exiting) return
@@ -205,6 +231,8 @@ onMounted(() => {
   waitSettled()
 
   pageEl.value?.addEventListener('wheel', onWheel, { passive: true })
+  pageEl.value?.addEventListener('touchstart', onTouchStart, { passive: true })
+  pageEl.value?.addEventListener('touchmove', onTouchMove, { passive: true })
 
   // Track the active section for the floating dress popups (the most in-view section wins).
   if (pageContent.value && pageEl.value) {
@@ -223,6 +251,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   pageEl.value?.removeEventListener('wheel', onWheel)
+  pageEl.value?.removeEventListener('touchstart', onTouchStart)
+  pageEl.value?.removeEventListener('touchmove', onTouchMove)
   sectionObserver?.disconnect()
   if (readyPoll) clearTimeout(readyPoll)
   // Leaving mid-exit (e.g. the back button while in the outro) → finalize to a clean homepage ring.

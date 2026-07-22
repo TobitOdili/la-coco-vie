@@ -26,10 +26,40 @@ function onHitClick(e) {
 
 // Wheel → carousel scroll. (The `virtualscroll` dep was dead: the installed package is an
 // unrelated custom-scrollbar widget whose constructor threw on our config, so the code
-// always fell back to this listener anyway. Removed the dead import.) Touch/mobile is a
-// known gap — `wheel` doesn't cover it; revisit with the real `virtual-scroll` lib if needed.
+// always fell back to this listener anyway. Removed the dead import.)
 function onWheel(e) {
   scene.onScroll(e.deltaY - e.deltaX)
+}
+
+// Touch → carousel scroll (mobile). The carousel used to be wheel-ONLY, so on a phone the
+// ring simply didn't respond. Mirrors the wheel mapping (deltaY - deltaX) using per-move
+// finger deltas, scaled up so a comfortable swipe turns a meaningful arc (cards sit 45°
+// apart; ~300px of swipe ≈ 34°). Listeners live on the hit layer, so they're inert while a
+// chapter page (z-10) covers it. `touch-action: none` on that layer stops the browser
+// hijacking the gesture for scroll/zoom, which is why these can stay passive.
+const TOUCH_SCALE = 2.5
+let touchLastX = 0
+let touchLastY = 0
+let touching = false
+function onTouchStart(e) {
+  const t = e.touches[0]
+  if (!t) return
+  touchLastX = t.clientX
+  touchLastY = t.clientY
+  touching = true
+}
+function onTouchMove(e) {
+  if (!touching) return
+  const t = e.touches[0]
+  if (!t) return
+  const dy = touchLastY - t.clientY   // finger up ⇒ positive, same sense as wheel deltaY
+  const dx = touchLastX - t.clientX
+  touchLastX = t.clientX
+  touchLastY = t.clientY
+  scene.onScroll((dy - dx) * TOUCH_SCALE)
+}
+function onTouchEnd() {
+  touching = false
 }
 
 onMounted(async () => {
@@ -69,6 +99,16 @@ onMounted(async () => {
   // Wheel drives the homepage carousel scroll.
   window.addEventListener('wheel', onWheel, { passive: true })
 
+  // Touch drives it on mobile. Bound to the hit layer (not window) so a chapter page
+  // covering it takes the gesture instead.
+  const hit = hitLayerRef.value
+  if (hit) {
+    hit.addEventListener('touchstart', onTouchStart, { passive: true })
+    hit.addEventListener('touchmove', onTouchMove, { passive: true })
+    hit.addEventListener('touchend', onTouchEnd, { passive: true })
+    hit.addEventListener('touchcancel', onTouchEnd, { passive: true })
+  }
+
   // Resize — listen to both window resize and visualViewport resize (mobile)
   window.addEventListener('resize', handleResize)
   if (window.visualViewport) {
@@ -83,6 +123,13 @@ function handleResize() {
 onUnmounted(() => {
   window.removeEventListener('mousemove', scene.onMouseMove)
   window.removeEventListener('wheel', onWheel)
+  const hit = hitLayerRef.value
+  if (hit) {
+    hit.removeEventListener('touchstart', onTouchStart)
+    hit.removeEventListener('touchmove', onTouchMove)
+    hit.removeEventListener('touchend', onTouchEnd)
+    hit.removeEventListener('touchcancel', onTouchEnd)
+  }
   window.removeEventListener('resize', handleResize)
   if (window.visualViewport) {
     window.visualViewport.removeEventListener('resize', handleResize)
