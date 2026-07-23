@@ -100,16 +100,26 @@ function tick() {
       const frames = strip.querySelectorAll('.film-frame')
       if (frames.length > 1) {
         const step = frames[1].offsetTop - frames[0].offsetTop
-        strip.style.transform = `translateY(${(-p * (frames.length - 1) * step).toFixed(1)}px)`
+        // A projector advances in discrete pulls: double-smoothstep the fractional
+        // position so each frame DWELLS centred in the gate and the transition
+        // between frames is quick. Continuous + reversible, but it reads as frames.
+        const q = p * (frames.length - 1)
+        const i0 = Math.floor(q)
+        const x = q - i0
+        const s1 = x * x * (3 - 2 * x)
+        const dwell = s1 * s1 * (3 - 2 * s1)
+        const qq = i0 + dwell
+        strip.style.transform = `translateY(${(-qq * step).toFixed(1)}px)`
         let cap = ''
         frames.forEach((f, i) => {
           const fr = f.getBoundingClientRect()
           const d = Math.abs(fr.top + fr.height / 2 - vh / 2) / vh
-          const t = Math.min(1, Math.max(0, 1 - d * 2.2))
-          f.style.opacity = String(0.25 + 0.75 * t)
-          f.style.filter = `brightness(${(0.55 + 0.55 * t).toFixed(2)})`
-          if (d < 0.1) cap = exposures.value[i]?.cap || ''
+          const t = Math.min(1, Math.max(0, 1 - d * 2))
+          f.style.opacity = String(0.45 + 0.55 * t)
+          f.style.filter = `brightness(${(0.72 + 0.38 * t).toFixed(2)})`
         })
+        const near = Math.round(qq)
+        if (Math.abs(qq - near) < 0.3) cap = exposures.value[near]?.cap || ''
         currentCap.value = cap
       }
     }
@@ -210,8 +220,8 @@ onBeforeUnmount(() => cancelAnimationFrame(rafId))
   background: #1d1c30;
   padding: 0 3.4rem;
   background-image:
-    radial-gradient(0.55rem 0.8rem at 1.7rem 50%, rgba(214, 213, 232, 0.5) 58%, transparent 62%),
-    radial-gradient(0.55rem 0.8rem at calc(100% - 1.7rem) 50%, rgba(214, 213, 232, 0.5) 58%, transparent 62%);
+    radial-gradient(0.6rem 0.85rem at 1.7rem 50%, rgba(214, 213, 232, 0.85) 58%, transparent 63%),
+    radial-gradient(0.6rem 0.85rem at calc(100% - 1.7rem) 50%, rgba(214, 213, 232, 0.85) 58%, transparent 63%);
   background-size: 100% 3.2rem;
 }
 .film-frame {
