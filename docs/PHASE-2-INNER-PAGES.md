@@ -62,10 +62,23 @@ original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker*
   story); (2) the thread's MOTION CONSISTENCY between scenes (segments draw at per-scene rates);
   (3) the page is CONTENT-THIN — more to read/do per scene when real details arrive; (4) user
   LIKES the add-to-calendar card; wants a real MAP widget card later.
-- **Remaining to build:** In Frames ("Screening Room": strip = the thread, gate-lock frames,
-  leader countdowns, blank "reserved" frames for future rolls, lights up at the outro) and
-  With Love ("Thank-You in Advance": scrubbed ink handwriting, items circled like a catalogue,
-  the line splits to SIGN both names, underline → RSVP).
+- **IN FRAMES = "The Screening Room" — BUILT + prod-verified (`3730fbae`), awaiting user reaction.**
+  `components/chapter/InFrames.vue`: the one page that goes DARK (chapter deep-purple #2b2a45).
+  Film-leader title card → THE GATE (sticky projector window; scroll translates a physical film
+  strip through it via rAF; sprocket holes = repeating radial-gradients, zero assets; each frame
+  brightens as it reaches gate centre, caption flickers on beneath in the handwriting voice) →
+  THE LEADER (academy countdown, crosshairs + scroll-scrubbed sweep circle + Monoton 3→2→1) →
+  RESERVED ROLLS (The Traditional / The White Wedding as dashed blank "exposures reserved"
+  frames) → END OF REEL card, gradient lifts the lights back into the RSVP outro. Roll 01 = 5
+  placeholder exposures w/ subtitle captions. **Projector DWELL:** the strip position is
+  double-smoothstepped so frames rest centred in the gate and transition quickly (a naive linear
+  advance left every frame half-in/half-out and murky — fixed `3730fbae`). Verified desktop +
+  mobile: strip advances, captions swap at frame centre, leader counts 3→1, popups track, 0 errors.
+  ⚠️ **KNOWN NIT (tunable):** sprocket holes render but read too subtle on prod — the strip bar
+  (#1d1c30) is too close to the room (#2b2a45); needs more contrast / wider bar. CSS is correct
+  (isolated test passes); it's a value tweak, not a bug.
+- **Remaining to build:** With Love ("Thank-You in Advance": scrubbed ink handwriting, items
+  circled like a catalogue, the line splits to SIGN both names, underline → RSVP).
 
 **▶ THE PIVOT (2026-07-23).** The site is no longer a Milla Nova replica: it is now **the
 wedding site of Covenant (Odili) & Uvie (Dan-Egua)** — "A Love Story in Chapters" (HEAD `cd48cb2b`,
