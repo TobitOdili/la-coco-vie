@@ -7,14 +7,20 @@
            you scroll, the scene couples the card to the scroll so it rises away. -->
       <section class="chapter-hero" aria-hidden="true" />
 
-      <!-- Built inner page (data-driven) when content exists for this chapter… -->
+      <!-- Built inner page (data-driven) when content exists for this chapter.
+           Each chapter can have a bespoke treatment (US = the margin-notes scrapbook);
+           the generic ChapterSection loop is the fallback. Bespoke components must
+           render `.chapter-section` roots with data-idx so the popup observer works. -->
       <div v-if="pageContent" class="chapter-content">
-        <ChapterSection
-          v-for="(section, i) in pageContent.sections"
-          :key="i"
-          :data-idx="i"
-          :section="section"
-        />
+        <UsStory v-if="chapter.slug === 'us'" :sections="pageContent.sections" />
+        <template v-else>
+          <ChapterSection
+            v-for="(section, i) in pageContent.sections"
+            :key="i"
+            :data-idx="i"
+            :section="section"
+          />
+        </template>
         <ChapterEnd :chapter="chapter" />
       </div>
 
@@ -46,6 +52,7 @@ import Lenis from 'lenis'
 import { CHAPTERS } from '~/composables/useChapterScene'
 import { CHAPTER_PAGES, POPUPS } from '~/composables/chapterPages'
 import ChapterSection from '~/components/chapter/ChapterSection.vue'
+import UsStory from '~/components/chapter/UsStory.vue'
 import ChapterEnd from '~/components/chapter/ChapterEnd.vue'
 import DressTail from '~/components/chapter/DressTail.vue'
 

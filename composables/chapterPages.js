@@ -91,48 +91,61 @@ export const POPUPS = {
 
 // ── The four chapters ────────────────────────────────────────────────────────
 export const CHAPTER_PAGES = {
+  // “Us” renders through the bespoke UsStory component (the margin-notes scrapbook),
+  // which reads the extra per-scene fields: date (the stitch line), notes[] (the
+  // two-voice handwritten margin notes; voice 'c' = Covenant, 'u' = Uvie), caption
+  // (under the taped polaroid — images[0] only; this page is deliberately media-light).
   us: {
     sections: [
       {
         num: 'I',
         title: 'The Meeting',
+        date: 'MARCH 2019',
         body:
           'Every story has a page one. Ours was an ordinary afternoon that refused to stay ' +
           'ordinary — a mutual friend, a borrowed seat, and a conversation neither of us ' +
-          'wanted to end. Covenant swears he knew by the second cup of coffee. Uvie says ' +
-          'it took a week. We have agreed to disagree, forever. [Placeholder — the real ' +
-          'how-we-met story goes here, 3–5 sentences.]',
-        images: [
-          asset('/images/gallery/eat-marry-love-01.jpg'),
-          asset('/images/gallery/eat-marry-love-02.jpg'),
+          'wanted to end. [Placeholder — the real how-we-met story goes here, 3–5 sentences.]',
+        notes: [
+          { voice: 'c', text: 'he swears it was instant' },
+          { voice: 'u', text: 'it took me a week. worth it.' },
         ],
+        images: [asset('/images/gallery/eat-marry-love-01.jpg')],
+        caption: 'the first hello',
         popups: ['momentHello'],
         align: 'left',
       },
       {
         num: 'II',
         title: 'The Question',
+        date: 'THE QUESTION',
         body:
           'Years, road trips, and a hundred small kindnesses later — one of us got down on ' +
-          'one knee. There was a speech, carefully rehearsed and instantly forgotten. There ' +
-          'were tears, though we still argue about whose came first. [Placeholder — the ' +
-          'proposal story: where it happened, who was in on it, what was said.]',
+          'one knee. There was a speech, and there were tears. [Placeholder — the proposal ' +
+          'story: where it happened, who was in on it, what was said.]',
+        notes: [
+          { voice: 'c', text: 'rehearsed for weeks. forgot every word.' },
+          { voice: 'u', text: 'the tears came first. his.' },
+        ],
         images: [asset('/images/gallery/eat-marry-love-03.jpg')],
+        caption: 'she said yes',
         popups: ['momentYes'],
         align: 'right',
       },
       {
         num: 'III',
         title: 'The Yes',
+        date: 'AND NOW',
         body:
-          'And now — this. Two families becoming one, two names on one invitation. We are ' +
-          'Covenant Odili and Uvie Dan-Egua, and we cannot wait to write the next chapter ' +
-          'with everyone we love in the room. [Placeholder — a short closing note that ' +
-          'hands the reader on to The Big Day.]',
-        images: [
-          asset('/images/gallery/eat-marry-love-05.jpg'),
-          asset('/images/gallery/eat-marry-love-06.jpg'),
+          'Two families becoming one, two names on one invitation. We are Covenant Odili ' +
+          'and Uvie Dan-Egua, and we cannot wait to write the next chapter with everyone ' +
+          'we love in the room. [Placeholder — a short closing note that hands the reader ' +
+          'on to The Big Day.]',
+        notes: [
+          { voice: 'c', text: 'two names, one invitation' },
+          { voice: 'u', text: 'see you there — U & C' },
         ],
+        images: [asset('/images/gallery/eat-marry-love-05.jpg')],
+        caption: 'october twenty-seven',
         popups: [],
         align: 'left',
       },
