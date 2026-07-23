@@ -28,9 +28,22 @@ original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker*
    (b) Browserless `captureScreenshot` latency can't time a sub-2s animation — use a **screenshot-free
    `evaluate` probe** (sample `transform`/`opacity`/`__camDebug` over time), screenshots for the look only.
 
-**▶ STATE (2026-07-22 — handoff).** Three things closed since the last handoff: the **bottom-edge exit is
-DONE and user-approved**, **all four chapters are built with the reference's REAL copy**, and
-**mobile/touch works**. What remains is layout *fidelity* (scaling), not function — see ▼ "What's left".
+**▶▶ STATE (2026-07-23 — THE PIVOT).** The site is no longer a Milla Nova replica: it is now **the
+wedding site of Covenant (Odili) & Uvie (Dan-Egua)** — "A Love Story in Chapters" (HEAD `cd48cb2b`,
+live + prod-verified). The conventional wedding pages became the four ring cards: **US** (story) →
+**THE BIG DAY** (events; popups = 📍 map / 🗓 calendar cards) → **IN FRAMES** (gallery) → **WITH LOVE**
+(registry; popups = gift cards). Chapter-end CTA = "See you there — RSVP"; homepage carries the names
+wordmark + date + countdown; the About panel is the welcome note. The scene machinery is untouched.
+**ALL content is PLACEHOLDER** (invented date Dec 12 2026, [bracketed] facts, Milla Nova stills,
+dummy registry, '#rsvp'). Texture pipeline gotchas: poster SVGs must be **pre-rendered to PNG**
+(SVG-as-image won't wait for embedded fonts at drawImage); `cu-logo.png` **alpha is load-bearing**
+(shader: mix(poster, accent, logo.a) — opaque bg floods the card accent); posterTex needs
+colorSpace=SRGB on the PNG path. Old replica copy recoverable at `a4224399`.
+
+**▶ Pre-pivot state (2026-07-22 handoff).** Three things closed since the previous handoff: the
+**bottom-edge exit is DONE and user-approved**, **all four chapters are built with the reference's REAL
+copy**, and **mobile/touch works**. What remained was layout *fidelity* (scaling), not function — see
+▼ "What's left" (those items now serve the wedding skin).
 The exit is the reference's scroll-driven outro (decoded from `millanova frames/`, gitignored) — NO page morph.
 
 ## ⚠️ VERIFICATION STATUS — read before trusting anything above
