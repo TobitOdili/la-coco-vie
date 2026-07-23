@@ -45,14 +45,18 @@ const TAP_SLOP = 12          // px of travel below which a touch still counts as
 let touchLastX = 0
 let touchLastY = 0
 let touchTravel = 0          // accumulated travel this gesture — distinguishes swipe from tap
+let touchVel = 0             // last per-move delta — seeds the release momentum
+let momentumRaf = null
 let suppressClickUntil = 0
 let touching = false
 function onTouchStart(e) {
   const t = e.touches[0]
   if (!t) return
+  cancelAnimationFrame(momentumRaf)   // a new touch overrides any coasting
   touchLastX = t.clientX
   touchLastY = t.clientY
   touchTravel = 0
+  touchVel = 0
   touching = true
 }
 function onTouchMove(e) {
@@ -64,13 +68,26 @@ function onTouchMove(e) {
   touchLastX = t.clientX
   touchLastY = t.clientY
   touchTravel += Math.abs(dy) + Math.abs(dx)
-  scene.onScroll((dy - dx) * TOUCH_SCALE)
+  const delta = (dy - dx) * TOUCH_SCALE
+  touchVel = delta
+  scene.onScroll(delta)
 }
 function onTouchEnd() {
   touching = false
   // Browsers synthesize a click after a touch even when it travelled — so a swipe would
   // otherwise ALSO select a card. Swallow the trailing click after a real drag.
   if (touchTravel > TAP_SLOP) suppressClickUntil = performance.now() + 400
+  // Momentum. Without this the ring stops dead the instant the finger lifts, which reads as
+  // "stuck" next to the desktop wheel (where a stream of events keeps it gliding).
+  cancelAnimationFrame(momentumRaf)
+  if (Math.abs(touchVel) < 0.6) return
+  const coast = () => {
+    touchVel *= 0.94
+    if (Math.abs(touchVel) < 0.05) return
+    scene.onScroll(touchVel)
+    momentumRaf = requestAnimationFrame(coast)
+  }
+  momentumRaf = requestAnimationFrame(coast)
 }
 
 onMounted(async () => {
@@ -137,6 +154,7 @@ function handleResize() {
 }
 
 onUnmounted(() => {
+  cancelAnimationFrame(momentumRaf)
   window.removeEventListener('mousemove', scene.onMouseMove)
   window.removeEventListener('wheel', onWheel)
   const hit = hitLayerRef.value

@@ -230,7 +230,10 @@ export function useChapterScene() {
   let videoElements = []
   let videoTextures = []
   let txtTextures = []
-  let currentTxtChapter = 0              // chapter shown on the center txtMesh (#9/#14)
+  // -1 (not 0) so the FIRST setTxtChapter always applies: the material is built with
+  // txtTextures[0], and if the post-intro front card happened to be chapter 0 the early-return
+  // would leave the plane at opacity 0 forever. It also means we never show a wrong wordmark.
+  let currentTxtChapter = -1             // chapter shown on the center txtMesh (#9/#14)
   const _frontVec = new THREE.Vector3()  // scratch vec for front-card detection (#14)
   let canvasEl
   let width, height, aspectRatio
@@ -252,6 +255,10 @@ export function useChapterScene() {
   const N = 8
   const baseDistance = 40  // original source: ve=40
   const introDistance = 75
+  // World size of the centre wordmark plane. It's a fixed 60 units, but a portrait phone only
+  // sees ~34 units across at that depth (three's `fov` is VERTICAL, so narrow aspect ⇒ narrow
+  // horizontal view) — which cropped the wordmark at both edges. fitTxtMesh() scales it down.
+  const TXT_PLANE = 60
   // Selected card resting Y. The shader's progress=1 layout frames the content into
   // a sub-region of the plane, so scale/position are hand-tuned (not camera-derived):
   // scale = aspectRatio*2.07, this Y top-anchors the content band as the hero.
@@ -453,8 +460,10 @@ export function useChapterScene() {
       t.wrapS = THREE.ClampToEdgeWrapping
       t.wrapT = THREE.ClampToEdgeWrapping
     })
-    const txtGeo = new THREE.PlaneGeometry(60, 60)
-    const txtMat = new THREE.MeshBasicMaterial({ map: txtTextures[0], transparent: true, opacity: 1.0, depthWrite: false, alphaTest: 0.5 })
+    const txtGeo = new THREE.PlaneGeometry(TXT_PLANE, TXT_PLANE)
+    // opacity 0 until the first setTxtChapter picks the RIGHT chapter (at intro end, instant)
+    // — otherwise the plane flashes chapter 0's wordmark and then swaps.
+    const txtMat = new THREE.MeshBasicMaterial({ map: txtTextures[0], transparent: true, opacity: 0.0, depthWrite: false, alphaTest: 0.5 })
     txtMat.toneMapped = false
     const txtMesh = new THREE.Mesh(txtGeo, txtMat)
     // y=-8 pushes the text lower on screen so it clears the top logo/subtitle
@@ -464,6 +473,7 @@ export function useChapterScene() {
     scene.add(txtMesh)
     groupG.userData.txtMesh = txtMesh
     groupG.userData.txtMat = txtMat
+    fitTxtMesh()   // portrait viewports are far narrower than the plane — scale it to fit
     logoTexture.wrapS = THREE.ClampToEdgeWrapping
     logoTexture.wrapT = THREE.ClampToEdgeWrapping
 
@@ -1013,17 +1023,16 @@ export function useChapterScene() {
   function onClick(e) {
     if (!introComplete || selectedIndex !== -1) return
 
-    // Select the FRONT-facing card (the active one the center text reflects). The
-    // raycast hitboxes are flat boxes at each card's un-bent origin, but the vertex
-    // shader bends the cards — so a click on the visible front card frequently misses
-    // or hits an offset neighbor ("a different card comes up"). frontChapterIdx() is
-    // visual-accurate (nearest camera). Use a direct raycast hit only if it agrees with
-    // the front card; otherwise default to the front card.
-    const front = frontChapterIdx()
+    // The pointer must actually be ON the deck. The hitboxes are flat boxes at each card's
+    // un-bent origin while the vertex shader bends the cards, so a hit can't tell us WHICH
+    // card was struck — but it does tell us we're over the carousel. So: require a hit, then
+    // select the FRONT card (visual-accurate, nearest camera). Mirrors the hover logic.
+    // Previously this fell through to `front` even on a MISS, which on a phone meant a tap
+    // anywhere on the screen opened a chapter.
     const slotI = getHoveredPoster(e.clientX, e.clientY)
-    const hit = slotI !== -1 ? chapterIdxForSlot(slotI) : -1
-    const chIdx = hit === front ? hit : front
-    if (chIdx !== -1) selectChapter(chIdx)
+    if (slotI === -1) return
+    const front = frontChapterIdx()
+    if (front !== -1) selectChapter(front)
   }
 
   function selectChapter(chIdx) {
@@ -1379,6 +1388,18 @@ export function useChapterScene() {
     scrollOffsetPx = Math.max(0, px || 0)
   }
 
+  // Scale the centre wordmark plane so it always fits the viewport WIDTH. The visible width at
+  // the plane's depth is 2·d·tan(fov/2)·aspect; on a portrait phone that's far less than the
+  // plane's 60 units, which cropped the wordmark. Only ever scales DOWN (desktop keeps 1:1).
+  function fitTxtMesh() {
+    const mesh = groupG?.userData?.txtMesh
+    if (!mesh || !camera) return
+    const d = Math.max(1, camera.position.z - mesh.position.z)
+    const visibleW = 2 * d * Math.tan(toRad(camera.fov / 2)) * aspectRatio
+    const s = Math.min(1, (visibleW * 0.92) / TXT_PLANE)
+    mesh.scale.set(s, s, 1)
+  }
+
   function onResize(w, h) {
     const vp = getViewportSize()
     w = vp.w
@@ -1390,6 +1411,7 @@ export function useChapterScene() {
     camera.aspect = aspectRatio
     camera.updateProjectionMatrix()
     renderer.setSize(w, h, false)
+    fitTxtMesh()   // aspect changed (incl. iOS URL-bar show/hide) → refit the wordmark
 
     // Keep the hero full-bleed across resizes — its scale is aspect-dependent and was
     // baked at select time (the reference rescales on resize too). Skip while animating:

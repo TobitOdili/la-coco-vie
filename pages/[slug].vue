@@ -270,7 +270,10 @@ onBeforeUnmount(() => {
   position: fixed;
   inset: 0;
   z-index: 10;
-  height: 100dvh;
+  /* `inset: 0` already sizes this to the fixed-position viewport. An explicit 100dvh on top of
+     it fights iOS Safari, whose dynamic viewport changes as the URL bar shows/hides — which
+     left the page offset from the canvas on entry. Percentage of the inset box is stable. */
+  height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
 }
