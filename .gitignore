@@ -2,6 +2,9 @@ node_modules/
 .nuxt/
 .output/
 .env
+# Secrets — .env.bless holds BLESS_TOKEN (Browserless API token) for the prod verification
+# probes; scripts read it via `export $(cat .env.bless)` or dotenv. Never commit any .env.*.
+.env.*
 dist
 .claude/settings.local.json
 .DS_Store

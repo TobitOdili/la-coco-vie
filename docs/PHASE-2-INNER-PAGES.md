@@ -19,6 +19,10 @@ original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker*
    (`__exitBegin()`→`__exitScrub(0..1)`→`__exitEnd()`, `__setScroll(px)`), and `__gsdev()` (GSAP scrubber).
 4. **Verify** the way this project does (ARCHITECTURE → QA workflow): deploy first (Vercel auto-builds
    `main`; check `state:READY` via the Vercel MCP), then Browserless against the **prod** URL.
+   🔑 **The Browserless token lives in `.env.bless` at the repo root** (gitignored, `BLESS_TOKEN=…`) —
+   load it with `export $(cat .env.bless)` before running probes; no need to ask the user for it.
+   ⚠️ The Claude Code in-app Browser pane CANNOT verify this site: its tab is `document.hidden`, rAF
+   never fires, so the loader/intro freeze (~28%). Use scratchpad playwright-core → prod, or Browserless.
    ⚠️ **Two hard-won rules** (see the bottom-exit saga): (a) verify exits on the **real wheel→DOM path**
    (dispatch real `wheel` events), NOT the `__exitScrub` scene scrub — it bypasses the DOM and misleads;
    (b) Browserless `captureScreenshot` latency can't time a sub-2s animation — use a **screenshot-free
@@ -42,7 +46,7 @@ has been seen on a real phone**, and the last commit of the session was never re
 | 3 chapters built (placeholder copy) | `ce585648` | Browserless prod per chapter: `sections: 3`, `scaffold: false`, end title, popups | ✅ Emulated |
 | Touch carousel, tap-select, chapter scroll, top-pull exit | `9e80bb6d` `ebe33618` | Browserless CDP touch @390×844: swipe rotates (`scrollRotY 0→-0.76`), tap selects, chapter scrolls `0→1395`, top-pull → `/` | ✅ Emulated |
 | ABOUT nav label on phones | `d93b9b07` | Visible in the user's device screenshot | ✅ **Confirmed** |
-| **Real harvested copy — the 5-section chapters** | `a4224399` | ❌ **Never re-verified after deploy.** la-storia and eat-marry-love went 3 → **5 sections** and were never rendered-checked. eat-marry-love is *known to render* (user screenshots) but the 5-section structure is unverified | ⚠️ **UNVERIFIED** |
+| **Real harvested copy — the 5-section chapters** | `a4224399` | 2026-07-23 local-headless→prod @390×844: la-storia AND eat-marry-love render **5 sections each**; dress popups appear for sections 0 & 1 (pinned 723–839). Browserless cross-check: real copy renders on prod, 0 errors | ✅ Emulated |
 | Tap must hit the deck (no more "tap anywhere selects") | `8c67c360` | ❌ No probe run; user never confirmed | ⚠️ **UNVERIFIED** |
 | Wordmark scaling + no wrong-chapter flash | `8c67c360` `9b8659ce` | Emulated screenshot: text legible, correct chapter, unclipped | ✅ Emulated |
 | Swipe release momentum | `8c67c360` | ❌ Never measured | ⚠️ **UNVERIFIED** |
@@ -52,17 +56,20 @@ has been seen on a real phone**, and the last commit of the session was never re
 | EXPLORE button off chapter pages | `43c1e6d8` | Emulated: chapter scrolled `375→1875` afterwards | ✅ Emulated |
 | Portrait hero geometry (`heroFillScale`, `SELECTED_Y_MOBILE`) | `49306bc0` | User's device screenshot: hero **does** now fill the top — but that same shot exposed the card bug below | 🟡 **Partly confirmed** |
 | Ring-card clearance, first attempt (−62) | `5444da3e` | User's device screenshot: **still broken** — cards still visible | ❌ **Was insufficient** |
-| Ring-card clearance, corrected (−101, derived) | `17da487c` | ❌ **Arithmetic only.** Never rendered, never screenshotted, never seen by the user | ⚠️ **UNVERIFIED** |
+| Ring-card clearance, corrected (−101, derived) | `17da487c` | 2026-07-23 local-headless→prod @390×844: non-hero cards at world y −90…−138 (frustum floor −62), screenshot clean (hero + accent, no card shapes); hero at y=11 | ✅ Emulated, measured |
+| Desktop regression pass (post-`722ed89e`) | — | 2026-07-23 local-headless→prod @1440×900: intro rests 4π, tilt 25/70/15°, wheel rotates; hero `SELECTED_Y −43`/`scaleX 3.31` (bit-identical fill-width), ring at −73…−121; popups pinned 820–896 at 3 scroll positions; striped wordmark band leads the hero; 0 errors | ✅ Emulated |
+| Inner pages on a real phone | — | User, 2026-07-23: **"workable for now. Still not perfect"** — first device sign-off since the fixes; fidelity gaps remain (hero leads with photo, card sizing) | 🟡 **Confirmed workable** |
 
-**The single most important open question: are the inner pages actually fixed on a real phone?**
-The user reported them broken repeatedly. Several genuine causes were found and fixed (popups scrolling
-off, the EXPLORE dead zone, hero geometry, card clearance) — but **the final state has never been
-confirmed on a device.** Start a pickup by loading a chapter on a real phone before assuming any of it.
+**RESOLVED 2026-07-23:** the user confirmed the inner pages are **"workable for now. Still not
+perfect"** on a real phone, and a desktop regression pass (homepage + chapter, geometry + popups +
+wheel) passed clean. Remaining gaps are *fidelity* (see "What's left"), not breakage.
 
-**Also unverified: that any of this is still correct on desktop.** Every mobile change is gated on
-`isMobile`, and `heroFillScale()` provably evaluates to the old `2.07` on desktop — but no desktop
-regression pass was run after `722ed89e`. Two of the bugs fixed here (dress popups, ring cards in frame)
-were **not** mobile-only, so desktop deserves a fresh look.
+**⚠️ Latent trap found 2026-07-23 (not currently visible):** the active-section IntersectionObserver
+in `pages/[slug].vue` requires `intersectionRatio ≥ 0.45`, but the ratio is relative to the SECTION's
+own height — a section taller than `viewportHeight/0.45` can NEVER activate. Wine's section 1 (2121px
+mobile / 2556px desktop, max ratio 0.35–0.40) is the only such section today and carries no dresses,
+so nothing is visibly lost — but giving dresses to any tall section will silently never show them.
+Fix when touched: compare `intersectionRect.height / rootBounds.height` instead.
 
 **⭐ THE SINGLE MOST USEFUL THING IN THIS DOC: the reference's inner pages CAN be read.** An earlier pass
 concluded its copy was "permanently un-scrapeable" and shipped invented placeholder text — that was **wrong**.
