@@ -29,6 +29,11 @@ custom GLSL shaders, GSAP animation, spatial audio, and chapter transitions.
 
 > 📋 **The single live tracker is [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md) →
 > "Running checklist (the board)"** — read it first for a cold pickup (current state, roadblocks, next steps).
+>
+> ⚠️ **"Done" is not uniform.** Read that doc's **VERIFICATION STATUS** table first: some items are
+> confirmed by the user on a real device, some only by headless emulation, and **several of the last
+> mobile fixes are unverified — the final one (`17da487c`) was never rendered at all.** Whether the
+> chapter inner pages are actually fixed on a phone is **still an open question**.
 
 - ✅ **Homepage:** intro animation, carousel rotate-on-scroll, hover (lift + film), click-to-select,
   audio, loading screen, custom cursor, noise overlay, per-card depth fade, per-chapter center text.
@@ -48,11 +53,13 @@ custom GLSL shaders, GSAP animation, spatial audio, and chapter transitions.
   the top; the ring then rises to the homepage. Reversible, spins in the down-scroll direction (no
   reversal at home). 9 "morph the page into a card" approaches were tried and rejected before a
   reference decode confirmed the page is never morphed — see `docs/PHASE-2-INNER-PAGES.md`.
-- ✅ **Mobile / touch (2026-07-22):** the carousel was wheel-only, so phones couldn't turn the ring at
-  all. Touch swipe + release momentum, tap-vs-swipe guard, a parked **EXPLORE** button as the tap
-  target (tinted to the card beneath), touch top-edge exit, and a set of portrait geometry fixes
-  (wordmark scaling, hero fill-scale + resting height, hidden-card clearance). All gated on
-  `isMobile` — desktop is unchanged.
+- 🟡 **Mobile / touch (2026-07-22) — built, PARTLY verified:** the carousel was wheel-only, so phones
+  couldn't turn the ring at all. Touch swipe + release momentum, tap-vs-swipe guard, a parked
+  **EXPLORE** button as the tap target (tinted to the card beneath), touch top-edge exit, and a set of
+  portrait geometry fixes (wordmark scaling, hero fill-scale + resting height, hidden-card clearance).
+  All gated on `isMobile` — desktop is unchanged. **The carousel side is confirmed working; the chapter
+  inner pages on a phone are NOT — the last fixes went out unverified.** See the VERIFICATION STATUS
+  table in `docs/PHASE-2-INNER-PAGES.md`.
 - ✅ **Hardened (2026-06-12 re-review):** scroll-then-click hero alignment, rapid back/forward
   interrupt-safety, video play/pause lifecycle, background-tab robustness, input normalization.
   Verified on prod (Browserless probes) **and** a real browser (video + textures confirmed live).

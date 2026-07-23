@@ -6,7 +6,9 @@
 > [`docs/ROADMAP.md`](docs/ROADMAP.md) · issue forensics → [`AUDIT.md`](AUDIT.md).
 > **This file is the living status log** (what works, resolved/open issues, dev workflow, sessions).
 
-> Last updated: 2026-07-22 (**bottom exit DONE + user-approved** as the "cluster-unfurl" outro; **all 4 chapters built with the reference's REAL harvested copy**; **mobile/touch working**. HEAD `17da487c`. Remaining work is layout *fidelity* vs the reference — scaling — not function.)
+> Last updated: 2026-07-22 (**bottom exit DONE + user-approved** as the "cluster-unfurl" outro; **all 4 chapters built with the reference's REAL harvested copy**; **mobile/touch built**. HEAD `ce885d53`.)
+>
+> ⚠️ **Verification is uneven — see the VERIFICATION STATUS table in [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md) before trusting any "done" here.** The exit and the carousel are confirmed; **the chapter inner pages on a real phone are NOT** — the last three mobile fixes shipped without a device check and the final one (`17da487c`) was never rendered at all. No desktop regression pass was run after `722ed89e` either, and two of the bugs fixed this session were not mobile-only.
 
 ---
 
@@ -382,6 +384,17 @@ The recurring theme: **constants that looked universal were landscape-derived**,
 offset, and the 60-unit wordmark plane. Two also turned out to be **desktop bugs**, not mobile-only: the
 dress popups were `position: absolute` inside a scroll container (so they slid off the top on every
 platform), and the ring cards have always been in-frame on desktop — merely occluded by the huge hero.
+
+**⚠️ What is NOT verified (do not assume this session ended clean):**
+- The **5-section** chapters (la-storia, eat-marry-love) were never rendered-checked after the copy
+  rewrite — they went 3 → 5 sections in `a4224399`.
+- The tap-target fix, swipe momentum, the entry cadence, and the `100dvh → 100%` iOS change were **never
+  verified** — the last is only a hypothesis about iOS's dynamic viewport.
+- The final ring-card clearance (`17da487c`) is **arithmetic only** — never rendered, never seen.
+- **Whether the inner pages are actually fixed on a phone is an open question.** The user reported them
+  broken repeatedly; real causes were found and fixed, but the end state was never confirmed on a device.
+- **No desktop regression pass** since `722ed89e`. Two bugs fixed here (dress popups positioned
+  `absolute` inside a scroll container; ring cards in-frame but occluded) were **not** mobile-only.
 
 **Verification lessons (both cost a release):**
 - **Assert on-screen position, not DOM presence.** "`popupCards: 2`" passed while the popups were scrolled

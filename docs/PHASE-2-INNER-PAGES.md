@@ -29,6 +29,41 @@ DONE and user-approved**, **all four chapters are built with the reference's REA
 **mobile/touch works**. What remains is layout *fidelity* (scaling), not function — see ▼ "What's left".
 The exit is the reference's scroll-driven outro (decoded from `millanova frames/`, gitignored) — NO page morph.
 
+## ⚠️ VERIFICATION STATUS — read before trusting anything above
+
+**"Done" below does not uniformly mean "confirmed working on a real device."** Three different levels of
+evidence are mixed together. This table is the honest state as of `ce885d53`. **Nothing after `43c1e6d8`
+has been seen on a real phone**, and the last commit of the session was never rendered at all.
+
+| Change | Commit | Evidence | Status |
+|---|---|---|---|
+| Cluster-unfurl exit (all cards present, monotonic radius) | `41812cff` `185f9f8b` | User on the live site (_"I love it"_) **+** Browserless prod probe: mid-exit poses, `endExit` → clean full-radius ring, 0 errors | ✅ **Confirmed** |
+| Inner-page layout rework (wine slice) | `722ed89e` | Browserless prod: 3 sections, popups present, chapter-end, images load, 0 errors — at 800×600 | ✅ Emulated |
+| 3 chapters built (placeholder copy) | `ce585648` | Browserless prod per chapter: `sections: 3`, `scaffold: false`, end title, popups | ✅ Emulated |
+| Touch carousel, tap-select, chapter scroll, top-pull exit | `9e80bb6d` `ebe33618` | Browserless CDP touch @390×844: swipe rotates (`scrollRotY 0→-0.76`), tap selects, chapter scrolls `0→1395`, top-pull → `/` | ✅ Emulated |
+| ABOUT nav label on phones | `d93b9b07` | Visible in the user's device screenshot | ✅ **Confirmed** |
+| **Real harvested copy — the 5-section chapters** | `a4224399` | ❌ **Never re-verified after deploy.** la-storia and eat-marry-love went 3 → **5 sections** and were never rendered-checked. eat-marry-love is *known to render* (user screenshots) but the 5-section structure is unverified | ⚠️ **UNVERIFIED** |
+| Tap must hit the deck (no more "tap anywhere selects") | `8c67c360` | ❌ No probe run; user never confirmed | ⚠️ **UNVERIFIED** |
+| Wordmark scaling + no wrong-chapter flash | `8c67c360` `9b8659ce` | Emulated screenshot: text legible, correct chapter, unclipped | ✅ Emulated |
+| Swipe release momentum | `8c67c360` | ❌ Never measured | ⚠️ **UNVERIFIED** |
+| `.chapter-page` `100dvh` → `100%` | `8c67c360` | ❌ **A hypothesis about iOS's dynamic viewport.** Never confirmed to fix anything | ⚠️ **UNVERIFIED** |
+| Entry cadence (3.8s spin; cards → wordmark → EXPLORE) | `16347dde` | ❌ Never verified, on device or emulated | ⚠️ **UNVERIFIED** |
+| Dress popups pinned to viewport | `eb87d5c2` | Browserless: `getBoundingClientRect` 723–816 in an 844 viewport across 3 scroll positions | ✅ Emulated, measured |
+| EXPLORE button off chapter pages | `43c1e6d8` | Emulated: chapter scrolled `375→1875` afterwards | ✅ Emulated |
+| Portrait hero geometry (`heroFillScale`, `SELECTED_Y_MOBILE`) | `49306bc0` | User's device screenshot: hero **does** now fill the top — but that same shot exposed the card bug below | 🟡 **Partly confirmed** |
+| Ring-card clearance, first attempt (−62) | `5444da3e` | User's device screenshot: **still broken** — cards still visible | ❌ **Was insufficient** |
+| Ring-card clearance, corrected (−101, derived) | `17da487c` | ❌ **Arithmetic only.** Never rendered, never screenshotted, never seen by the user | ⚠️ **UNVERIFIED** |
+
+**The single most important open question: are the inner pages actually fixed on a real phone?**
+The user reported them broken repeatedly. Several genuine causes were found and fixed (popups scrolling
+off, the EXPLORE dead zone, hero geometry, card clearance) — but **the final state has never been
+confirmed on a device.** Start a pickup by loading a chapter on a real phone before assuming any of it.
+
+**Also unverified: that any of this is still correct on desktop.** Every mobile change is gated on
+`isMobile`, and `heroFillScale()` provably evaluates to the old `2.07` on desktop — but no desktop
+regression pass was run after `722ed89e`. Two of the bugs fixed here (dress popups, ring cards in frame)
+were **not** mobile-only, so desktop deserves a fresh look.
+
 **⭐ THE SINGLE MOST USEFUL THING IN THIS DOC: the reference's inner pages CAN be read.** An earlier pass
 concluded its copy was "permanently un-scrapeable" and shipped invented placeholder text — that was **wrong**.
 `chapter.millanova.com` is a pure-WebGL SPA: `setSelected()` rotates but never mounts, a synthetic click does
