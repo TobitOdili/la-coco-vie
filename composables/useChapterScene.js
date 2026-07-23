@@ -671,6 +671,21 @@ export function useChapterScene() {
     isIntro = true
     introComplete = false
 
+    // ── Entry timing ──────────────────────────────────────────────────────────
+    // DESKTOP IS UNCHANGED (6s spin, cards settle 5.9s, introComplete 7s — a deliberate 1.1s
+    // beat). MOBILE gets its own, shorter cue sheet: on a phone the long spin reads as dead
+    // time, and the wordmark landing ~1.1s AFTER the cards had already settled looked broken.
+    // The spin still covers the same 720° (it isn't sped past legibility, just shortened), and
+    // introComplete now lands just after the last card settles so the wordmark appears ON cue.
+    // The EXPLORE button is gated on that same moment (app.vue), so it can't precede the cards
+    // or flash a placeholder colour before the front chapter is known.
+    const introSpinDur = isMobile ? 3.8 : 6            // full 720° either way
+    const posterDelay = isMobile ? 1.5 : 3             // when cards start flying in
+    const posterStagger = isMobile ? 0.12 : 0.2
+    const posterDur = isMobile ? 1.2 : 1.5
+    // last card settles at posterDelay + stagger*7 + dur  →  mobile 3.54s, desktop 5.9s
+    const introEndAt = isMobile ? 3.75 : 7
+
     // Original: B.animatedRotationY starts at 0, animates to degToRad(360*2) = 720°
     carousel.animatedRotationY = 0
     carousel.rotation.y = 0
@@ -679,7 +694,7 @@ export function useChapterScene() {
     const rotProxy = { val: 0 }
     introAnims.push(gsap.to(rotProxy, {
       val: Math.PI * 4,  // 720° = degToRad(360*2)
-      duration: 6,
+      duration: introSpinDur,
       ease: 'power3.inOut',
       onUpdate: () => {
         carousel.animatedRotationY = rotProxy.val
@@ -695,7 +710,7 @@ export function useChapterScene() {
     introAnims.push(gsap.to(camMouseProxy, {
       x: 0.5,
       y: 0.5,
-      duration: 6,
+      duration: introSpinDur,
       ease: 'power3.inOut',
       onUpdate: () => {
         mouse.set(camMouseProxy.x, camMouseProxy.y)
@@ -706,11 +721,11 @@ export function useChapterScene() {
     // Posters intro: animate from far (introDistance) to baseDistance
     // by moving mesh positions and updating axisPosition uniform
     posters.forEach((p, idx) => {
-      const delay = 0.2 * idx + 3
+      const delay = posterStagger * idx + posterDelay
       const distProxy = { d: introDistance }
       introAnims.push(gsap.to(distProxy, {
         d: baseDistance,
-        duration: 1.5,
+        duration: posterDur,
         delay,
         ease: 'power3.inOut',
         onUpdate: () => {
@@ -731,8 +746,9 @@ export function useChapterScene() {
       }))
     })
 
-    // Mark intro complete
-    introAnims.push(gsap.delayedCall(7, () => {
+    // Mark intro complete — cued just after the last card settles (see the timing block above),
+    // so the wordmark reveal lands on the settle rather than trailing it.
+    introAnims.push(gsap.delayedCall(introEndAt, () => {
       if (isDestroyed) return   // the component unmounted mid-intro — don't touch a torn-down scene
       isIntro = false
       introComplete = true

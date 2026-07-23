@@ -2,7 +2,7 @@
   <div
     ref="cursorRef"
     class="cursor"
-    :class="{ active: isActive || isTouch, parked: isTouch }"
+    :class="{ active: isActive || parkedVisible, parked: isTouch, ready: parkedVisible }"
     :style="{ '--cursorAccent': accent }"
     @click="onExploreTap"
   >
@@ -13,16 +13,21 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 
-defineProps({
+const props = defineProps({
   // Accent of the card the circle is currently over (front card, or the open chapter).
   accent: { type: String, default: '#b32c05' },
+  // True once the intro has settled and the front chapter is known — gates the parked button
+  // so it can't appear mid-spin or flash a placeholder colour.
+  exploreReady: { type: Boolean, default: false },
 })
 const emit = defineEmits(['explore'])
 
 const cursorRef = ref(null)
 const isActive = ref(false)
+// The parked EXPLORE button shows only on touch AND once the cards have settled.
+const parkedVisible = computed(() => isTouch.value && props.exploreReady)
 // Touch devices have no pointer to follow, so the circle would sit at its off-screen start
 // forever. The reference instead parks it on-screen in its EXPANDED state — a real "EXPLORE"
 // button you tap to open the front chapter. Mirror that.
@@ -47,8 +52,8 @@ function onMouseMove(e) {
 }
 
 function onExploreTap() {
-  // Only meaningful in the parked/touch state; on desktop the circle is pointer-events:none.
-  if (isTouch.value) emit('explore')
+  // Only meaningful once parked + revealed; on desktop the circle is pointer-events:none.
+  if (parkedVisible.value) emit('explore')
 }
 
 function loop() {
@@ -101,6 +106,14 @@ defineExpose({ activate, deactivate })
   top: 75% !important;
   left: 50% !important;
   transform: translate(-50%, -50%);
+  /* Hidden until the cards have settled (.ready), then eased in a beat later so the order
+     reads: cards settle → wordmark → EXPLORE. */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease 0.35s;
+}
+.cursor.parked.ready {
+  opacity: 1;
   pointer-events: auto;   /* overrides the base `none` so the button is tappable */
   cursor: pointer;
 }

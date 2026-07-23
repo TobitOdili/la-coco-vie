@@ -5,7 +5,12 @@
 
     <!-- Custom cursor / explore circle — tinted to whichever card it sits over. On touch it
          parks on-screen as the tappable EXPLORE button (the reference's mobile affordance). -->
-    <CustomCursor ref="cursorRef" :accent="cursorAccent" @explore="onExploreTap" />
+    <CustomCursor
+      ref="cursorRef"
+      :accent="cursorAccent"
+      :explore-ready="exploreReady"
+      @explore="onExploreTap"
+    />
 
     <!-- WebGL Scene — persistent across routes (never unmounts, so no intro replay) -->
     <WebGLScene
@@ -76,7 +81,14 @@ const currentAccent = computed(() => currentChapter.value?.accent || '#b32c05')
 // route-selected, so this is what the explore circle tints itself to — matching the reference,
 // where the circle reflects the card beneath it.
 const frontChapterIdx = ref(-1)
-function onChapterFront(idx) { frontChapterIdx.value = idx }
+// Gates the parked EXPLORE button. The scene reports the front chapter the moment the intro
+// completes (i.e. once the cards have settled), so waiting on it means the button can't appear
+// mid-spin — and can't flash the placeholder accent before the real chapter is known.
+const exploreReady = ref(false)
+function onChapterFront(idx) {
+  frontChapterIdx.value = idx
+  exploreReady.value = true
+}
 const cursorAccent = computed(
   () => currentChapter.value?.accent || CHAPTERS[frontChapterIdx.value]?.accent || '#b32c05'
 )
