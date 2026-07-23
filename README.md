@@ -25,7 +25,7 @@ custom GLSL shaders, GSAP animation, spatial audio, and chapter transitions.
 
 ## Status
 
-**Homepage complete (~9/10 parity); Phase 2 (chapter inner pages) — "card becomes the page" is built and live. Inner-page exit: both edges built — top edge done; bottom edge built as a scroll-driven outro (feel-tuning remaining).**
+**Homepage complete (~9/10 parity); Phase 2 (chapter inner pages) built and live — all 4 chapters, both exit edges done, mobile/touch working. Remaining work is layout _fidelity_ vs the reference (scaling), not function.**
 
 > 📋 **The single live tracker is [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md) →
 > "Running checklist (the board)"** — read it first for a cold pickup (current state, roadblocks, next steps).
@@ -34,28 +34,34 @@ custom GLSL shaders, GSAP animation, spatial audio, and chapter transitions.
   audio, loading screen, custom cursor, noise overlay, per-card depth fade, per-chapter center text.
 - ✅ **Phase 2 routing:** real `/{slug}` routes, **persistent WebGL shell** (no intro replay), the
   card-select animation *is* the transition into the page, URL = source of truth, deep-links +
-  browser back/forward, per-slug prerender. **Wine O'Clock inner page built** (data-driven
-  sub-chapters, galleries, dress-tail cards, scroll reveal); other 3 chapters are scaffolds.
-- ✅ **"Card becomes the page":** hero **scroll-coupling** (card scrolls away 1:1 with the page;
-  killed the old "purple overlay") + **edge-gated exits** (mid-page scroll free). **Top** edge
-  (stable, done) reverse-rewinds the card into the ring (`deselectChapter`). **Bottom** edge is
-  **built as a scroll-driven outro** (M1 + M2 Chunk A, prod-verified) — the reference's approach,
-  no morph/snapshot: the page scrolls fully out while a WebGL ring "outro" section scrolls in on
-  the chapter-accent (purple) background, spinning with the chapter's card missing; once the page is
-  out the card descends from the top into its slot, then the ring rises to the homepage. Reversible,
-  and the exit spins in the down-scroll direction (no spin reversal at home). The earlier
-  snapshot/overscroll-coupling machinery (and `html-to-image`) was removed; 8 "morph the page into a
-  card" approaches were tried and rejected before the reference decode confirmed the page is never
-  morphed. Remaining work is **feel-tuning (M2)** — drop speed, bowl depth, bg-fade timing, sync. See
-  `docs/PHASE-2-INNER-PAGES.md` for the build detail and the full bottom-edge saga.
+  browser back/forward, per-slug prerender.
+- ✅ **All 4 chapter inner pages built** — with the reference's **real, verbatim copy** (harvested
+  2026-07-22; section counts differ per chapter: wine 3, eat-marry-love 5, la-storia 5, amour 3).
+  Shared components (`ChapterSection` / `DressTail` / `ChapterEnd`) with content as pure data in
+  `composables/chapterPages.js`, so a layout change lands on every chapter at once. Galleries are
+  placeholder film stills; dress cards are real (names/photos/links from the collection site).
+- ✅ **"Card becomes the page":** hero **scroll-coupling** (card scrolls away 1:1 with the page) +
+  **edge-gated exits** (mid-page scroll free). **Top** edge reverse-rewinds into the ring. **Bottom**
+  edge is the scroll-driven **"cluster-unfurl" outro** and is **done/user-approved**: the page scrolls
+  fully out, then the whole deck — all 8 cards, none hidden — unfurls from a tight low cluster on the
+  chapter-accent background while one wine copy already sits in the deck and the second drops in from
+  the top; the ring then rises to the homepage. Reversible, spins in the down-scroll direction (no
+  reversal at home). 9 "morph the page into a card" approaches were tried and rejected before a
+  reference decode confirmed the page is never morphed — see `docs/PHASE-2-INNER-PAGES.md`.
+- ✅ **Mobile / touch (2026-07-22):** the carousel was wheel-only, so phones couldn't turn the ring at
+  all. Touch swipe + release momentum, tap-vs-swipe guard, a parked **EXPLORE** button as the tap
+  target (tinted to the card beneath), touch top-edge exit, and a set of portrait geometry fixes
+  (wordmark scaling, hero fill-scale + resting height, hidden-card clearance). All gated on
+  `isMobile` — desktop is unchanged.
 - ✅ **Hardened (2026-06-12 re-review):** scroll-then-click hero alignment, rapid back/forward
   interrupt-safety, video play/pause lifecycle, background-tab robustness, input normalization.
   Verified on prod (Browserless probes) **and** a real browser (video + textures confirmed live).
 - ⏸️ **Parked:** ring viewing-angle (#4) — needs the original's exact group tilt; low ROI.
-- ✅ **Done (2026-06-12):** entry-spin normalized (**D**) · hover targeting driven off the front card ·
-  dead `virtualscroll` dep removed (carousel is wheel-only; no mobile touch).
-- 🔧 **Open:** option-B reference match (blocked on a `chapter.millanova.com` extension grant) ·
-  other 3 chapters' content · re-skin (Phase 3).
+- ✅ **Done (2026-06-12):** entry-spin normalized (**D**) · hover targeting driven off the front card.
+- 🔧 **Open (fidelity, not function):** inner-page **scaling** vs the reference (copy size, heading
+  typeface, images inset vs our full-bleed) · homepage **card sizing on portrait** · the reference's
+  real gallery photos · code-health (split the ~1500-line scene module, `prefers-reduced-motion`,
+  34M MP4s) · re-skin (Phase 3).
 
 Full live status → [`PROGRESS.md`](PROGRESS.md) · issue history → [`AUDIT.md`](AUDIT.md) · plan → [`docs/ROADMAP.md`](docs/ROADMAP.md)
 
@@ -91,7 +97,7 @@ npm run preview   # preview a production build
 | 3D / WebGL | **Three.js** + custom GLSL vertex & fragment shaders |
 | Animation | **GSAP** (timelines, eased tweens; `GSDevTools` under `?debug`) |
 | Audio | **Howler.js** (per-chapter ambient loops) |
-| Scroll | **Lenis** (inner pages) · homepage carousel uses a window `wheel` listener (no touch yet — see ARCHITECTURE tech debt) |
+| Scroll | **Lenis** (inner pages) · homepage carousel: window `wheel` listener + touch handlers with release momentum on `#canvas-hit-layer` |
 | Styling | Tailwind v4 (via `@tailwindcss/vite`) + `assets/css/main.css` |
 | Fonts | Bague & Movie (local `.woff`) + Italiana / Monoton / Over the Rainbow (Google Fonts) |
 | Hosting | **Vercel** (primary, auto-deploys `main`) + GitHub Pages (CI fallback) |
@@ -115,7 +121,8 @@ components/
   AboutPanel.vue             Full-screen About overlay
   LoadingScreen.vue          Asset-gated loading counter (GSAP)
   chapter/ChapterSection.vue Inner-page section block (heading + copy + gallery, fade-up reveal)
-  chapter/DressTail.vue      Dress card (photo + name + params + link)
+  chapter/DressTail.vue      Dress card (photo + name + params + link) — rendered as a viewport-pinned popup
+  chapter/ChapterEnd.vue     Chapter-end: "Discover dress from the chapter" + Wedding/Evening pills + socials + disclaimer
 composables/
   useChapterScene.js         ★ The whole 3D experience: scene, shaders, intro, select/exit
   chapterPages.js            Inner-page content: CHAPTER_PAGES + DRESSES (data only)
@@ -125,7 +132,7 @@ public/                      Static assets — posters, videos, audio, fonts (se
 .github/workflows/deploy.yml GitHub Pages CI (npm run generate, base /la-coco-vie/)
 ```
 
-`composables/useChapterScene.js` (~1300 lines) is where ~90% of the project lives. Read
+`composables/useChapterScene.js` (~1500 lines) is where ~90% of the project lives. Read
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) before editing it. **Debug:** load any route with
 `?debug` (on the initial URL) for scene probes + the GSAP timeline scrubber.
 

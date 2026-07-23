@@ -18,7 +18,7 @@ Remaining homepage polish (optional, low priority):
 
 ---
 
-## Phase 2 — Chapter inner pages 🟢 (in progress — core built & live)
+## Phase 2 — Chapter inner pages ✅ (built & live; fidelity polish remains)
 
 > **Live tracker (state / roadblocks / next steps):**
 > [`PHASE-2-INNER-PAGES.md`](PHASE-2-INNER-PAGES.md) → "Running checklist (the board)".
@@ -26,9 +26,7 @@ Remaining homepage polish (optional, low priority):
 **Built & live:** real `/{slug}` routes on a persistent WebGL shell (URL = source of truth,
 deep-links + back/forward, per-slug prerender); the card-select animation *is* the transition;
 the **"card becomes the page"** rework (hero scroll-coupling + edge-gated exits — the **top edge
-reverse-spins back into the ring** and is done/stable; the **bottom edge is a scroll-driven "outro"
-section** and is **BUILT** (M1 + M2 Chunk A, prod-verified) — feel-tuning remains, see below); the **Wine O'Clock** inner page as a full data-driven
-vertical slice (3 sub-chapters, galleries, dress-tail cards, fade-up reveal); a 2026-06-12
+reverse-spins back into the ring** and is done/stable; the **bottom edge is the scroll-driven "cluster-unfurl" outro** and is **DONE/user-approved**); **all four** inner pages, data-driven from the reference's real copy (3–5 sub-chapters each, galleries, viewport-pinned dress popups, chapter-end); a 2026-06-12
 re-review + fix batch (interrupt-safety, video lifecycle, input hardening), prod- and
 real-browser-verified.
 
@@ -37,26 +35,28 @@ real-browser-verified.
 - Scene **stays mounted** (paused logic via `selectedIndex`) — never re-pays the 7 s intro.
 - Content lives in a **parallel `CHAPTER_PAGES` model** (`composables/chapterPages.js`), not in `CHAPTERS`.
 
+**Closed since (2026-07-22):**
+- ✅ **Bottom-edge exit — DONE, user-approved.** The scroll-driven **"cluster-unfurl" outro**: the article
+  scrolls fully out, then the whole deck (all 8 cards, **none hidden**) unfurls from a tight low cluster on
+  the chapter accent, with one wine copy already in the deck and the second **dropping in from the top**;
+  the ring rises + un-tilts to the homepage and the bg fades. Radius grows **monotonically** (an earlier dip
+  read as "shrinks first, then expands"). Reversible; spins in the down-scroll direction. 9 "morph the page
+  into a card" attempts were rejected and removed — don't reintroduce them.
+- ✅ **All 4 chapters built, with the reference's REAL copy.** Section counts differ (wine 3, eat-marry-love
+  5, la-storia 5, amour 3). Galleries are placeholder film stills; dresses are real.
+- ✅ **Mobile / touch.** Carousel swipe + momentum, tap-vs-swipe guard, parked EXPLORE tap target, touch
+  top-edge exit, and portrait geometry fixes. All gated on `isMobile`.
+
 **Remaining (per the board):**
-- **Bottom-edge exit — feel-tuning (M2 Chunk B).** The scroll-driven "outro" is **BUILT** (M1 + M2
-  Chunk A, prod-verified, HEAD `49df9f17`) — it's the reference's outro with **no page morph/snapshot**:
-  a transparent `.chapter-outro` section below the article drives `de` → `scene.setExitProgress`. The
-  article **scrolls fully out the top**; the ring assembles + spins on the chapter-accent (purple)
-  background with the chapter's own **card missing**; once the page is out the **card descends from the
-  top** into its empty slot (reads as the page becoming a card — pure illusion); the ring then rises +
-  un-tilts to the homepage and the bg fades to light. Spins in the **down-scroll direction (no spin
-  reversal at home)**; scroll-coupled + reversible; commits + navigates `/` at the bottom. The 8 earlier
-  "morph the page into a card" attempts (snapshot, drop-into-deck, per-slug split, …) were **all rejected
-  and removed** — don't reintroduce them. **Remaining:** feel-tuning (drop speed, bowl depth, bg-fade
-  timing, drop↔slot sync). Full mechanism + the open steers: [`PHASE-2-INNER-PAGES.md`](PHASE-2-INNER-PAGES.md).
-- **D** — normalize the entry-spin magnitude (varies per chapter / >1 turn).
-- Hover targeting (side-card hover lifts a neighbor); richer ScrollTrigger/Lenis parallax + inline films.
-- **The other 3 chapters' content + assets** (la-storia / eat-marry-love / amour-getaway are scaffolds; only
-  Wine O'Clock is built) — the largest single cost; ~11 dresses shared across chapters (`symphony`,
-  `tasmania`, `sydney`, `markita`, …).
-- **Mobile / touch** — the carousel + inner-page exits are **wheel-only** (the dead `virtualscroll` dep was
-  dropped 2026-06-12; wire `virtual-scroll` (hyphen) if touch is wanted).
-- Docs/code-health debt: split the 1430-line `useChapterScene.js` god-module; perf/a11y (no
+- **Inner-page scaling vs the reference** — its copy is `16px/24px` Bague, headings use a striped display
+  face scaled to width (ours is plain Bague), and images are **inset with margins** (ours are full-bleed).
+  Measured, not yet applied. This is the main open fidelity gap.
+- **Homepage card sizing on portrait** — cards read oversized/cropped. Root cause understood (three's `fov`
+  is vertical, so portrait collapses the horizontal view), but every lever also moves the hero, which is
+  currently correct — needs a compensating hero adjustment rather than a guess.
+- **Real gallery photos** from the reference (the harvest recipe is at the top of PHASE-2-INNER-PAGES).
+- Richer ScrollTrigger/Lenis parallax + inline films; section bg alternation (**G**).
+- Code-health debt: split the ~1500-line `useChapterScene.js` god-module; perf/a11y (no
   `prefers-reduced-motion`, 34M MP4s); remove `useAudio.js`.
 
 ### QA habit (carried from Phase 1)

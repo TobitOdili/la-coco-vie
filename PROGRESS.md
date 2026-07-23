@@ -6,7 +6,7 @@
 > [`docs/ROADMAP.md`](docs/ROADMAP.md) · issue forensics → [`AUDIT.md`](AUDIT.md).
 > **This file is the living status log** (what works, resolved/open issues, dev workflow, sessions).
 
-> Last updated: 2026-06-15 (bottom chapter-exit BUILT scroll-driven — M1 + M2 Chunk A, prod-verified `49df9f17`: page scrolls out → ring outro on the accent bg → wine card drops from the top → homepage; reversible, no spin reversal; feel-tuning M2 Chunk B remaining)
+> Last updated: 2026-07-22 (**bottom exit DONE + user-approved** as the "cluster-unfurl" outro; **all 4 chapters built with the reference's REAL harvested copy**; **mobile/touch working**. HEAD `17da487c`. Remaining work is layout *fidelity* vs the reference — scaling — not function.)
 
 ---
 
@@ -347,6 +347,47 @@ git commit -m "your message" && git push   # Vercel auto-deploys from main
 ---
 
 ## 🗓 Session Log
+
+### 2026-07-22 (session 18) — exit finished · all 4 chapters (real copy) · mobile/touch
+16 commits, `41812cff` → `17da487c`. Three tracks closed; what's left is fidelity, not function.
+
+**1. Bottom exit — DONE & user-approved** (`41812cff`, `185f9f8b`). User: _"I love it. I nailed it RIGHT ON."_
+- The M2-ChunkA "hide the wine card, drop it in" model was **wrong** and is gone. Corrected against the
+  user's own capture (`millanova frames/bottom cards cluster/`): the deck is **never hidden**. All 8 cards
+  are present; ONE wine copy rides in the deck from the start and only the SECOND drops in from the top.
+  (The old model hid both, dropped one and *materialised* the other — the user caught the mismatch at once.)
+- Ring **radius now grows monotonically** `CLUSTER_R 18 → 40`. It used to dip (40→18→40), which the user
+  described exactly: _"it shrinks first, then expands — that's weird."_ **Never reintroduce the dip.**
+- Because the exit animates card x/z, every exit-out path now restores the ring (`cancelExit`,
+  `deselectChapter`, and `endExit` — which is called *alone* when Back is pressed mid-scroll, so it can't
+  assume `setExitProgress(1)` ran). That also fixed a pre-existing bug where Back mid-exit left the ring
+  low/tilted.
+
+**2. All four chapters built — with the reference's REAL copy** (`722ed89e`, `ce585648`, `a4224399`).
+- Layout reworked to the reference: immersive full-height split, **viewport-pinned dress popups**, and a new
+  `ChapterEnd` ("Discover dress from the chapter" + Wedding/Evening pills + socials + disclaimer).
+- ⭐ **Correction of an earlier wrong conclusion.** A previous pass declared the reference's copy
+  "permanently un-scrapeable" and shipped invented placeholder text. A real **touch tap under mobile
+  emulation mounts its inner pages** — recipe in PHASE-2-INNER-PAGES. All four chapters were then harvested
+  verbatim. Structure was wrong too: **la-storia and eat-marry-love have 5 sections, not 3**, and wine's
+  copy had been truncated mid-thought.
+- Galleries are placeholder stills pulled from each chapter's own film via a scratchpad `ffmpeg-static`
+  (no brew, no repo deps). Dresses are real, scraped from the collection site (ordinary DOM, unlike the
+  WebGL experience).
+
+**3. Mobile / touch** (`9e80bb6d` → `17da487c`). The carousel was **wheel-only** — a phone couldn't turn the
+ring at all. Everything is gated on `isMobile`; desktop is untouched. Full list on the PHASE-2 board.
+The recurring theme: **constants that looked universal were landscape-derived**, and portrait broke on each —
+`aspectRatio * 2.07` (fill-width at the *desktop* camera distance), `SELECTED_Y -43`, the -30 card-hide
+offset, and the 60-unit wordmark plane. Two also turned out to be **desktop bugs**, not mobile-only: the
+dress popups were `position: absolute` inside a scroll container (so they slid off the top on every
+platform), and the ring cards have always been in-frame on desktop — merely occluded by the huge hero.
+
+**Verification lessons (both cost a release):**
+- **Assert on-screen position, not DOM presence.** "`popupCards: 2`" passed while the popups were scrolled
+  off the top. Use `getBoundingClientRect()` against the viewport.
+- **`/tmp/bless/` is not durable** — macOS wiped it mid-session with `playwright-core` and every probe.
+  Build the harness in the session scratchpad.
 
 ### 2026-06-15 (session 17) — bottom-exit scroll-driven outro: M1 + M2 Chunk A (built, prod-verified)
 - **Built the reference's scroll-driven bottom "outro"** (no page morph/snapshot). A transparent

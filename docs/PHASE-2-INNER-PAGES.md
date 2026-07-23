@@ -8,8 +8,12 @@ original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker*
 1. `npm install` → `npm run dev` → http://localhost:3001 (macOS build gotcha + commands in the [README](../README.md)).
 2. Read [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) before touching `composables/useChapterScene.js`. The
    exit model: TOP edge → `pages/[slug].vue doExit()` → `router.push('/')` → watcher runs the scene's
-   `deselectChapter` (reverse). BOTTOM edge is being REBUILT scroll-driven (see ACTIVE WORK below) and will
-   reuse the dormant `beginExit`/`setExitProgress`/`cancelExit`/`endExit` ring-reassembly primitives.
+   `deselectChapter` (reverse). BOTTOM edge = the scroll-driven **cluster-unfurl outro**, driven by
+   `beginExit`/`setExitProgress`/`cancelExit`/`endExit`. **Both edges are done.**
+   ⚠️ Anything positional or timing-related in the scene is likely **orientation-dependent**. Several
+   constants that look like magic numbers are landscape-derived (`2.07` = fill-width at the desktop camera
+   distance; `SELECTED_Y -43`; the -30 card-hide offset). Portrait broke on every one of them. Check
+   `isMobile` before assuming a constant is universal.
 3. **Debug:** load any route with **`?debug`** *on the initial URL* (e.g. `/wine-o-clock?debug`) for
    `window.__heroDebug()/__camDebug()/__probe()`, deterministic exit scrubbing
    (`__exitBegin()`→`__exitScrub(0..1)`→`__exitEnd()`, `__setScroll(px)`), and `__gsdev()` (GSAP scrubber).
@@ -20,9 +24,21 @@ original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker*
    (b) Browserless `captureScreenshot` latency can't time a sub-2s animation — use a **screenshot-free
    `evaluate` probe** (sample `transform`/`opacity`/`__camDebug` over time), screenshots for the look only.
 
-**▶ ACTIVE WORK (2026-06-15): bottom-edge exit — scroll-driven "outro" REBUILT (M1 + M2-ChunkA done, prod-
-verified, HEAD `49df9f17`). USER HANDED OFF mid-M2 awaiting feel-steers (see ▼ "What's left").** The exit
-is the reference's scroll-driven outro (decoded from `millanova frames/`, gitignored) — NO page morph.
+**▶ STATE (2026-07-22 — handoff).** Three things closed since the last handoff: the **bottom-edge exit is
+DONE and user-approved**, **all four chapters are built with the reference's REAL copy**, and
+**mobile/touch works**. What remains is layout *fidelity* (scaling), not function — see ▼ "What's left".
+The exit is the reference's scroll-driven outro (decoded from `millanova frames/`, gitignored) — NO page morph.
+
+**⭐ THE SINGLE MOST USEFUL THING IN THIS DOC: the reference's inner pages CAN be read.** An earlier pass
+concluded its copy was "permanently un-scrapeable" and shipped invented placeholder text — that was **wrong**.
+`chapter.millanova.com` is a pure-WebGL SPA: `setSelected()` rotates but never mounts, a synthetic click does
+nothing, and a cold deep-link bounces to `/`. But a **real touch TAP on the front card under mobile emulation
+mounts the inner page** (route flips, `scrollHeight` 844 → 6481, real DOM text appears). Recipe: emulate
+390×844 + `Emulation.setTouchEmulationEnabled` → load `/` → swipe N× to rotate the ring → tap (195, 500) →
+scroll with `window.scrollTo` (CDP touch events blow the 59 s Browserless session cap) → read
+`document.body.innerText`. Rotation cycles wine → eat-marry-love → amour-getaway → wine; **`rot=4` reaches
+la-storia**. Cap the scroll below the outro or the reference's own exit fires and dumps you back to `/`.
+The same trick is how you'd harvest its real GALLERY PHOTOS (still outstanding — ours are film stills).
 
 **⭐ Decoded reference mechanism (the north star).** The chapter page is normal scrolling DOM. You scroll
 past its footer and the **WHOLE page scrolls up and out**. Below it a tall **"outro" section** scrolls in
@@ -42,27 +58,60 @@ saga below. Top ≠ bottom, and that's fine.)
 - **Background:** `renderer.setClearColor(exitBg, exitBgAlpha)` in `animate()`; `exitBg.set(chapter.accent)`
   + a fade-in tween on `selectChapter`; faded back out on `deselectChapter`/`endExit`; driven 1→0 over de
   0.7→1 by `setExitProgress`. The ring spins on the accent during the exit, → light at the homepage.
-- **Two-phase, page-out-before-drop:** `DROP_START` = 0.45 (a const in BOTH `pages/[slug].vue` AND
-  `composables/useChapterScene.js` — keep in sync). Phase A [0..0.45] = article fully scrolls out + ring
-  assembles into the bowl (`BOWL_Y` -58, `BOWL_TILT` 58/36/4°) + spins + **wine card HIDDEN** (op 0, slot
-  empty). Phase B [0.45..1] = wine card **descends from off-top + fades in** + bowl rises/un-tilts to home.
 - **No spin reversal:** `EXIT_SPIN` = `toRad(-300)` (NEGATIVE — matches `onScroll`'s `scrollRotationY -=
   delta*0.0008` down-scroll). Verified: animRotY 7.07→1.83 (decreasing).
-- **Gotcha fixed:** `animate()`'s idle depth-fade uOpacity lerp was overriding the wine-hide → gated on
+- **Gotcha fixed:** `animate()`'s idle depth-fade uOpacity lerp was overriding the card opacity → gated on
   `!isDeselecting` so `setExitProgress` owns the chapter cards' opacity through the exit.
 
-**▶ WHAT'S LEFT — M2 Chunk B (TUNE THE FEEL with the user's eye on `la-coco-vie.vercel.app/wine-o-clock`).**
-4 open steers the user hasn't answered yet (they handed off): (1) the DROP — reads as dropping from the
-top? good speed? (`drop=ss(b/0.85)`, `reveal=ss(b/0.35)` in `setExitProgress`; lower `HERO_FIT_END`/raise
-the start to emphasize). (2) BOWL depth (`BOWL_Y`/`BOWL_TILT`). (3) BG-fade timing (purple holds to de 0.7
-then fades — hold longer?). (4) the SYNC — empty slot meets the descending card cleanly (couple the spin
-amount so the wine slot is at the drop point when it lands). **Then:** final polish; the OTHER 3 chapters'
-content (only wine-o-clock is built — `CHAPTER_PAGES` in `composables/chapterPages.js`; la-storia / eat-
-marry-love / amour-getaway are scaffolds); mobile/touch (wheel-only); + the review's code-health debt
-(split the 1430-line god-module; perf/a11y — no `prefers-reduced-motion`, 34M MP4s). **VERIFY** changes on
-prod via Browserless (`/tmp/bless/poseprobe.mjs` fast static `__exitScrub` poses; `m1probe.mjs` real
-scroll); `?debug` hooks `__setScroll/__exitBegin/__exitScrub/__exitEnd`, `__heroDebug().opacity`. Needs
-`BLESS_TOKEN` from the user.
+**✅ EXIT FINISHED — "cluster-unfurl" (`41812cff` + `185f9f8b`; user: _"I love it, nailed it RIGHT ON"_).**
+The M2-ChunkA "hide the wine card, drop it in" model was WRONG and is gone. Corrected from the user's own
+frames (`millanova frames/bottom cards cluster/`): the deck is **never hidden**. Final mechanism —
+- **All 8 cards present throughout**; ONE wine copy (the mirror) rides in the deck from the start while only
+  the SECOND (the hero) waits off-top and **drops in** during the unfurl. (Before: both were hidden, one
+  dropped and the other *materialised* — the user spotted the mismatch immediately.)
+- **Ring RADIUS grows MONOTONICALLY** `CLUSTER_R 18 → baseDistance 40` via `ss(t)`. It originally *dipped*
+  (40→18→40), which read as "shrinks first, then expands" — the user's words. Never reintroduce the dip.
+- Card faces stay visible on the purple the whole way; the centre wordmark holds out until the homepage
+  settles (the reference shows no floating wordmark mid-unfurl).
+- **Because the exit now animates card x/z, every exit-out path restores the ring**: `cancelExit` and
+  `deselectChapter` reset x/z, and `endExit` snaps the FULL homepage pose (carousel.y, group tilt, every
+  poster's position/scale/framing/opacity). `endExit` is called alone when Back is pressed mid-scroll, so it
+  can't assume `setExitProgress(1)` ran first — that path also used to leave the ring low/tilted.
+- Tunables: `CLUSTER_R`, `BOWL_Y`/`BOWL_TILT`, `DROP_START 0.45` (**mirrored in `pages/[slug].vue`**),
+  `EXIT_SPIN`, `HERO_FIT_END`. Prod-verified: mid-exit all 8 present with one wine visible + second hidden;
+  `endExit` → clean full-radius ring (`carouselPosY 0`, tilt 25/70/15°); 0 console errors.
+- Deferred by the user: an angular fan-out (reads slightly cylindrical, but they're happy).
+
+**✅ ALL FOUR CHAPTERS BUILT — with the reference's REAL copy (`ce585648` → `a4224399`).** Section counts
+differ and are NOT uniform: **wine 3, eat-marry-love 5, la-storia 5, amour-getaway 3**. Reference quirks
+preserved verbatim ("pallete" sic in wine II); their duplicated "Chapter IV" label on eat-marry-love is
+corrected to IV + V. Galleries are **placeholder film stills** extracted from each chapter's own
+`public/video/*-intro.mp4`; DRESSES are **real** (names/photos/links scraped from
+`millanova.com/collection/chapter-bride`, which unlike the WebGL experience IS ordinary DOM).
+
+**✅ MOBILE/TOUCH WORKS (`9e80bb6d` → `17da487c`).** See the mobile section below — the carousel was
+wheel-only, so a phone couldn't turn the ring at all.
+
+**▶ WHAT'S LEFT — fidelity, not function.**
+1. **Inner-page SCALING vs the reference** (measured, not yet applied): reference copy is `16px/24px` Bague;
+   its headings use a striped display face scaled to fit width (ours is plain Bague); its images are **inset
+   with margins**, ours are full-bleed edge-to-edge.
+2. **Homepage card sizing on portrait** — cards are still oversized/cropped. Root cause is known and is the
+   same class as the wordmark bug: three's `fov` is VERTICAL, so portrait collapses the horizontal view.
+   Every lever (camera distance, fov, group scale) also moves the hero, which is currently *correct* — so it
+   needs a compensating hero adjustment. Don't guess at it.
+3. **Mobile hero framing** — the card is anchored top-edge-to-viewport-top, but the reference leads with the
+   WORDMARK band; ours shows the photo. Likely a small `SELECTED_Y_MOBILE` adjustment.
+4. **Real gallery photos** from the reference (harvest recipe at the top of this doc).
+5. Code-health: split the ~1500-line `useChapterScene.js`; perf/a11y (no `prefers-reduced-motion`, 34M MP4s).
+
+**VERIFY** on prod via Browserless; `?debug` hooks `__setScroll/__exitBegin/__exitScrub/__exitEnd`,
+`__heroDebug()`, `__camDebug()`. ⚠️ **Two verification rules learned the hard way this session:**
+(a) **assert on-screen POSITION, not DOM presence** — "popupCards: 2" passed while the popups were scrolled
+off the top for an entire release; use `getBoundingClientRect()` vs the viewport. (b) **`/tmp/bless/` is NOT
+durable** — macOS wiped it mid-session, taking `playwright-core` and every probe with it. Build the harness
+in the session scratchpad instead (`npm install playwright-core` there; same trick with `ffmpeg-static` for
+video frames — no brew, no repo deps).
 
 **2026-06-14 hygiene (done, pushed + deployed — `ced2dac7`, `011aa323`).** Untracked
 `node_modules` (18,630 files) + `.output` (33) — both were committed despite `.gitignore` (.git was
@@ -109,16 +158,49 @@ sections below ("card-becomes-the-page rework" step table A–G + the "Careful a
 - [x] **C — Scroll coupling (P1, "purple overlay")**: hero card scrolls away 1:1 with the page. *(live 2026-05-30, `005d849f`)*
 
 **Next up — motion**
-- [~] **E — Scroll exits (P2)** — **Top edge: DONE & stable** (overscroll up → `doExit()` → `deselectChapter` reverse-rewind into the ring; also the back button / nav logo). **Bottom edge: REBUILD pending** — 8 "morph the page" approaches were tried + rejected; a reference decode (2026-06-14) showed the page is never morphed: it **scrolls fully out** and a **scroll-driven ring "outro" section** scrolls in (the "card drop" is illusion). The snapshot/coupling machinery was removed; bottom exit is temporarily inert. 👉 **Decoded mechanism + the plan: see the `ACTIVE WORK` banner at the top + the `🔁 P2 — Bottom-edge exit — the FULL saga` section below.**
+- [x] **E — Scroll exits (P2) — BOTH EDGES DONE.** **Top edge** (overscroll up → `doExit()` → `deselectChapter` reverse-rewind; also back button / nav logo / a 180px finger-pull on touch). **Bottom edge = the "cluster-unfurl" outro** — user-approved 2026-07-22 (`41812cff` + `185f9f8b`). All 8 cards present and unfurling on a MONOTONIC radius (never re-add the dip); one wine copy already in the deck, the second drops in. 9 "morph the page" approaches were tried and rejected before the reference decode — don't reintroduce them. 👉 Mechanism + tunables: the STATE banner at the top.
 - [x] **D — Normalize entry spin (P2)**: select spin pinned to one consistent FORWARD turn. *(2026-06-12)* The 7s intro rests `animatedRotationY` at `+4π` and the old target `toRad(φ−90)` was a small absolute angle → the entry tweened ~2 turns BACKWARD by a chapter-dependent amount. Now: collapse the accumulated whole turns (subtract the same multiple of 2π from the lerp anchor `rotation.y` so it's invisible — rotation is 2π-periodic), then advance forward to the front angle, clamped into `[180°,540°)`. Verified (local headless CDP, all 4 chapters): forward spins of **315/360/405/450°** (eat-marry-love/la-storia/wine/amour — the 135° spread is the cards' real 45°-apart ring positions), each landing front-centre (`x:0,z:40,dist:66`); select→deselect→reselect cycle lands the ring back at rest (`animRotY 0`) with no drift; zero console errors.
 - [x] **Hover targeting (P2)**: driven off the front card. *(2026-06-12)* The flat hitboxes don't follow the shader bend, so a raw raycast over the visible front card resolved to a neighbour slot and lifted the wrong card. `onMouseMove` now treats any hitbox hit as "cursor over the carousel" and lifts the front copy (`frontPoster().i`), mirroring the click fix; misses unhover. Verified (CDP): at a bug spot whose raw raycast → ch1, the lifted card is now the front ch2 (single slot, `blend:2`); off-carousel unhovers; no errors.
 - [ ] **F — Robustness matrix**: deep-link / click / re-select / exit-by-scroll / exit-by-button / rapid-repeat all verified.
 
+**Mobile / touch — DONE 2026-07-22** (`9e80bb6d` → `17da487c`). The carousel was **wheel-only**, so a phone
+couldn't turn the ring at all. Every change is gated on `isMobile` (`aspectRatio < 1`) — desktop untouched.
+- [x] **Touch drives the carousel** — handlers on `#canvas-hit-layer` → `scene.onScroll`, mirroring the wheel's
+      `deltaY - deltaX` at ×2.5, **plus release momentum** (velocity ×0.94 decay) because it otherwise stopped
+      dead on finger-lift and read as "stuck". `touch-action: none` on that layer is load-bearing — without it
+      the browser claims the gesture and the ring never turns.
+- [x] **Tap-vs-swipe guard** — browsers synthesise a click after a drag, so swiping also selected a card.
+      >12px travel now swallows the trailing click for 400ms.
+- [x] **Deliberate tap target** — `onClick` used to fall through to the front card even when the raycast
+      MISSED, so a tap anywhere on screen opened a chapter. A hitbox hit is now required.
+- [x] **Parked EXPLORE button** — on touch the cursor parks expanded/filled/labelled at 50%/75% and opens the
+      front chapter; tinted to the card beneath via a new `onFrontChapter` scene callback → `--cursorAccent`.
+      Gated on intro-complete (it used to appear mid-spin and flash a placeholder colour) **and on `isHome`**
+      (it takes pointer-events, so on a chapter page it was a 140px dead zone swallowing scroll).
+- [x] **Wordmark on portrait** — `fitTxtMesh()` scales the fixed 60-unit plane to the visible width (three's
+      `fov` is VERTICAL, so portrait sees only ~34 units across and it was cropped both edges); it also starts
+      hidden with `currentTxtChapter = -1` so it never flashes the wrong chapter; and sits in the upper third.
+- [x] **Entry cadence** — portrait spin 3.8s (was 6s) with `introComplete` cued to the card settle, so the
+      order is cards → wordmark → EXPLORE instead of a 1.1s dead gap.
+- [x] **Portrait hero geometry** — `aspectRatio * 2.07` is really `(2·60·tan(fov/2))/24`, a fill-width value
+      derived for the DESKTOP camera distance; it's now derived live (`heroFillScale()`, still 2.071 on
+      desktop). `SELECTED_Y_MOBILE = 11` (vs -43) — at -43 the portrait hero sat at world -60.9…-25.1 against a
+      visible band of -29…+29, i.e. almost entirely below the screen.
+- [x] **Hidden ring cards** — the "push them out of frame" offset must clear the frustum at the ring's
+      DEEPEST card (z=-40, d=150, band ±62), not the front (±29). Derived now; desktop keeps -30 because its
+      ~106-unit hero simply occludes the deck.
+- [x] **ABOUT nav label** restored on phones (`hidden md:block` left no way into About at all).
+- [x] **`.chapter-page`** `height: 100dvh` → `100%` (iOS's dynamic viewport shifts under the URL bar).
+
 **Later — content & polish**
+- [ ] **Inner-page scaling vs the reference** — copy `16px/24px` Bague; headings in a striped display face
+      scaled to width (ours is plain Bague); images **inset with margins** (ours are full-bleed). Measured,
+      not applied.
+- [ ] **Homepage card sizing on portrait** — oversized/cropped; see "What's left" for why it needs care.
 - [ ] **G — Section bg** alternates dark/light accent like the reference.
 - [ ] Richer parallax (ScrollTrigger/Lenis) + inline films in sections.
-- [ ] Other 3 chapters' `CHAPTER_PAGES` content + gallery/dress assets (P3 — currently scaffolds).
-- [ ] Polish: exact heading typeface + verbatim copy.
+- [ ] Real gallery photos from the reference (ours are film stills) — harvest recipe at the top.
+- [x] ~~Other 3 chapters' `CHAPTER_PAGES` content~~ — **DONE** (`ce585648`, real copy `a4224399`).
 
 **Re-review fix batch (2026-06-12) — shipped & prod-verified**
 - [x] P1: scroll-then-click parked the hero off-axis (scrollRotationY now compensated; verified exact — hero (0,40), totalRot 0).

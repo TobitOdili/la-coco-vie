@@ -141,8 +141,10 @@ registers the scene callbacks, and forwards browser events into the scene. Conta
 > Homepage scroll is a **`window`-level `onWheel` listener** → `scene.onScroll`. (The old
 > `virtualscroll` dep was dead — an unrelated custom-scrollbar widget whose constructor threw — so a
 > `catch`-installed wheel listener was always the real handler; the dead path + dep were removed
-> 2026-06-12.) Consequence: **no touch input on the homepage carousel** (mobile) — wire the intended
-> `virtual-scroll` (hyphen) if touch is wanted. `scene.onScroll` no-ops while a chapter is open (the
+> 2026-06-12.) **Touch was added 2026-07-22**: `touchstart/move/end` on `#canvas-hit-layer` feed
+> `scene.onScroll` (mirroring the wheel's `deltaY - deltaX`, ×2.5) with release momentum, plus a
+> tap-vs-swipe guard. `touch-action: none` on that layer is load-bearing — without it the browser
+> claims the gesture and the ring never turns. `scene.onScroll` no-ops while a chapter is open (the
 > inner page owns scrolling), so the global listener is harmless there.
 
 ### `components/CustomCursor.vue`
@@ -181,7 +183,7 @@ inline instead. Kept for now but safe to delete — see [Known tech debt](#known
 ## The 3D scene (`useChapterScene.js`)
 
 `useChapterScene()` returns `{ init, onMouseMove, onClick, onScroll, onResize, destroy,
-onSelect, onHover, onProgress, onDeselect, onReady, selectChapter, deselectChapter, setScroll,
+onSelect, onHover, onFrontChapter, onProgress, onDeselect, onReady, selectChapter, deselectChapter, setScroll,
 beginExit, setExitProgress, cancelExit, endExit, getState }`. It closes over all scene state
 (renderer, camera, groups, posters, flags). `getState()` → `{ selectedIndex, hoveredIndex,
 introComplete, isSelecting, isDeselecting }`. (There is no `exitChapterDrop` / page-card /
@@ -193,11 +195,16 @@ snapshot export anymore — that machinery was removed.)
 - `setScroll(px)` — inner-page scroll position → 1:1 hero coupling (P1).
 - `beginExit()` / `setExitProgress(0→1)` / `cancelExit()` / `endExit()` — the scrubbable **bottom-exit
   primitives** that reassemble the ring (mirror the reference's scroll-driven "outro", which never morphs
-  the page). `beginExit` captures the selected/scrolled state (`exitStart`) and hides the chapter's own
-  cards; `setExitProgress` is **two-phase** around `DROP_START` (0.45): phase A [0..0.45] the article scrolls
-  out while the ring assembles into a low "look-into-the-cylinder" bowl (`BOWL_Y` −58, `BOWL_TILT`) and
-  spins — with the **chapter's own card hidden** (`uOpacity` 0); phase B [0.45..1] the card descends from
-  off-top into its slot + fades in ("drops from the top") while the bowl rises/un-tilts to the homepage.
+  the page). `beginExit` captures the selected/scrolled state (`exitStart`); `setExitProgress` is
+  **two-phase** around `DROP_START` (0.45): phase A [0..0.45] the article scrolls out while the deck
+  gathers into a low, steeply-tilted **cluster** (`BOWL_Y` −58, `BOWL_TILT`, radius → `CLUSTER_R` 18) and
+  spins; phase B [0.45..1] the cluster **unfurls** back out to the full ring, rising + un-tilting to the
+  homepage, while the chapter's **second** card copy descends from off-top into its slot. **All 8 cards
+  stay present and visible** — ONE copy of the chapter's card rides in the deck the whole time; only the
+  second drops in. The radius grows **monotonically** (`ss(t)`); an earlier version dipped 40→18→40 and
+  read as "shrinks first, then expands" — don't reintroduce it. Because x/z are animated, `cancelExit`,
+  `endExit` and `deselectChapter` all restore the ring; `endExit` is called ALONE when Back is pressed
+  mid-scroll, so it snaps the full homepage pose rather than assuming `setExitProgress(1)` ran.
   The spin uses `EXIT_SPIN` (**negative**, −300°) so it turns the same way a homepage down-scroll does
   → no spin reversal landing on `/`. `cancelExit` lerps every transform back to the captured start (user
   scrolled back up before committing); `endExit` finalizes the homepage ring (`selectedIndex = −1`). The
@@ -331,16 +338,18 @@ drives two exits — a top-edge reverse rewind and a scroll-driven bottom "outro
   which maps scroll position → `de` 0→1 → `scene.setExitProgress(de)` — fully scroll-coupled and
   reversible (scroll back up → `cancelExit()` restores the article), no page morph or snapshot. It runs
   in **two phases** around `DROP_START` (0.45, present in *both* this file and `useChapterScene.js`):
-  phase A [0..0.45] the article scrolls fully out + the ring assembles into the low bowl (`BOWL_Y`,
-  `BOWL_TILT`) and spins with the chapter's **own card hidden**; phase B [0.45..1] that card descends
-  from off-top into its slot + fades in while the bowl rises/un-tilts to the homepage. The spin uses a
+  phase A [0..0.45] the article scrolls fully out + the deck gathers into the low cluster (`BOWL_Y`,
+  `BOWL_TILT`, radius → `CLUSTER_R`) and spins — **all cards present**; phase B [0.45..1] the cluster
+  unfurls back to the full ring and rises/un-tilts home while the chapter's **second** card copy descends
+  from off-top into its slot (the first already rides in the deck). The spin uses a
   **negative** `EXIT_SPIN` (−300°) so it matches a homepage down-scroll → no reversal at `/`. Throughout,
   the scene background is the **chapter accent** (`renderer.setClearColor(exitBg, exitBgAlpha)` in
   `animate()`; `exitBg` set + faded in by `selectChapter`, driven 1→0 over `de` 0.7→1 by
   `setExitProgress`, faded out by `deselectChapter`/`endExit`) — the ring spins on e.g. wine `#353454`,
   fading to the light homepage. `de`→1 → `commitExit()` → `endExit()` (`selectedIndex = −1`) then
-  `router.push('/')`. **Remaining work is feel-tuning (M2 Chunk B) — drop speed/read, bowl depth,
-  bg-fade timing, spin↔drop sync; see [PHASE-2-INNER-PAGES.md](PHASE-2-INNER-PAGES.md).**
+  `router.push('/')`. **DONE and user-approved 2026-07-22** — see
+  [PHASE-2-INNER-PAGES.md](PHASE-2-INNER-PAGES.md) for the tunables (`CLUSTER_R`, `BOWL_Y`/`BOWL_TILT`,
+  `DROP_START`, `EXIT_SPIN`, `HERO_FIT_END`).
 - The select-in's idle depth-fade `uOpacity` lerp in `animate()` is gated on `!isDeselecting` so
   `setExitProgress` owns the chapter cards' opacity during the bottom exit.
 - Mid-page scrolling is **free**; the bottom exit only engages once you scroll into `.chapter-outro`.
@@ -376,7 +385,7 @@ absolute URL. Apply the same pattern for any future CSS-var asset paths.
 
 | Item | Notes |
 |---|---|
-| **Homepage carousel has no touch input** (mobile) | Scroll is a `window` `onWheel` listener only. (The old `virtualscroll` dep was dead and was removed 2026-06-12.) Wire the intended `virtual-scroll` (hyphen) if touch is wanted. |
+| **Orientation-dependent constants** | Several scene constants look universal but are **landscape-derived**, and portrait broke on every one: `aspectRatio * 2.07` (really fill-width at the *desktop* camera distance — now derived by `heroFillScale()`), `SELECTED_Y -43` (now `SELECTED_Y_MOBILE`), the card-hide offset (must clear the frustum at the ring's DEEPEST card, ±62, not the front's ±29), and the fixed 60-unit wordmark plane (now `fitTxtMesh()`). Check `isMobile` before assuming a constant is universal. |
 | **`onDeselect` plumbing is dead** | The scene never fires it anymore (old scroll-back exit removed). `WebGLScene`→`app.vue` wiring is harmless but unused. |
 | Debug instrumentation | `__heroDebug` / `__camDebug` / `__probe` / `__exitBegin/Scrub/End` and `__gsdev()` (GSAP DevTools) are gated behind **`?debug` on the initial load URL**. Inert otherwise. Fine to ship; remove if you want them gone. |
 | `composables/useAudio.js` | **Dead code** — never imported; `app.vue` does audio inline. Safe to delete (verify no future import first). |

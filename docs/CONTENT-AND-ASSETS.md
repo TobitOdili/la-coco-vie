@@ -85,27 +85,63 @@ public/
     └── Movie.woff               "Movie"-style display font (About copy)
 ```
 
-### Inner-page assets (Phase 2 — Wine O'Clock so far)
+### Inner-page COPY (Phase 2) — real, not placeholder
 
-Downloaded from the reference as study placeholders (see attribution in [ROADMAP](ROADMAP.md)).
-The reference names gallery photos `{slug}-{sub-chapter}-NN.jpg`, mapping cleanly to the 3
-sub-chapters:
+`composables/chapterPages.js` holds `CHAPTER_PAGES` + `DRESSES` and is **the only per-chapter thing** —
+all four chapters render through the same components, so a layout change lands on every chapter at once
+and a content swap is a change *there* plus the images.
+
+The copy is the reference's own, **verbatim** (harvested 2026-07-22). Two things to know before editing:
+- **Section counts are NOT uniform** — wine 3, eat-marry-love 5, la-storia 5, amour-getaway 3. Code that
+  assumes 3 will be wrong.
+- **Reference quirks are preserved deliberately** — e.g. "pallete" (sic) in wine II. Their duplicated
+  "Chapter IV" label on eat-marry-love is the one thing corrected (to IV + V).
+
+An earlier pass wrongly concluded this copy was unobtainable and shipped invented text; the file header
+records the harvest method so that mistake isn't repeated.
+
+### Inner-page assets (Phase 2 — all 4 chapters built)
+
+See attribution in [ROADMAP](ROADMAP.md). **Provenance differs per asset class — this matters
+for the re-skin, because only the film stills are ours to regenerate.**
 
 ```
 public/images/gallery/
-  wine-the-bride-01.jpg  wine-the-bride-02.jpg     THE BRIDE  (900×1200 / 1400×900)
-  wine-the-wine-01.jpg   …-02.jpg  …-03.jpg        THE WINE   (900×1200)
-  wine-the-people.jpg                              THE PEOPLE (900×1200)
+  wine-the-bride-01.jpg  wine-the-bride-02.jpg     THE BRIDE  (900×1200 / 1400×900)  ── from the reference
+  wine-the-wine-01.jpg   …-02.jpg  …-03.jpg        THE WINE   (900×1200)             ── from the reference
+  wine-the-people.jpg                              THE PEOPLE (900×1200)             ── from the reference
+  eat-marry-love-01..06.jpg                        (900×1200)   ── PLACEHOLDER film stills
+  la-storia-01..06.jpg                             (900×1200)   ── PLACEHOLDER film stills
+  amour-getaway-01..04.jpg                         (900×1200)   ── PLACEHOLDER film stills
 public/video/
-  {wine,eat,la,amour}-intro.jpg                    video poster frames (1080×1080)
+  {wine,eat,la,amour}-intro.mp4                    chapter films (900×1200, 6–8.5s)
 public/images/dresses/
-  dress-01.jpg  dress-02.jpg                        dress-tail thumbnails (200×300)
+  dress-01.jpg  dress-02.jpg                        Yaroslava / Malva (200×300, generic names)
+  aggie · alaia · aldrans · aminata · andalusia ·
+  antonelly · arcada · ariel · azalia  (.jpg)       REAL dresses (750×1000) from the collection site
 ```
 
-TODO when building dress tails: the dress thumbnails came from a CDN with hashed names and
-are renamed generically — map them to the real dress names (Malva, Yaroslava, …) in the
-`DRESSES` model. The other 3 chapters' gallery photos aren't downloaded yet (fetch per the
-same `{slug}-{sub}-NN.jpg` pattern when building them).
+**Gallery stills for the 3 non-wine chapters are placeholders**, extracted from each chapter's own
+`public/video/*-intro.mp4` — so the imagery is at least on-theme (the processional, the black-tie
+group under the floral arch, the Vespa send-off). To regenerate or re-cut them, install
+`ffmpeg-static` **into a scratch directory** (not the repo, not brew) and grab frames:
+
+```bash
+npm install ffmpeg-static --prefix /tmp/scratch          # sandboxed; nothing touches the repo
+FF=/tmp/scratch/node_modules/ffmpeg-static/ffmpeg
+"$FF" -ss 3.2 -i public/video/eat-intro.mp4 -frames:v 1 -q:v 3 -y public/images/gallery/eat-marry-love-03.jpg
+```
+
+**The reference's real gallery photos are still outstanding.** They're obtainable — its inner pages
+mount under a real touch tap (recipe at the top of
+[PHASE-2-INNER-PAGES.md](PHASE-2-INNER-PAGES.md)); nobody has harvested the images yet.
+
+**Dresses are real.** Names, photos and product links were scraped from
+`millanova.com/collection/chapter-bride`, which — unlike the WebGL experience — is ordinary
+server-rendered DOM and scrapes normally. `params` carries the collection tag rather than invented
+silhouette/colour specs, except for the two originals where the reference showed real values.
+The reference pairs **Yaroslava** with wine, **Markita** with la-storia, and **Kohana + Yaroslava**
+with amour; we use the subset whose images we host.
 
 Google Fonts (loaded via `<link>` in `nuxt.config.ts`): **Italiana**, **Monoton**,
 **Over the Rainbow** — used by the loader and the per-chapter `.display` styles.
