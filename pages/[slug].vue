@@ -14,6 +14,7 @@
       <div v-if="pageContent" class="chapter-content">
         <UsStory v-if="chapter.slug === 'us'" :sections="pageContent.sections" />
         <BigDay v-else-if="chapter.slug === 'the-big-day'" :sections="pageContent.sections" />
+        <InFrames v-else-if="chapter.slug === 'in-frames'" :sections="pageContent.sections" />
         <template v-else>
           <ChapterSection
             v-for="(section, i) in pageContent.sections"
@@ -55,6 +56,7 @@ import { CHAPTER_PAGES, POPUPS } from '~/composables/chapterPages'
 import ChapterSection from '~/components/chapter/ChapterSection.vue'
 import UsStory from '~/components/chapter/UsStory.vue'
 import BigDay from '~/components/chapter/BigDay.vue'
+import InFrames from '~/components/chapter/InFrames.vue'
 import ChapterEnd from '~/components/chapter/ChapterEnd.vue'
 import DressTail from '~/components/chapter/DressTail.vue'
 

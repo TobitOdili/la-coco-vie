@@ -206,47 +206,38 @@ export const CHAPTER_PAGES = {
     ],
   },
 
+  // “In Frames” renders through the bespoke InFrames component (“The Screening Room”):
+  // the page goes dark, the thread becomes the film strip, and scroll advances the
+  // film through a projector gate — one photo owning the screen at a time. Fields:
+  // sections[1].exposures[] = { src, cap } (Roll 01; caps are the subtitles);
+  // sections[2].reserved[] = the future rolls' title cards.
   'in-frames': {
     sections: [
+      { num: '—', title: 'Now Showing', popups: [], align: 'center' },
       {
-        num: 'I',
+        num: '01',
         title: 'The Pre-Wedding',
-        body:
-          'We put on our good clothes, stood where the photographer pointed, and tried to ' +
-          'act natural. These are the frames that survived the laughing fits. [Placeholder ' +
-          '— a line or two about the pre-wedding shoot: where, when, and by whom.]',
-        images: [
-          asset('/images/gallery/wine-the-bride-01.jpg'),
-          asset('/images/gallery/wine-the-bride-02.jpg'),
+        exposures: [
+          { src: asset('/images/gallery/wine-the-bride-01.jpg'), cap: 'we tried to act natural' },
+          { src: asset('/images/gallery/wine-the-bride-02.jpg'), cap: 'this one survived the laughing fit' },
+          { src: asset('/images/gallery/wine-the-wine-01.jpg'), cap: 'golden hour, borrowed jacket' },
+          { src: asset('/images/gallery/wine-the-wine-02.jpg'), cap: 'the photographer said “again”' },
+          { src: asset('/images/gallery/wine-the-people.jpg'), cap: 'everyone we love, one frame' },
         ],
         popups: ['fullAlbum'],
-        align: 'left',
+        align: 'center',
       },
       {
-        num: 'II',
-        title: 'The Traditional',
-        body:
-          'Colour, culture, and both families in their finest. This gallery fills after ' +
-          'the traditional ceremony — check back soon. [Placeholder — swap in the ' +
-          'traditional-engagement photos when they exist.]',
-        images: [asset('/images/gallery/wine-the-wine-01.jpg')],
-        popups: [],
-        align: 'right',
-      },
-      {
-        num: 'III',
-        title: 'The White Wedding',
-        body:
-          'The aisle, the vows, the exit through a corridor of confetti. This chapter is ' +
-          'still being written — the frames land here after October 27. [Placeholder — ' +
-          'the post-wedding gallery.]',
-        images: [
-          asset('/images/gallery/wine-the-wine-02.jpg'),
-          asset('/images/gallery/wine-the-people.jpg'),
+        num: '02–03',
+        title: 'Reserved',
+        reserved: [
+          { title: 'The Traditional', note: 'date tbc' },
+          { title: 'The White Wedding', note: 'october 27, 2026' },
         ],
         popups: [],
-        align: 'left',
+        align: 'center',
       },
+      { num: '—', title: 'End of Reel', popups: [], align: 'center' },
     ],
   },
 

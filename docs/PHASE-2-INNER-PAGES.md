@@ -57,6 +57,11 @@ original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker*
   (viewport-relative) — the old element-relative 0.45 threshold could never fire for sections
   taller than vh/0.45 (the documented latent trap; the knot scene is exactly that). Popups
   verified tracking all four scenes on desktop + mobile emulation, 0 console errors.
+- **Big Day follow-ups (user, 2026-07-23 — "I see the vision", parked while pages build out):**
+  (1) add the TRADITIONAL wedding date/eventing (the day currently only tells the white-wedding
+  story); (2) the thread's MOTION CONSISTENCY between scenes (segments draw at per-scene rates);
+  (3) the page is CONTENT-THIN — more to read/do per scene when real details arrive; (4) user
+  LIKES the add-to-calendar card; wants a real MAP widget card later.
 - **Remaining to build:** In Frames ("Screening Room": strip = the thread, gate-lock frames,
   leader countdowns, blank "reserved" frames for future rolls, lights up at the outro) and
   With Love ("Thank-You in Advance": scrubbed ink handwriting, items circled like a catalogue,
