@@ -13,6 +13,7 @@
            render `.chapter-section` roots with data-idx so the popup observer works. -->
       <div v-if="pageContent" class="chapter-content">
         <UsStory v-if="chapter.slug === 'us'" :sections="pageContent.sections" />
+        <BigDay v-else-if="chapter.slug === 'the-big-day'" :sections="pageContent.sections" />
         <template v-else>
           <ChapterSection
             v-for="(section, i) in pageContent.sections"
@@ -53,6 +54,7 @@ import { CHAPTERS } from '~/composables/useChapterScene'
 import { CHAPTER_PAGES, POPUPS } from '~/composables/chapterPages'
 import ChapterSection from '~/components/chapter/ChapterSection.vue'
 import UsStory from '~/components/chapter/UsStory.vue'
+import BigDay from '~/components/chapter/BigDay.vue'
 import ChapterEnd from '~/components/chapter/ChapterEnd.vue'
 import DressTail from '~/components/chapter/DressTail.vue'
 
@@ -242,12 +244,18 @@ onMounted(() => {
   if (pageContent.value && pageEl.value) {
     sectionObserver = new IntersectionObserver(
       (entries) => {
-        for (const e of entries) sectionRatios.set(+e.target.dataset.idx, e.intersectionRatio)
+        // Ratio is measured against the VIEWPORT, not the section: a section taller than
+        // viewport/0.45 could never reach the old element-relative threshold, so its popups
+        // silently never showed (The Big Day's 250vh knot scene is exactly that case).
+        for (const e of entries) {
+          const vh = e.rootBounds?.height || window.innerHeight
+          sectionRatios.set(+e.target.dataset.idx, e.intersectionRect.height / vh)
+        }
         let best = -1, bestR = 0.45
         sectionRatios.forEach((r, idx) => { if (r >= bestR) { bestR = r; best = idx } })
         activeIdx.value = best
       },
-      { root: pageEl.value, threshold: [0, 0.25, 0.45, 0.7, 1] }
+      { root: pageEl.value, threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1] }
     )
     pageEl.value.querySelectorAll('.chapter-section').forEach((el) => sectionObserver.observe(el))
   }

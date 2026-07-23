@@ -152,45 +152,53 @@ export const CHAPTER_PAGES = {
     ],
   },
 
+  // “The Big Day” renders through the bespoke BigDay component (“The Hours”): scroll
+  // scrubs the day from morning light into night; the two threads TIE THE KNOT at
+  // 12:00 (sticky, reversible). Scenes are info signposts hung off the thread — this
+  // page is deliberately photo-free. Fields: time, lines[] (short skimmable facts),
+  // vow (the caption at the knot), body (scene 0’s subtitle). No images.
   'the-big-day': {
     sections: [
       {
+        num: '—',
+        time: '07:00',
+        title: 'Daybreak',
+        body: 'the day, hour by hour',
+        popups: [],
+        align: 'center',
+      },
+      {
         num: 'I',
+        time: '12:00',
         title: 'The Ceremony',
-        body:
-          'The part where we say the words. Join us at twelve noon on October 27, 2026 ' +
-          'as we exchange our vows. Doors open at 11:30 — come ' +
-          'early, sit close, sing loud. [Placeholder — church/venue name and address, plus ' +
-          'any notes on parking or arrival.]',
-        images: [
-          asset('/images/gallery/la-storia-01.jpg'),
-          asset('/images/gallery/la-storia-02.jpg'),
+        vow: 'we do.',
+        lines: [
+          'doors open 11:30 — sit close, sing loud',
+          '[venue name + address — placeholder]',
         ],
         popups: ['mapCeremony', 'calCeremony'],
-        align: 'left',
+        align: 'center',
       },
       {
         num: 'II',
+        time: '16:00',
         title: 'The Reception',
-        body:
-          'Then we eat. From four o’clock the celebration moves to the reception venue ' +
-          '[placeholder — name and address]: dinner, toasts, and the small matter of our ' +
-          'first dance. If you leave hungry, that is entirely on you.',
-        images: [asset('/images/gallery/la-storia-03.jpg')],
+        lines: [
+          'dinner · toasts · the first dance',
+          '[venue name + address — placeholder]',
+          'if you leave hungry, that is on you',
+        ],
         popups: ['mapReception'],
         align: 'right',
       },
       {
         num: 'III',
+        time: '22:00',
         title: 'The Party',
-        body:
-          'And then we dance. The band hands over to the DJ, the lights come down, and the ' +
-          'floor is open until we are asked — politely but firmly — to leave. Dress to ' +
-          'celebrate. [Placeholder — after-party details, dress-code specifics, colours of ' +
-          'the day.]',
-        images: [
-          asset('/images/gallery/la-storia-04.jpg'),
-          asset('/images/gallery/la-storia-05.jpg'),
+        lines: [
+          'the floor opens and does not close',
+          'until they beg us to stop',
+          'dress to celebrate [colours — placeholder]',
         ],
         popups: ['dressCode'],
         align: 'left',
