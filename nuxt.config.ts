@@ -22,7 +22,7 @@ export default defineNuxtConfig({
   // module into the build config.
   nitro: {
     prerender: {
-      routes: ['/', '/eat-marry-love', '/la-storia', '/wine-o-clock', '/amour-getaway'],
+      routes: ['/', '/us', '/the-big-day', '/in-frames', '/with-love'],
     },
   },
   vite: {

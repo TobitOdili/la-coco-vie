@@ -1,57 +1,69 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // SITE CONFIG — brand / chrome content (single source of truth)
 //
-// Everything chrome-level and brand-specific lives here so a re-skin is data-only.
-// Consumed by: nuxt.config.ts (title + Google fonts), app.vue (document titles),
-// SiteNav.vue (subtitle, nav, credit), AboutPanel.vue (about copy).
+// COVENANT & UVIE — the wedding site. Everything chrome-level lives here so a
+// content pass is data-only. Consumed by: nuxt.config.ts (title + Google fonts),
+// app.vue (document titles), SiteNav.vue (wordmark, subtitle, countdown, nav,
+// credit), AboutPanel.vue (welcome-note copy).
+//
+// ⚠️ PLACEHOLDERS (2026-07-23, awaiting the couple's real details):
+//   • weddingDate / dateLabel — invented (Dec 12 2026)
+//   • rsvpUrl — dead link until an RSVP destination exists
+//   • the welcome-note copy below — tone draft for correction
 //
 // NOT here (by design):
 //   • Per-chapter content (titles, colors, posters, films, audio) → `CHAPTERS` in
 //     composables/useChapterScene.js. See docs/CONTENT-AND-ASSETS.md.
-//   • The "MILLA NOVA" logo wordmark is vector art, not a string — it stays as an
-//     inline <svg> in SiteNav.vue (clearly marked there as the one brand-art element
-//     to swap on re-skin).
 //   • Local @font-face (Bague, Movie) + per-chapter .display fonts → assets/css/main.css.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const SITE = {
-  // Brand name, used to build document titles.
-  brand: 'Milla Nova',
+  // Brand name, used to build document titles + the nav wordmark.
+  brand: 'Covenant & Uvie',
 
-  // Subtitle shown under the nav logo on the homepage.
-  subtitle: 'Chapter the bride',
+  // The big day. Drives the countdown in SiteNav. PLACEHOLDER date.
+  weddingDate: '2026-12-12T12:00:00+01:00',
+  dateLabel: 'December 12, 2026 · Lagos',
+
+  // Subtitle shown under the nav wordmark on the homepage.
+  subtitle: 'A love story in chapters',
 
   // Document <title>s.
   titles: {
-    home: 'Chapter — Milla Nova',
+    home: 'Covenant & Uvie — A Love Story in Chapters',
     // Per-chapter title = `${chapter.title} ${chapterSuffix}` (set in app.vue on select).
-    chapterSuffix: '— Chapter Milla Nova',
+    chapterSuffix: '— Covenant & Uvie',
   },
 
   // Top navigation.
   nav: {
-    aboutLabel: 'About',
-    collectionLabel: 'Collection',
-    collectionUrl: 'https://millanova.com/collection/chapter-bride',
+    aboutLabel: 'Welcome',
+    collectionLabel: 'RSVP',
+    // PLACEHOLDER — point at the real RSVP form / WhatsApp / mailto when it exists.
+    collectionUrl: '#rsvp',
   },
 
   // Bottom-left credit.
   credit: {
-    prefix: 'Made by ',
-    name: 'Sarakuz',
-    url: 'https://sarakuz.com',
+    prefix: 'With love, ',
+    name: 'C & U',
+    url: '#',
   },
 
-  // About-panel body. Each entry is one paragraph; `gap: true` adds spacing after it
-  // (matches the original's break before the final paragraph).
+  // Welcome-note panel (the old About). Each entry is one paragraph; `gap: true`
+  // adds spacing after it. PLACEHOLDER copy — the couple's own words go here.
   about: [
-    { text: 'IMMERSE YOURSELF into the CINEMATOGRAPHICAL-LIKE EXPERIENCE' },
-    { text: 'to DISCOVER our NEWEST COLLECTION "CHAPTER BRIDE".', gap: true },
+    { text: 'WELCOME to OUR CORNER of the INTERNET — and THANK YOU for BEING HERE.' },
+    {
+      text: 'WE ARE COVENANT & UVIE, and on DECEMBER 12, 2026 we are GETTING MARRIED.',
+      gap: true,
+    },
     {
       text:
-        'the COLLECTION SHOWCASE COMPRISES FOUR DISTINCT FILMS about ITALIAN-INSPIRED ' +
-        'WEDDINGS, EACH WITH ITS OWN STORYLINE and WEDDING THEME, yet all CENTERED AROUND ' +
-        'the MAIN FOCUS: the BRIDE, who BECOMES the FOCAL POINT of the ENTIRE WEDDING JOURNEY.',
+        'THIS SITE is OUR STORY told in FOUR CHAPTERS: how WE BECAME US, EVERYTHING you ' +
+        'NEED to KNOW about THE BIG DAY, the MOMENTS we have CAPTURED so far, and a ' +
+        'LITTLE WISHLIST for the GENEROUS of HEART. SPIN the CARDS, PICK a CHAPTER, ' +
+        'and COME ALONG — WE SAVED YOU a SEAT.',
     },
   ],
 

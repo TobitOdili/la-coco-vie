@@ -8,58 +8,60 @@ const TWO_PI = Math.PI * 2
 const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
 const asset = (path) => `${base}${path}`
 
-// Chapter data
+// Chapter data — the four chapters of the Covenant & Uvie journey.
+// Accents/videos/audio are inherited from the Milla Nova build as aspect-correct
+// PLACEHOLDERS until the couple's media arrives; the cu-* textures are ours.
 export const CHAPTERS = [
   {
-    slug: 'eat-marry-love',
-    title: 'Eat, Merry, Love',
+    slug: 'us',
+    title: 'Us',
     accent: '#B32C05',
     accentLight: '#F3EBE4',
     accentLighter: '#f0d7bf',
     audio: asset('/audio/eat-merry-love.mp3'),
     video: asset('/video/eat-intro.mp4'),
     poster: asset('/images/poster-1.jpg'),
-    txt: asset('/images/txt-1.png'),
-    svg: asset('/images/p1.svg'),
+    txt: asset('/images/cu-txt1.png'),
+    svg: asset('/images/cu-p1.svg'),
     index: 0,
   },
   {
-    slug: 'la-storia',
-    title: "La Storia Dell'eleganza",
+    slug: 'the-big-day',
+    title: 'The Big Day',
     accent: '#304443',
     accentLight: '#D7DDDD',
     accentLighter: '#a0aeae',
     audio: asset('/audio/la-storia.mp3'),
     video: asset('/video/la-intro.mp4'),
     poster: asset('/images/poster-2.jpg'),
-    txt: asset('/images/txt-2.png'),
-    svg: asset('/images/p2.svg'),
+    txt: asset('/images/cu-txt2.png'),
+    svg: asset('/images/cu-p2.svg'),
     index: 1,
   },
   {
-    slug: 'wine-o-clock',
-    title: "Wine O'Clock",
+    slug: 'in-frames',
+    title: 'In Frames',
     accent: '#353454',
     accentLight: '#D6D5E8',
     accentLighter: '#b3b0db',
     audio: asset('/audio/wine-time.mp3'),
     video: asset('/video/wine-intro.mp4'),
     poster: asset('/images/poster-3.jpg'),
-    txt: asset('/images/txt-3.png'),
-    svg: asset('/images/p3.svg'),
+    txt: asset('/images/cu-txt3.png'),
+    svg: asset('/images/cu-p3.svg'),
     index: 2,
   },
   {
-    slug: 'amour-getaway',
-    title: 'Amour Getaway',
+    slug: 'with-love',
+    title: 'With Love',
     accent: '#7E3C48',
     accentLight: '#FFE7F7',
     accentLighter: '#f0c3e1',
     audio: asset('/audio/amour-getway.mp3'),
     video: asset('/video/amour-intro.mp4'),
     poster: asset('/images/poster-4.jpg'),
-    txt: asset('/images/txt-4.png'),
-    svg: asset('/images/p4.svg'),
+    txt: asset('/images/cu-txt4.png'),
+    svg: asset('/images/cu-p4.svg'),
     index: 3,
   },
 ]
@@ -463,7 +465,7 @@ export function useChapterScene() {
     groupG.add(carousel)
 
     // Load logo texture
-    const logoTexture = await loadTexture(asset('/images/logo.png'))
+    const logoTexture = await loadTexture(asset('/images/cu-logo.png'))
     reportProgress()
 
     // Add floating title texture plane — preload all 4 chapter txt textures so

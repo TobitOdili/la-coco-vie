@@ -1,49 +1,33 @@
 <template>
   <footer ref="root" class="chapter-end" :class="{ 'in-view': visible }">
-    <h3 class="end-title">Discover dress from the chapter</h3>
+    <h3 class="end-title">See you there.</h3>
 
     <div class="pills">
-      <a class="pill" :href="weddingUrl" target="_blank" rel="noopener noreferrer">
-        Wedding <span class="arrow">↗</span>
-      </a>
-      <a class="pill" :href="eveningUrl" target="_blank" rel="noopener noreferrer">
-        Evening <span class="arrow">↗</span>
+      <a class="pill" :href="SITE.nav.collectionUrl" target="_blank" rel="noopener noreferrer">
+        RSVP <span class="arrow">↗</span>
       </a>
     </div>
 
     <div class="socials">
-      <a href="https://www.instagram.com/millanova_official/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6">
-          <rect x="3" y="3" width="18" height="18" rx="5" />
-          <circle cx="12" cy="12" r="4" />
-          <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
-        </svg>
-      </a>
-      <a href="https://www.tiktok.com/@millanova" target="_blank" rel="noopener noreferrer" aria-label="TikTok">
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-          <path d="M16.5 3c.3 2.1 1.6 3.6 3.5 3.9v2.4c-1.3.1-2.5-.3-3.6-1v6.1c0 3.2-2.6 5.6-5.7 5.3-2.7-.3-4.7-2.6-4.6-5.3.1-2.8 2.6-5 5.4-4.8v2.5c-.4-.1-.9-.2-1.3-.1-1.3.2-2.2 1.3-2.1 2.6.1 1.2 1.1 2.2 2.4 2.2 1.4 0 2.4-1 2.4-2.5V3h3.2z" />
-        </svg>
-      </a>
+      <!-- PLACEHOLDER — the couple's hashtag / Instagram when they have one. -->
+      <span class="hashtag">#CovenantAndUvie</span>
     </div>
 
     <p class="disclaimer">
-      Disclaimer: names, characters, and stories presented are fictional and include a
-      humorous undertone. Any resemblance to real individuals is purely coincidental.
+      Placeholder details — dates, times, venues and links on this page are stand-ins
+      until Covenant &amp; Uvie confirm the real ones. Keep scrolling to return to the
+      chapters.
     </p>
   </footer>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { SITE } from '~/site.config'
 
 const props = defineProps({
   chapter: { type: Object, required: true }, // { slug, title, … }
 })
-
-// The reference's pills filter the collection; for the replica they point at the live
-// collection (a content swap can repoint these per-chapter later).
-const weddingUrl = computed(() => 'https://millanova.com/collection/chapter-bride')
-const eveningUrl = computed(() => 'https://millanova.com/collection/chapter-bride')
 
 const root = ref(null)
 const visible = ref(false)
@@ -120,6 +104,11 @@ onBeforeUnmount(() => observer?.disconnect())
 }
 .socials a { color: inherit; cursor: none; transition: opacity 0.3s ease; }
 .socials a:hover { opacity: 0.6; }
+.hashtag {
+  font-family: 'Bague', sans-serif;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
 
 .disclaimer {
   max-width: 40rem;

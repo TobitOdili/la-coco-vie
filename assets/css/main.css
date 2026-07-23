@@ -24,22 +24,22 @@ html {
   --accentLighter: gray;
 }
 
-.--eat-marry-love {
+.--us {
   --accent: #b32c05;
   --accentLighter: #f0d7bf;
   --accentLight: #f3ebe4;
 }
-.--la-storia {
+.--the-big-day {
   --accent: #304443;
   --accentLighter: #a0aeae;
   --accentLight: #d7dddd;
 }
-.--wine-o-clock {
+.--in-frames {
   --accent: #353454;
   --accentLighter: #b3b0db;
   --accentLight: #d6d5e8;
 }
-.--amour-getaway {
+.--with-love {
   --accent: #7e3c48;
   --accentLighter: #f0c3e1;
   --accentLight: #ffe7f7;
@@ -280,17 +280,17 @@ body::after {
   .display { font-size: 210px; }
 }
 
-.--eat-marry-love .display {
+.--us .display {
   font-family: 'Over the Rainbow', cursive;
 }
-.--la-storia .display {
+.--the-big-day .display {
   font-family: 'Italiana', sans-serif;
 }
-.--wine-o-clock .display {
+.--in-frames .display {
   font-family: 'Monoton', sans-serif;
   text-transform: uppercase;
 }
-.--amour-getaway .display {
+.--with-love .display {
   font-family: 'Bague', sans-serif;
   letter-spacing: 0.05em;
   text-transform: uppercase;

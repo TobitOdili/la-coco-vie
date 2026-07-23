@@ -1,16 +1,30 @@
 <template>
-  <a class="dress-tail" :href="dress.url" target="_blank" rel="noopener noreferrer">
-    <img class="dress-photo" :src="dress.photo" :alt="dress.title" loading="lazy" />
+  <!-- Generalized floating popup card (was the dress card): photo and url are both
+       optional — registry items may be text-only, "moment" polaroids may not link. -->
+  <component
+    :is="dress.url ? 'a' : 'div'"
+    class="dress-tail"
+    :href="dress.url || undefined"
+    :target="dress.url ? '_blank' : undefined"
+    :rel="dress.url ? 'noopener noreferrer' : undefined"
+  >
+    <img
+      v-if="dress.photo"
+      class="dress-photo"
+      :src="dress.photo"
+      :alt="dress.title"
+      loading="lazy"
+    />
     <div class="dress-meta">
       <div class="dress-name">{{ dress.title }}</div>
       <div v-for="(p, i) in dress.params" :key="i" class="dress-param">{{ p }}</div>
     </div>
-  </a>
+  </component>
 </template>
 
 <script setup>
 defineProps({
-  dress: { type: Object, required: true }, // { title, photo, params[], url }
+  dress: { type: Object, required: true }, // { title, params[], photo?, url? }
 })
 </script>
 

@@ -1,280 +1,260 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// CHAPTER PAGE CONTENT — the inner (scroll) page per chapter (Phase 2).
+// CHAPTER PAGES — the inner-page content for the Covenant & Uvie journey.
+// Pure data (no three/gsap). Rendered by pages/[slug].vue via ChapterSection /
+// DressTail (popup cards) / ChapterEnd.
 //
-// The spine of which chapters exist + their colors/films/posters is CHAPTERS
-// (composables/useChapterScene.js). This file holds the *inner page* content:
-// the sub-chapters, their copy, gallery images, and dress-tail references.
+// ⚠️ EVERYTHING BELOW IS PLACEHOLDER (2026-07-23). The couple will correct:
+//   • COPY — written to demonstrate placement + tone, not facts. Every date,
+//     venue, time and story beat is invented; [bracketed notes] mark what to fill.
+//   • IMAGES — reused Milla Nova film stills (right aspect ratios, wrong people).
+//     Swap for the couple's shoots, keeping roughly the same counts per section.
+//   • POPUPS — dummy registry items / map links; urls are '#' dead links.
 //
-// ⚠️ THIS FILE IS THE ONLY PER-CHAPTER THING. All four chapters render through the
-// SAME components (ChapterSection / DressTail / ChapterEnd), so a layout change lands
-// on every chapter at once, and a content swap is a change *here* plus the images.
+// (The previous Milla Nova replica content — the reference's verbatim harvested
+// copy — is preserved in git history at a4224399 should it ever be needed.)
 //
-// PROVENANCE
-//  • COPY — VERBATIM from the reference (chapter.millanova.com), harvested 2026-07-22.
-//    Getting it needed a real TOUCH TAP on the front card under mobile emulation: the site
-//    is a pure-WebGL SPA whose inner pages never mount for `setSelected()` or a synthetic
-//    click, and cold deep-links bounce to `/`. (An earlier pass wrongly concluded the copy
-//    was unobtainable and shipped invented placeholder text — this replaced it.)
-//    Section COUNTS differ per chapter: wine 3, eat-marry-love 5, la-storia 5, amour 3.
-//    Reference quirks kept as-is: "pallete" (sic) in wine II. Their numbering labels the
-//    last two eat-marry-love sections both "Chapter IV" — corrected here to IV and V.
-//  • GALLERIES — still PLACEHOLDER: frames extracted from each chapter's own
-//    public/video/*-intro.mp4. The reference's real gallery photos are a later swap.
-//  • DRESSES — real names/photos/links from millanova.com/collection/chapter-bride. The
-//    reference pairs Yaroslava with wine, Markita with la-storia, Kohana+Yaroslava with
-//    amour; we use the subset whose images we host.
+// Shape:
+//   CHAPTER_PAGES[slug].sections[] = { num, title, body, images[], popups[], align }
+//     • images[0] leads the split; the rest render as full-bleed bands.
+//     • popups[] → keys into POPUPS: the floating cards pinned to the viewport
+//       while that section is active (the old dress cards, generalized).
+//   POPUPS[key] = { title, params[], photo?, url? } — photo and url are optional.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
 const asset = (p) => `${base}${p}`
-const dressUrl = (slug) => `https://millanova.com/dress/${slug}`
 
-// Dresses referenced by the dress-tail popups. `params` mirrors the reference's own format
-// (it shows e.g. "silhouette: straight"); the collection tag is used where we didn't capture specs.
-export const DRESSES = {
-  yaroslava: {
-    title: 'Yaroslava',
-    photo: asset('/images/dresses/dress-01.jpg'),
-    params: ['silhouette: straight', 'color: ivory'],
-    url: dressUrl('yaroslava'),
+// ── The floating popup cards ─────────────────────────────────────────────────
+export const POPUPS = {
+  // “Us” — captioned moments (polaroids that follow the story).
+  momentHello: {
+    title: 'The First Hello',
+    params: ['lagos · march 2019', 'placeholder moment'],
+    photo: asset('/images/gallery/eat-marry-love-01.jpg'),
   },
-  malva: {
-    title: 'Malva',
-    photo: asset('/images/dresses/dress-02.jpg'),
-    params: ['silhouette: straight', 'color: ivory'],
-    url: dressUrl('malva'),
+  momentYes: {
+    title: 'She Said Yes',
+    params: ['the proposal · placeholder'],
+    photo: asset('/images/gallery/eat-marry-love-04.jpg'),
   },
-  aggie: { title: 'Aggie', photo: asset('/images/dresses/aggie.jpg'), params: ['collection: chapter bride'], url: dressUrl('aggie') },
-  alaia: { title: 'Alaia', photo: asset('/images/dresses/alaia.jpg'), params: ['collection: chapter bride'], url: dressUrl('alaia') },
-  aldrans: { title: 'Aldrans', photo: asset('/images/dresses/aldrans.jpg'), params: ['collection: chapter bride'], url: dressUrl('aldrans') },
-  aminata: { title: 'Aminata', photo: asset('/images/dresses/aminata.jpg'), params: ['collection: chapter bride'], url: dressUrl('aminata') },
-  andalusia: { title: 'Andalusia', photo: asset('/images/dresses/andalusia.jpg'), params: ['collection: chapter bride'], url: dressUrl('andalusia') },
-  antonelly: { title: 'Antonelly', photo: asset('/images/dresses/antonelly.jpg'), params: ['collection: chapter bride'], url: dressUrl('antonelly') },
-  arcada: { title: 'Arcada', photo: asset('/images/dresses/arcada.jpg'), params: ['collection: chapter bride'], url: dressUrl('arcada') },
-  ariel: { title: 'Ariel', photo: asset('/images/dresses/ariel.jpg'), params: ['collection: chapter bride'], url: dressUrl('ariel') },
-  azalia: { title: 'Azalia', photo: asset('/images/dresses/azalia.jpg'), params: ['collection: chapter bride'], url: dressUrl('azalia') },
+
+  // “The Big Day” — utility cards (maps / calendar / dress code).
+  mapCeremony: {
+    title: '📍 The Ceremony',
+    params: ['sat · dec 12, 2026 · 12 noon', 'venue tbc — open in maps'],
+    url: '#',
+  },
+  calCeremony: {
+    title: '🗓 Add to Calendar',
+    params: ['placeholder — ics link coming'],
+    url: '#',
+  },
+  mapReception: {
+    title: '📍 The Reception',
+    params: ['sat · dec 12, 2026 · 4 pm', 'venue tbc — open in maps'],
+    url: '#',
+  },
+  dressCode: {
+    title: 'The Dress Code',
+    params: ['colours of the day: tbc', 'come beautiful, come comfy'],
+  },
+
+  // “In Frames” — album link.
+  fullAlbum: {
+    title: 'The Full Album',
+    params: ['every photo, one place', 'coming soon'],
+    url: '#',
+  },
+
+  // “With Love” — dummy registry items until the real list arrives.
+  regFund: {
+    title: 'The Honeymoon Fund',
+    params: ['contribute any amount', 'placeholder link'],
+    url: '#',
+  },
+  regEspresso: {
+    title: 'Espresso Machine',
+    params: ['for slow sunday mornings', 'placeholder item'],
+    url: '#',
+  },
+  regDinner: {
+    title: 'Dinnerware for Twelve',
+    params: ['for the tables we will host', 'placeholder item'],
+    url: '#',
+  },
+  regLuggage: {
+    title: 'Weekender Luggage',
+    params: ['for everywhere we have not been', 'placeholder item'],
+    url: '#',
+  },
 }
 
-// sections[]: { num, title, body, images[], dresses[], align }
-//   • images[0]  → the full-height photo in the split (flush to one edge)
-//   • images[1…] → full-bleed bands below the split
-//   • dresses[]  → the floating popups shown while that section is the active one
+// ── The four chapters ────────────────────────────────────────────────────────
 export const CHAPTER_PAGES = {
-  'wine-o-clock': {
+  us: {
     sections: [
       {
         num: 'I',
-        title: 'THE BRIDE',
+        title: 'The Meeting',
         body:
-          'Meet Ivy, a self-sufficient and open-minded professional sommelier who has turned her ' +
-          'love for wine into her career. She wanted to share her passion with closest friends, so ' +
-          'she organized an intimate wedding in a picturesque Italian vineyard to enjoy a carefree ' +
-          'fun yet flawless celebration, reflecting her approach to life.',
-        images: [
-          asset('/images/gallery/wine-the-bride-01.jpg'),
-          asset('/images/gallery/wine-the-bride-02.jpg'),
-        ],
-        dresses: ['malva', 'yaroslava'],
-        align: 'right',
-      },
-      {
-        num: 'II',
-        title: 'THE WINE',
-        body:
-          'Wine is an art form: nuanced, multifaceted, precise, impressive, and endlessly ' +
-          'surprising. From the taste, scent, color, and the making process – it’s beautiful in ' +
-          'every way. Treat yourself to a glass and let each sip transport your pallete to a new ' +
-          'experience.',
-        images: [
-          asset('/images/gallery/wine-the-wine-01.jpg'),
-          asset('/images/gallery/wine-the-wine-02.jpg'),
-          asset('/images/gallery/wine-the-wine-03.jpg'),
-        ],
-        align: 'left',
-      },
-      {
-        num: 'III',
-        title: 'THE PEOPLE',
-        body:
-          'Surrounded by your dearest friends, you share the most important moment in your life – ' +
-          'a ceremony nestled in the embrace of nature. In the company of those who have stood by ' +
-          'you through thick and thin, this is an intimate atmosphere that wraps you in the warmth ' +
-          'of shared laughter, heartfelt conversations, and unrestrained fun.',
-        images: [asset('/images/gallery/wine-the-people.jpg')],
-        align: 'right',
-      },
-    ],
-  },
-
-  'eat-marry-love': {
-    sections: [
-      {
-        num: 'I',
-        title: 'The bride',
-        body:
-          'This is Eleonora, she’s been dreaming about her wedding day since she was a little ' +
-          'girl, with a clear idea of how she wants it to unfold. She’s steadfast in her opinions, ' +
-          'unwavering, and formidable in the debate. She values her cultural heritage, so there is ' +
-          'no doubt about the theme of the wedding she chose. Eleanor’s special mission? Winning ' +
-          'the affection of a mama’s boy.',
+          'Every story has a page one. Ours was an ordinary afternoon that refused to stay ' +
+          'ordinary — a mutual friend, a borrowed seat, and a conversation neither of us ' +
+          'wanted to end. Covenant swears he knew by the second cup of coffee. Uvie says ' +
+          'it took a week. We have agreed to disagree, forever. [Placeholder — the real ' +
+          'how-we-met story goes here, 3–5 sentences.]',
         images: [
           asset('/images/gallery/eat-marry-love-01.jpg'),
           asset('/images/gallery/eat-marry-love-02.jpg'),
         ],
-        dresses: ['aggie', 'alaia'],
-        align: 'right',
+        popups: ['momentHello'],
+        align: 'left',
       },
       {
         num: 'II',
-        title: 'The Taste',
+        title: 'The Question',
         body:
-          'Food can be considered a cornerstone of Italian culture, and, of course, food will play ' +
-          'a central role in an Italian-styled wedding. It’s always a great idea to invite a guest ' +
-          'chef, who will craft freshly made dishes, ensuring guests savor an unforgettable ' +
-          'culinary show that captures the essence of la dolce vita.',
+          'Years, road trips, and a hundred small kindnesses later — one of us got down on ' +
+          'one knee. There was a speech, carefully rehearsed and instantly forgotten. There ' +
+          'were tears, though we still argue about whose came first. [Placeholder — the ' +
+          'proposal story: where it happened, who was in on it, what was said.]',
         images: [asset('/images/gallery/eat-marry-love-03.jpg')],
-        dresses: ['aldrans'],
-        align: 'left',
+        popups: ['momentYes'],
+        align: 'right',
       },
       {
         num: 'III',
-        title: 'The Vibrancy',
+        title: 'The Yes',
         body:
-          'Under the glow of the scorching sun, amid lush flora and fruity scents, ' +
-          'Italian-inspired weddings are destined to burst with vibrant colors. From the boundless ' +
-          'picturesque landscapes, scenic winery vistas, and endless sea views, each shade tells a ' +
-          'story of passion, romance, and gioia di vivere.',
-        images: [asset('/images/gallery/eat-marry-love-04.jpg')],
-        align: 'right',
-      },
-      {
-        num: 'IV',
-        title: 'The Energy',
-        body:
-          'Italians are renowned for their expressiveness, and thus, a wedding would only be ' +
-          'complete with a lively atmosphere brimming with energy that embodies the spirit of ' +
-          'Italian rich cultural charm. Turn on the volume and let yourself loose!',
-        images: [asset('/images/gallery/eat-marry-love-05.jpg')],
+          'And now — this. Two families becoming one, two names on one invitation. We are ' +
+          'Covenant Odili and Uvie Dan-Egua, and we cannot wait to write the next chapter ' +
+          'with everyone we love in the room. [Placeholder — a short closing note that ' +
+          'hands the reader on to The Big Day.]',
+        images: [
+          asset('/images/gallery/eat-marry-love-05.jpg'),
+          asset('/images/gallery/eat-marry-love-06.jpg'),
+        ],
+        popups: [],
         align: 'left',
-      },
-      {
-        num: 'V',
-        title: 'The Mamma',
-        body:
-          'Introducing: the life of the party, the star of the tango championships, and the one ' +
-          'person who can truly rattle our bride’s nerves – the groom’s mother! She is domineering, ' +
-          'overly caring, and always knows best. Despite occasionally not knowing when to step ' +
-          'back, her deep love for the newlyweds and her charismatic presence are what make this ' +
-          'reception unforgettable.',
-        images: [asset('/images/gallery/eat-marry-love-06.jpg')],
-        align: 'right',
       },
     ],
   },
 
-  'la-storia': {
+  'the-big-day': {
     sections: [
       {
         num: 'I',
-        title: 'The bride',
+        title: 'The Ceremony',
         body:
-          'Meet the bride – Katie. She’s been dreaming about her wedding day since she was a ' +
-          'little girl, with a clear idea of how she wants it to unfold. She’s the bride who brings ' +
-          'her entire family to the dress fitting, valuing her father’s choices the most. Adhering ' +
-          'to all traditions, she prepared something new, something blue, and something borrowed. ' +
-          'Her ceremony mirrors her lifestyle: elegant, traditional, lively, and a bit showy.',
+          'The part where we say the words. Join us at twelve noon on Saturday, December ' +
+          '12, 2026 [placeholder date] as we exchange our vows. Doors open at 11:30 — come ' +
+          'early, sit close, sing loud. [Placeholder — church/venue name and address, plus ' +
+          'any notes on parking or arrival.]',
         images: [
           asset('/images/gallery/la-storia-01.jpg'),
           asset('/images/gallery/la-storia-02.jpg'),
         ],
-        dresses: ['aminata', 'andalusia'],
-        align: 'right',
+        popups: ['mapCeremony', 'calCeremony'],
+        align: 'left',
       },
       {
         num: 'II',
-        title: 'The Style',
+        title: 'The Reception',
         body:
-          'Creating a truly timeless yet impressively elegant wedding is no easy task. The tricky ' +
-          'part is to mingle the casual ambiance amidst the splendor effortlessly. While every ' +
-          'detail is imbued with elegance and every touch is filled with lushness, there should be ' +
-          'a balance of all to ensure an air of ease for the guests.',
+          'Then we eat. From four o’clock the celebration moves to the reception venue ' +
+          '[placeholder — name and address]: dinner, toasts, and the small matter of our ' +
+          'first dance. If you leave hungry, that is entirely on you.',
         images: [asset('/images/gallery/la-storia-03.jpg')],
-        dresses: ['antonelly'],
-        align: 'left',
+        popups: ['mapReception'],
+        align: 'right',
       },
       {
         num: 'III',
-        title: 'The Bride Tribe',
+        title: 'The Party',
         body:
-          'Meet a tight-knit circle of confidantes who ensure the wedding proceeds flawlessly. ' +
-          'They’re always wrapped up in the world around them, too busy to talk about themselves, ' +
-          'but they’ll always find time to catch up and discuss everyone else’s lives in detail. ' +
-          'In their world, loyalty reigns supreme, and drama rules over all.',
-        images: [asset('/images/gallery/la-storia-04.jpg')],
-        align: 'right',
-      },
-      {
-        num: 'IV',
-        title: 'The Moment',
-        body:
-          'With weddings overflowing with activities, newlyweds often overlook the importance of ' +
-          'pausing to savor the moment together. Amidst the bustling celebration with a whirlwind ' +
-          'schedule, Katie and Luke managed to take a step back, capturing the moment in their ' +
-          'memories, savoring it, and truly appreciating the day.',
-        images: [asset('/images/gallery/la-storia-05.jpg')],
+          'And then we dance. The band hands over to the DJ, the lights come down, and the ' +
+          'floor is open until we are asked — politely but firmly — to leave. Dress to ' +
+          'celebrate. [Placeholder — after-party details, dress-code specifics, colours of ' +
+          'the day.]',
+        images: [
+          asset('/images/gallery/la-storia-04.jpg'),
+          asset('/images/gallery/la-storia-05.jpg'),
+        ],
+        popups: ['dressCode'],
         align: 'left',
-      },
-      {
-        num: 'V',
-        title: 'The Bash',
-        body:
-          'As the tally of glasses consumed becomes a mystery, the true bash begins. For it is ' +
-          'amidst your nearest friends that you can abandon restraint, casting off inhibitions. ' +
-          'And the most pleasing part is that the venue has the knack for shrouding any ' +
-          'undesirable details from public scrutiny.',
-        images: [asset('/images/gallery/la-storia-06.jpg')],
-        align: 'right',
       },
     ],
   },
 
-  'amour-getaway': {
+  'in-frames': {
     sections: [
       {
         num: 'I',
-        title: 'THE BRIDE',
+        title: 'The Pre-Wedding',
         body:
-          'Introducing the bride – Viki. She struggles to stay in one place, fueled by her ' +
-          'insatiable thirst for adventure. She found a husband who shares her adventurous spirit ' +
-          'and supports any wild ideas she has. She is unconventional, imaginative, and strives ' +
-          'diligently for independence.',
+          'We put on our good clothes, stood where the photographer pointed, and tried to ' +
+          'act natural. These are the frames that survived the laughing fits. [Placeholder ' +
+          '— a line or two about the pre-wedding shoot: where, when, and by whom.]',
+        images: [
+          asset('/images/gallery/wine-the-bride-01.jpg'),
+          asset('/images/gallery/wine-the-bride-02.jpg'),
+        ],
+        popups: ['fullAlbum'],
+        align: 'left',
+      },
+      {
+        num: 'II',
+        title: 'The Traditional',
+        body:
+          'Colour, culture, and both families in their finest. This gallery fills after ' +
+          'the traditional ceremony — check back soon. [Placeholder — swap in the ' +
+          'traditional-engagement photos when they exist.]',
+        images: [asset('/images/gallery/wine-the-wine-01.jpg')],
+        popups: [],
+        align: 'right',
+      },
+      {
+        num: 'III',
+        title: 'The White Wedding',
+        body:
+          'The aisle, the vows, the exit through a corridor of confetti. This chapter is ' +
+          'still being written — the frames land here after December 12. [Placeholder — ' +
+          'the post-wedding gallery.]',
+        images: [
+          asset('/images/gallery/wine-the-wine-02.jpg'),
+          asset('/images/gallery/wine-the-people.jpg'),
+        ],
+        popups: [],
+        align: 'left',
+      },
+    ],
+  },
+
+  'with-love': {
+    sections: [
+      {
+        num: 'I',
+        title: 'Your Presence',
+        body:
+          'Let us say it plainly: the greatest gift is you, in the room, on the day. ' +
+          'Travel safely, dance freely, and consider every obligation fulfilled. ' +
+          '[Placeholder — the couple’s own words on gifts; keep it warm and short.]',
         images: [
           asset('/images/gallery/amour-getaway-01.jpg'),
           asset('/images/gallery/amour-getaway-02.jpg'),
         ],
-        dresses: ['arcada', 'yaroslava'],
-        align: 'right',
-      },
-      {
-        num: 'II',
-        title: 'THE INTIMACY',
-        body:
-          'Introducing the lovebirds: Viki and Michael. Despite their penchant for grand ' +
-          'celebrations, their deepest desire is to exchange vows in private atop a mountain or on ' +
-          'the edge of a cliff in another country. However, the parents who organized the wedding ' +
-          'had a different opinion.',
-        images: [asset('/images/gallery/amour-getaway-03.jpg')],
-        dresses: ['azalia'],
+        popups: ['regFund'],
         align: 'left',
       },
       {
-        num: 'III',
-        title: 'HAPPILY EVER AFTER',
+        num: 'II',
+        title: 'The Wishlist',
         body:
-          'Newlyweds have served the official part of the celebration, and they finally can with a ' +
-          'clear conscience escape earlier to their amour getaway across the highway "Happily Ever ' +
-          'After". Cheers!',
-        images: [asset('/images/gallery/amour-getaway-04.jpg')],
+          'But if your love language comes wrapped with a bow — here is a small wishlist ' +
+          'for the home we are building. Anything on it, in any measure, will be ' +
+          'treasured. [Placeholder — the real registry replaces these dummy cards; each ' +
+          'card links out to the store or fund.]',
+        images: [asset('/images/gallery/amour-getaway-03.jpg')],
+        popups: ['regEspresso', 'regDinner', 'regLuggage'],
         align: 'right',
       },
     ],

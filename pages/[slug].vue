@@ -18,13 +18,10 @@
         <ChapterEnd :chapter="chapter" />
       </div>
 
-      <!-- …otherwise the scaffold (chapters not yet built: la-storia, eat, amour). -->
+      <!-- …otherwise the scaffold (safety net — all four chapters have content). -->
       <section v-else class="chapter-body">
         <h1 class="chapter-title">{{ chapter.title }}</h1>
-        <p class="chapter-note">
-          Inner-page scaffold. Content for this chapter is not built yet — see
-          <code>docs/PHASE-2-INNER-PAGES.md</code>.
-        </p>
+        <p class="chapter-note">This chapter is still being written — check back soon.</p>
       </section>
 
       <!-- Scroll-driven exit "outro": transparent, so the WebGL ring shows through as the article scrolls
@@ -47,7 +44,7 @@
 import { computed, onMounted, onBeforeUnmount, inject, ref } from 'vue'
 import Lenis from 'lenis'
 import { CHAPTERS } from '~/composables/useChapterScene'
-import { CHAPTER_PAGES, DRESSES } from '~/composables/chapterPages'
+import { CHAPTER_PAGES, POPUPS } from '~/composables/chapterPages'
 import ChapterSection from '~/components/chapter/ChapterSection.vue'
 import ChapterEnd from '~/components/chapter/ChapterEnd.vue'
 import DressTail from '~/components/chapter/DressTail.vue'
@@ -64,7 +61,7 @@ const sectionRatios = new Map()
 let sectionObserver = null
 const activeDresses = computed(() => {
   const s = pageContent.value?.sections?.[activeIdx.value]
-  return (s?.dresses || []).map((slug) => DRESSES[slug]).filter(Boolean)
+  return (s?.popups || []).map((key) => POPUPS[key]).filter(Boolean)
 })
 
 // Reach the persistent WebGL scene (provided by app.vue) so page scroll can drive
