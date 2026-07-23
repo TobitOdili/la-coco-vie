@@ -40,11 +40,27 @@ original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker*
   sequence (his 0.7s, hers 1.3s), same accent/watermark/reveal language as the rest.
   ⚠️ Bespoke chapter components MUST render `.chapter-section` roots with `data-idx` — the
   popup observer in `pages/[slug].vue` keys on them.
-- **Design principle from the user for the remaining 3 pages:** do NOT reuse a single visual
-  vocabulary (frames/tape) across pages — derive each page's treatment from its PURPOSE and its
-  stage in the journey. Concepts pitched 2026-07-23: Big Day = "The Hours" (scroll-scrubbed
-  daylight timeline), In Frames = "The Screening Room" (dark projected-slides page), With Love =
-  "Thank-You in Advance" (typographic promises). Build in journey order after user reaction.
+- **Design principle from the user for the remaining pages:** do NOT reuse a single visual
+  vocabulary across pages — derive each page's treatment from its PURPOSE and journey stage.
+  Approved narrative: **THE THREAD** — one line runs the whole site: two threads (US's stitch
+  lines + two voices) → they TIE THE KNOT at the Big Day's ceremony → become the FILM strip
+  (In Frames, dark "screening room") → become INK that writes and signs (With Love).
+- **THE BIG DAY = "The Hours" — BUILT + prod-verified (`4586dd48`), awaiting user reaction.**
+  `components/chapter/BigDay.vue`: 4 scenes, one falling light (sage → noon → golden → deep-
+  green night; text flips light at dusk); scroll-scrubbed SVG thread per scene (pathLength=1
+  dash trick + rAF reading scene rects — follows Lenis, reverses free); THE KNOT: 260dvh sticky
+  scene at 12:00, his/hers threads draw from opposite edges, interlace, twist, continue as one;
+  'we do.' + ceremony facts land after; photo-free page. Giant Italiana hour numerals.
+  ⚠️ Gotchas: (a) `overflow:hidden` on a scene KILLS position:sticky (it becomes the sticky
+  containment box) — the knot pinned to the scene top until removed; (b) the active-section
+  observer in `pages/[slug].vue` now measures `intersectionRect.height / rootBounds.height`
+  (viewport-relative) — the old element-relative 0.45 threshold could never fire for sections
+  taller than vh/0.45 (the documented latent trap; the knot scene is exactly that). Popups
+  verified tracking all four scenes on desktop + mobile emulation, 0 console errors.
+- **Remaining to build:** In Frames ("Screening Room": strip = the thread, gate-lock frames,
+  leader countdowns, blank "reserved" frames for future rolls, lights up at the outro) and
+  With Love ("Thank-You in Advance": scrubbed ink handwriting, items circled like a catalogue,
+  the line splits to SIGN both names, underline → RSVP).
 
 **▶ THE PIVOT (2026-07-23).** The site is no longer a Milla Nova replica: it is now **the
 wedding site of Covenant (Odili) & Uvie (Dan-Egua)** — "A Love Story in Chapters" (HEAD `cd48cb2b`,
