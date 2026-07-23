@@ -1132,10 +1132,23 @@ export function useChapterScene() {
 
     // Pick ONE copy as the hero and rotate the carousel so THAT copy faces the camera.
     // A copy placed at ring angle φ (=intRotationY) sits at the front (local +Z, nearest
-    // camera) when the carousel rotates to (φ − 90)°. The old `-(φ)` only coincidentally
-    // worked for wine — for other chapters it parked the card at the SIDE (z≈0). Deriving
-    // from the chosen copy fixes selection for every chapter.
-    const heroPoster = posters.find((p) => p.chapterIdx === chIdx)
+    // camera) when the carousel rotates to (φ − 90)°.
+    //
+    // The hero must be the copy CURRENTLY nearest the camera — i.e. the physical card the
+    // user clicked. Each chapter has two identical copies 180° apart on the ring (the far
+    // one faces away). `posters.find()` always returned the LOWER copy (slots 1–4): whenever
+    // the MIRROR copy was the one in front, that made the BACK copy the hero and spun the
+    // clicked card AWAY to bring its twin round — reading as "the card behind rotates, not
+    // the one I clicked". Both copies look identical, so choosing the near one changes only
+    // WHICH physical card becomes the hero (the clicked one now does a clean forward spin).
+    let heroPoster = null
+    let heroDist = Infinity
+    for (const p of posters) {
+      if (p.chapterIdx !== chIdx) continue
+      p.mesh.getWorldPosition(_frontVec)
+      const d = _frontVec.distanceToSquared(camera.position)
+      if (d < heroDist) { heroDist = d; heroPoster = p }
+    }
     selectedHero = heroPoster   // the card the inner-page scroll couples to (P1)
 
     // D — normalize the entry spin to one consistent FORWARD turn. The 7s intro leaves
