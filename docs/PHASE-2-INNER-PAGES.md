@@ -28,7 +28,25 @@ original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker*
    (b) Browserless `captureScreenshot` latency can't time a sub-2s animation — use a **screenshot-free
    `evaluate` probe** (sample `transform`/`opacity`/`__camDebug` over time), screenshots for the look only.
 
-**▶▶ STATE (2026-07-23 — THE PIVOT).** The site is no longer a Milla Nova replica: it is now **the
+**▶▶ STATE (2026-07-23, evening — post-pivot progress, HEAD `6d57d155`).**
+- **Date is real: OCTOBER 27** (year still assumed 2026 — confirm). Countdown, copy, poster credit
+  lines all updated.
+- **Card faces: individualized typefaces are FINAL** (Us=Over the Rainbow · Big Day=Italiana ·
+  In Frames=Monoton · With Love=Bague). An all-Monoton pass was tried and REVERTED — the user
+  called it monotonous; don't unify the card faces again.
+- **US inner page: bespoke "margin notes" treatment BUILT + user-approved** ("simple and nice").
+  `components/chapter/UsStory.vue`: per-scene stitch date-line (draws on reveal), ONE taped
+  polaroid (settles from a deeper tilt, cursive caption), two-voice margin notes landing in
+  sequence (his 0.7s, hers 1.3s), same accent/watermark/reveal language as the rest.
+  ⚠️ Bespoke chapter components MUST render `.chapter-section` roots with `data-idx` — the
+  popup observer in `pages/[slug].vue` keys on them.
+- **Design principle from the user for the remaining 3 pages:** do NOT reuse a single visual
+  vocabulary (frames/tape) across pages — derive each page's treatment from its PURPOSE and its
+  stage in the journey. Concepts pitched 2026-07-23: Big Day = "The Hours" (scroll-scrubbed
+  daylight timeline), In Frames = "The Screening Room" (dark projected-slides page), With Love =
+  "Thank-You in Advance" (typographic promises). Build in journey order after user reaction.
+
+**▶ THE PIVOT (2026-07-23).** The site is no longer a Milla Nova replica: it is now **the
 wedding site of Covenant (Odili) & Uvie (Dan-Egua)** — "A Love Story in Chapters" (HEAD `cd48cb2b`,
 live + prod-verified). The conventional wedding pages became the four ring cards: **US** (story) →
 **THE BIG DAY** (events; popups = 📍 map / 🗓 calendar cards) → **IN FRAMES** (gallery) → **WITH LOVE**
