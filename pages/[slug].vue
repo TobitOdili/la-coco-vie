@@ -304,9 +304,14 @@ onBeforeUnmount(() => {
   background: var(--accentLight, #f3ebe4);
 }
 
-/* Floating dress popups — fixed to the viewport bottom-center over the content. */
+/* Floating dress popups — pinned to the VIEWPORT bottom-centre over the content.
+   MUST be `fixed`, not `absolute`: .chapter-page is a scroll container (overflow-y: auto), and
+   absolutely-positioned children of a scroller scroll WITH the content — so these sat at the
+   bottom only at scroll 0 and then slid up and off the top as you read. `fixed` resolves
+   against the viewport (no transformed ancestor here — Lenis scrolls .chapter-page natively via
+   scrollTop, and these live OUTSIDE .chapter-scroll), so they stay put. */
 .dress-popups {
-  position: absolute;
+  position: fixed;
   bottom: 1.75rem;
   left: 50%;
   transform: translateX(-50%);
