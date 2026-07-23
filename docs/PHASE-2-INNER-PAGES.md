@@ -79,8 +79,24 @@ original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker*
   (isolated test passes); it's a value tweak, not a bug.
   **User (2026-07-23): "In Frames could be better" — circle back to polish ALL pages after the
   four are built.** Don't treat any page as final yet.
-- **Remaining to build:** With Love ("Thank-You in Advance": scrubbed ink handwriting, items
-  circled like a catalogue, the line splits to SIGN both names, underline → RSVP).
+- **WITH LOVE = "Thank-You in Advance" — BUILT + prod-verified (`d75375a5`).** `components/chapter/
+  WithLove.vue`, the thread's final form (INK). OPENING: the ink writes "thank you" via a new
+  `.write` scrub type (L→R `clip-path: inset()` reveal = handwriting), flourish draws beneath.
+  GIFTS as PROMISES: each gift written as its future memory ("slow sunday mornings → the espresso
+  machine"), the ink CIRCLES the gift name (scrubbed pen-loop ellipse, non-distorting `viewBox`);
+  the registry LINK stays the floating white card, tracked per stanza (the recurring element the
+  user likes). SIGNING: the trunk forks and each branch runs INTO the start of a name (fixed from
+  a first pass where branches dropped past the names); both names write in cursive, underlined;
+  flows into ChapterEnd's RSVP. All scroll-scrubbed, reversible, ~zero media. Verified: 6 scenes,
+  circles + cards track, signatures write, 0 errors.
+  ⚠️ CIRCLE-BACK POLISH: signature completion timing rides high toward the nav late in the scene
+  (transient mid-scroll; centered during natural scroll) — shift `.write` windows earlier.
+
+**▶▶ ALL FOUR INNER PAGES ARE NOW BESPOKE (the thread narrative complete): US (voices) → THE BIG
+DAY (light + the knot) → IN FRAMES (darkness + the film strip) → WITH LOVE (ink that signs).**
+The generic `ChapterSection` loop is now only the unused fallback. Next: the user wants a POLISH
+pass over ALL pages (In Frames flagged first), plus real content/media, plus the Big Day
+follow-ups. No page is final.
 
 **▶ THE PIVOT (2026-07-23).** The site is no longer a Milla Nova replica: it is now **the
 wedding site of Covenant (Odili) & Uvie (Dan-Egua)** — "A Love Story in Chapters" (HEAD `cd48cb2b`,
