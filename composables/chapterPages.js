@@ -41,7 +41,7 @@ export const POPUPS = {
   // “The Big Day” — utility cards (maps / calendar / dress code).
   mapCeremony: {
     title: '📍 The Ceremony',
-    params: ['sat · dec 12, 2026 · 12 noon', 'venue tbc — open in maps'],
+    params: ['oct 27, 2026 · 12 noon', 'venue tbc — open in maps'],
     url: '#',
   },
   calCeremony: {
@@ -51,7 +51,7 @@ export const POPUPS = {
   },
   mapReception: {
     title: '📍 The Reception',
-    params: ['sat · dec 12, 2026 · 4 pm', 'venue tbc — open in maps'],
+    params: ['oct 27, 2026 · 4 pm', 'venue tbc — open in maps'],
     url: '#',
   },
   dressCode: {
@@ -145,8 +145,8 @@ export const CHAPTER_PAGES = {
         num: 'I',
         title: 'The Ceremony',
         body:
-          'The part where we say the words. Join us at twelve noon on Saturday, December ' +
-          '12, 2026 [placeholder date] as we exchange our vows. Doors open at 11:30 — come ' +
+          'The part where we say the words. Join us at twelve noon on October 27, 2026 ' +
+          'as we exchange our vows. Doors open at 11:30 — come ' +
           'early, sit close, sing loud. [Placeholder — church/venue name and address, plus ' +
           'any notes on parking or arrival.]',
         images: [
@@ -217,7 +217,7 @@ export const CHAPTER_PAGES = {
         title: 'The White Wedding',
         body:
           'The aisle, the vows, the exit through a corridor of confetti. This chapter is ' +
-          'still being written — the frames land here after December 12. [Placeholder — ' +
+          'still being written — the frames land here after October 27. [Placeholder — ' +
           'the post-wedding gallery.]',
         images: [
           asset('/images/gallery/wine-the-wine-02.jpg'),

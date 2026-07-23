@@ -7,7 +7,7 @@
 // credit), AboutPanel.vue (welcome-note copy).
 //
 // ⚠️ PLACEHOLDERS (2026-07-23, awaiting the couple's real details):
-//   • weddingDate / dateLabel — invented (Dec 12 2026)
+//   • weddingDate / dateLabel — user-confirmed Oct 27; YEAR assumed 2026
 //   • rsvpUrl — dead link until an RSVP destination exists
 //   • the welcome-note copy below — tone draft for correction
 //
@@ -22,8 +22,8 @@ export const SITE = {
   brand: 'Covenant & Uvie',
 
   // The big day. Drives the countdown in SiteNav. PLACEHOLDER date.
-  weddingDate: '2026-12-12T12:00:00+01:00',
-  dateLabel: 'December 12, 2026 · Lagos',
+  weddingDate: '2026-10-27T12:00:00+01:00',
+  dateLabel: 'October 27, 2026 · Lagos',
 
   // Subtitle shown under the nav wordmark on the homepage.
   subtitle: 'A love story in chapters',
@@ -55,7 +55,7 @@ export const SITE = {
   about: [
     { text: 'WELCOME to OUR CORNER of the INTERNET — and THANK YOU for BEING HERE.' },
     {
-      text: 'WE ARE COVENANT & UVIE, and on DECEMBER 12, 2026 we are GETTING MARRIED.',
+      text: 'WE ARE COVENANT & UVIE, and on OCTOBER 27, 2026 we are GETTING MARRIED.',
       gap: true,
     },
     {
