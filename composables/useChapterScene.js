@@ -1167,9 +1167,17 @@ export function useChapterScene() {
     tl.to(heroPoster.material.uniforms.progress, { value: 1.0, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
     tl.to(heroPoster.mesh.scale, { x: s, y: s, z: 1, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
 
-    // Hide every other poster (including the same chapter's back copy)
+    // Hide every other poster (including the same chapter's back copy) by dropping it below the
+    // frame. The offset must clear the CAROUSEL's selected height, not just be "a big number":
+    // -30 clears a carousel parked at -43 (landscape), but portrait parks it at +11, which left
+    // the first card at world y -19 — inside the visible -29…+29 band, so the ring sat in plain
+    // sight under the hero. Push from the carousel's own resting height instead.
+    // Cards are half-height 16 and the portrait band bottoms out at world y -29, so a portrait
+    // local y must be < -56 (carousel +11) to clear it; -62 leaves margin. Desktop keeps -30
+    // verbatim (carousel -43 ⇒ world -73, already far below its -39.85 floor).
+    const hideFrom = isMobile ? -62 : -30
     posters.filter((p) => p !== heroPoster).forEach((p, idx) => {
-      tl.to(p.mesh.position, { y: -30 - idx * 8, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
+      tl.to(p.mesh.position, { y: hideFrom - idx * 8, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
     })
   }
 
