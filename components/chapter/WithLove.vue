@@ -38,31 +38,34 @@
       <!-- ── Signing · the ink splits in two and signs both names. ── -->
       <section v-else-if="s.kind === 'sign'" class="chapter-section love-scene sign-scene" :data-idx="i">
         <div class="closer fade" data-window="0.14,0.34">{{ s.closer }}</div>
-        <svg class="fork" viewBox="0 0 1000 460" preserveAspectRatio="none" aria-hidden="true">
-          <path class="scrub" data-window="0.18,0.4" pathLength="1"
-            d="M 500 0 C 500 120, 500 220, 500 300"
-            :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.5" />
-          <path class="scrub" data-window="0.4,0.56" pathLength="1"
-            d="M 500 300 C 470 360, 360 380, 300 430"
-            :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.5" />
-          <path class="scrub" data-window="0.4,0.56" pathLength="1"
-            d="M 500 300 C 530 360, 640 380, 700 430"
-            :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.5" />
-        </svg>
-        <div class="sig-row">
-          <div class="sig">
-            <span class="sig-name write" data-window="0.52,0.72">{{ s.names[0] }}</span>
-            <svg class="sig-line" viewBox="0 0 360 24" preserveAspectRatio="none" aria-hidden="true">
-              <path class="scrub" data-window="0.7,0.82" pathLength="1"
-                d="M 12 14 C 120 6, 250 6, 348 12" :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" />
-            </svg>
-          </div>
-          <div class="sig">
-            <span class="sig-name write" data-window="0.64,0.84">{{ s.names[1] }}</span>
-            <svg class="sig-line" viewBox="0 0 360 24" preserveAspectRatio="none" aria-hidden="true">
-              <path class="scrub" data-window="0.82,0.92" pathLength="1"
-                d="M 12 14 C 120 6, 250 6, 348 12" :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" />
-            </svg>
+        <div class="sign-block">
+          <!-- Trunk descends, forks, and each branch runs INTO the start of a name. -->
+          <svg class="fork" viewBox="0 0 1000 160" preserveAspectRatio="none" aria-hidden="true">
+            <path class="scrub" data-window="0.2,0.4" pathLength="1"
+              d="M 500 0 C 500 40, 500 70, 500 88"
+              :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55" />
+            <path class="scrub" data-window="0.4,0.54" pathLength="1"
+              d="M 500 88 C 440 118, 300 128, 230 160"
+              :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55" />
+            <path class="scrub" data-window="0.4,0.54" pathLength="1"
+              d="M 500 88 C 560 118, 700 128, 770 160"
+              :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55" />
+          </svg>
+          <div class="sig-row">
+            <div class="sig">
+              <span class="sig-name write" data-window="0.52,0.72">{{ s.names[0] }}</span>
+              <svg class="sig-line" viewBox="0 0 360 24" preserveAspectRatio="none" aria-hidden="true">
+                <path class="scrub" data-window="0.7,0.82" pathLength="1"
+                  d="M 12 14 C 120 6, 250 6, 348 12" :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" />
+              </svg>
+            </div>
+            <div class="sig">
+              <span class="sig-name write" data-window="0.64,0.84">{{ s.names[1] }}</span>
+              <svg class="sig-line" viewBox="0 0 360 24" preserveAspectRatio="none" aria-hidden="true">
+                <path class="scrub" data-window="0.82,0.92" pathLength="1"
+                  d="M 12 14 C 120 6, 250 6, 348 12" :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" />
+              </svg>
+            </div>
           </div>
         </div>
         <div class="tail fade" data-window="0.88,1">{{ s.tail }}</div>
@@ -196,15 +199,20 @@ onBeforeUnmount(() => cancelAnimationFrame(rafId))
 .closer {
   font-family: 'Italiana', serif;
   font-size: clamp(1.4rem, 3vw, 2.4rem);
-  margin-bottom: 3.5rem;
+  margin-bottom: 2rem;
 }
-.fork { position: absolute; top: 20%; left: 0; width: 100%; height: 46%; pointer-events: none; }
+.sign-block {
+  width: min(82vw, 46rem);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.fork { width: 100%; height: 6.5rem; pointer-events: none; }
 .sig-row {
   display: flex;
-  gap: clamp(2rem, 8vw, 7rem);
-  align-items: flex-end;
-  position: relative;
-  z-index: 1;
+  justify-content: space-evenly;
+  align-items: flex-start;
+  margin-top: -0.5rem;
 }
 .sig { display: flex; flex-direction: column; align-items: center; }
 .sig-name {
