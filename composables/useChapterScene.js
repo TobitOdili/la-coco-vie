@@ -1172,10 +1172,18 @@ export function useChapterScene() {
     // -30 clears a carousel parked at -43 (landscape), but portrait parks it at +11, which left
     // the first card at world y -19 — inside the visible -29…+29 band, so the ring sat in plain
     // sight under the hero. Push from the carousel's own resting height instead.
-    // Cards are half-height 16 and the portrait band bottoms out at world y -29, so a portrait
-    // local y must be < -56 (carousel +11) to clear it; -62 leaves margin. Desktop keeps -30
-    // verbatim (carousel -43 ⇒ world -73, already far below its -39.85 floor).
-    const hideFrom = isMobile ? -62 : -30
+    // The offset has to clear (a) the carousel's own resting height and (b) the frustum at the
+    // ring's DEEPEST card. A perspective frustum widens with distance: the front of the ring
+    // (z=+40, d=70) has a visible band of ±29, but the BACK (z=-40, d=150) has ±62 — so a card
+    // parked for the front band still shows at the back. Landscape never needed this because its
+    // hero is ~106 units tall and occludes the whole deck; portrait's hero only covers the top
+    // ~62%, leaving them poking out at the bottom.
+    let hideFrom = -30                                       // desktop: unchanged, tuned value
+    if (isMobile) {
+      const dFar = camera.position.z + baseDistance          // deepest ring card
+      const halfH = dFar * Math.tan(toRad(camera.fov / 2))   // visible half-height there
+      hideFrom = -(halfH + 16 + 12) - selectedCarouselY()    // 16 = card half-height, 12 = margin
+    }
     posters.filter((p) => p !== heroPoster).forEach((p, idx) => {
       tl.to(p.mesh.position, { y: hideFrom - idx * 8, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
     })
