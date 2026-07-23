@@ -77,6 +77,8 @@ original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker*
   ⚠️ **KNOWN NIT (tunable):** sprocket holes render but read too subtle on prod — the strip bar
   (#1d1c30) is too close to the room (#2b2a45); needs more contrast / wider bar. CSS is correct
   (isolated test passes); it's a value tweak, not a bug.
+  **User (2026-07-23): "In Frames could be better" — circle back to polish ALL pages after the
+  four are built.** Don't treat any page as final yet.
 - **Remaining to build:** With Love ("Thank-You in Advance": scrubbed ink handwriting, items
   circled like a catalogue, the line splits to SIGN both names, underline → RSVP).
 

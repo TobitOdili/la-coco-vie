@@ -241,33 +241,55 @@ export const CHAPTER_PAGES = {
     ],
   },
 
+  // “With Love” renders through the bespoke WithLove component (“Thank-You in Advance”):
+  // the thread becomes INK — it writes the thank-you, circles each gift like something
+  // marked in a catalogue, then splits in two to SIGN both names. No shop; each gift is
+  // written as the future memory it becomes, and the registry link is the floating card.
+  // Fields: kind ('open'|'gift'|'sign'); gift scenes = { memory, gift, popups:[regKey] }.
   'with-love': {
     sections: [
       {
-        num: 'I',
-        title: 'Your Presence',
-        body:
-          'Let us say it plainly: the greatest gift is you, in the room, on the day. ' +
-          'Travel safely, dance freely, and consider every obligation fulfilled. ' +
-          '[Placeholder — the couple’s own words on gifts; keep it warm and short.]',
-        images: [
-          asset('/images/gallery/amour-getaway-01.jpg'),
-          asset('/images/gallery/amour-getaway-02.jpg'),
-        ],
-        popups: ['regFund'],
-        align: 'left',
+        kind: 'open',
+        lead: 'before you give us a single thing —',
+        big: 'thank you',
+        sub: 'your presence on the day is the whole gift. truly.',
+        pivot: 'but if your love language comes wrapped with a bow…',
+        popups: [],
       },
       {
-        num: 'II',
-        title: 'The Wishlist',
-        body:
-          'But if your love language comes wrapped with a bow — here is a small wishlist ' +
-          'for the home we are building. Anything on it, in any measure, will be ' +
-          'treasured. [Placeholder — the real registry replaces these dummy cards; each ' +
-          'card links out to the store or fund.]',
-        images: [asset('/images/gallery/amour-getaway-03.jpg')],
-        popups: ['regEspresso', 'regDinner', 'regLuggage'],
-        align: 'right',
+        kind: 'gift',
+        memory: 'slow sunday mornings — two cups, no hurry.',
+        gift: 'the espresso machine',
+        thanks: 'thank you.',
+        popups: ['regEspresso'],
+      },
+      {
+        kind: 'gift',
+        memory: 'every table we will set for the people we love.',
+        gift: 'dinnerware for twelve',
+        thanks: 'thank you.',
+        popups: ['regDinner'],
+      },
+      {
+        kind: 'gift',
+        memory: 'for everywhere we have not been yet.',
+        gift: 'a weekender for two',
+        thanks: 'thank you.',
+        popups: ['regLuggage'],
+      },
+      {
+        kind: 'gift',
+        memory: 'the first of many, many adventures.',
+        gift: 'the honeymoon fund',
+        thanks: 'thank you.',
+        popups: ['regFund'],
+      },
+      {
+        kind: 'sign',
+        closer: 'with love,',
+        names: ['Covenant', 'Uvie'],
+        tail: 'see you on october 27.',
+        popups: [],
       },
     ],
   },
