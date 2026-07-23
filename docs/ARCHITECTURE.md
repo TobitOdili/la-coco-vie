@@ -310,8 +310,15 @@ The chosen chapter becomes a single full-bleed **hero**:
   far the homepage carousel was scrolled** (the `− scrollRotationY` is load-bearing; without it,
   scroll-then-click parked the card off-axis).
 - Drops the carousel to `SELECTED_Y`, flattens `groupG` to `(0,0,0)`, eases the camera back to
-  its on-axis base, and animates **the single front copy** (`selectedHero`, the higher-`intRotationY`
-  mirror) `blendFactor→1`, `progress→1`, `scale→aspectRatio*2.07`. All other posters drop away.
+  its on-axis base, and animates **the single front copy** (`selectedHero`) `blendFactor→1`,
+  `progress→1`, `scale→aspectRatio*2.07`. All other posters drop away.
+  - ⚠️ **`selectedHero` = the copy of `chIdx` CURRENTLY NEAREST the camera** (the card actually
+    clicked), chosen by a min-`distanceToSquared` scan — **not** `posters.find()`. Each chapter
+    has two identical copies 180° apart; `posters.find()` always returns the lower one (slots
+    1–4), so whenever the **mirror** copy (5–8) was in front, the old code made the *back* copy
+    the hero and spun the deck to bring its twin round — the clicked card rotated away (fixed
+    2026-07-23). The forced-forward `targetRot` normalization then spins the chosen (front) copy
+    ~360° and lands it front, so the clicked card is the hero with no spin reversal.
 - `onComplete`: clears `isSelecting`, re-applies the hero scale from the *current* aspect (resize
   safety), and **plays the chapter film** (covers deep-link selects that never hovered).
 - The select + deselect timelines are tracked (`selectTl` / `deselectTl`) and killed if interrupted,
