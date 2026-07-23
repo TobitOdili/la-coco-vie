@@ -132,7 +132,8 @@ onBeforeUnmount(() => cancelAnimationFrame(rafId))
 <style scoped>
 .day-scene {
   position: relative;
-  overflow: hidden;
+  /* No overflow:hidden here — it turns the scene into the sticky containment box and
+     kills the knot's position:sticky. The thread SVGs are inset:0 so nothing bleeds. */
   color: var(--accent, #304443);
 }
 
