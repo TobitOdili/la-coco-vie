@@ -22,7 +22,7 @@ export const CHAPTERS = [
     video: asset('/video/eat-intro.mp4'),
     poster: asset('/images/poster-1.jpg'),
     txt: asset('/images/cu-txt1.png'),
-    svg: asset('/images/cu-p1.svg'),
+    svg: asset('/images/cu-p1.png'),
     index: 0,
   },
   {
@@ -35,7 +35,7 @@ export const CHAPTERS = [
     video: asset('/video/la-intro.mp4'),
     poster: asset('/images/poster-2.jpg'),
     txt: asset('/images/cu-txt2.png'),
-    svg: asset('/images/cu-p2.svg'),
+    svg: asset('/images/cu-p2.png'),
     index: 1,
   },
   {
@@ -48,7 +48,7 @@ export const CHAPTERS = [
     video: asset('/video/wine-intro.mp4'),
     poster: asset('/images/poster-3.jpg'),
     txt: asset('/images/cu-txt3.png'),
-    svg: asset('/images/cu-p3.svg'),
+    svg: asset('/images/cu-p3.png'),
     index: 2,
   },
   {
@@ -61,7 +61,7 @@ export const CHAPTERS = [
     video: asset('/video/amour-intro.mp4'),
     poster: asset('/images/poster-4.jpg'),
     txt: asset('/images/cu-txt4.png'),
-    svg: asset('/images/cu-p4.svg'),
+    svg: asset('/images/cu-p4.png'),
     index: 3,
   },
 ]
