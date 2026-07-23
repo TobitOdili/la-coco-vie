@@ -620,6 +620,10 @@ export function useChapterScene() {
     reportProgress()
     posterTex.wrapS = THREE.ClampToEdgeWrapping
     posterTex.wrapT = THREE.ClampToEdgeWrapping
+    // The card faces were SVGs rasterized through a CanvasTexture, which set SRGB;
+    // now they're plain PNGs through TextureLoader, which doesn't. Without this the
+    // pastel faces wash toward white (linear-as-sRGB double conversion).
+    posterTex.colorSpace = THREE.SRGBColorSpace
 
     // Photo texture: video (will update on hover)
     const photoTex = videoTextures[chapterIdx]
