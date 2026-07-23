@@ -3,8 +3,9 @@
     <!-- Loading screen -->
     <LoadingScreen v-if="!loaded" :progress="loadProgress" @complete="onLoaded" />
 
-    <!-- Custom cursor / explore circle — tinted to whichever card it sits over. -->
-    <CustomCursor ref="cursorRef" :accent="cursorAccent" />
+    <!-- Custom cursor / explore circle — tinted to whichever card it sits over. On touch it
+         parks on-screen as the tappable EXPLORE button (the reference's mobile affordance). -->
+    <CustomCursor ref="cursorRef" :accent="cursorAccent" @explore="onExploreTap" />
 
     <!-- WebGL Scene — persistent across routes (never unmounts, so no intro replay) -->
     <WebGLScene
@@ -79,6 +80,15 @@ function onChapterFront(idx) { frontChapterIdx.value = idx }
 const cursorAccent = computed(
   () => currentChapter.value?.accent || CHAPTERS[frontChapterIdx.value]?.accent || '#b32c05'
 )
+
+// The parked EXPLORE button (touch) opens the front chapter — the deliberate tap target, so a
+// stray tap on empty screen no longer selects anything.
+function onExploreTap() {
+  if (!isHome.value) return
+  const idx = frontChapterIdx.value
+  if (idx < 0) return
+  webglSceneRef.value?.scene?.selectChapter?.(idx)
+}
 const chapterClass = computed(() => (currentChapter.value ? `--${currentChapter.value.slug}` : ''))
 
 // Document title — via useHead so Nuxt's head system manages it (assigning

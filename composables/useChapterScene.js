@@ -259,6 +259,8 @@ export function useChapterScene() {
   // sees ~34 units across at that depth (three's `fov` is VERTICAL, so narrow aspect ⇒ narrow
   // horizontal view) — which cropped the wordmark at both edges. fitTxtMesh() scales it down.
   const TXT_PLANE = 60
+  const TXT_Y_DESKTOP = -8   // tuned so it clears the top logo/subtitle (issue #11)
+  const TXT_Y_MOBILE = 14    // upper third — clear of the cards, matching the reference
   // Selected card resting Y. The shader's progress=1 layout frames the content into
   // a sub-region of the plane, so scale/position are hand-tuned (not camera-derived):
   // scale = aspectRatio*2.07, this Y top-anchors the content band as the hero.
@@ -1394,6 +1396,9 @@ export function useChapterScene() {
   function fitTxtMesh() {
     const mesh = groupG?.userData?.txtMesh
     if (!mesh || !camera) return
+    // Portrait puts the wordmark in the UPPER third so the (large, central) cards don't bury it
+    // — the reference separates them the same way. Landscape keeps the tuned -8 (issue #11).
+    mesh.position.y = isMobile ? TXT_Y_MOBILE : TXT_Y_DESKTOP
     const d = Math.max(1, camera.position.z - mesh.position.z)
     const visibleW = 2 * d * Math.tan(toRad(camera.fov / 2)) * aspectRatio
     const s = Math.min(1, (visibleW * 0.92) / TXT_PLANE)
