@@ -8,7 +8,7 @@
     <CustomCursor
       ref="cursorRef"
       :accent="cursorAccent"
-      :explore-ready="exploreReady"
+      :explore-ready="exploreReady && isHome"
       @explore="onExploreTap"
     />
 
@@ -84,6 +84,8 @@ const frontChapterIdx = ref(-1)
 // Gates the parked EXPLORE button. The scene reports the front chapter the moment the intro
 // completes (i.e. once the cards have settled), so waiting on it means the button can't appear
 // mid-spin — and can't flash the placeholder accent before the real chapter is known.
+// It's ALSO gated on isHome: the button takes pointer-events, so leaving it up on a chapter
+// page put a 140px dead zone mid-screen that swallowed scroll gestures.
 const exploreReady = ref(false)
 function onChapterFront(idx) {
   frontChapterIdx.value = idx
