@@ -266,6 +266,22 @@ export function useChapterScene() {
   // scale = aspectRatio*2.07, this Y top-anchors the content band as the hero.
   // (Step A of the card-becomes-the-page rework — see docs/PHASE-2-INNER-PAGES.md.)
   const SELECTED_Y = -43
+  // PORTRAIT needs its own value. The card is scaled to fill the viewport WIDTH, but a 24×32
+  // card filling a narrow width is far shorter than a tall screen — so at -43 it landed at
+  // world y −60.9…−25.1 against a visible band of −29…+29, i.e. almost entirely BELOW the
+  // screen (you saw only its top edge peeking up). This sits its top edge at the viewport top,
+  // with the accent clear-colour filling beneath — which is what the reference shows on a phone.
+  const SELECTED_Y_MOBILE = 11
+  const selectedCarouselY = () => (isMobile ? SELECTED_Y_MOBILE : SELECTED_Y)
+  // Hero "fill the width" scale. The old hard-coded `aspectRatio * 2.07` is exactly
+  // (2·60·tan(fov/2))/24 — derived for the DESKTOP camera distance (100 − baseDistance = 60).
+  // The mobile camera sits further back (110 − 40 = 70), where the constant is 2.42, so the
+  // desktop value under-scaled the hero on phones. Deriving it keeps desktop bit-identical
+  // (it evaluates to 2.071) while adapting to any camera distance.
+  const heroFillScale = () => {
+    const d = Math.max(1, camera.position.z - baseDistance)
+    return aspectRatio * ((2 * d * Math.tan(toRad(camera.fov / 2))) / 24)
+  }
   // Scroll-coupling (P1, "card-becomes-the-page"): while a chapter is open, the
   // hero card is moved UP at the same on-screen rate as the inner-page DOM content
   // scrolls in (1:1 screen-pixel coupling) so the card "scrolls away" with no seam
@@ -1087,7 +1103,7 @@ export function useChapterScene() {
       isSelecting = false
       // The select scale was baked from aspectRatio at select START — re-apply from the
       // CURRENT aspect in case the window resized during the 3s entry.
-      const sFinal = aspectRatio * 2.07
+      const sFinal = heroFillScale()
       heroPoster.mesh.scale.set(sFinal, sFinal, 1)
       // Play the chapter film once the card is parked (matches the reference, which
       // plays in the select rotation's onComplete). Click-selects had it playing via
@@ -1137,7 +1153,7 @@ export function useChapterScene() {
     tl.to(carousel, { animatedRotationY: targetRot, duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
 
     // Move carousel down
-    tl.to(carousel.position, { y: SELECTED_Y, duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
+    tl.to(carousel.position, { y: selectedCarouselY(), duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
 
     // Flatten groupG
     tl.to(groupG.rotation, { x: 0, y: 0, z: 0, duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
@@ -1145,7 +1161,7 @@ export function useChapterScene() {
     // Scale tuned to the shader's progress=1 content framing (the wordmark/logo sit
     // at a fixed UV; over-scaling pushes them out of the hero). aspectRatio*2.07 is
     // the reference-tuned value.
-    const s = aspectRatio * 2.07
+    const s = heroFillScale()
 
     tl.to(heroPoster.material.uniforms.blendFactor, { value: 1.0, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
     tl.to(heroPoster.material.uniforms.progress, { value: 1.0, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
@@ -1439,8 +1455,12 @@ export function useChapterScene() {
     // mid-select the live scale tween would fight this (the select onComplete re-applies
     // the final scale from the then-current aspect instead).
     if (selectedIndex !== -1 && selectedHero && !isDeselecting && !isSelecting) {
-      const s = aspectRatio * 2.07
+      const s = heroFillScale()
       selectedHero.mesh.scale.set(s, s, 1)
+      // The hero's resting height is orientation-dependent too (see SELECTED_Y_MOBILE), so a
+      // rotate — or an iOS URL-bar resize that flips the aspect — has to re-anchor it as well,
+      // otherwise the card slides off the bottom of a portrait viewport.
+      carousel.position.y = selectedCarouselY()
     }
 
     if (isMobile && selectedIndex === -1) {
