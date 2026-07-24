@@ -109,6 +109,14 @@ original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker*
   rotates to front then opens). Cursor tint reports the HOVERED card's accent (front when idle).
   Verified: grid sweep lifts 3+ distinct chapters incl. non-front; click a side card → its route;
   scroll hand-off preserved; 0 errors. (Consequence: gaps BETWEEN cards lift nothing now — correct.)
+  (5) Bottom-edge hover FLICKER fixed (`4ab2c880`): a lifting card moves its own hitbox up off the
+  cursor, so the per-frame re-resolve unhovered → dropped → re-hit → oscillated. The re-resolve now
+  only SWITCHES cards (never unhovers); leaving the deck is onMouseMove's job. Verified: hover blend
+  holds 2.00 across 12 samples (stable), move-off still unhovers (blend→0), 0 errors.
+- **HOMEPAGE tagline tightened (`4ab2c880`).** Too airy vs the reference's squeezed block. In
+  `scratchpad/gen-textures.mjs`: line-height 0.94→0.82, `.sm` margins 14→3px, letter-spacing
+  looser→tighter, size bump (xl 180→204, sm 74→86) — tighter spacing offsets the size so vertical
+  extent doesn't grow (no re-collision with the dropped ring). Regenerated `cu-txt1..4.png`.
 - **HOMEPAGE desktop text/card collision FIXED (`40c6c1a8`, prod-verified 1.35 + 1.6).** The big
   central tagline mesh and the card ring shared the same vertical band → the front card covered
   the wordmark's lower half. Two DESKTOP-ONLY levers (mobile keeps its fitTxtMesh scale + 0 idle):
