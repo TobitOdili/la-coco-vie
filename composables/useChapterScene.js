@@ -891,8 +891,25 @@ export function useChapterScene() {
         lastFrontChapter = fc
         if (onFrontChapterCallback) onFrontChapterCallback(fc)
       }
-      // The center text still only tracks the front when NOT hovering (hover owns it, #9).
-      if (hoveredIndex === -1) setTxtChapter(fc)
+      if (hoveredIndex === -1) {
+        // Not hovering: the center text tracks the front card (#14).
+        setTxtChapter(fc)
+      } else {
+        // Hovering while the ring scrolls: hand the lift OFF to whatever card is now front.
+        // The wheel fires no mousemove, so onMouseMove couldn't re-target — the originally
+        // hovered card stayed lifted as it rotated away. Re-target here so the lift + flatten
+        // (and its film + text) follow the front fluidly. hover/unhover tweens overwrite, so
+        // the old card lowers as the new one rises — a smooth handoff.
+        const frontSlot = frontPoster()?.i ?? -1
+        if (frontSlot !== -1 && frontSlot !== hoveredIndex) {
+          const prevCh = chapterIdxForSlot(hoveredIndex)
+          unhoverChapter(hoveredIndex)
+          if (onHoverCallback) onHoverCallback(prevCh, false)
+          hoveredIndex = frontSlot
+          hoverChapter(frontSlot)
+          if (onHoverCallback) onHoverCallback(chapterIdxForSlot(frontSlot), true)
+        }
+      }
     }
 
     // Scroll-couple the hero card to the inner page (P1). Move the card up by the
