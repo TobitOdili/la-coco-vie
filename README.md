@@ -1,74 +1,65 @@
-# La Coco Vie
+# La Coco Vie — Covenant &amp; Uvie
 
-A faithful, from-scratch **replica of the Milla Nova "Chapter the Bride" homepage**
-([chapter.millanova.com](https://chapter.millanova.com/)) — a WebGL-driven, cinematic
-bridal-fashion experience: a spinning 3D carousel of poster cards built in Three.js with
-custom GLSL shaders, GSAP animation, spatial audio, and chapter transitions.
+**The wedding website of Covenant (Odili) &amp; Uvie (Dan-Egua)** — *"A Love Story in Chapters."*
+A WebGL-driven, cinematic experience: a spinning 3D carousel of poster cards (Three.js + custom
+GLSL shaders, GSAP, Lenis, spatial audio) where each card is a chapter of the couple's story that
+opens into its own bespoke scroll page.
 
 | | |
 |---|---|
-| **Live (replica)** | https://la-coco-vie.vercel.app/ |
-| **Reference (original)** | https://chapter.millanova.com/ |
-| **Secondary deploy** | https://tobitodili.github.io/la-coco-vie/ (GitHub Pages) |
+| **Live** | https://la-coco-vie.vercel.app/ |
 | **Repo** | https://github.com/TobitOdili/la-coco-vie |
+| **Secondary deploy** | https://tobitodili.github.io/la-coco-vie/ (GitHub Pages) |
 
-> ### ℹ️ What this project is
-> This is a **technical study / replica** of the Milla Nova site, rebuilt independently
-> in Nuxt + Three.js. The long-term plan is to **keep the functionality and interaction
-> design but swap out the media, content, and branding** for a different project — with
-> full credit to the original creators (Milla Nova; site by [Sarakuz](https://sarakuz.com)).
-> The original artwork, video, audio, and copy in `public/` are placeholders standing in
-> for the real reference experience and are **not** intended for redistribution. See
-> [`docs/ROADMAP.md`](docs/ROADMAP.md) for the re-skin plan and attribution notes.
+> ### ℹ️ What this project is (and its history)
+> The **engine** was first built as a faithful, from-scratch **replica of the Milla Nova "Chapter
+> the Bride" homepage** ([chapter.millanova.com](https://chapter.millanova.com/), site by
+> [Sarakuz](https://sarakuz.com)) — a technical study. As of **2026-07-23** it has been **re-skinned
+> into Covenant &amp; Uvie's wedding site**: the four cards became the journey **US → THE BIG DAY →
+> IN FRAMES → WITH LOVE**, each with its own bespoke inner page. Full credit to the original
+> creators for the interaction design. Remaining Milla Nova media in `public/` (films, some gallery
+> stills) are **aspect-correct placeholders** awaiting the couple's own photos/video, and are **not**
+> for redistribution.
+>
+> ⚠️ **ALL copy, dates, venues, and the registry are PLACEHOLDERS** pending the couple's real
+> details. The wedding date (October 27, 2026) is user-confirmed; the year is assumed 2026.
 
 ---
 
 ## Status
 
-**Homepage complete (~9/10 parity); Phase 2 (chapter inner pages) built and live — all 4 chapters, both exit edges done, mobile/touch working. Remaining work is layout _fidelity_ vs the reference (scaling), not function.**
+**The four-chapter journey is fully built, all live. Every inner page is a bespoke scroll
+experience unified by one motif — a thread that runs through the whole site.**
 
-> 📋 **The single live tracker is [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md) →
-> "Running checklist (the board)"** — read it first for a cold pickup (current state, roadblocks, next steps).
->
-> ⚠️ **"Done" is not uniform.** Read that doc's **VERIFICATION STATUS** table first: some items are
-> confirmed by the user on a real device, some only by headless emulation, and **several of the last
-> mobile fixes are unverified — the final one (`17da487c`) was never rendered at all.** Whether the
-> chapter inner pages are actually fixed on a phone is **still an open question**.
+> 📋 **The single live tracker is [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md)** —
+> read it first for a cold pickup (current state, the full change log, next steps). This README is
+> the orientation; that doc is the source of truth.
 
-- ✅ **Homepage:** intro animation, carousel rotate-on-scroll, hover (lift + film), click-to-select,
-  audio, loading screen, custom cursor, noise overlay, per-card depth fade, per-chapter center text.
-- ✅ **Phase 2 routing:** real `/{slug}` routes, **persistent WebGL shell** (no intro replay), the
-  card-select animation *is* the transition into the page, URL = source of truth, deep-links +
-  browser back/forward, per-slug prerender.
-- ✅ **All 4 chapter inner pages built** — with the reference's **real, verbatim copy** (harvested
-  2026-07-22; section counts differ per chapter: wine 3, eat-marry-love 5, la-storia 5, amour 3).
-  Shared components (`ChapterSection` / `DressTail` / `ChapterEnd`) with content as pure data in
-  `composables/chapterPages.js`, so a layout change lands on every chapter at once. Galleries are
-  placeholder film stills; dress cards are real (names/photos/links from the collection site).
-- ✅ **"Card becomes the page":** hero **scroll-coupling** (card scrolls away 1:1 with the page) +
-  **edge-gated exits** (mid-page scroll free). **Top** edge reverse-rewinds into the ring. **Bottom**
-  edge is the scroll-driven **"cluster-unfurl" outro** and is **done/user-approved**: the page scrolls
-  fully out, then the whole deck — all 8 cards, none hidden — unfurls from a tight low cluster on the
-  chapter-accent background while one wine copy already sits in the deck and the second drops in from
-  the top; the ring then rises to the homepage. Reversible, spins in the down-scroll direction (no
-  reversal at home). 9 "morph the page into a card" approaches were tried and rejected before a
-  reference decode confirmed the page is never morphed — see `docs/PHASE-2-INNER-PAGES.md`.
-- 🟡 **Mobile / touch (2026-07-22) — built, PARTLY verified:** the carousel was wheel-only, so phones
-  couldn't turn the ring at all. Touch swipe + release momentum, tap-vs-swipe guard, a parked
-  **EXPLORE** button as the tap target (tinted to the card beneath), touch top-edge exit, and a set of
-  portrait geometry fixes (wordmark scaling, hero fill-scale + resting height, hidden-card clearance).
-  All gated on `isMobile` — desktop is unchanged. **The carousel side is confirmed working; the chapter
-  inner pages on a phone are NOT — the last fixes went out unverified.** See the VERIFICATION STATUS
-  table in `docs/PHASE-2-INNER-PAGES.md`.
-- ✅ **Hardened (2026-06-12 re-review):** scroll-then-click hero alignment, rapid back/forward
-  interrupt-safety, video play/pause lifecycle, background-tab robustness, input normalization.
-  Verified on prod (Browserless probes) **and** a real browser (video + textures confirmed live).
-- ⏸️ **Parked:** ring viewing-angle (#4) — needs the original's exact group tilt; low ROI.
-- ✅ **Done (2026-06-12):** entry-spin normalized (**D**) · hover targeting driven off the front card.
-- 🔧 **Open (fidelity, not function):** inner-page **scaling** vs the reference (copy size, heading
-  typeface, images inset vs our full-bleed) · homepage **card sizing on portrait** · the reference's
-  real gallery photos · code-health (split the ~1500-line scene module, `prefers-reduced-motion`,
-  34M MP4s) · re-skin (Phase 3).
+- ✅ **Homepage carousel** — intro animation, rotate-on-scroll (wheel + touch), **per-card
+  hover/click** (any visible card lifts + its film plays, not just the front — `posterAtScreen`),
+  the hover lift **follows the ring** as it scrolls, live cursor tint, click-to-open, the couple's
+  names + date + **countdown**, a welcome note (the About panel), and RSVP.
+- ✅ **The four bespoke inner pages** (the *thread* narrative — one line runs the whole site):
+  - **US** — "the margin notes": the story in two handwritten voices, taped polaroids.
+  - **THE BIG DAY** — "the hours": scroll scrubs the day from morning light into night; two threads
+    **tie the knot** at the ceremony (sticky, reversible). Photo-free.
+  - **IN FRAMES** — "the screening room": the page goes dark, the thread becomes a **film strip**
+    that scroll-advances through a projector gate; academy countdowns; future galleries are
+    "reserved" title cards.
+  - **WITH LOVE** — "thank-you in advance": the thread becomes **ink** that writes the thank-you,
+    circles each gift like a catalogue, and **splits in two to sign** both names → RSVP.
+- ✅ **Shared engine** — persistent WebGL shell (no intro replay across routes), URL = source of
+  truth, real `/{slug}` routes + prerender, deep-links + browser back/forward. A shared
+  scroll-scrubbed line-drawing engine (`.scrub`/`.fade`/`.write`, rAF vs scene rects) powers the
+  inner pages; floating white "moment/utility/registry" cards recur on every page.
+- ✅ **Exits** — top edge reverse-rewinds into the ring; bottom edge is the scroll-driven
+  **cluster-unfurl outro** (user-approved). Both reversible.
+- ✅ **Mobile / touch** — swipe + momentum, tap-vs-swipe guard, parked EXPLORE button, portrait
+  geometry fixes. (Re-verify the latest homepage refinements on device — see the tracker.)
+- 🔧 **Open** — real content/media from the couple (copy, photos, registry, RSVP destination);
+  per-page polish (In Frames flagged, Big Day: traditional-wedding date + thread motion); favicon
+  still Milla Nova's; portrait card-sizing; code-health (split the ~1500-line scene module,
+  `prefers-reduced-motion`, 34M MP4s).
 
 Full live status → [`PROGRESS.md`](PROGRESS.md) · issue history → [`AUDIT.md`](AUDIT.md) · plan → [`docs/ROADMAP.md`](docs/ROADMAP.md)
 

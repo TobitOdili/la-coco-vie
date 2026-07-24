@@ -1,5 +1,14 @@
 # La Coco Vie — Project Progress
 
+> **▶▶ PIVOT (2026-07-23):** the project is no longer a Milla Nova replica — it is now the
+> **Covenant &amp; Uvie wedding site** ("A Love Story in Chapters"). The four cards became the journey
+> **US → THE BIG DAY → IN FRAMES → WITH LOVE**, each a bespoke inner page unified by the *thread*
+> motif; the homepage carries the couple's names/date/countdown, welcome note, and RSVP. The Three.js
+> **engine is unchanged** — this was the planned content-and-skin swap. Entries below that predate
+> this and say "replica"/wine-o-clock/etc. describe the engine's history. Current state + full recent
+> change log live in [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md) (the source of truth).
+> ALL copy/dates/venues/registry are PLACEHOLDERS pending the couple's details.
+
 > **Doc map:** new here? Start with [`README.md`](README.md). How it works →
 > [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · assets/re-skin →
 > [`docs/CONTENT-AND-ASSETS.md`](docs/CONTENT-AND-ASSETS.md) · plan →

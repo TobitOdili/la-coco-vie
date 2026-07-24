@@ -1,5 +1,12 @@
 # Roadmap
 
+> **▶▶ THE RE-SKIN HAPPENED (2026-07-23).** This doc long described the *plan* to re-skin the Milla
+> Nova replica for a real project. That is now DONE: the site is **Covenant &amp; Uvie's wedding site**
+> — cards US / THE BIG DAY / IN FRAMES / WITH LOVE, each a bespoke inner page (the "thread" narrative).
+> The re-skin mechanics below (swap `CHAPTERS`, textures, `chapterPages.js`, `site.config.js`) are the
+> exact levers that were used. Current state → [`docs/PHASE-2-INNER-PAGES.md`](PHASE-2-INNER-PAGES.md).
+> What's left is the couple's real content/media + per-page polish, not the re-skin itself.
+
 Where the project has been and where it's going. For live issue status see
 [`PROGRESS.md`](../PROGRESS.md); for forensic issue history see [`AUDIT.md`](../AUDIT.md).
 

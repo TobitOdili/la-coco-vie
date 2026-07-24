@@ -1,6 +1,15 @@
 # Architecture
 
-How the replica works, end to end. Read this before editing `composables/useChapterScene.js`.
+How the scene works, end to end. Read this before editing `composables/useChapterScene.js`.
+
+> **▶▶ Re-skinned to the Covenant &amp; Uvie wedding site (2026-07-23).** The engine is unchanged; the
+> four chapter **slugs are now** `us` / `the-big-day` / `in-frames` / `with-love`. Older examples in
+> this doc using `wine-o-clock` / `eat-marry-love` etc. describe the same mechanics with the old
+> slugs. Each chapter now renders a **bespoke** inner-page component (`UsStory` / `BigDay` /
+> `InFrames` / `WithLove`) selected in `pages/[slug].vue`; the generic `ChapterSection` loop is the
+> unused fallback. Bespoke components must keep `.chapter-section` + `data-idx` roots (the floating-
+> card observer keys on them). Homepage hover/click resolve the card under the pointer via
+> `posterAtScreen()` (not the front-only shortcut). See [`PHASE-2-INNER-PAGES.md`](PHASE-2-INNER-PAGES.md).
 
 - [Mental model](#mental-model)
 - [State ownership & data flow](#state-ownership--data-flow)
