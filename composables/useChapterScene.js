@@ -250,6 +250,12 @@ export function useChapterScene() {
   let prevMouse = new THREE.Vector2(-10.0, -10.0)
   let raycaster = new THREE.Raycaster()
   let hoveredIndex = -1
+  // Last known cursor position (screen px). animate() re-resolves the hover target from this
+  // each frame, so a wheel scroll (which fires no mousemove) still hands the lift to whatever
+  // card rotates under the pointer. Off-screen until the first real mousemove.
+  let lastCursorX = -100000
+  let lastCursorY = -100000
+  const _sv = new THREE.Vector3()   // scratch: project poster world pos → screen for hover pick
   let selectedIndex = -1
   let isIntro = true
   let introComplete = false
@@ -880,35 +886,24 @@ export function useChapterScene() {
       groupG.userData.txtMesh.lookAt(camera.position)
     }
 
-    // Keep center text + cursor tint synced to the front card when idle (Issues #9/#14).
+    // Keep hover + center text + cursor tint in sync each idle frame (Issues #9/#13/#14).
     if (introComplete && selectedIndex === -1) {
+      // Re-resolve the hover from the last cursor position against the CURRENT ring. This is
+      // what makes a wheel scroll (no mousemove) hand the lift to whatever card rotates under
+      // the pointer — front OR side — and settle it when scrolling stops. Same path as
+      // onMouseMove, so the two never disagree.
+      applyHover(resolveHoverTarget(lastCursorX, lastCursorY))
+
       const fc = frontChapterIdx()
-      // Report the front chapter for the explore-cursor tint EVERY time it changes — even
-      // while hovering or mid-scroll-settle. The wheel doesn't fire mousemove, so the old
-      // hover-gated path left the cursor stuck on the pre-scroll card's accent until the
-      // mouse moved. This is decoupled from setTxtChapter (which the hover state overrides).
-      if (fc >= 0 && fc !== lastFrontChapter) {
-        lastFrontChapter = fc
-        if (onFrontChapterCallback) onFrontChapterCallback(fc)
-      }
-      if (hoveredIndex === -1) {
-        // Not hovering: the center text tracks the front card (#14).
-        setTxtChapter(fc)
-      } else {
-        // Hovering while the ring scrolls: hand the lift OFF to whatever card is now front.
-        // The wheel fires no mousemove, so onMouseMove couldn't re-target — the originally
-        // hovered card stayed lifted as it rotated away. Re-target here so the lift + flatten
-        // (and its film + text) follow the front fluidly. hover/unhover tweens overwrite, so
-        // the old card lowers as the new one rises — a smooth handoff.
-        const frontSlot = frontPoster()?.i ?? -1
-        if (frontSlot !== -1 && frontSlot !== hoveredIndex) {
-          const prevCh = chapterIdxForSlot(hoveredIndex)
-          unhoverChapter(hoveredIndex)
-          if (onHoverCallback) onHoverCallback(prevCh, false)
-          hoveredIndex = frontSlot
-          hoverChapter(frontSlot)
-          if (onHoverCallback) onHoverCallback(chapterIdxForSlot(frontSlot), true)
-        }
+      // Center text tracks the front card when NOT hovering (hover owns the wordmark, #9).
+      if (hoveredIndex === -1) setTxtChapter(fc)
+
+      // Explore-cursor tint = the card under the pointer (hovered), else the front card.
+      // Reported every change so it tracks the ring even with no mousemove.
+      const reportCh = hoveredIndex !== -1 ? chapterIdxForSlot(hoveredIndex) : fc
+      if (reportCh >= 0 && reportCh !== lastFrontChapter) {
+        lastFrontChapter = reportCh
+        if (onFrontChapterCallback) onFrontChapterCallback(reportCh)
       }
     }
 
@@ -965,32 +960,15 @@ export function useChapterScene() {
     mouse.x = (e.clientX / width) * 2 - 1
     mouse.y = (e.clientY / height) * 2 - 1
 
-    if (!introComplete || selectedIndex !== -1) return
+    // Remember the pointer so the animate() loop can keep the hover resolved against the
+    // moving ring between mousemoves (a wheel scroll fires none).
+    lastCursorX = e.clientX
+    lastCursorY = e.clientY
 
-    // hoveredIndex tracks the SLOT index (i) so only the single hovered poster reacts —
-    // not its mirrored copy (Issue #13). chapterIdx is resolved for the audio/cursor
-    // callback so app.vue still receives 0–3.
-    //
-    // Drive hover off the FRONT-facing card (mirror of the click fix). The flat hitboxes
-    // don't follow the shader bend, so a raw raycast over the visible front card often
-    // lands on a neighbour slot and lifted the WRONG card. Treat any hit as "cursor over
-    // the carousel" and lift the front copy; lift nothing when the ray misses entirely.
-    const overCarousel = getHoveredPoster(e.clientX, e.clientY) !== -1
-    const targetSlot = overCarousel ? (frontPoster()?.i ?? -1) : -1
-
-    if (targetSlot !== hoveredIndex) {
-      if (hoveredIndex !== -1) {
-        // Unhover previous slot
-        const prevChIdx = chapterIdxForSlot(hoveredIndex)
-        unhoverChapter(hoveredIndex)
-        if (onHoverCallback) onHoverCallback(prevChIdx, false)
-      }
-      hoveredIndex = targetSlot
-      if (targetSlot !== -1) {
-        hoverChapter(targetSlot)
-        if (onHoverCallback) onHoverCallback(chapterIdxForSlot(targetSlot), true)
-      }
-    }
+    // hoveredIndex tracks the SLOT (i) so only the single hovered poster reacts (#13); the
+    // chapter is resolved for the audio/cursor callback. Hover the card actually under the
+    // pointer — front OR side (posterAtScreen), not always the front card as before.
+    applyHover(resolveHoverTarget(e.clientX, e.clientY))
   }
 
   // Crossfade the center txtMesh to a chapter's txt (Issues #9 + #14).
@@ -1033,6 +1011,54 @@ export function useChapterScene() {
       if (d < bestDist) { bestDist = d; best = p }
     }
     return best
+  }
+
+  // Which VISIBLE card is under the cursor. The flat hitboxes don't follow the shader bend,
+  // so `getHoveredPoster` can't tell WHICH card was struck (it long forced the front card).
+  // Instead: project each poster's world centre to screen and pick the nearest to the cursor,
+  // restricted to the front half of the ring (the far copies are faded ghosts behind). This
+  // resolves any visible card — front OR side — so each can be hovered/clicked independently.
+  function posterAtScreen(clientX, clientY) {
+    let sum = 0
+    for (const p of posters) { p.mesh.getWorldPosition(_sv); sum += _sv.distanceTo(camera.position) }
+    const meanD = sum / posters.length
+    let best = null, bestD = Infinity
+    for (const p of posters) {
+      p.mesh.getWorldPosition(_sv)
+      if (_sv.distanceTo(camera.position) > meanD) continue   // far/faded copy — not hoverable
+      _sv.project(camera)
+      const sx = (_sv.x + 1) / 2 * width
+      const sy = (1 - _sv.y) / 2 * height
+      const d = (sx - clientX) ** 2 + (sy - clientY) ** 2
+      if (d < bestD) { bestD = d; best = p }
+    }
+    return best
+  }
+
+  // Slot (i) the cursor should hover/click: -1 unless the pointer is over the deck (raycast
+  // gate) and the intro's done with nothing selected. Shared by mousemove, the per-frame
+  // scroll re-target, and click — so all three agree on the card under the pointer.
+  function resolveHoverTarget(x, y) {
+    if (!introComplete || selectedIndex !== -1) return -1
+    if (getHoveredPoster(x, y) === -1) return -1   // not over the carousel
+    return posterAtScreen(x, y)?.i ?? -1
+  }
+
+  // Move the lift to `targetSlot` (or clear it at -1): only the one poster lifts (#13), and
+  // its flatten/film/text swap ride along. hover/unhover tweens overwrite, so a change hands
+  // off smoothly (old lowers as new rises). Fires the hover callback both ways (audio + cursor).
+  function applyHover(targetSlot) {
+    if (targetSlot === hoveredIndex) return
+    if (hoveredIndex !== -1) {
+      const prevCh = chapterIdxForSlot(hoveredIndex)
+      unhoverChapter(hoveredIndex)
+      if (onHoverCallback) onHoverCallback(prevCh, false)
+    }
+    hoveredIndex = targetSlot
+    if (targetSlot !== -1) {
+      hoverChapter(targetSlot)
+      if (onHoverCallback) onHoverCallback(chapterIdxForSlot(targetSlot), true)
+    }
   }
 
   // Chapter index of the front-facing poster (0–3), or -1 if none.
@@ -1099,16 +1125,13 @@ export function useChapterScene() {
   function onClick(e) {
     if (!introComplete || selectedIndex !== -1) return
 
-    // The pointer must actually be ON the deck. The hitboxes are flat boxes at each card's
-    // un-bent origin while the vertex shader bends the cards, so a hit can't tell us WHICH
-    // card was struck — but it does tell us we're over the carousel. So: require a hit, then
-    // select the FRONT card (visual-accurate, nearest camera). Mirrors the hover logic.
-    // Previously this fell through to `front` even on a MISS, which on a phone meant a tap
-    // anywhere on the screen opened a chapter.
-    const slotI = getHoveredPoster(e.clientX, e.clientY)
-    if (slotI === -1) return
-    const front = frontChapterIdx()
-    if (front !== -1) selectChapter(front)
+    // Open the card actually under the pointer — front OR side — matching what hover lifts
+    // (posterAtScreen, gated on being over the deck via the raycast so a tap on empty screen
+    // selects nothing). selectChapter rotates the chosen card to front and opens it, so a
+    // side card animates forward first. (Touch uses the parked EXPLORE button → front chapter.)
+    const slot = resolveHoverTarget(e.clientX, e.clientY)
+    if (slot === -1) return
+    selectChapter(chapterIdxForSlot(slot))
   }
 
   function selectChapter(chIdx) {
