@@ -17,7 +17,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
   // Accent of the card the circle is currently over (front card, or the open chapter).
-  accent: { type: String, default: '#b32c05' },
+  accent: { type: String, default: '#42221A' },
   // True once the intro has settled and the front chapter is known — gates the parked button
   // so it can't appear mid-spin or flash a placeholder colour.
   exploreReady: { type: Boolean, default: false },

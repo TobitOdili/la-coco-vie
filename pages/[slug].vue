@@ -317,7 +317,7 @@ onBeforeUnmount(() => {
 
 /* Content scrolls up over the (fixed) WebGL hero on the chapter's light accent. */
 .chapter-content {
-  background: var(--accentLight, #f3ebe4);
+  background: var(--accentLight, #F2EEE8);
 }
 
 /* Floating dress popups — pinned to the VIEWPORT bottom-centre over the content.
@@ -343,7 +343,7 @@ onBeforeUnmount(() => {
 /* Scaffold fallback (unbuilt chapters) */
 .chapter-body {
   min-height: 100dvh;
-  background: var(--accentLight, #f3ebe4);
+  background: var(--accentLight, #F2EEE8);
   color: var(--accent, #333);
   display: flex;
   flex-direction: column;

@@ -54,7 +54,7 @@ defineEmits(['close'])
   left: 0;
   width: 100%;
   height: 100%;
-  background: var(--accentLight, #f3ebe4);
+  background: var(--accentLight, #F2EEE8);
   z-index: 50;
   overflow-y: auto;
   display: flex;

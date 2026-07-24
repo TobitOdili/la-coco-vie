@@ -54,7 +54,7 @@ onBeforeUnmount(() => observer?.disconnect())
   box-sizing: border-box;
   text-align: center;
   color: var(--accent, #333);
-  background: var(--accentLight, #f3ebe4);
+  background: var(--accentLight, #F2EEE8);
 }
 .chapter-end > * {
   opacity: 0;

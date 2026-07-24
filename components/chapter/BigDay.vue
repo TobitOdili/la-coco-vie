@@ -71,7 +71,7 @@
              C 500 360, 700 340, 690 460 C 680 570, 330 520, 330 650
              C 330 760, 760 700, 730 830 C 705 940, 300 900, 320 1020
              C 338 1120, 660 1080, 640 1180 C 625 1260, 460 1250, 500 1320 L 500 1400"
-          stroke="#D7DDDD" stroke-width="4" fill="none" stroke-linecap="round"
+          stroke="#E9ECE2" stroke-width="4" fill="none" stroke-linecap="round"
         />
       </svg>
       <div class="hour hour-side hour-light">22:00</div>
@@ -90,7 +90,7 @@ defineProps({
   sections: { type: Array, required: true },
 })
 
-const ink = '#304443'
+const ink = '#41492D'
 const rootEl = ref(null)
 let rafId = 0
 
@@ -134,14 +134,14 @@ onBeforeUnmount(() => cancelAnimationFrame(rafId))
   position: relative;
   /* No overflow:hidden here — it turns the scene into the sticky containment box and
      kills the knot's position:sticky. The thread SVGs are inset:0 so nothing bleeds. */
-  color: var(--accent, #304443);
+  color: var(--accent, #41492D);
 }
 
 /* The falling light: each scene fades from the previous scene's sky to its own. */
-.scene-daybreak { min-height: 120dvh; background: linear-gradient(#EDF0EF, #E2E8E6); }
-.scene-knot { height: 260dvh; background: linear-gradient(#E2E8E6, #D7DDDD 30%, #D7DDDD); }
-.scene-evening { min-height: 160dvh; background: linear-gradient(#D7DDDD, #D9CDB2 55%, #C8B694); }
-.scene-night { min-height: 180dvh; background: linear-gradient(#C8B694, #54604F 30%, #22332F 60%, #1B2A26); }
+.scene-daybreak { min-height: 120dvh; background: linear-gradient(#F1F3EC, #E9ECE2); }
+.scene-knot { height: 260dvh; background: linear-gradient(#E9ECE2, #DEE2D2 30%, #DEE2D2); }
+.scene-evening { min-height: 160dvh; background: linear-gradient(#DEE2D2, #C2C79E 55%, #9BA66F); }
+.scene-night { min-height: 180dvh; background: linear-gradient(#9BA66F, #5A6440 30%, #2E3620 60%, #232A18); }
 
 /* The thread — stretched to the scene, centred; the vertical run stays centred. */
 .thread {
@@ -233,7 +233,7 @@ onBeforeUnmount(() => cancelAnimationFrame(rafId))
   text-align: end;
 }
 .scene-night .info-side { inset-inline-end: auto; inset-inline-start: 8vw; text-align: start; }
-.hour-light, .info-light { color: #D7DDDD; }
+.hour-light, .info-light { color: #E9ECE2; }
 
 @media (max-width: 768px) {
   .knot-svg { width: 94vw; }

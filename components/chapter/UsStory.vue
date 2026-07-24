@@ -82,7 +82,7 @@ onBeforeUnmount(() => observer?.disconnect())
   min-height: 100dvh;
   box-sizing: border-box;
   padding: 16vh 7vw 12vh;
-  color: var(--accent, #b32c05);
+  color: var(--accent, #42221A);
   overflow: hidden;
 }
 
@@ -162,7 +162,7 @@ onBeforeUnmount(() => observer?.disconnect())
   text-align: center;
   font-family: 'Over the Rainbow', cursive;
   font-size: 1.05rem;
-  color: var(--accent, #b32c05);
+  color: var(--accent, #42221A);
   opacity: 0.85;
 }
 .tape {
@@ -171,7 +171,7 @@ onBeforeUnmount(() => observer?.disconnect())
   left: 50%;
   width: 7rem;
   height: 1.9rem;
-  background: var(--accentLighter, #f0d7bf);
+  background: var(--accentLighter, #D2C3AE);
   opacity: 0.75;
   transform: translateX(-50%) rotate(-2deg);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
@@ -229,7 +229,7 @@ onBeforeUnmount(() => observer?.disconnect())
   text-align: right;
   opacity: 0;
   transform: rotate(1.5deg) translateY(16px);
-  color: color-mix(in srgb, var(--accent, #b32c05) 72%, var(--accentLight, #f3ebe4));
+  color: color-mix(in srgb, var(--accent, #42221A) 72%, var(--accentLight, #F2EEE8));
 }
 /* The voices land one after the other — he speaks, then she answers. */
 .in-view .note.voice-c { opacity: 0.95; transform: rotate(-2deg); transition-delay: 0.7s; }

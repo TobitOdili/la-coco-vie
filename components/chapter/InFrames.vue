@@ -33,12 +33,12 @@
     <section class="chapter-section room-scene leader-scene" :data-idx="2">
       <div class="leader-sticky">
         <svg class="leader-svg" viewBox="0 0 400 400" aria-hidden="true">
-          <line x1="200" y1="0" x2="200" y2="400" stroke="#D6D5E8" stroke-width="1" opacity="0.25" />
-          <line x1="0" y1="200" x2="400" y2="200" stroke="#D6D5E8" stroke-width="1" opacity="0.25" />
-          <circle cx="200" cy="200" r="150" stroke="#D6D5E8" stroke-width="1.5" fill="none" opacity="0.35" />
+          <line x1="200" y1="0" x2="200" y2="400" stroke="#EFE8F5" stroke-width="1" opacity="0.25" />
+          <line x1="0" y1="200" x2="400" y2="200" stroke="#EFE8F5" stroke-width="1" opacity="0.25" />
+          <circle cx="200" cy="200" r="150" stroke="#EFE8F5" stroke-width="1.5" fill="none" opacity="0.35" />
           <circle
             ref="sweepEl" class="sweep" cx="200" cy="200" r="150" pathLength="1"
-            stroke="#D6D5E8" stroke-width="3" fill="none" transform="rotate(-90 200 200)"
+            stroke="#EFE8F5" stroke-width="3" fill="none" transform="rotate(-90 200 200)"
           />
         </svg>
         <div class="leader-num" ref="leaderNumEl">3</div>
@@ -146,20 +146,20 @@ onBeforeUnmount(() => cancelAnimationFrame(rafId))
 /* The dark room. NO overflow:hidden on scene roots — it breaks position:sticky. */
 .room-scene {
   position: relative;
-  color: #d6d5e8;
+  color: #EFE8F5;
 }
 .scene-title {
   min-height: 130dvh;
-  background: linear-gradient(#d6d5e8, #454363 26%, #2b2a45 55%, #2b2a45);
+  background: linear-gradient(#EFE8F5, #3A2B4A 26%, #241A33 55%, #241A33);
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.roll-scene { background: #2b2a45; }
-.leader-scene { background: #2b2a45; }
+.roll-scene { background: #241A33; }
+.leader-scene { background: #241A33; }
 .scene-end {
   min-height: 130dvh;
-  background: linear-gradient(#2b2a45 30%, #454363 60%, #d6d5e8);
+  background: linear-gradient(#241A33 30%, #3A2B4A 60%, #EFE8F5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -178,7 +178,7 @@ onBeforeUnmount(() => cancelAnimationFrame(rafId))
   font-size: clamp(2.6rem, 7.5vw, 6.5rem);
   line-height: 1.1;
   margin: 1.4rem 0;
-  color: #d6d5e8;
+  color: #EFE8F5;
 }
 .film-title.small { font-size: clamp(1.8rem, 4.5vw, 3.4rem); }
 .sub { opacity: 0.5; }
@@ -212,16 +212,16 @@ onBeforeUnmount(() => cancelAnimationFrame(rafId))
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(#2b2a45, transparent 18%, transparent 82%, #2b2a45);
+  background: linear-gradient(#241A33, transparent 18%, transparent 82%, #241A33);
 }
 .strip {
   will-change: transform;
   /* The film itself: darker than the room, sprocket holes down both edges. */
-  background: #1d1c30;
+  background: #170F22;
   padding: 0 3.4rem;
   background-image:
-    radial-gradient(0.6rem 0.85rem at 1.7rem 50%, rgba(214, 213, 232, 0.85) 58%, transparent 63%),
-    radial-gradient(0.6rem 0.85rem at calc(100% - 1.7rem) 50%, rgba(214, 213, 232, 0.85) 58%, transparent 63%);
+    radial-gradient(0.6rem 0.85rem at 1.7rem 50%, rgba(239, 232, 245, 0.85) 58%, transparent 63%),
+    radial-gradient(0.6rem 0.85rem at calc(100% - 1.7rem) 50%, rgba(239, 232, 245, 0.85) 58%, transparent 63%);
   background-size: 100% 3.2rem;
 }
 .film-frame {
@@ -260,7 +260,7 @@ onBeforeUnmount(() => cancelAnimationFrame(rafId))
   position: absolute;
   font-family: 'Monoton', cursive;
   font-size: clamp(4rem, 9vw, 7.5rem);
-  color: #d6d5e8;
+  color: #EFE8F5;
 }
 
 /* ── reserved rolls ── */
@@ -273,8 +273,8 @@ onBeforeUnmount(() => cancelAnimationFrame(rafId))
   padding: 14dvh 0 20dvh;
 }
 .frame-blank {
-  background: #1d1c30;
-  border: 1px dashed rgba(214, 213, 232, 0.35);
+  background: #170F22;
+  border: 1px dashed rgba(239, 232, 245, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -303,8 +303,8 @@ onBeforeUnmount(() => cancelAnimationFrame(rafId))
   .film-frame { width: 88vw; }
   .strip { padding: 0 2rem; background-size: 100% 2.6rem;
     background-image:
-      radial-gradient(0.45rem 0.65rem at 1rem 50%, rgba(214, 213, 232, 0.5) 58%, transparent 62%),
-      radial-gradient(0.45rem 0.65rem at calc(100% - 1rem) 50%, rgba(214, 213, 232, 0.5) 58%, transparent 62%);
+      radial-gradient(0.45rem 0.65rem at 1rem 50%, rgba(239, 232, 245, 0.5) 58%, transparent 62%),
+      radial-gradient(0.45rem 0.65rem at calc(100% - 1rem) 50%, rgba(239, 232, 245, 0.5) 58%, transparent 62%);
   }
   .gate { height: 56dvh; }
   .frame-blank { width: 88vw; }

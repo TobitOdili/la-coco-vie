@@ -25,24 +25,24 @@ html {
 }
 
 .--us {
-  --accent: #b32c05;
-  --accentLighter: #f0d7bf;
-  --accentLight: #f3ebe4;
+  --accent: #42221a;
+  --accentLighter: #d2c3ae;
+  --accentLight: #f2eee8;
 }
 .--the-big-day {
-  --accent: #304443;
-  --accentLighter: #a0aeae;
-  --accentLight: #d7dddd;
+  --accent: #41492d;
+  --accentLighter: #a6b18a;
+  --accentLight: #e9ece2;
 }
 .--in-frames {
-  --accent: #353454;
-  --accentLighter: #b3b0db;
-  --accentLight: #d6d5e8;
+  --accent: #453350;
+  --accentLighter: #c3a6d8;
+  --accentLight: #efe8f5;
 }
 .--with-love {
-  --accent: #7e3c48;
-  --accentLighter: #f0c3e1;
-  --accentLight: #ffe7f7;
+  --accent: #2e4a52;
+  --accentLighter: #9fb4c8;
+  --accentLight: #e8edf2;
 }
 
 /* ===== Global Reset ===== */

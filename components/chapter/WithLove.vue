@@ -81,7 +81,7 @@ defineProps({
   sections: { type: Array, required: true },
 })
 
-const ink = '#7E3C48'
+const ink = '#2E4A52'
 const rootEl = ref(null)
 let rafId = 0
 
@@ -114,8 +114,8 @@ onBeforeUnmount(() => cancelAnimationFrame(rafId))
 <style scoped>
 .love-scene {
   position: relative;
-  color: var(--accent, #7e3c48);
-  background: var(--accentLight, #ffe7f7);
+  color: var(--accent, #2E4A52);
+  background: var(--accentLight, #E8EDF2);
   display: flex;
   flex-direction: column;
   align-items: center;

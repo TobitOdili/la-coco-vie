@@ -123,7 +123,7 @@ defineProps({
   },
   accentColor: {
     type: String,
-    default: '#b32c05',
+    default: '#42221A',
   },
   soundOn: {
     type: Boolean,

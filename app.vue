@@ -75,7 +75,7 @@ const isHome = computed(() => !route.params.slug)
 const currentChapter = computed(() =>
   selectedChapterIdx.value !== null ? CHAPTERS[selectedChapterIdx.value] : null
 )
-const currentAccent = computed(() => currentChapter.value?.accent || '#b32c05')
+const currentAccent = computed(() => currentChapter.value?.accent || '#42221A')
 
 // The FRONT-facing card on the carousel (scene-reported). On the homepage no chapter is
 // route-selected, so this is what the explore circle tints itself to — matching the reference,
@@ -92,7 +92,7 @@ function onChapterFront(idx) {
   exploreReady.value = true
 }
 const cursorAccent = computed(
-  () => currentChapter.value?.accent || CHAPTERS[frontChapterIdx.value]?.accent || '#b32c05'
+  () => currentChapter.value?.accent || CHAPTERS[frontChapterIdx.value]?.accent || '#42221A'
 )
 
 // The parked EXPLORE button (touch) opens the front chapter — the deliberate tap target, so a
