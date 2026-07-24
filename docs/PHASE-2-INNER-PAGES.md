@@ -100,9 +100,15 @@ original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker*
   `lastFrontChapter` guard) so `--cursorAccent` tracks the ring as it settles. Verified: wheel-only
   scroll (no mousemove) changed front 2→0 and the tint followed `#353454→#B32C05`; hover blend→2.0.
   (3) The whole hover LIFT now follows the scroll too (`e4e77382`): while hovering, every idle frame
-  re-targets the lift to the current front slot (unhover old / hover new; tweens overwrite = smooth
-  handoff), so the flatten + film + text + colour all travel with the ring. Verified: wheel-only
-  scroll handed the lift 3→2 onto the new front, old card lowered, 0 errors.
+  re-targets the lift, so the flatten + film + text + colour all travel with the ring.
+  (4) ANY card is now hoverable/clickable, not just the front (`8229121b`). The flat hitboxes don't
+  follow the shader bend, so the code couldn't tell WHICH card was under the pointer and always
+  lifted/opened the front. New `posterAtScreen()` projects each poster's centre to screen and picks
+  the nearest to the cursor (front half of the ring only); unified via `resolveHoverTarget()` +
+  `applyHover()`, shared by onMouseMove, the per-frame scroll re-target, AND onClick (a side card
+  rotates to front then opens). Cursor tint reports the HOVERED card's accent (front when idle).
+  Verified: grid sweep lifts 3+ distinct chapters incl. non-front; click a side card → its route;
+  scroll hand-off preserved; 0 errors. (Consequence: gaps BETWEEN cards lift nothing now — correct.)
 - **HOMEPAGE desktop text/card collision FIXED (`40c6c1a8`, prod-verified 1.35 + 1.6).** The big
   central tagline mesh and the card ring shared the same vertical band → the front card covered
   the wordmark's lower half. Two DESKTOP-ONLY levers (mobile keeps its fitTxtMesh scale + 0 idle):
