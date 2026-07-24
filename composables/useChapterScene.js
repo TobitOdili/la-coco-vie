@@ -20,7 +20,6 @@ export const CHAPTERS = [
     accentLighter: '#D2C3AE',
     audio: asset('/audio/eat-merry-love.mp3'),
     video: asset('/video/eat-intro.mp4'),
-    poster: asset('/images/poster-1.jpg'),
     txt: asset('/images/cu-txt1.png'),
     svg: asset('/images/cu-p1.png'),
     index: 0,
@@ -33,7 +32,6 @@ export const CHAPTERS = [
     accentLighter: '#A6B18A',
     audio: asset('/audio/la-storia.mp3'),
     video: asset('/video/la-intro.mp4'),
-    poster: asset('/images/poster-2.jpg'),
     txt: asset('/images/cu-txt2.png'),
     svg: asset('/images/cu-p2.png'),
     index: 1,
@@ -46,7 +44,6 @@ export const CHAPTERS = [
     accentLighter: '#C3A6D8',
     audio: asset('/audio/wine-time.mp3'),
     video: asset('/video/wine-intro.mp4'),
-    poster: asset('/images/poster-3.jpg'),
     txt: asset('/images/cu-txt3.png'),
     svg: asset('/images/cu-p3.png'),
     index: 2,
@@ -59,7 +56,6 @@ export const CHAPTERS = [
     accentLighter: '#9FB4C8',
     audio: asset('/audio/amour-getway.mp3'),
     video: asset('/video/amour-intro.mp4'),
-    poster: asset('/images/poster-4.jpg'),
     txt: asset('/images/cu-txt4.png'),
     svg: asset('/images/cu-p4.png'),
     index: 3,
@@ -348,7 +344,6 @@ export function useChapterScene() {
 
   let onSelectCallback = null
   let onHoverCallback = null
-  let onDeselectCallback = null
   let onReadyCallback = null  // fired once when the intro finishes (for deep-link selection)
   // Fired whenever the FRONT-facing chapter changes (the one the centre text tracks). The
   // explore cursor uses it to tint itself to the card it's sitting over — on the homepage no
@@ -1640,7 +1635,6 @@ export function useChapterScene() {
   function onHover(cb) { onHoverCallback = cb }
   function onFrontChapter(cb) { onFrontChapterCallback = cb }
   function onProgress(cb) { onProgressCallback = cb }
-  function onDeselect(cb) { onDeselectCallback = cb }
   function onReady(cb) { onReadyCallback = cb }
 
   return {
@@ -1654,7 +1648,6 @@ export function useChapterScene() {
     onHover,
     onFrontChapter,
     onProgress,
-    onDeselect,
     onReady,
     selectChapter,    // exposed so the route watcher can drive selection (Phase 2)
     deselectChapter,  // TOP-edge / back-button exit: reverse-spin rewind into the ring

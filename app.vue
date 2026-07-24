@@ -19,7 +19,6 @@
       @chapter-hover="onChapterHover"
       @chapter-unhover="onChapterUnhover"
       @progress="onProgress"
-      @chapter-deselect="onChapterDeselect"
       @chapter-front="onChapterFront"
     />
 
@@ -144,8 +143,7 @@ function onChapterSelect(idx) {
   const slug = CHAPTERS[idx].slug
   if (route.params.slug !== slug) router.push(`/${slug}`)
 }
-// Scene fired scroll-back exit, or the nav logo / back button was used → go home.
-function onChapterDeselect() { if (route.params.slug) router.push('/') }
+// The nav logo / back button was used → go home.
 function goHome() { if (route.params.slug) router.push('/') }
 
 function onChapterHover(idx) {

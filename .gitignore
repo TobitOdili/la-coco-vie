@@ -12,3 +12,4 @@ dist
 millanova frames/
 exit-frames/
 *.frames/
+.claude/

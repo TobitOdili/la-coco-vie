@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // CHAPTER PAGES — the inner-page content for the Covenant & Uvie journey.
 // Pure data (no three/gsap). Rendered by pages/[slug].vue via ChapterSection /
-// DressTail (popup cards) / ChapterEnd.
+// PopupCard (floating cards) / ChapterEnd.
 //
 // ⚠️ EVERYTHING BELOW IS PLACEHOLDER (2026-07-23). The couple will correct:
 //   • COPY — written to demonstrate placement + tone, not facts. Every date,
@@ -17,7 +17,7 @@
 //   CHAPTER_PAGES[slug].sections[] = { num, title, body, images[], popups[], align }
 //     • images[0] leads the split; the rest render as full-bleed bands.
 //     • popups[] → keys into POPUPS: the floating cards pinned to the viewport
-//       while that section is active (the old dress cards, generalized).
+//       while that section is active (the floating popup cards).
 //   POPUPS[key] = { title, params[], photo?, url? } — photo and url are optional.
 // ─────────────────────────────────────────────────────────────────────────────
 

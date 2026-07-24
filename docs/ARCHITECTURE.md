@@ -61,7 +61,7 @@ owns 3D state** (rotation, hover, selection internals) and notifies `app.vue` vi
 ```
             ┌─────────────────────────────── app.vue ───────────────────────────────┐
             │  selectedChapterIdx · soundOn · aboutOpen · loaded · loadProgress       │
-            │  (Howler audio is handled INLINE here, not via useAudio.js)             │
+            │  (Howler audio is handled INLINE here, not in a separate composable)    │
             └───────────▲───────────────────────────────────────────────┬────────────┘
                         │ events (emit)                                  │ props / method calls
             ┌───────────┴───────────────── WebGLScene.vue ───────────────▼────────────┐
@@ -86,7 +86,7 @@ owns 3D state** (rotation, hover, selection internals) and notifies `app.vue` vi
 | `onHover(chIdx, hovering)` | `chapter-hover` / `chapter-unhover` | `onChapterHover` / `onChapterUnhover` | cursor activate + audio fade |
 | `onProgress(pct)` | `progress` | `onProgress` | drives the loader counter |
 | `onReady(cb)` | — (direct) | — | fires once when the intro ends → app applies any deep-link |
-| `onDeselect()` | `chapter-deselect` | `onChapterDeselect` | **dead path** — the scene no longer fires this (the old scroll-back exit was removed). Plumbing kept; harmless. |
+| `onFrontChapter(idx)` | `chapter-front` | `onChapterFront` | front-facing chapter changed → tint the explore cursor + gate the parked EXPLORE button |
 
 > **Routing is the single source of truth (the big change from Phase 1).** Selection is no
 > longer app-local state — it's derived from `route.params.slug`. A `watch(route.params.slug)`
@@ -138,9 +138,23 @@ owns the inner-page scroll + exit:
 Inner-page content (`CHAPTER_PAGES[slug].sections[]` + the `DRESSES` table). Lightweight data
 module — no three/gsap. Only Wine O'Clock is filled in; others fall back to the scaffold.
 
-### `components/chapter/ChapterSection.vue` + `DressTail.vue`
-The inner-page section block (numbered label + display heading + body + gallery, alternating
-left/right, IntersectionObserver fade-up) and the dress card.
+### Inner-page components (`components/chapter/`)
+Each chapter has a **bespoke** page component, selected by slug in `pages/[slug].vue` — they share
+one motif (the "thread") but no layout: `UsStory.vue` (margin-notes scrapbook), `BigDay.vue`
+("The Hours" — scroll scrubs the day, the two threads tie the knot), `InFrames.vue` ("The Screening
+Room" — dark, the film strip runs through a projector gate), `WithLove.vue` ("Thank-You in Advance"
+— ink writes + circles + signs). All four run on one **scroll-scrubbed line-drawing engine**: an rAF
+loop reads each scene's `getBoundingClientRect()` and drives per-element `data-window="a,b"` attrs →
+`strokeDashoffset` (`.scrub` SVG paths, `pathLength=1`), `opacity` (`.fade`), or L→R clip reveal
+(`.write`). Reversible, follows Lenis, ~zero media. ⚠️ Bespoke components MUST render
+`.chapter-section` roots with `data-idx` — the floating-card observer in `[slug].vue` keys on them.
+`ChapterSection.vue` is the generic section block (numbered heading + gallery + fade-up), now only
+the unused fallback. `PopupCard.vue` is the floating card pinned bottom-centre (photo + url both
+optional — moment polaroids, map/calendar cards, registry items). `ChapterEnd.vue` = the shared
+"See you there — RSVP" footer.
+
+Textures (`public/images/cu-*`) are generated — see [`scripts/README.md`](../scripts/README.md)
+(`npm run gen:textures`).
 
 ### `components/WebGLScene.vue`
 Thin bridge. Mounts the `<canvas>` inside `#canvas-container`, calls `scene.init()`,
@@ -183,16 +197,18 @@ chapter content stays in `CHAPTERS`; the logo wordmark stays as an `<svg>` in `S
 ### `composables/useChapterScene.js` ★
 The whole 3D experience. Detailed below.
 
-### `composables/useAudio.js` ⚠️ DEAD CODE
-A self-contained audio composable that is **never imported**. `app.vue` reimplements audio
-inline instead. Kept for now but safe to delete — see [Known tech debt](#known-tech-debt).
+### `composables/chapterPages.js`
+Inner-page content as pure data: `CHAPTER_PAGES[slug].sections[]` (each bespoke component reads the
+fields it needs — `notes`/`caption` for US, `time`/`lines`/`vow` for Big Day, `exposures`/`reserved`
+for In Frames, `kind`/`memory`/`gift`/`names` for With Love) + the `POPUPS` table (floating-card
+content). All copy/dates/registry here are PLACEHOLDERS.
 
 ---
 
 ## The 3D scene (`useChapterScene.js`)
 
 `useChapterScene()` returns `{ init, onMouseMove, onClick, onScroll, onResize, destroy,
-onSelect, onHover, onFrontChapter, onProgress, onDeselect, onReady, selectChapter, deselectChapter, setScroll,
+onSelect, onHover, onFrontChapter, onProgress, onReady, selectChapter, deselectChapter, setScroll,
 beginExit, setExitProgress, cancelExit, endExit, getState }`. It closes over all scene state
 (renderer, camera, groups, posters, flags). `getState()` → `{ selectedIndex, hoveredIndex,
 introComplete, isSelecting, isDeselecting }`. (There is no `exitChapterDrop` / page-card /
@@ -402,10 +418,12 @@ absolute URL. Apply the same pattern for any future CSS-var asset paths.
 | Item | Notes |
 |---|---|
 | **Orientation-dependent constants** | Several scene constants look universal but are **landscape-derived**, and portrait broke on every one: `aspectRatio * 2.07` (really fill-width at the *desktop* camera distance — now derived by `heroFillScale()`), `SELECTED_Y -43` (now `SELECTED_Y_MOBILE`), the card-hide offset (must clear the frustum at the ring's DEEPEST card, ±62, not the front's ±29), and the fixed 60-unit wordmark plane (now `fitTxtMesh()`). Check `isMobile` before assuming a constant is universal. |
-| **`onDeselect` plumbing is dead** | The scene never fires it anymore (old scroll-back exit removed). `WebGLScene`→`app.vue` wiring is harmless but unused. |
+| **Hover/click resolution** | The flat raycast hitboxes don't follow the shader bend, so hover/click can't trust *which* hitbox was hit. `posterAtScreen()` instead projects each poster's centre to screen and picks the nearest to the cursor (front half of the ring only) → any visible card is hoverable/clickable, not just the front. Shared by `onMouseMove`, the per-frame scroll re-target (`applyHover(resolveHoverTarget(lastCursor))`), and `onClick`. The per-frame re-resolve only *switches* the lift, never unhovers (a lifting card moves its own hitbox off the cursor → bottom-edge oscillation). |
 | Debug instrumentation | `__heroDebug` / `__camDebug` / `__probe` / `__exitBegin/Scrub/End` and `__gsdev()` (GSAP DevTools) are gated behind **`?debug` on the initial load URL**. Inert otherwise. Fine to ship; remove if you want them gone. |
-| `composables/useAudio.js` | **Dead code** — never imported; `app.vue` does audio inline. Safe to delete (verify no future import first). |
+| **Palette** | The wedding colours live in `CHAPTERS` (`composables/useChapterScene.js`) + the `.--{slug}` vars in `assets/css/main.css` + the `CH` array in `scripts/gen-textures.mjs` — keep all three in sync. The four bespoke components also hardcode family tones (Big Day day→night gradient, In Frames' `#241A33` room, With Love's teal ink). |
 | `dist` symlink | Was tracked pointing at a stale path; now gitignored. |
+| **God-module** | `useChapterScene.js` is ~1500 lines. Splitting it (shaders / intro / select-exit / hover) is the main open refactor; deferred (high-risk, low-urgency). |
+| ~~`onDeselect` / `useAudio.js` dead code~~ | Removed 2026-07-23. |
 | `#4` ring tilt | Parked — replica reads slightly more face-on than the original. Needs the original's exact group rotation (couldn't extract cleanly). See AUDIT #4. |
 | Hardcoded exit/deselect angles | `deselectChapter` and `setExitProgress`'s `homeTilt` both hardcode the homepage `(25°,70°,15°)` (desktop) / `(22°,0,0)` (mobile) group tilt; `setExitProgress` also hardcodes `BOWL_TILT` (and `DROP_START` is duplicated in `pages/[slug].vue`). If any changes, update every copy. |
 | Doc-drift risk | This file lagged the code badly before the 2026-06-12 reconcile. When you change the scene/exit model, update the affected section here in the same commit. |

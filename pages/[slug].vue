@@ -39,11 +39,11 @@
       <section ref="outroEl" class="chapter-outro" aria-hidden="true" />
     </div>
 
-    <!-- Floating dress popups — pinned to the viewport bottom-center; content is the in-view
-         section's dresses (the reference's scroll-following dress cards), gone at the chapter end. -->
+    <!-- Floating popup cards — pinned to the viewport bottom-center; content is the in-view
+         section's popups (moments / map + calendar / registry), gone at the chapter end. -->
     <transition name="popups">
-      <div v-if="activeDresses.length" class="dress-popups">
-        <DressTail v-for="d in activeDresses" :key="d.title" :dress="d" />
+      <div v-if="activePopups.length" class="popup-stack">
+        <PopupCard v-for="p in activePopups" :key="p.title" :popup="p" />
       </div>
     </transition>
   </div>
@@ -60,19 +60,19 @@ import BigDay from '~/components/chapter/BigDay.vue'
 import InFrames from '~/components/chapter/InFrames.vue'
 import WithLove from '~/components/chapter/WithLove.vue'
 import ChapterEnd from '~/components/chapter/ChapterEnd.vue'
-import DressTail from '~/components/chapter/DressTail.vue'
+import PopupCard from '~/components/chapter/PopupCard.vue'
 
 const route = useRoute()
 const router = useRouter()
 const chapter = computed(() => CHAPTERS.find((c) => c.slug === route.params.slug))
 const pageContent = computed(() => CHAPTER_PAGES[route.params.slug])
 
-// Floating dress popups: the active (most in-view) section's dresses, shown in one fixed
+// Floating popup cards: the active (most in-view) section's popups, shown in one fixed
 // overlay at the viewport bottom-center (so they're never affected by the content scroll).
 const activeIdx = ref(-1)
 const sectionRatios = new Map()
 let sectionObserver = null
-const activeDresses = computed(() => {
+const activePopups = computed(() => {
   const s = pageContent.value?.sections?.[activeIdx.value]
   return (s?.popups || []).map((key) => POPUPS[key]).filter(Boolean)
 })
@@ -244,7 +244,7 @@ onMounted(() => {
   pageEl.value?.addEventListener('touchstart', onTouchStart, { passive: true })
   pageEl.value?.addEventListener('touchmove', onTouchMove, { passive: true })
 
-  // Track the active section for the floating dress popups (the most in-view section wins).
+  // Track the active section for the floating popup cards (the most in-view section wins).
   if (pageContent.value && pageEl.value) {
     sectionObserver = new IntersectionObserver(
       (entries) => {
@@ -320,13 +320,13 @@ onBeforeUnmount(() => {
   background: var(--accentLight, #F2EEE8);
 }
 
-/* Floating dress popups — pinned to the VIEWPORT bottom-centre over the content.
+/* Floating popup cards — pinned to the VIEWPORT bottom-centre over the content.
    MUST be `fixed`, not `absolute`: .chapter-page is a scroll container (overflow-y: auto), and
    absolutely-positioned children of a scroller scroll WITH the content — so these sat at the
    bottom only at scroll 0 and then slid up and off the top as you read. `fixed` resolves
    against the viewport (no transformed ancestor here — Lenis scrolls .chapter-page natively via
    scrollTop, and these live OUTSIDE .chapter-scroll), so they stay put. */
-.dress-popups {
+.popup-stack {
   position: fixed;
   bottom: 1.75rem;
   left: 50%;

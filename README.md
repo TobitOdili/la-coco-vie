@@ -55,7 +55,10 @@ experience unified by one motif — a thread that runs through the whole site.**
 - ✅ **Exits** — top edge reverse-rewinds into the ring; bottom edge is the scroll-driven
   **cluster-unfurl outro** (user-approved). Both reversible.
 - ✅ **Mobile / touch** — swipe + momentum, tap-vs-swipe guard, parked EXPLORE button, portrait
-  geometry fixes. (Re-verify the latest homepage refinements on device — see the tracker.)
+  geometry fixes; the homepage refinements are device-verified.
+- ✅ **Wedding colour palette** — one hue family per chapter (US beige/chocolate · Big Day sage/olive ·
+  In Frames lavender/purple · With Love dusty-blue/teal). Card art is **generated**:
+  `npm run gen:textures` (see [`scripts/README.md`](scripts/README.md)).
 - 🔧 **Open** — real content/media from the couple (copy, photos, registry, RSVP destination);
   per-page polish (In Frames flagged, Big Day: traditional-wedding date + thread motion); favicon
   still Milla Nova's; portrait card-sizing; code-health (split the ~1500-line scene module,

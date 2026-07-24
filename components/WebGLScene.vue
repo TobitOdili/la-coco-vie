@@ -14,7 +14,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useChapterScene } from '~/composables/useChapterScene'
 
-const emit = defineEmits(['chapter-select', 'chapter-hover', 'chapter-unhover', 'progress', 'chapter-deselect', 'chapter-front'])
+const emit = defineEmits(['chapter-select', 'chapter-hover', 'chapter-unhover', 'progress', 'chapter-front'])
 
 const canvasRef = ref(null)
 const hitLayerRef = ref(null)
@@ -118,12 +118,6 @@ onMounted(async () => {
     } else {
       emit('chapter-unhover', idx)
     }
-  })
-
-  // Scene self-initiated deselect (scroll-back exit, Issue #7) — let app.vue
-  // reset its state. The scene already runs the reverse animation.
-  scene.onDeselect(() => {
-    emit('chapter-deselect')
   })
 
   // Mouse tracking on window (doesn't block events)

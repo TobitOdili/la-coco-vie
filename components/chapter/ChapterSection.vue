@@ -41,7 +41,7 @@ const sideImage = computed(() => props.section.images?.[0] || '')
 const fullImages = computed(() => (props.section.images || []).slice(1))
 
 // Reveal on first enter (latches — content shouldn't re-hide on scroll-up). The
-// dress popups are a separate, page-level concern (they toggle with the active section).
+// the floating popup cards are a separate, page-level concern (they toggle with the active section).
 const root = ref(null)
 const visible = ref(false)
 let observer = null

@@ -1,7 +1,25 @@
 # Phase 2 — Chapter Inner Pages (Scope)
 
-Scope and build plan for the per-chapter inner pages. Grounded in a live inspection of the
-original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker** — start here.
+Scope and build plan for the per-chapter inner pages. **This doc is the single live tracker** —
+start here. (It grew from the original Milla Nova replica build; the ▼ HANDOFF box is the current
+state, everything below it is history — newest first.)
+
+> ## ▶▶▶ HANDOFF SNAPSHOT (2026-07-23) — read this first
+> **What this is:** the **wedding site of Covenant (Odili) & Uvie (Dan-Egua)** — "A Love Story in
+> Chapters." A Three.js carousel of 4 poster cards; each opens a bespoke scroll page. Built on an
+> engine that began as a Milla Nova replica (`chapter.millanova.com`) and was re-skinned.
+> **DONE & LIVE (all prod-verified):** the four chapters US / THE BIG DAY / IN FRAMES / WITH LOVE,
+> each a **bespoke inner page** (the "thread" motif — see the STATE entries); homepage carousel with
+> per-card hover/click (`posterAtScreen`), scroll-following lift, live cursor tint, names + date +
+> countdown, welcome note, RSVP; both exit edges; mobile/touch; and the **wedding colour palette**
+> (per-chapter hexes in the ▼ palette entry). Repo cleaned up + docs current (this pass).
+> **PLACEHOLDER (waiting on the couple):** all copy, the date's YEAR (Oct 27 confirmed, 2026 assumed),
+> venues, the registry items, the RSVP destination (`#rsvp`), gallery photos (Milla Nova stills) and
+> the card films, and the favicon (still Milla Nova's).
+> **NEXT / OPEN:** real content + media; per-page polish (In Frames flagged "could be better"; Big Day
+> wants the traditional-wedding date + thread-motion consistency); portrait card-sizing ("passable");
+> code-health (split the ~1500-line `useChapterScene.js`; `prefers-reduced-motion`; 34M MP4s).
+> **Regenerate card art:** `npm run gen:textures` (see [`scripts/README.md`](../scripts/README.md)).
 
 ## 🚀 Pick up from here (cold start)
 
