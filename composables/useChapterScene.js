@@ -263,6 +263,11 @@ export function useChapterScene() {
   const TXT_PLANE = 60
   const TXT_Y_DESKTOP = -8   // tuned so it clears the top logo/subtitle (issue #11)
   const TXT_Y_MOBILE = 14    // upper third — clear of the cards, matching the reference
+  // Desktop: the tagline is a large central plane; the front card rose into its lower half.
+  // Shrink the wordmark a touch AND drop the whole idle ring so the front card clears the text.
+  // Both are DESKTOP-ONLY (mobile keeps its own fitTxtMesh scale + 0 idle Y, tuned separately).
+  const TXT_SCALE_DESKTOP = 0.82
+  const IDLE_Y_DESKTOP = -12   // idle carousel Y on desktop (was 0); select still uses SELECTED_Y
   // Selected card resting Y. The shader's progress=1 layout frames the content into
   // a sub-region of the plane, so scale/position are hand-tuned (not camera-derived):
   // scale = aspectRatio*2.07, this Y top-anchors the content band as the hero.
@@ -462,6 +467,7 @@ export function useChapterScene() {
     // Original: B.animatedRotationY = 0, animates to degToRad(360*2) = 720°
     carousel.animatedRotationY = 0
     carousel.rotation.y = 0
+    carousel.position.y = idleCarouselY()   // drop the desktop ring below the central tagline
     groupG.add(carousel)
 
     // Load logo texture
@@ -1249,7 +1255,7 @@ export function useChapterScene() {
     }
 
     // Restore carousel
-    tl.to(carousel.position, { y: 0, duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
+    tl.to(carousel.position, { y: idleCarouselY(), duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
 
     // Reset all posters
     posters.forEach((p) => {
@@ -1421,7 +1427,7 @@ export function useChapterScene() {
     // pose), but a Back pressed mid-scroll calls endExit ALONE — so snap the carousel pose + every poster
     // back to its homepage slot here, else the ring is left low/tilted/collapsed-inward. (animatedRotationY
     // is intentionally left at its spun value — EXIT_SPIN is negative so it flows into the idle, no reversal.)
-    carousel.position.y = 0
+    carousel.position.y = idleCarouselY()
     groupG.rotation.set(isMobile ? toRad(22) : toRad(25), isMobile ? 0 : toRad(70), isMobile ? 0 : toRad(15))
     posters.forEach((p) => {
       p.mesh.position.set(p.baseX, p.baseY, p.baseZ)
@@ -1460,6 +1466,10 @@ export function useChapterScene() {
   // Scale the centre wordmark plane so it always fits the viewport WIDTH. The visible width at
   // the plane's depth is 2·d·tan(fov/2)·aspect; on a portrait phone that's far less than the
   // plane's 60 units, which cropped the wordmark. Only ever scales DOWN (desktop keeps 1:1).
+  // Idle (homepage) carousel Y. Desktop drops the ring so the front card clears the central
+  // tagline; mobile keeps 0 (its ring/text separation is handled by TXT_Y_MOBILE + fitTxtMesh).
+  function idleCarouselY() { return isMobile ? 0 : IDLE_Y_DESKTOP }
+
   function fitTxtMesh() {
     const mesh = groupG?.userData?.txtMesh
     if (!mesh || !camera) return
@@ -1468,7 +1478,9 @@ export function useChapterScene() {
     mesh.position.y = isMobile ? TXT_Y_MOBILE : TXT_Y_DESKTOP
     const d = Math.max(1, camera.position.z - mesh.position.z)
     const visibleW = 2 * d * Math.tan(toRad(camera.fov / 2)) * aspectRatio
-    const s = Math.min(1, (visibleW * 0.92) / TXT_PLANE)
+    // Mobile scales to fit the narrow frustum; desktop applies a fixed shrink so the big
+    // central tagline no longer reaches down into the card cluster.
+    const s = isMobile ? Math.min(1, (visibleW * 0.92) / TXT_PLANE) : TXT_SCALE_DESKTOP
     mesh.scale.set(s, s, 1)
   }
 
