@@ -236,6 +236,7 @@ export function useChapterScene() {
   // txtTextures[0], and if the post-intro front card happened to be chapter 0 the early-return
   // would leave the plane at opacity 0 forever. It also means we never show a wrong wordmark.
   let currentTxtChapter = -1             // chapter shown on the center txtMesh (#9/#14)
+  let lastFrontChapter = -1              // last front chapter reported for the cursor tint
   const _frontVec = new THREE.Vector3()  // scratch vec for front-card detection (#14)
   let canvasEl
   let width, height, aspectRatio
@@ -879,10 +880,19 @@ export function useChapterScene() {
       groupG.userData.txtMesh.lookAt(camera.position)
     }
 
-    // Keep center text synced to the front-facing card when idle (Issue #14).
-    // Hover (#9) overrides; skip during intro and while a chapter is selected.
-    if (introComplete && selectedIndex === -1 && hoveredIndex === -1) {
-      setTxtChapter(frontChapterIdx())
+    // Keep center text + cursor tint synced to the front card when idle (Issues #9/#14).
+    if (introComplete && selectedIndex === -1) {
+      const fc = frontChapterIdx()
+      // Report the front chapter for the explore-cursor tint EVERY time it changes — even
+      // while hovering or mid-scroll-settle. The wheel doesn't fire mousemove, so the old
+      // hover-gated path left the cursor stuck on the pre-scroll card's accent until the
+      // mouse moved. This is decoupled from setTxtChapter (which the hover state overrides).
+      if (fc >= 0 && fc !== lastFrontChapter) {
+        lastFrontChapter = fc
+        if (onFrontChapterCallback) onFrontChapterCallback(fc)
+      }
+      // The center text still only tracks the front when NOT hovering (hover owns it, #9).
+      if (hoveredIndex === -1) setTxtChapter(fc)
     }
 
     // Scroll-couple the hero card to the inner page (P1). Move the card up by the
@@ -974,7 +984,8 @@ export function useChapterScene() {
     const newTex = txtTextures[chIdx]
     if (!txtMat || !newTex) return
     currentTxtChapter = chIdx
-    if (onFrontChapterCallback) onFrontChapterCallback(chIdx)
+    // (The front-chapter callback for the cursor tint is fired by the animate() tracker,
+    // not here — so it also updates during a scroll-settle while hovering, no mousemove.)
     gsap.killTweensOf(txtMat)
     if (instant) {
       txtMat.map = newTex
@@ -1018,16 +1029,18 @@ export function useChapterScene() {
     if (!p) return
     const chIdx = p.chapterIdx
 
+    // power2.OUT (not inOut) so the lift starts immediately on hover — inOut eases IN, so the
+    // first ~0.3s barely moved and the hover read as laggy though it registered instantly.
     gsap.to(p.material.uniforms.blendFactor, {
       value: 2.0,
-      duration: 1.0,
-      ease: 'power2.inOut',
+      duration: 0.55,
+      ease: 'power2.out',
       overwrite: true,
     })
     gsap.to(p.mesh.position, {
       y: p.baseY + 7,
-      duration: 1.0,
-      ease: 'power2.inOut',
+      duration: 0.55,
+      ease: 'power2.out',
       overwrite: true,
     })
 
@@ -1050,14 +1063,14 @@ export function useChapterScene() {
 
     gsap.to(p.material.uniforms.blendFactor, {
       value: 0.0,
-      duration: 1.0,
-      ease: 'power2.inOut',
+      duration: 0.5,
+      ease: 'power2.out',
       overwrite: true,
     })
     gsap.to(p.mesh.position, {
       y: p.baseY,
-      duration: 1.0,
-      ease: 'power2.inOut',
+      duration: 0.5,
+      ease: 'power2.out',
       overwrite: true,
     })
     const vid = videoElements[chIdx]
