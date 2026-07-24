@@ -92,6 +92,15 @@ original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker*
   ⚠️ CIRCLE-BACK POLISH: signature completion timing rides high toward the nav late in the scene
   (transient mid-scroll; centered during natural scroll) — shift `.write` windows earlier.
 
+- **HOMEPAGE desktop text/card collision FIXED (`40c6c1a8`, prod-verified 1.35 + 1.6).** The big
+  central tagline mesh and the card ring shared the same vertical band → the front card covered
+  the wordmark's lower half. Two DESKTOP-ONLY levers (mobile keeps its fitTxtMesh scale + 0 idle):
+  `TXT_SCALE_DESKTOP 0.82` (was fixed 1.0) + `IDLE_Y_DESKTOP -12` via a new `idleCarouselY()`
+  used at init/deselect/endExit. Select still drops to the absolute `SELECTED_Y`, so the verified
+  hero framing is untouched; select→deselect returns the ring to -12 with no drift. Now reads like
+  the reference: big central tagline, cards in a lower arc. (Portrait card-sizing "passable"
+  issue is separate + still open.)
+
 **▶▶ ALL FOUR INNER PAGES ARE NOW BESPOKE (the thread narrative complete): US (voices) → THE BIG
 DAY (light + the knot) → IN FRAMES (darkness + the film strip) → WITH LOVE (ink that signs).**
 The generic `ChapterSection` loop is now only the unused fallback. Next: the user wants a POLISH
