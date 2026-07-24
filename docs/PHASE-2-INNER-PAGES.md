@@ -92,6 +92,13 @@ original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker*
   ⚠️ CIRCLE-BACK POLISH: signature completion timing rides high toward the nav late in the scene
   (transient mid-scroll; centered during natural scroll) — shift `.write` windows earlier.
 
+- **HOMEPAGE feel fixes (`7dd5ca82`, prod-verified).** (1) Hover felt laggy — the lift tween used
+  `power2.inOut` (eases IN, ~0.3s of near-zero motion); now `power2.out` + 1.0s→0.55s so it starts
+  on contact. (2) The explore-cursor accent went stale after a wheel-scroll (it only updated on
+  mousemove): `onFrontChapterCallback` fired only from `setTxtChapter`, whose idle call was gated
+  on `hoveredIndex===-1`. The front chapter is now reported every idle frame (decoupled from hover,
+  `lastFrontChapter` guard) so `--cursorAccent` tracks the ring as it settles. Verified: wheel-only
+  scroll (no mousemove) changed front 2→0 and the tint followed `#353454→#B32C05`; hover blend→2.0.
 - **HOMEPAGE desktop text/card collision FIXED (`40c6c1a8`, prod-verified 1.35 + 1.6).** The big
   central tagline mesh and the card ring shared the same vertical band → the front card covered
   the wordmark's lower half. Two DESKTOP-ONLY levers (mobile keeps its fitTxtMesh scale + 0 idle):
