@@ -113,6 +113,20 @@ original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker*
   cursor, so the per-frame re-resolve unhovered → dropped → re-hit → oscillated. The re-resolve now
   only SWITCHES cards (never unhovers); leaving the deck is onMouseMove's job. Verified: hover blend
   holds 2.00 across 12 samples (stable), move-off still unhovers (blend→0), 0 errors.
+- **⭐ WEDDING PALETTE adopted (2026-07-23, `93a04a6b`, prod-verified all 4 chapters + home).**
+  Replaced the Milla Nova reference colors with the couple's actual wedding palette, one hue family
+  per chapter (user-approved after a preview; retires the jarring rust-red). Wedding hexes are the
+  EXACT mid-tones; each chapter's dark ink + pale card bg are derived from the family:
+  | chapter | accent (ink) | accentLight (bg) | accentLighter (mid) | deep tone (components) |
+  |---|---|---|---|---|
+  | us | `#42221A` chocolate | `#F2EEE8` | `#D2C3AE` mocha | — |
+  | the-big-day | `#41492D` | `#E9ECE2` | `#A6B18A` sage | `#9BA66F` olive |
+  | in-frames | `#453350` | `#EFE8F5` | `#C3A6D8` lavender | `#9F7BB8` purple; room `#241A33` |
+  | with-love | `#2E4A52` | `#E8EDF2` | `#9FB4C8` dusty blue | `#6FAFC0` teal |
+  Touched: `CHAPTERS` + `main.css` vars; regenerated `cu-p1..4` + `cu-txt1..4` (bg=pale, ink=accent,
+  via `scratchpad/gen-textures.mjs`); the 4 bespoke components' hardcoded palettes (Big Day day→night
+  shifted to olive; In Frames room → deep purple `#241A33`, still "lights-down" dark; With Love ink →
+  teal); chrome fallbacks default to chocolate. With Love went pink→blue/teal (palette has no pink).
 - **MOBILE audit of the homepage refinements (2026-07-23, prod @390×844).** All relevant ones
   present + working: cursor/EXPLORE tint tracks front during scroll (front 1→3, tint followed);
   per-card TAP-to-select resolves via `posterAtScreen` at portrait (tap → `/us`); tighter tagline
