@@ -113,6 +113,14 @@ original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker*
   cursor, so the per-frame re-resolve unhovered → dropped → re-hit → oscillated. The re-resolve now
   only SWITCHES cards (never unhovers); leaving the deck is onMouseMove's job. Verified: hover blend
   holds 2.00 across 12 samples (stable), move-off still unhovers (blend→0), 0 errors.
+- **MOBILE audit of the homepage refinements (2026-07-23, prod @390×844).** All relevant ones
+  present + working: cursor/EXPLORE tint tracks front during scroll (front 1→3, tint followed);
+  per-card TAP-to-select resolves via `posterAtScreen` at portrait (tap → `/us`); tighter tagline
+  renders compact in the upper-middle, not cropped; parked EXPLORE button shows + tints; 0 errors.
+  Hover-only fixes (snappy ease, lift-follows-scroll, per-card lift, bottom-edge flicker) correctly
+  no-op on touch (`lastCursor` off-screen; "only switch, never unhover" guard). The desktop-only
+  collision fix (`IDLE_Y_DESKTOP`/`TXT_SCALE_DESKTOP`) is NOT needed on mobile — portrait already
+  separates wordmark (upper-third, `TXT_Y_MOBILE`+fitTxtMesh) from the card; verified no collision.
 - **HOMEPAGE tagline tightened (`4ab2c880`).** Too airy vs the reference's squeezed block. In
   `scratchpad/gen-textures.mjs`: line-height 0.94→0.82, `.sm` margins 14→3px, letter-spacing
   looser→tighter, size bump (xl 180→204, sm 74→86) — tighter spacing offsets the size so vertical
