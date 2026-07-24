@@ -888,11 +888,13 @@ export function useChapterScene() {
 
     // Keep hover + center text + cursor tint in sync each idle frame (Issues #9/#13/#14).
     if (introComplete && selectedIndex === -1) {
-      // Re-resolve the hover from the last cursor position against the CURRENT ring. This is
-      // what makes a wheel scroll (no mousemove) hand the lift to whatever card rotates under
-      // the pointer — front OR side — and settle it when scrolling stops. Same path as
-      // onMouseMove, so the two never disagree.
-      applyHover(resolveHoverTarget(lastCursorX, lastCursorY))
+      // Re-resolve the hover from the last cursor position against the CURRENT ring — this hands
+      // the lift to whatever card scrolls under a still pointer (a wheel fires no mousemove).
+      // But NEVER unhover from here: a lifting card moves its own hitbox up off the cursor, so
+      // unhovering on that miss made the bottom edge oscillate (lift → miss → drop → hit → …).
+      // Only SWITCH between cards; leaving the deck is onMouseMove's job (it fires on move-off).
+      const reTarget = resolveHoverTarget(lastCursorX, lastCursorY)
+      if (reTarget !== -1) applyHover(reTarget)
 
       const fc = frontChapterIdx()
       // Center text tracks the front card when NOT hovering (hover owns the wordmark, #9).
