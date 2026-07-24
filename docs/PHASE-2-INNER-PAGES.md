@@ -99,6 +99,10 @@ original (`/wine-o-clock`) on 2026-05-29. **This doc is the single live tracker*
   on `hoveredIndex===-1`. The front chapter is now reported every idle frame (decoupled from hover,
   `lastFrontChapter` guard) so `--cursorAccent` tracks the ring as it settles. Verified: wheel-only
   scroll (no mousemove) changed front 2→0 and the tint followed `#353454→#B32C05`; hover blend→2.0.
+  (3) The whole hover LIFT now follows the scroll too (`e4e77382`): while hovering, every idle frame
+  re-targets the lift to the current front slot (unhover old / hover new; tweens overwrite = smooth
+  handoff), so the flatten + film + text + colour all travel with the ring. Verified: wheel-only
+  scroll handed the lift 3→2 onto the new front, old card lowered, 0 errors.
 - **HOMEPAGE desktop text/card collision FIXED (`40c6c1a8`, prod-verified 1.35 + 1.6).** The big
   central tagline mesh and the card ring shared the same vertical band → the front card covered
   the wordmark's lower half. Two DESKTOP-ONLY levers (mobile keeps its fitTxtMesh scale + 0 idle):
