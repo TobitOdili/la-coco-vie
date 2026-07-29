@@ -111,7 +111,13 @@ routes (so no intro replay). Handles:
 - Document title via `useHead({ title })` (assigning `document.title` directly gets clobbered
   by Nuxt once `pages/` is active).
 - **Audio inline** via Howler (lazy-initialised on first user gesture). Each chapter has a
-  looping ambient track; volume fades up on hover (0.12), louder on select (0.5), out on leave.
+  looping ambient track (`CHAPTERS[i].audio`, `html5:true`) + a `tick` sound; volume fades up on
+  hover (0.12), louder on select (0.5), out on leave; the `SiteNav` sound toggle mutes Howler
+  globally. This is a faithful port of the reference's audio (verified 2026-07-23 via Browserless —
+  `chapter.millanova.com` uses the same Howler.js + the same files). ⚠️ **The 4 tracks are
+  PLACEHOLDERS** (the reference's own mp3s, named off the old chapter slugs) — swap for the couple's
+  wedding music and update `CHAPTERS[i].audio`. (`useAudio.js` was a *separate* never-imported
+  composable, deleted 2026-07-23; it was not this working path.)
 - Sets `--noise-url` to an **absolute** URL (see [Base URL & assets](#base-url--assets)).
 
 ### `pages/index.vue` + `pages/[slug].vue`

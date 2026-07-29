@@ -11,15 +11,22 @@ state, everything below it is history — newest first.)
 > **DONE & LIVE (all prod-verified):** the four chapters US / THE BIG DAY / IN FRAMES / WITH LOVE,
 > each a **bespoke inner page** (the "thread" motif — see the STATE entries); homepage carousel with
 > per-card hover/click (`posterAtScreen`), scroll-following lift, live cursor tint, names + date +
-> countdown, welcome note, RSVP; both exit edges; mobile/touch; and the **wedding colour palette**
-> (per-chapter hexes in the ▼ palette entry). Repo cleaned up + docs current (this pass).
+> countdown, welcome note, RSVP; both exit edges; mobile/touch; the **wedding colour palette**
+> (per-chapter hexes in the ▼ palette entry); and **AMBIENT AUDIO** (Howler.js inline in `app.vue`:
+> a per-chapter looping track from `CHAPTERS[i].audio` + a `tick` sound, lazy-init on first gesture,
+> volume fades hover 0.12 / select 0.5, sound toggle in `SiteNav`). Repo cleaned up + docs current.
 > **PLACEHOLDER (waiting on the couple):** all copy, the date's YEAR (Oct 27 confirmed, 2026 assumed),
-> venues, the registry items, the RSVP destination (`#rsvp`), gallery photos (Milla Nova stills) and
-> the card films, and the favicon (still Milla Nova's).
-> **NEXT / OPEN:** real content + media; per-page polish (In Frames flagged "could be better"; Big Day
-> wants the traditional-wedding date + thread-motion consistency); portrait card-sizing ("passable");
-> code-health (split the ~1500-line `useChapterScene.js`; `prefers-reduced-motion`; 34M MP4s).
+> venues, the registry items, the RSVP destination (`#rsvp`), gallery photos (Milla Nova stills), the
+> card films, the favicon (still Milla Nova's), **and the 4 AUDIO tracks** — currently the reference's
+> own files (`eat-merry-love`/`la-storia`/`wine-time`/`amour-getway`.mp3), to be replaced with the
+> couple's wedding music (one loop per chapter; rename to the new slugs + update `CHAPTERS[i].audio`).
+> **NEXT / OPEN:** real content + media (incl. audio); per-page polish (In Frames flagged "could be
+> better"; Big Day wants the traditional-wedding date + thread-motion consistency); portrait
+> card-sizing ("passable"); code-health (split the ~1500-line `useChapterScene.js`;
+> `prefers-reduced-motion`; 34M MP4s).
 > **Regenerate card art:** `npm run gen:textures` (see [`scripts/README.md`](../scripts/README.md)).
+> **Audio matches the reference** (verified 2026-07-23 via Browserless: `chapter.millanova.com` uses
+> the same Howler.js + the same 4 loop files + tick — our audio is a faithful port, not missing).
 
 ## 🚀 Pick up from here (cold start)
 
