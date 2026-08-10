@@ -38,8 +38,12 @@
               :data-window="itemWindow(j, s.items.length)"
               :data-rot="it.rot"
               :data-depth="0.3 + j * 0.22">
+              <!-- NOT lazy, and the ratio is reserved: a cut-out with height:auto
+                   is 0px tall until it decodes, which collapses the whole paper
+                   page to its header and makes spreads look like they overlap. -->
               <div class="lift">
-                <img :src="it.image" :alt="it.name" loading="lazy" decoding="async" />
+                <img :src="it.image" :alt="it.name" decoding="async"
+                  :style="{ aspectRatio: it.ratio || '480 / 277' }" />
                 <span class="tape" aria-hidden="true"></span>
                 <span v-if="it.claimed" class="stamp" aria-hidden="true">taken</span>
               </div>
@@ -211,6 +215,7 @@ onBeforeUnmount(() => cancelAnimationFrame(rafId))
   border: 1px solid var(--paper-edge);
   padding: clamp(2.25rem, 5vw, 4rem) clamp(1.5rem, 5vw, 4.5rem) clamp(3rem, 7vw, 5rem);
   box-shadow: 0 26px 50px -34px rgba(20, 24, 28, 0.55);
+  min-height: 62vh;   /* a spread is a PAGE — never let it shrink-wrap its header */
 }
 .stitch {
   position: absolute;
@@ -271,7 +276,11 @@ onBeforeUnmount(() => cancelAnimationFrame(rafId))
   transform: translateY(-9px) scale(1.055) rotate(calc(var(--rot, 0deg) * -1));
   filter: drop-shadow(0 24px 26px rgba(20, 24, 28, 0.28));
 }
-.lift img { display: block; width: 100%; height: auto; }
+/* `aspect-ratio` is set inline per item (data `ratio`, default the placeholder's)
+   so the page keeps its height before the image decodes. object-fit: contain
+   means a swapped-in image with a different ratio letterboxes rather than
+   distorts — set `ratio` on the item to fit it exactly. */
+.lift img { display: block; width: 100%; height: auto; object-fit: contain; }
 
 /* One strip of tape, never five. */
 .tape {
