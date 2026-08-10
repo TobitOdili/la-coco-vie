@@ -61,10 +61,11 @@ real-browser-verified.
 - **Homepage card sizing on portrait** — cards read oversized/cropped. Root cause understood (three's `fov`
   is vertical, so portrait collapses the horizontal view), but every lever also moves the hero, which is
   currently correct — needs a compensating hero adjustment rather than a guess.
-- **Real gallery photos** from the reference (the harvest recipe is at the top of PHASE-2-INNER-PAGES).
+- **Real gallery photos** — now the couple's own, waiting in `new frames/` (the card films were
+  swapped in 2026-08-10; the inner-page galleries are still Milla Nova stills).
 - Richer ScrollTrigger/Lenis parallax + inline films; section bg alternation (**G**).
 - Code-health debt: split the ~1500-line `useChapterScene.js` god-module; perf/a11y (no
-  `prefers-reduced-motion`, 34M MP4s); remove `useAudio.js`.
+  `prefers-reduced-motion`). *(The 34M of MP4s is resolved — the new films total 6.6M.)*
 
 ### QA habit (carried from Phase 1)
 Verify at each step: Browserless probes/geometry on prod + a real-browser pass (Claude-in-Chrome)

@@ -17,9 +17,9 @@ opens into its own bespoke scroll page.
 > [Sarakuz](https://sarakuz.com)) — a technical study. As of **2026-07-23** it has been **re-skinned
 > into Covenant &amp; Uvie's wedding site**: the four cards became the journey **US → THE BIG DAY →
 > IN FRAMES → WITH LOVE**, each with its own bespoke inner page. Full credit to the original
-> creators for the interaction design. Remaining Milla Nova media in `public/` (films, some gallery
-> stills) are **aspect-correct placeholders** awaiting the couple's own photos/video, and are **not**
-> for redistribution.
+> creators for the interaction design. The **card films are now the couple's own** (2026-08-10);
+> the remaining Milla Nova media in `public/` (gallery stills, the ambient audio, the favicon) are
+> **aspect-correct placeholders** awaiting their own, and are **not** for redistribution.
 >
 > ⚠️ **ALL copy, dates, venues, and the registry are PLACEHOLDERS** pending the couple's real
 > details. The wedding date (October 27, 2026) is user-confirmed; the year is assumed 2026.
@@ -59,10 +59,14 @@ experience unified by one motif — a thread that runs through the whole site.**
 - ✅ **Wedding colour palette** — one hue family per chapter (US beige/chocolate · Big Day sage/olive ·
   In Frames lavender/purple · With Love dusty-blue/teal). Card art is **generated**:
   `npm run gen:textures` (see [`scripts/README.md`](scripts/README.md)).
-- 🔧 **Open** — real content/media from the couple (copy, photos, registry, RSVP destination);
-  per-page polish (In Frames flagged, Big Day: traditional-wedding date + thread motion); favicon
-  still Milla Nova's; portrait card-sizing; code-health (split the ~1500-line scene module,
-  `prefers-reduced-motion`, 34M MP4s).
+- ✅ **The couple's own card films** — one per chapter (`public/video/{slug}.mp4`), replacing the
+  Milla Nova placeholders. Raw media is dropped in **`new frames/`** at the repo root; see
+  [CONTENT-AND-ASSETS → Swapping the card films](docs/CONTENT-AND-ASSETS.md#swapping-the-card-films)
+  for the 900×1200 crop-encode recipe.
+- 🔧 **Open** — the rest of the real content/media (copy, gallery photos, ambient audio, registry,
+  RSVP destination); per-page polish (In Frames flagged, Big Day: traditional-wedding date + thread
+  motion); favicon still Milla Nova's; portrait card-sizing; code-health (split the ~1500-line scene
+  module, `prefers-reduced-motion`).
 
 Full live status → [`PROGRESS.md`](PROGRESS.md) · issue history → [`AUDIT.md`](AUDIT.md) · plan → [`docs/ROADMAP.md`](docs/ROADMAP.md)
 
@@ -121,15 +125,19 @@ components/
   SiteNav.vue                Top nav (About · logo · Collection) + bottom bar (credit · sound)
   AboutPanel.vue             Full-screen About overlay
   LoadingScreen.vue          Asset-gated loading counter (GSAP)
-  chapter/ChapterSection.vue Inner-page section block (heading + copy + gallery, fade-up reveal)
-  chapter/DressTail.vue      Dress card (photo + name + params + link) — rendered as a viewport-pinned popup
-  chapter/ChapterEnd.vue     Chapter-end: "Discover dress from the chapter" + Wedding/Evening pills + socials + disclaimer
+  chapter/UsStory.vue        ★ US — "the margin notes" (bespoke page)
+  chapter/BigDay.vue         ★ THE BIG DAY — "the hours" + the knot (bespoke page)
+  chapter/InFrames.vue       ★ IN FRAMES — "the screening room" film strip (bespoke page)
+  chapter/WithLove.vue       ★ WITH LOVE — the ink that writes and signs (bespoke page)
+  chapter/ChapterSection.vue Generic section block — now the unused fallback
+  chapter/PopupCard.vue      Floating white card (moment / utility / registry) pinned to the viewport
+  chapter/ChapterEnd.vue     Chapter-end: "See you there — RSVP" + socials + disclaimer
 composables/
-  useChapterScene.js         ★ The whole 3D experience: scene, shaders, intro, select/exit
-  chapterPages.js            Inner-page content: CHAPTER_PAGES + DRESSES (data only)
-  useAudio.js                ⚠️ DEAD CODE — superseded by inline audio in app.vue (see ARCHITECTURE)
+  useChapterScene.js         ★ The whole 3D experience: scene, shaders, intro, select/exit + CHAPTERS
+  chapterPages.js            Inner-page content: CHAPTER_PAGES + POPUPS (data only)
 assets/css/main.css          Fonts, cursor, noise overlay, container, per-chapter color vars
-public/                      Static assets — posters, videos, audio, fonts (see CONTENT-AND-ASSETS)
+public/                      Static assets — posters, films, audio, fonts (see CONTENT-AND-ASSETS)
+new frames/                  📁 Media drop — the couple's raw photos/films, processed into public/
 .github/workflows/deploy.yml GitHub Pages CI (npm run generate, base /la-coco-vie/)
 ```
 

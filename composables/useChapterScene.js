@@ -9,8 +9,10 @@ const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
 const asset = (path) => `${base}${path}`
 
 // Chapter data — the four chapters of the Covenant & Uvie journey.
-// Accents/videos/audio are inherited from the Milla Nova build as aspect-correct
-// PLACEHOLDERS until the couple's media arrives; the cu-* textures are ours.
+// The card FILMS are the couple's own (2026-08-10, sourced from `new frames/`,
+// crop-encoded to the 900×1200 the card shader expects — see CONTENT-AND-ASSETS).
+// AUDIO is still inherited from the Milla Nova build as a PLACEHOLDER; the cu-*
+// textures are ours.
 export const CHAPTERS = [
   {
     slug: 'us',
@@ -19,7 +21,7 @@ export const CHAPTERS = [
     accentLight: '#F2EEE8',
     accentLighter: '#D2C3AE',
     audio: asset('/audio/eat-merry-love.mp3'),
-    video: asset('/video/eat-intro.mp4'),
+    video: asset('/video/us.mp4'),
     txt: asset('/images/cu-txt1.png'),
     svg: asset('/images/cu-p1.png'),
     index: 0,
@@ -31,7 +33,7 @@ export const CHAPTERS = [
     accentLight: '#E9ECE2',
     accentLighter: '#A6B18A',
     audio: asset('/audio/la-storia.mp3'),
-    video: asset('/video/la-intro.mp4'),
+    video: asset('/video/the-big-day.mp4'),
     txt: asset('/images/cu-txt2.png'),
     svg: asset('/images/cu-p2.png'),
     index: 1,
@@ -43,7 +45,7 @@ export const CHAPTERS = [
     accentLight: '#EFE8F5',
     accentLighter: '#C3A6D8',
     audio: asset('/audio/wine-time.mp3'),
-    video: asset('/video/wine-intro.mp4'),
+    video: asset('/video/in-frames.mp4'),
     txt: asset('/images/cu-txt3.png'),
     svg: asset('/images/cu-p3.png'),
     index: 2,
@@ -55,7 +57,7 @@ export const CHAPTERS = [
     accentLight: '#E8EDF2',
     accentLighter: '#9FB4C8',
     audio: asset('/audio/amour-getway.mp3'),
-    video: asset('/video/amour-intro.mp4'),
+    video: asset('/video/with-love.mp4'),
     txt: asset('/images/cu-txt4.png'),
     svg: asset('/images/cu-p4.png'),
     index: 3,

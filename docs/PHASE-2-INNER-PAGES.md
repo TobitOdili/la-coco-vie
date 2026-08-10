@@ -28,6 +28,22 @@ state, everything below it is history — newest first.)
 > **Audio matches the reference** (verified 2026-07-23 via Browserless: `chapter.millanova.com` uses
 > the same Howler.js + the same 4 loop files + tick — our audio is a faithful port, not missing).
 
+**▶▶ STATE (2026-08-10) — THE COUPLE'S OWN CARD FILMS ARE IN.** The four hover/select films are no
+longer Milla Nova's: `public/video/{us,the-big-day,in-frames,with-love}.mp4`, sourced from the
+**`new frames/`** drop folder at the repo root (tracked in git — that's where the couple's raw media
+lands, photos included). `CHAPTERS[i].video` updated; the old `*-intro.mp4` deleted (recoverable
+before `5d44726c`); `public/video/` went 32M → 6.6M.
+⚠️ **Encode gotcha — the card shader wants 900×1200 (3:4), silent.** The sources are SQUARE phone
+exports (546–720px, ~4.5 Mbps, with AAC): feeding a square texture into the 3:4 window stretches
+faces vertically. They're **cropped to fill** (`scale=-2:1200,crop=900:1200:X:0`), `-an`, CRF 23 —
+recipe + the per-file X offsets in [CONTENT-AND-ASSETS → Swapping the card films](CONTENT-AND-ASSETS.md#swapping-the-card-films).
+`with-love` needed `X=240` (not the centre 150) to keep his face in frame; frames were contact-sheeted
+across each clip before shipping because the subjects move.
+⚠️ **Video does NOT decode in ANY headless engine** (Browserless included) — a prod probe can confirm
+the files fetch 200 and the `<video>` elements reach `readyState`/`videoWidth`, but *how the films
+look on the cards* needs a real browser or the user. **Still placeholder:** gallery stills, ambient
+audio, favicon.
+
 ## 🚀 Pick up from here (cold start)
 
 1. `npm install` → `npm run dev` → http://localhost:3001 (macOS build gotcha + commands in the [README](../README.md)).
