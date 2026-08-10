@@ -24,6 +24,13 @@
 const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
 const asset = (p) => `${base}${p}`
 
+// ⚠️ PLACEHOLDER registry art — ONE stock clipart cut-out standing in for every
+// item, so the album's layout/motion can be judged before the real list exists.
+// It carries the stock vendor's watermark on purpose (it is a free preview, not a
+// licensed asset) — swap per item via `image:` before launch. See
+// docs/CONTENT-AND-ASSETS.md → "The registry album".
+const PLACEHOLDER_ITEM = asset('/images/registry/placeholder-item.png')
+
 // ── The floating popup cards ─────────────────────────────────────────────────
 export const POPUPS = {
   // “Us” — captioned moments (polaroids that follow the story).
@@ -87,6 +94,9 @@ export const POPUPS = {
     params: ['for everywhere we have not been', 'placeholder item'],
     url: '#',
   },
+  // ⚠️ The four reg* cards above are ORPHANED as of 2026-08-10: the With Love
+  // album renders its items in the page and has no floating popups. Kept only
+  // in case the album ever wants a utility card; delete if it never does.
 }
 
 // ── The four chapters ────────────────────────────────────────────────────────
@@ -246,49 +256,101 @@ export const CHAPTER_PAGES = {
   // marked in a catalogue, then splits in two to SIGN both names. No shop; each gift is
   // written as the future memory it becomes, and the registry link is the floating card.
   // Fields: kind ('open'|'gift'|'sign'); gift scenes = { memory, gift, popups:[regKey] }.
+  // ── WITH LOVE — "the album": a scrapbook of cut-outs, pasted page by page. ──
+  // No prices, no per-item links (user decision 2026-08-10): the items say what
+  // we'd love, and the ONE call to action is the cash card at the end.
+  // Item shape: { name, caption, image, w (page-width %), rot (deg), claimed }
+  //   • `claimed: true` greys an item out + marks it taken. Supported but unused
+  //     until gifts are actually tracked.
   'with-love': {
     sections: [
       {
-        kind: 'open',
+        kind: 'cover',
+        big: 'with love',
         lead: 'before you give us a single thing —',
-        big: 'thank you',
         sub: 'your presence on the day is the whole gift. truly.',
-        pivot: 'but if your love language comes wrapped with a bow…',
+        pivot: 'but if your love language comes wrapped with a bow, we kept a little book of wishes.',
         popups: [],
       },
       {
-        kind: 'gift',
-        memory: 'slow sunday mornings — two cups, no hurry.',
-        gift: 'the espresso machine',
-        thanks: 'thank you.',
-        popups: ['regEspresso'],
+        kind: 'spread',
+        no: 'i',
+        heading: 'for the kitchen',
+        note: 'where most of our arguing — and all of our eating — will happen.',
+        items: [
+          {
+            name: 'the espresso machine',
+            caption: 'slow sunday mornings, two cups, no hurry.',
+            image: PLACEHOLDER_ITEM, w: 44, rot: -3.2, claimed: false,
+          },
+          {
+            name: 'dinnerware for twelve',
+            caption: 'every table we will set for the people we love.',
+            image: PLACEHOLDER_ITEM, w: 36, rot: 2.6, claimed: false,
+          },
+          {
+            name: 'a good, heavy pot',
+            caption: 'the jollof will be judged. we intend to be ready.',
+            image: PLACEHOLDER_ITEM, w: 33, rot: -1.4, claimed: false,
+          },
+        ],
+        popups: [],
       },
       {
-        kind: 'gift',
-        memory: 'every table we will set for the people we love.',
-        gift: 'dinnerware for twelve',
-        thanks: 'thank you.',
-        popups: ['regDinner'],
+        kind: 'spread',
+        no: 'ii',
+        heading: 'for the home',
+        note: 'the small things that turn an address into a place you want to be.',
+        items: [
+          {
+            name: 'linens, the soft kind',
+            caption: 'for the first morning we wake up somewhere that is ours.',
+            image: PLACEHOLDER_ITEM, w: 40, rot: 2.1, claimed: false,
+          },
+          {
+            name: 'a lamp for the corner',
+            caption: 'the one we will read under, badly, until far too late.',
+            image: PLACEHOLDER_ITEM, w: 32, rot: -2.8, claimed: false,
+          },
+          {
+            name: 'frames, empty for now',
+            caption: 'we have a wedding coming. they will not stay empty.',
+            image: PLACEHOLDER_ITEM, w: 37, rot: 1.5, claimed: false,
+          },
+        ],
+        popups: [],
       },
       {
-        kind: 'gift',
-        memory: 'for everywhere we have not been yet.',
-        gift: 'a weekender for two',
-        thanks: 'thank you.',
-        popups: ['regLuggage'],
+        kind: 'spread',
+        no: 'iii',
+        heading: 'for the going',
+        note: 'because staying in is lovely, and leaving is lovelier.',
+        items: [
+          {
+            name: 'a weekender for two',
+            caption: 'for everywhere we have not been yet.',
+            image: PLACEHOLDER_ITEM, w: 42, rot: -2.2, claimed: false,
+          },
+          {
+            name: 'the picnic basket',
+            caption: 'optimistic, in this weather. we are doing it anyway.',
+            image: PLACEHOLDER_ITEM, w: 34, rot: 3.1, claimed: false,
+          },
+        ],
+        popups: [],
       },
       {
-        kind: 'gift',
-        memory: 'the first of many, many adventures.',
-        gift: 'the honeymoon fund',
-        thanks: 'thank you.',
-        popups: ['regFund'],
-      },
-      {
-        kind: 'sign',
-        closer: 'with love,',
-        names: ['Covenant', 'Uvie'],
-        tail: 'see you on october 27.',
+        kind: 'cash',
+        heading: 'or, simply —',
+        body:
+          'if you would rather send something toward the honeymoon, that is more than ' +
+          'welcome, and we will think of you every single day of it.',
+        cta: 'how to send it',
+        // ⚠️ PLACEHOLDER — becomes a payment link or a get-in-touch destination.
+        // NO bank details on the page (user decision 2026-08-10).
+        url: '#',
+        note: 'no account numbers here, on purpose — this just puts you in touch with us.',
+        sign: 'with love, Covenant & Uvie',
         popups: [],
       },
     ],

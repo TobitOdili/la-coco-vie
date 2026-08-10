@@ -1,74 +1,68 @@
 <template>
-  <div ref="rootEl" class="with-love">
+  <div ref="rootEl" class="album">
     <template v-for="(s, i) in sections" :key="i">
-      <!-- ── Opening · the ink writes the thank-you, before anything is asked. ── -->
-      <section v-if="s.kind === 'open'" class="chapter-section love-scene open-scene" :data-idx="i">
-        <div class="lead fade" data-window="0.04,0.24">{{ s.lead }}</div>
-        <div class="big-thanks write" data-window="0.14,0.58">{{ s.big }}</div>
-        <svg class="flourish" viewBox="0 0 600 60" preserveAspectRatio="none" aria-hidden="true">
-          <path class="scrub" data-window="0.5,0.72" pathLength="1"
-            d="M 20 34 C 160 12, 300 12, 430 30 C 500 40, 560 34, 585 22"
-            :stroke="ink" stroke-width="3" fill="none" stroke-linecap="round" />
-        </svg>
-        <div class="sub fade" data-window="0.6,0.8">{{ s.sub }}</div>
-        <div class="pivot fade" data-window="0.8,0.97">{{ s.pivot }}</div>
-      </section>
-
-      <!-- ── Gift · a future memory, the gift circled like a catalogue, thank-you. ── -->
-      <section v-else-if="s.kind === 'gift'" class="chapter-section love-scene gift-scene" :data-idx="i">
-        <svg class="connector" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
-          <path class="scrub" data-window="0,0.82" pathLength="1"
-            d="M 500 0 C 540 240, 452 470, 500 690 C 522 830, 492 930, 500 1000"
-            :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.5" />
-        </svg>
-        <div class="gift-stanza">
-          <div class="memory write" data-window="0.06,0.42">{{ s.memory }}</div>
-          <div class="gift-wrap">
-            <span class="gift-name fade" data-window="0.18,0.42">{{ s.gift }}</span>
-            <svg class="circle" viewBox="0 0 640 200" aria-hidden="true">
-              <path class="scrub" data-window="0.46,0.78" pathLength="1"
-                d="M 120 108 C 70 60, 300 34, 430 42 C 560 50, 600 96, 560 138 C 520 178, 240 182, 130 158 C 70 144, 66 96, 150 74"
-                :stroke="ink" stroke-width="3" fill="none" stroke-linecap="round" />
-            </svg>
-          </div>
-          <div class="thanks fade" data-window="0.74,0.92">{{ s.thanks }}</div>
-        </div>
-      </section>
-
-      <!-- ── Signing · the ink splits in two and signs both names. ── -->
-      <section v-else-if="s.kind === 'sign'" class="chapter-section love-scene sign-scene" :data-idx="i">
-        <div class="closer fade" data-window="0.14,0.34">{{ s.closer }}</div>
-        <div class="sign-block">
-          <!-- Trunk descends, forks, and each branch runs INTO the start of a name. -->
-          <svg class="fork" viewBox="0 0 1000 160" preserveAspectRatio="none" aria-hidden="true">
-            <path class="scrub" data-window="0.2,0.4" pathLength="1"
-              d="M 500 0 C 500 40, 500 70, 500 88"
-              :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55" />
-            <path class="scrub" data-window="0.4,0.54" pathLength="1"
-              d="M 500 88 C 440 118, 300 128, 230 160"
-              :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55" />
-            <path class="scrub" data-window="0.4,0.54" pathLength="1"
-              d="M 500 88 C 560 118, 700 128, 770 160"
-              :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55" />
+      <!-- ── Cover · the book, closed. Everything after this is a page of it. ── -->
+      <section v-if="s.kind === 'cover'" class="chapter-section album-scene cover-scene" :data-idx="i">
+        <div class="cover-card paste" data-window="0.02,0.30" data-rot="-1.1" data-depth="0.35">
+          <span class="cover-lead">{{ s.lead }}</span>
+          <h2 class="cover-title">{{ s.big }}</h2>
+          <svg class="rule" viewBox="0 0 400 12" preserveAspectRatio="none" aria-hidden="true">
+            <path class="scrub" data-window="0.18,0.44" pathLength="1" d="M 8 6 L 392 6"
+              :stroke="ink" stroke-width="1.5" fill="none" stroke-linecap="round" />
           </svg>
-          <div class="sig-row">
-            <div class="sig">
-              <span class="sig-name write" data-window="0.52,0.72">{{ s.names[0] }}</span>
-              <svg class="sig-line" viewBox="0 0 360 24" preserveAspectRatio="none" aria-hidden="true">
-                <path class="scrub" data-window="0.7,0.82" pathLength="1"
-                  d="M 12 14 C 120 6, 250 6, 348 12" :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" />
-              </svg>
-            </div>
-            <div class="sig">
-              <span class="sig-name write" data-window="0.64,0.84">{{ s.names[1] }}</span>
-              <svg class="sig-line" viewBox="0 0 360 24" preserveAspectRatio="none" aria-hidden="true">
-                <path class="scrub" data-window="0.82,0.92" pathLength="1"
-                  d="M 12 14 C 120 6, 250 6, 348 12" :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" />
-              </svg>
-            </div>
+          <p class="cover-sub">{{ s.sub }}</p>
+        </div>
+        <p class="cover-pivot fade" data-window="0.52,0.78">{{ s.pivot }}</p>
+      </section>
+
+      <!-- ── Spread · a page of the album; cut-outs paste themselves down. ── -->
+      <section v-else-if="s.kind === 'spread'" class="chapter-section album-scene spread-scene" :data-idx="i">
+        <div class="page">
+          <!-- The thread's last form: the stitch binding the album, drawn top→bottom. -->
+          <svg class="stitch drawdown" data-window="0.02,0.8" viewBox="0 0 6 200"
+            preserveAspectRatio="none" aria-hidden="true">
+            <path d="M 3 0 L 3 200" :stroke="ink" stroke-width="1.4" fill="none"
+              stroke-dasharray="5 7" stroke-linecap="round" opacity="0.45" />
+          </svg>
+
+          <header class="page-head">
+            <span class="page-no fade" data-window="0.02,0.16">{{ s.no }}</span>
+            <h3 class="page-heading fade" data-window="0.04,0.2">{{ s.heading }}</h3>
+            <p class="page-note fade" data-window="0.09,0.28">{{ s.note }}</p>
+          </header>
+
+          <div class="collage">
+            <figure v-for="(it, j) in s.items" :key="j" class="item paste"
+              :class="{ 'is-claimed': it.claimed }"
+              :style="{ '--w': it.w + '%', '--rot': it.rot + 'deg' }"
+              :data-window="itemWindow(j, s.items.length)"
+              :data-rot="it.rot"
+              :data-depth="0.3 + j * 0.22">
+              <div class="lift">
+                <img :src="it.image" :alt="it.name" loading="lazy" decoding="async" />
+                <span class="tape" aria-hidden="true"></span>
+                <span v-if="it.claimed" class="stamp" aria-hidden="true">taken</span>
+              </div>
+              <figcaption :aria-disabled="it.claimed ? 'true' : undefined">
+                <span class="label">{{ it.name }}</span>
+                <span class="cap">{{ it.caption }}</span>
+                <span v-if="it.claimed" class="sr-taken">— already given, thank you</span>
+              </figcaption>
+            </figure>
           </div>
         </div>
-        <div class="tail fade" data-window="0.88,1">{{ s.tail }}</div>
+      </section>
+
+      <!-- ── Cash · the one call to action in the whole album. ── -->
+      <section v-else-if="s.kind === 'cash'" class="chapter-section album-scene cash-scene" :data-idx="i">
+        <div class="envelope paste" data-window="0.08,0.40" data-rot="-0.7" data-depth="0.3">
+          <span class="flap" aria-hidden="true"></span>
+          <h3 class="cash-heading">{{ s.heading }}</h3>
+          <p class="cash-body">{{ s.body }}</p>
+          <a class="cash-cta" :href="s.url">{{ s.cta }}</a>
+          <p class="cash-note">{{ s.note }}</p>
+        </div>
+        <p class="cash-sign fade" data-window="0.56,0.8">{{ s.sign }}</p>
       </section>
     </template>
   </div>
@@ -85,22 +79,56 @@ const ink = '#2E4A52'
 const rootEl = ref(null)
 let rafId = 0
 
-// Same rAF scrub engine as BigDay/InFrames, plus `.write` — a left-to-right clip
-// reveal that reads as the ink writing the text. Every animated element declares
-// data-window="start,end" (its slice of the SCENE's 0→1 progress).
+// Each item gets its own slice of the scene so a spread pastes down in sequence
+// rather than all at once.
+function itemWindow(j, n) {
+  const start = 0.16 + j * (0.42 / Math.max(1, n))
+  return `${start.toFixed(3)},${(start + 0.3).toFixed(3)}`
+}
+
+// Gentle overshoot — the cut-out drops slightly past its resting angle and settles.
+function easeOutBack(t) {
+  const c1 = 1.0
+  const c3 = c1 + 1
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2)
+}
+
+// Same rAF scrub engine as BigDay/InFrames — every animated element declares
+// data-window="start,end" (its slice of the SCENE's 0→1 progress). Types:
+//   .fade      opacity
+//   .scrub     SVG stroke draw-on
+//   .drawdown  clip reveal, top → bottom (the binding stitch)
+//   .paste     the cut-out settling onto the page (+ depth parallax)
+// Only transform/opacity are touched per frame; shadows are CSS (a per-frame
+// drop-shadow recompute on a full-size PNG is what makes this kind of page crawl).
 function tick() {
   const root = rootEl.value
   if (root) {
     const vh = window.innerHeight
-    for (const scene of root.querySelectorAll('.love-scene')) {
+    for (const scene of root.querySelectorAll('.album-scene')) {
       const r = scene.getBoundingClientRect()
       const p = Math.min(1, Math.max(0, (vh - r.top) / (r.height + vh)))
-      for (const el of scene.querySelectorAll('.scrub, .fade, .write')) {
+      for (const el of scene.querySelectorAll('.scrub, .fade, .drawdown, .paste')) {
         const [a, b] = el.dataset.window.split(',').map(Number)
         const lp = Math.min(1, Math.max(0, (p - a) / (b - a)))
-        if (el.classList.contains('scrub')) el.style.strokeDashoffset = String(1 - lp)
-        else if (el.classList.contains('write')) el.style.clipPath = `inset(0 ${((1 - lp) * 100).toFixed(1)}% 0 0)`
-        else el.style.opacity = String(lp)
+
+        if (el.classList.contains('scrub')) {
+          el.style.strokeDashoffset = String(1 - lp)
+        } else if (el.classList.contains('drawdown')) {
+          el.style.clipPath = `inset(0 0 ${((1 - lp) * 100).toFixed(1)}% 0)`
+        } else if (el.classList.contains('paste')) {
+          const e = easeOutBack(lp)
+          const rot = Number(el.dataset.rot || 0)
+          const depth = Number(el.dataset.depth || 0)
+          const drift = (p - 0.5) * depth * 30      // parallax: pages breathe apart
+          const y = (1 - e) * 26 + drift
+          const scale = 1 + (1 - e) * 0.045
+          const tilt = rot - (1 - e) * 4            // lands into its pasted angle
+          el.style.transform = `translate3d(0, ${y.toFixed(2)}px, 0) rotate(${tilt.toFixed(2)}deg) scale(${scale.toFixed(3)})`
+          el.style.opacity = String(Math.min(1, lp * 1.7))
+        } else {
+          el.style.opacity = String(lp)
+        }
       }
     }
   }
@@ -112,127 +140,259 @@ onBeforeUnmount(() => cancelAnimationFrame(rafId))
 </script>
 
 <style scoped>
-.love-scene {
+/* The chapter's cool blue is the SURFACE; the album pages are warm paper on top. */
+.album {
+  --paper: #f4efe5;
+  --paper-edge: #e2d9c8;
+  color: var(--accent, #2e4a52);
+  background: var(--accentLight, #e8edf2);
+}
+
+.album-scene {
   position: relative;
-  color: var(--accent, #2E4A52);
-  background: var(--accentLight, #E8EDF2);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  padding: clamp(4rem, 12vh, 9rem) 1.25rem;
+  min-height: 100vh;
+}
+
+/* ── Cover ────────────────────────────────────────────────────────────────── */
+.cover-card {
+  background: var(--paper);
+  border: 1px solid var(--paper-edge);
+  outline: 1px solid var(--paper);
+  outline-offset: -9px;
+  padding: clamp(2.5rem, 7vw, 5rem) clamp(2rem, 8vw, 6rem);
   text-align: center;
-  padding: 12vh 8vw;
-  box-sizing: border-box;
+  max-width: 44rem;
+  box-shadow: 0 22px 40px -26px rgba(20, 24, 28, 0.5);
+  will-change: transform, opacity;
 }
-.scrub { stroke-dasharray: 1; stroke-dashoffset: 1; }
-.fade { opacity: 0; }
-.write { clip-path: inset(0 100% 0 0); }
-
-/* ── opening ── */
-.open-scene { min-height: 128dvh; }
-.lead {
-  font-family: 'Bague', sans-serif;
-  font-size: 0.8rem;
-  letter-spacing: 0.26em;
+.cover-lead {
+  display: block;
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  opacity: 0.6;
-  margin-bottom: 2.4rem;
+  opacity: 0.62;
 }
-.big-thanks {
-  font-family: 'Over the Rainbow', cursive;
-  font-size: clamp(3.4rem, 12vw, 9rem);
-  line-height: 1;
-}
-.flourish { width: min(46vw, 30rem); height: 3.4rem; margin-top: -0.4rem; }
-.sub {
-  font-family: 'Italiana', serif;
-  font-size: clamp(1.2rem, 2.4vw, 1.9rem);
-  margin-top: 1.6rem;
-  max-width: 32rem;
-}
-.pivot {
+.cover-title {
   font-family: 'Bague', sans-serif;
-  font-size: 0.82rem;
+  text-transform: uppercase;
   letter-spacing: 0.16em;
-  text-transform: uppercase;
-  opacity: 0.55;
-  margin-top: 4rem;
-  max-width: 30rem;
+  font-size: clamp(2.4rem, 8vw, 4.6rem);
+  line-height: 1;
+  margin: 0.7em 0 0.5em;
+}
+.rule { display: block; width: 100%; height: 12px; }
+.rule .scrub { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.cover-sub {
+  margin: 1.6rem auto 0;
+  max-width: 26rem;
+  font-size: 0.98rem;
+  line-height: 1.65;
+  opacity: 0.78;
+}
+.cover-pivot {
+  margin-top: clamp(2.5rem, 7vh, 5rem);
+  max-width: 34rem;
+  text-align: center;
+  font-size: 1.02rem;
+  line-height: 1.7;
+  opacity: 0;
 }
 
-/* ── gift stanza ── */
-.gift-scene { min-height: 118dvh; }
-.connector { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.gift-stanza { position: relative; z-index: 1; }
-.memory {
-  font-family: 'Over the Rainbow', cursive;
-  font-size: clamp(1.3rem, 2.6vw, 2rem);
-  opacity: 0.9;
-  margin-bottom: 2.6rem;
+/* ── A page of the album ──────────────────────────────────────────────────── */
+.page {
+  position: relative;
+  width: min(72rem, 100%);
+  background: var(--paper);
+  border: 1px solid var(--paper-edge);
+  padding: clamp(2.25rem, 5vw, 4rem) clamp(1.5rem, 5vw, 4.5rem) clamp(3rem, 7vw, 5rem);
+  box-shadow: 0 26px 50px -34px rgba(20, 24, 28, 0.55);
 }
-.gift-wrap { position: relative; display: inline-block; padding: 0.6rem 1.4rem; }
-.gift-name {
-  font-family: 'Bague', sans-serif;
-  font-weight: 700;
-  font-size: clamp(1.8rem, 4.6vw, 3.4rem);
-  letter-spacing: 0.01em;
-}
-.circle {
+.stitch {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%) scale(1.18);
-  width: 100%;
-  height: 200%;
-  pointer-events: none;
-  overflow: visible;
-}
-.thanks {
-  font-family: 'Over the Rainbow', cursive;
-  font-size: 1.15rem;
-  opacity: 0.75;
-  margin-top: 2.8rem;
+  left: 14px;
+  top: 8%;
+  height: 84%;
+  width: 6px;
 }
 
-/* ── signing ── */
-.sign-scene { min-height: 150dvh; }
-.closer {
-  font-family: 'Italiana', serif;
-  font-size: clamp(1.4rem, 3vw, 2.4rem);
-  margin-bottom: 2rem;
-}
-.sign-block {
-  width: min(82vw, 46rem);
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-}
-.fork { width: 100%; height: 6.5rem; pointer-events: none; }
-.sig-row {
-  display: flex;
-  justify-content: space-evenly;
-  align-items: flex-start;
-  margin-top: -0.5rem;
-}
-.sig { display: flex; flex-direction: column; align-items: center; }
-.sig-name {
-  font-family: 'Over the Rainbow', cursive;
-  font-size: clamp(2.4rem, 6vw, 4.4rem);
-  line-height: 1.1;
-}
-.sig-line { width: clamp(9rem, 20vw, 15rem); height: 1.4rem; }
-.tail {
+.page-head { margin-bottom: clamp(2rem, 5vw, 3.25rem); padding-left: 1.5rem; }
+.page-no {
+  display: block;
   font-family: 'Bague', sans-serif;
-  font-size: 0.82rem;
-  letter-spacing: 0.2em;
+  font-size: 0.74rem;
+  letter-spacing: 0.34em;
   text-transform: uppercase;
-  opacity: 0.6;
-  margin-top: 4rem;
+  opacity: 0;
+}
+.page-heading {
+  font-family: 'Bague', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  font-size: clamp(1.5rem, 4.2vw, 2.4rem);
+  margin: 0.45em 0 0.3em;
+  opacity: 0;
+}
+.page-note {
+  max-width: 32rem;
+  font-size: 0.94rem;
+  line-height: 1.65;
+  opacity: 0;
 }
 
-@media (max-width: 768px) {
-  .sig-row { flex-direction: column; gap: 3rem; align-items: center; }
-  .gift-scene, .open-scene { min-height: 108dvh; }
-  .sign-scene { min-height: 160dvh; }
+/* ── The collage ──────────────────────────────────────────────────────────── */
+.collage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: center;
+  gap: clamp(1.75rem, 4vw, 3.5rem) clamp(1.5rem, 3.5vw, 3rem);
+}
+.item {
+  width: var(--w, 36%);
+  min-width: 13rem;
+  margin: 0;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.item:nth-child(even) { margin-top: clamp(1.5rem, 4vw, 3.25rem); }
+
+.lift {
+  position: relative;
+  display: block;
+  transition: transform 0.55s cubic-bezier(0.2, 0.7, 0.3, 1), filter 0.55s ease;
+  filter: drop-shadow(0 10px 12px rgba(20, 24, 28, 0.22));
+}
+.item:hover .lift {
+  transform: translateY(-9px) scale(1.055) rotate(calc(var(--rot, 0deg) * -1));
+  filter: drop-shadow(0 24px 26px rgba(20, 24, 28, 0.28));
+}
+.lift img { display: block; width: 100%; height: auto; }
+
+/* One strip of tape, never five. */
+.tape {
+  position: absolute;
+  top: -0.55rem;
+  left: 50%;
+  width: clamp(2.6rem, 7%, 4.2rem);
+  height: 1.15rem;
+  transform: translateX(-50%) rotate(-4deg);
+  background: rgba(255, 253, 245, 0.62);
+  border-left: 1px solid rgba(20, 24, 28, 0.07);
+  border-right: 1px solid rgba(20, 24, 28, 0.07);
+  box-shadow: 0 1px 2px rgba(20, 24, 28, 0.09);
+}
+
+figcaption {
+  display: block;
+  margin-top: 1.1rem;
+  padding-left: 0.15rem;
+}
+.label {
+  display: block;
+  font-family: 'Bague', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 0.76rem;
+}
+.cap {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.87rem;
+  line-height: 1.55;
+  opacity: 0.7;
+}
+
+/* Claimed — supported, unused until gifts are tracked. */
+.is-claimed .lift { filter: grayscale(1) opacity(0.45) drop-shadow(0 6px 8px rgba(20, 24, 28, 0.16)); }
+.is-claimed:hover .lift { transform: none; }
+.is-claimed .label { text-decoration: line-through; opacity: 0.55; }
+.is-claimed .cap { opacity: 0.42; }
+.stamp {
+  position: absolute;
+  bottom: 12%;
+  left: 50%;
+  transform: translateX(-50%) rotate(-7deg);
+  font-family: 'Bague', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  font-size: 0.7rem;
+  padding: 0.3rem 0.75rem;
+  border: 1.5px solid currentColor;
+  opacity: 0.62;
+}
+.sr-taken {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* ── The cash card ────────────────────────────────────────────────────────── */
+.envelope {
+  position: relative;
+  background: var(--paper);
+  border: 1px solid var(--paper-edge);
+  padding: clamp(3rem, 7vw, 4.5rem) clamp(1.75rem, 6vw, 4rem) clamp(2.25rem, 5vw, 3rem);
+  max-width: 34rem;
+  text-align: center;
+  box-shadow: 0 22px 42px -28px rgba(20, 24, 28, 0.5);
+  will-change: transform, opacity;
+}
+/* the flap */
+.flap {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4.5rem;
+  background: linear-gradient(to bottom, rgba(20, 24, 28, 0.045), rgba(20, 24, 28, 0));
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  border-bottom: 1px solid var(--paper-edge);
+}
+.cash-heading {
+  font-family: 'Bague', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: clamp(1.15rem, 3.4vw, 1.6rem);
+  margin: 0 0 1rem;
+}
+.cash-body { font-size: 0.95rem; line-height: 1.7; opacity: 0.8; margin: 0 0 1.9rem; }
+.cash-cta {
+  display: inline-block;
+  font-family: 'Bague', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.76rem;
+  padding: 0.85rem 2rem;
+  border: 1px solid currentColor;
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.4s ease, color 0.4s ease;
+}
+.cash-cta:hover { background: var(--accent, #2e4a52); color: var(--paper); }
+.cash-note { margin: 1.4rem 0 0; font-size: 0.78rem; line-height: 1.6; opacity: 0.55; }
+.cash-sign {
+  margin-top: clamp(2.5rem, 6vh, 4rem);
+  font-family: 'Bague', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 0.78rem;
+  opacity: 0;
+}
+
+/* ── Portrait ─────────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .item { width: 82% !important; min-width: 0; }
+  .item:nth-child(even) { margin-top: 0; }
+  .page { padding-left: 1.4rem; padding-right: 1.4rem; }
+  .stitch { left: 6px; }
+  .page-head { padding-left: 0.9rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lift { transition: none; }
 }
 </style>
