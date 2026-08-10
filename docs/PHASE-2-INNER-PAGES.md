@@ -28,6 +28,34 @@ state, everything below it is history — newest first.)
 > **Audio matches the reference** (verified 2026-07-23 via Browserless: `chapter.millanova.com` uses
 > the same Howler.js + the same 4 loop files + tick — our audio is a faithful port, not missing).
 
+**▶▶ STATE (2026-08-10) — WITH LOVE REBUILT AS "THE ALBUM" (`7799f09d`).** The registry page was
+the site's weakest and the user said so. **Diagnosis worth keeping:** it was built out of *US's*
+vocabulary — cursive `.write`, pen-loop circles, script signatures — against the rule that no two
+chapters share a visual language; and it was four identical stanzas in which the one page with a
+JOB (pick a gift) handed its only affordance to a floating card.
+**Now:** a cover, three paper spreads, a cash card. Each item is a cut-out that **pastes down** as
+its slice of the scene scrolls (drops in tilted + slightly large, `easeOutBack` overshoot, settles
+under one strip of tape); items sit at different depths and drift apart as the page moves; hover
+**picks a cut-out up** (it counter-rotates the parent's angle to straighten). Voice is **printed
+type only** — letterspaced caps, set captions, never script; that single rule is what keeps this
+page and US distinct. The thread's last form here is the **stitch binding the spine**, drawn
+top→bottom per spread (`.drawdown`).
+**User decisions (2026-08-10):** NO prices, NO per-item links — the cash card is the only CTA, and
+it shows **no account details** (payment link or get-in-touch; `url` still `'#'` — needs deciding).
+`claimed: true` support (greyscale + struck label + stamp + aria) is built and **shipped unused**.
+⚠️ **Perf rule learned:** the frame loop touches **only transform/opacity**. Shadows are static CSS
+with a hover transition — a per-frame `drop-shadow` recompute on full-size PNGs is what makes a
+collage page crawl. New scrub types beside `.fade`/`.scrub`: **`.paste`** and **`.drawdown`**.
+⚠️ **Placeholder art:** ONE stock clipart cut-out for every item
+(`public/images/registry/placeholder-item.png`), **watermark deliberately left in** — it's a free
+preview, not a licensed asset. Swap per item via `image:`.
+**Asset sourcing dead ends (don't repeat):** Openverse CC0 → rawpixel's "png sticker" collection
+looks perfect but the public preview URLs have a **checkerboard baked into the pixels**
+(`hasAlpha: false`, background alternating 238/255) — unusable, and clipart anyway. Wikimedia
+Commons PD PNGs: essentially none with real alpha. CC0 photography: all *scenes*, nothing isolated.
+**The real fix is retailer product images of the couple's actual items.**
+The four `reg*` entries in `POPUPS` are now **orphaned** (the album has no floating cards).
+
 **▶▶ STATE (2026-08-10) — THE COUPLE'S OWN CARD FILMS ARE IN.** The four hover/select films are no
 longer Milla Nova's: `public/video/{us,the-big-day,in-frames,with-love}.mp4`, sourced from the
 **`new frames/`** drop folder at the repo root (tracked in git — that's where the couple's raw media

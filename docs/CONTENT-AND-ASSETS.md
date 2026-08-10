@@ -149,6 +149,35 @@ public/images/dresses/
 `*-intro.mp4` films, which have since been deleted (recoverable from git before `5d44726c`). They are
 the next media swap: the couple's photos are already in `new frames/`.
 
+### The registry album (With Love)
+
+The With Love page is an **album of pasted cut-outs** (rebuilt 2026-08-10). Its items live in
+`CHAPTER_PAGES['with-love'].sections[].items[]`:
+
+```js
+{ name, caption, image, w /* % of page width */, rot /* deg */, claimed }
+```
+
+- **No prices, no per-item links** (user decision) — the items say what the couple would love; the
+  single call to action is the `kind: 'cash'` card at the end, which shows **no account details**
+  (a payment link or a get-in-touch destination; `url` is still `'#'`).
+- `claimed: true` greys the item, strikes its label, adds a "taken" stamp and marks it
+  `aria-disabled`. **Built but unused** until gifts are actually tracked.
+- `w` and `rot` are the art direction — vary them so a spread reads as composed rather than
+  gridded. Keep rotation under ~4°.
+
+⚠️ **The item art is ONE placeholder** — `public/images/registry/placeholder-item.png`, a stock
+clipart cut-out standing in for every item so the layout could be judged before the real list
+exists. It **carries the vendor's watermark on purpose**: it's a free preview, not a licensed
+asset, and the mark is a reminder to replace it. Swap per item by setting `image:`.
+
+**Making a cut-out from a white/checkerboard-backed source:** flood-fill the background from the
+border rather than keying the colour globally, or white *inside* the object (a plate, a mug) gets
+eaten too. The scratchpad script that did it is ~40 lines of `sharp` raw-pixel work: BFS from every
+border pixel where R,G,B ≥ 225, set those to alpha 0, blur the alpha channel by 0.6px to soften the
+anti-aliased fringe, trim, resize. Don't pass `png({ palette: true })` on the way out — it silently
+flattens the alpha you just made.
+
 ### Swapping the card films
 
 The card shader is tuned for a **900×1200 (3:4) portrait, silent** texture — the same geometry the
