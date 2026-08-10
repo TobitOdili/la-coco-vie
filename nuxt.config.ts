@@ -27,6 +27,12 @@ export default defineNuxtConfig({
   },
   vite: {
     plugins: [tailwindcss()],
+    // The app's base path, baked in at build time for utils/asset.js. Nuxt sets
+    // Vite's client `base` to './' in production, so `import.meta.env.BASE_URL`
+    // CANNOT be used to build public-asset URLs — see utils/asset.js.
+    define: {
+      __APP_BASE__: JSON.stringify(baseURL),
+    },
     server: {
       allowedHosts: 'all',
     },

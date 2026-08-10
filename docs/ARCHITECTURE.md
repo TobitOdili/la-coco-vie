@@ -409,13 +409,33 @@ drives two exits — a top-edge reverse rewind and a scroll-driven bottom "outro
 
 ## Base URL & assets
 
-The same build must work at `/` (Vercel) and `/la-coco-vie/` (GitHub Pages). Asset paths use
-`const asset = p => `${base}${p}`` where `base = import.meta.env.BASE_URL` (baked at build).
+The same build must work at `/` (Vercel) and `/la-coco-vie/` (GitHub Pages). **All public-asset
+URLs go through one helper — `asset()` in [`utils/asset.js`](../utils/asset.js)** — and nothing
+else should build them by hand.
+
+⚠️ **`import.meta.env.BASE_URL` DOES NOT WORK for this** (fixed 2026-08-10; it had been the
+mechanism, and this doc previously documented it). Nuxt hardcodes Vite's client `base` to `'./'`
+for **production** builds — its own bundle assets resolve through the build manifest instead — so
+`BASE_URL` is `'./'` regardless of `app.baseURL`, and `NUXT_APP_BASE_URL=/la-coco-vie/` does not
+change it. Every public asset URL therefore came out **relative** (`./images/cu-p1.png`), which:
+
+- **worked on Vercel by luck** — served at the root, and `/with-love` carries no trailing slash,
+  so `./images/…` resolved to `/images/…`; but
+- **404'd on GitHub Pages**, which serves prerendered routes **with** a trailing slash
+  (`/la-coco-vie/with-love/`), so it resolved one level too deep:
+  `/la-coco-vie/with-love/images/cu-p1.png`. Every image on every inner page was broken there.
+
+The base is now baked in at build time by `vite.define.__APP_BASE__` in `nuxt.config.ts` (same
+value as `app.baseURL`), so `asset('/images/x.png')` yields `/images/x.png` on Vercel and
+`/la-coco-vie/images/x.png` on Pages. **Verify a base-path change by grepping the built bundle**
+(`grep -o '"/\(images\|video\|audio\)/[^"]*"' .output/public/_nuxt/*.js`), not just the rendered page.
 
 ⚠️ **CSS `url()` gotcha (AUDIT #3):** a relative `url()` set into a CSS custom property is
 resolved by the browser relative to the **CSS bundle** (`_nuxt/…`), not the document — which
-404s. So `--noise-url` is built with `new URL(path, window.location.href).href` to force an
-absolute URL. Apply the same pattern for any future CSS-var asset paths.
+404s. So `--noise-url` is built with `new URL(asset(path), window.location.origin).href` to force
+an absolute URL. (It resolved against `window.location.href` until 2026-08-10 — fine only while
+the path was already absolute; `origin` is the trailing-slash-proof form.) Apply the same pattern
+for any future CSS-var asset paths.
 
 ---
 

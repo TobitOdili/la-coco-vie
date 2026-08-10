@@ -21,8 +21,7 @@
 //   POPUPS[key] = { title, params[], photo?, url? } — photo and url are optional.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
-const asset = (p) => `${base}${p}`
+import { asset } from '~/utils/asset'
 
 // ⚠️ PLACEHOLDER registry art — ONE stock clipart cut-out standing in for every
 // item, so the album's layout/motion can be judged before the real list exists.

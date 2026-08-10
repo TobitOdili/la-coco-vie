@@ -45,6 +45,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, provide } from 'vue'
 import { CHAPTERS } from '~/composables/useChapterScene'
 import { SITE } from '~/site.config'
+import { asset } from '~/utils/asset'
 
 // ── Routing is the single source of truth for which chapter is open ──────────
 // '/'        → homepage (carousel)
@@ -128,8 +129,7 @@ async function initAudio() {
   try {
     const { Howl, Howler } = await import('howler')
     howlerModule = Howler
-    const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
-    tickSound = new Howl({ src: [`${base}/audio/tick.mp3`], volume: 0.4 })
+    tickSound = new Howl({ src: [asset('/audio/tick.mp3')], volume: 0.4 })
     sounds = CHAPTERS.map((ch) => new Howl({ src: [ch.audio], loop: true, volume: 0, html5: true }))
   } catch (e) {
     console.warn('Audio init failed:', e)
@@ -212,8 +212,7 @@ onMounted(() => {
   window.addEventListener('touchstart', initAudioOnce, { once: true })
 
   // Resolve the noise texture to an ABSOLUTE url (see Issue #3 / ARCHITECTURE).
-  const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
-  const noiseUrl = new URL(`${base}/images/noise.png`, window.location.href).href
+  const noiseUrl = new URL(asset('/images/noise.png'), window.location.origin).href
   document.documentElement.style.setProperty('--noise-url', `url('${noiseUrl}')`)
 
   // Apply any deep-linked chapter once the intro finishes (selection is gated until

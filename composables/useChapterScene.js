@@ -1,12 +1,9 @@
 import * as THREE from 'three'
 import { gsap } from 'gsap'
+import { asset } from '~/utils/asset'
 
 const toRad = (deg) => (deg * Math.PI) / 180
 const TWO_PI = Math.PI * 2
-
-// Base URL — Vite injects this at build time (e.g. /la-coco-vie/ on GitHub Pages, / on Vercel)
-const base = (import.meta.env.BASE_URL || '/').replace(/\/$/, '')
-const asset = (path) => `${base}${path}`
 
 // Chapter data — the four chapters of the Covenant & Uvie journey.
 // The card FILMS are the couple's own (2026-08-10, sourced from `new frames/`,
