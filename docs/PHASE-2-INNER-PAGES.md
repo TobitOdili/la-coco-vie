@@ -42,7 +42,30 @@ copies (app.vue ×2, chapterPages.js, useChapterScene.js) are gone. `--noise-url
 200 on both. **Method worth reusing: grep the emitted bundle** (`grep -o '"/\(images\|video\|audio\)/[^"]*"'
 .output/public/_nuxt/*.js`) — the bug was invisible in config and only obvious in the build output.
 
-**▶▶ STATE (2026-08-10) — WITH LOVE REBUILT AS "THE ALBUM" (`7799f09d`).** The registry page was
+**▶▶ STATE (2026-08-10, latest) — WITH LOVE IS THE INK PAGE AGAIN, EVOLVED (`2c2ba73d`+).**
+The album (below) was **reverted at the user's request** — they preferred the original ink concept.
+What's live now: the opening thank-you and the signing are the originals; the gifts are **scattered
+left and right down the page** and **one wandering line threads them, lassoing each name** as it
+arrives; **hovering a gift fades its picture in on a torn paper scrap**.
+⚠️ **The curve is MEASURED, not authored** — `measure()` reads where the words actually land, runs a
+Catmull-Rom spline through those points, and splits it into per-gift segments whose scrub windows
+come from *when each word will be centred in the viewport*. So the line arrives exactly as you reach
+a word, and portrait can stack everything centred without the path lying. Re-measures on resize, via
+ResizeObserver, and after **`document.fonts.ready`** (web fonts change text metrics — without it the
+lassos sit around the wrong box). The lassos use the same spline helper (1.05 turns, wobbling radius,
+a tail) so line and loop share a hand. Torn edges = 3 deterministic ragged polygons built once at
+module load and cycled.
+⚠️ **Touch has no hover** — the scrap reveals when its gift is nearest the middle of the screen
+instead (`(hover: none)` branch in the frame loop). Note headless Chrome reports `hover: none`, so a
+Browserless shot exercises the TOUCH path, not `:hover`.
+**Tuning learned on prod:** the first pass at 62vh/gift + a 150dvh signing scene read far too sparse
+(rows are 46vh now, with a small per-gift vertical offset so they don't march); the line at
+2.2px/0.5 opacity vanished against the pale background (now 2.6/0.62). The **signing windows were
+shifted earlier** (names finish ~0.76 not ~0.92) — the old page's documented "signature rides high
+toward the nav" nit came back with the scene, and this is the fix.
+Kept from the album: the cash card (only CTA, no account details, `url` still `'#'`) and `claimed`.
+
+**▶▶ SUPERSEDED (kept for the reasoning) — "THE ALBUM" (`7799f09d`).** The registry page was
 the site's weakest and the user said so. **Diagnosis worth keeping:** it was built out of *US's*
 vocabulary — cursive `.write`, pen-loop circles, script signatures — against the rule that no two
 chapters share a visual language; and it was four identical stanzas in which the one page with a

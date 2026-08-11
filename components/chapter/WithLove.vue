@@ -57,31 +57,31 @@
         <div class="closer fade" data-window="0.14,0.34">{{ s.closer }}</div>
         <div class="sign-block">
           <svg class="fork" viewBox="0 0 1000 160" preserveAspectRatio="none" aria-hidden="true">
-            <path class="scrub" data-window="0.2,0.4" pathLength="1" d="M 500 0 C 500 40, 500 70, 500 88"
+            <path class="scrub" data-window="0.16,0.32" pathLength="1" d="M 500 0 C 500 40, 500 70, 500 88"
               :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55" />
-            <path class="scrub" data-window="0.4,0.54" pathLength="1" d="M 500 88 C 440 118, 300 128, 230 160"
+            <path class="scrub" data-window="0.32,0.44" pathLength="1" d="M 500 88 C 440 118, 300 128, 230 160"
               :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55" />
-            <path class="scrub" data-window="0.4,0.54" pathLength="1" d="M 500 88 C 560 118, 700 128, 770 160"
+            <path class="scrub" data-window="0.32,0.44" pathLength="1" d="M 500 88 C 560 118, 700 128, 770 160"
               :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55" />
           </svg>
           <div class="sig-row">
             <div class="sig">
-              <span class="sig-name write" data-window="0.52,0.72">{{ s.names[0] }}</span>
+              <span class="sig-name write" data-window="0.42,0.58">{{ s.names[0] }}</span>
               <svg class="sig-line" viewBox="0 0 360 24" preserveAspectRatio="none" aria-hidden="true">
-                <path class="scrub" data-window="0.7,0.82" pathLength="1" d="M 12 14 C 120 6, 250 6, 348 12"
+                <path class="scrub" data-window="0.56,0.66" pathLength="1" d="M 12 14 C 120 6, 250 6, 348 12"
                   :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" />
               </svg>
             </div>
             <div class="sig">
-              <span class="sig-name write" data-window="0.64,0.84">{{ s.names[1] }}</span>
+              <span class="sig-name write" data-window="0.52,0.68">{{ s.names[1] }}</span>
               <svg class="sig-line" viewBox="0 0 360 24" preserveAspectRatio="none" aria-hidden="true">
-                <path class="scrub" data-window="0.82,0.92" pathLength="1" d="M 12 14 C 120 6, 250 6, 348 12"
+                <path class="scrub" data-window="0.66,0.76" pathLength="1" d="M 12 14 C 120 6, 250 6, 348 12"
                   :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" />
               </svg>
             </div>
           </div>
         </div>
-        <div class="tail fade" data-window="0.88,1">{{ s.tail }}</div>
+        <div class="tail fade" data-window="0.80,0.92">{{ s.tail }}</div>
       </section>
     </template>
   </div>
