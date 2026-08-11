@@ -28,6 +28,20 @@ state, everything below it is history — newest first.)
 > **Audio matches the reference** (verified 2026-07-23 via Browserless: `chapter.millanova.com` uses
 > the same Howler.js + the same 4 loop files + tick — our audio is a faithful port, not missing).
 
+**▶▶ FIXED (2026-08-10, `67693fd3`) — GITHUB PAGES ASSETS (every image on every inner page).**
+`import.meta.env.BASE_URL` **cannot** build public-asset URLs in Nuxt: Vite's client `base` is
+hardcoded to `'./'` for production builds, so `NUXT_APP_BASE_URL=/la-coco-vie/` never reached it and
+every asset URL came out relative. Vercel worked **by luck** (root-served, `/with-love` has no
+trailing slash); Pages 404'd because it serves prerendered routes **with** a trailing slash, so
+`./images/…` resolved to `/la-coco-vie/with-love/images/…`. Now baked at build time via
+`vite.define.__APP_BASE__` and consumed by ONE helper, **`utils/asset.js`** — the four hand-rolled
+copies (app.vue ×2, chapterPages.js, useChapterScene.js) are gone. `--noise-url` resolves against
+`window.location.origin` (trailing-slash-proof) rather than `.href`.
+**Verified on BOTH hosts:** 8/8 album images load, `srcs` correctly prefixed
+(`/la-coco-vie/images/…` vs `/images/…`), **zero failed requests**, and video/audio/fonts/favicon
+200 on both. **Method worth reusing: grep the emitted bundle** (`grep -o '"/\(images\|video\|audio\)/[^"]*"'
+.output/public/_nuxt/*.js`) — the bug was invisible in config and only obvious in the build output.
+
 **▶▶ STATE (2026-08-10) — WITH LOVE REBUILT AS "THE ALBUM" (`7799f09d`).** The registry page was
 the site's weakest and the user said so. **Diagnosis worth keeping:** it was built out of *US's*
 vocabulary — cursive `.write`, pen-loop circles, script signatures — against the rule that no two
