@@ -21,8 +21,8 @@
         :data-idx="i" :style="{ '--rows': s.items.length }">
         <svg class="trace" :viewBox="`0 0 ${box.w} ${box.h}`" aria-hidden="true">
           <path v-for="(seg, k) in segments" :key="`s${k}`" class="scrub" :data-window="seg.win"
-            pathLength="1" :d="seg.d" :stroke="ink" stroke-width="2.2" fill="none"
-            stroke-linecap="round" opacity="0.5" />
+            pathLength="1" :d="seg.d" :stroke="ink" stroke-width="2.6" fill="none"
+            stroke-linecap="round" opacity="0.62" />
           <path v-for="(lo, k) in loops" :key="`l${k}`" class="scrub" :data-window="lo.win"
             pathLength="1" :d="lo.d" :stroke="ink" stroke-width="2.6" fill="none"
             stroke-linecap="round" />
@@ -30,7 +30,7 @@
 
         <div v-for="(it, j) in s.items" :key="j" class="gift"
           :class="[it.x < 50 ? 'side-right' : 'side-left', { 'is-claimed': it.claimed }]"
-          :style="{ '--x': it.x + '%', '--row': j }">
+          :style="{ '--x': it.x + '%', '--row': j, '--dy': DY[j % DY.length] }">
           <p class="memory">{{ it.memory }}</p>
           <h3 class="gift-name">{{ it.name }}</h3>
           <!-- The scrap: torn paper, fades in on hover — or, on touch, when the
@@ -105,6 +105,9 @@ let ro = null
 // ── Torn-paper edges ────────────────────────────────────────────────────────
 // Three deterministic ragged polygons, built once at module load rather than
 // hand-writing 60 coordinates. Cycled per item so neighbours don't match.
+// A little vertical jitter so six gifts don't read as a list.
+const DY = ['0vh', '4vh', '-3vh', '6vh', '-2vh', '3vh']
+
 const TORN = (() => {
   let seed = 7
   const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff)
@@ -299,7 +302,7 @@ onBeforeUnmount(() => {
 .write { clip-path: inset(0 100% 0 0); }
 
 /* ── opening ── */
-.open-scene { min-height: 128dvh; }
+.open-scene { min-height: 116dvh; }
 .lead {
   font-family: 'Bague', sans-serif;
   font-size: 0.8rem;
@@ -324,7 +327,7 @@ onBeforeUnmount(() => {
 /* ── the gift map ── */
 .gifts-scene {
   display: block;
-  min-height: calc(var(--rows, 6) * 62vh + 46vh);
+  min-height: calc(var(--rows, 6) * 46vh + 38vh);
   padding: 0;
   /* no overflow:hidden — the scraps and lassos deliberately break the box */
 }
@@ -339,7 +342,7 @@ onBeforeUnmount(() => {
 .gift {
   position: absolute;
   left: var(--x, 50%);
-  top: calc(var(--row, 0) * 62vh + 30vh);
+  top: calc(var(--row, 0) * 46vh + 24vh + var(--dy, 0vh));
   transform: translateX(-50%);
   width: min(26rem, 60vw);
   z-index: 1;
@@ -348,7 +351,7 @@ onBeforeUnmount(() => {
   font-family: 'Over the Rainbow', cursive;
   font-size: clamp(1.05rem, 2.1vw, 1.6rem);
   opacity: 0.9;
-  margin: 0 0 1.1rem;
+  margin: 0 0 0.75rem;
   line-height: 1.45;
 }
 .gift-name {
@@ -419,7 +422,7 @@ onBeforeUnmount(() => {
 .cash-note { margin: 1.3rem 0 0; font-size: 0.76rem; line-height: 1.6; opacity: 0.55; }
 
 /* ── signing ── */
-.sign-scene { min-height: 150dvh; }
+.sign-scene { min-height: 112dvh; }
 .closer { font-family: 'Italiana', serif; font-size: clamp(1.4rem, 3vw, 2.4rem); margin-bottom: 2rem; }
 .sign-block { width: min(82vw, 46rem); display: flex; flex-direction: column; align-items: stretch; }
 .fork { width: 100%; height: 6.5rem; pointer-events: none; }
@@ -438,8 +441,8 @@ onBeforeUnmount(() => {
 
 /* ── portrait: stack the words; the curve re-measures itself ── */
 @media (max-width: 767px) {
-  .gift { left: 50% !important; width: 84vw; top: calc(var(--row, 0) * 56vh + 26vh); }
-  .gifts-scene { min-height: calc(var(--rows, 6) * 56vh + 42vh); }
+  .gift { left: 50% !important; width: 84vw; top: calc(var(--row, 0) * 44vh + 22vh); }
+  .gifts-scene { min-height: calc(var(--rows, 6) * 44vh + 34vh); }
   .scrap {
     position: relative;
     left: auto; right: auto; top: auto;
