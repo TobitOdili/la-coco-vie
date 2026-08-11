@@ -1,79 +1,94 @@
 <template>
-  <div ref="rootEl" class="album">
+  <div ref="rootEl" class="with-love">
     <template v-for="(s, i) in sections" :key="i">
-      <!-- ── Cover · the book, closed. Everything after this is a page of it. ── -->
-      <section v-if="s.kind === 'cover'" class="chapter-section album-scene cover-scene" :data-idx="i">
-        <div class="cover-card paste" data-window="0.02,0.30" data-rot="-1.1" data-depth="0.35">
-          <span class="cover-lead">{{ s.lead }}</span>
-          <h2 class="cover-title">{{ s.big }}</h2>
-          <svg class="rule" viewBox="0 0 400 12" preserveAspectRatio="none" aria-hidden="true">
-            <path class="scrub" data-window="0.18,0.44" pathLength="1" d="M 8 6 L 392 6"
-              :stroke="ink" stroke-width="1.5" fill="none" stroke-linecap="round" />
-          </svg>
-          <p class="cover-sub">{{ s.sub }}</p>
-        </div>
-        <p class="cover-pivot fade" data-window="0.52,0.78">{{ s.pivot }}</p>
+      <!-- ── Opening · the ink writes the thank-you, before anything is asked. ── -->
+      <section v-if="s.kind === 'open'" class="chapter-section love-scene open-scene" :data-idx="i">
+        <div class="lead fade" data-window="0.04,0.24">{{ s.lead }}</div>
+        <div class="big-thanks write" data-window="0.14,0.58">{{ s.big }}</div>
+        <svg class="flourish" viewBox="0 0 600 60" preserveAspectRatio="none" aria-hidden="true">
+          <path class="scrub" data-window="0.5,0.72" pathLength="1"
+            d="M 20 34 C 160 12, 300 12, 430 30 C 500 40, 560 34, 585 22"
+            :stroke="ink" stroke-width="3" fill="none" stroke-linecap="round" />
+        </svg>
+        <div class="sub fade" data-window="0.6,0.8">{{ s.sub }}</div>
+        <div class="pivot fade" data-window="0.8,0.97">{{ s.pivot }}</div>
       </section>
 
-      <!-- ── Spread · a page of the album; cut-outs paste themselves down. ── -->
-      <section v-else-if="s.kind === 'spread'" class="chapter-section album-scene spread-scene" :data-idx="i">
-        <div class="page">
-          <!-- The thread's last form: the stitch binding the album, drawn top→bottom. -->
-          <svg class="stitch drawdown" data-window="0.02,0.8" viewBox="0 0 6 200"
-            preserveAspectRatio="none" aria-hidden="true">
-            <path d="M 3 0 L 3 200" :stroke="ink" stroke-width="1.4" fill="none"
-              stroke-dasharray="5 7" stroke-linecap="round" opacity="0.45" />
-          </svg>
+      <!-- ── Gifts · the words are scattered; one line wanders through and lassoes
+           each in turn. The curve is MEASURED from where the words actually land
+           (see measure()), so it stays true at any width. ── -->
+      <section v-else-if="s.kind === 'gifts'" class="chapter-section love-scene gifts-scene"
+        :data-idx="i" :style="{ '--rows': s.items.length }">
+        <svg class="trace" :viewBox="`0 0 ${box.w} ${box.h}`" aria-hidden="true">
+          <path v-for="(seg, k) in segments" :key="`s${k}`" class="scrub" :data-window="seg.win"
+            pathLength="1" :d="seg.d" :stroke="ink" stroke-width="2.2" fill="none"
+            stroke-linecap="round" opacity="0.5" />
+          <path v-for="(lo, k) in loops" :key="`l${k}`" class="scrub" :data-window="lo.win"
+            pathLength="1" :d="lo.d" :stroke="ink" stroke-width="2.6" fill="none"
+            stroke-linecap="round" />
+        </svg>
 
-          <header class="page-head">
-            <span class="page-no fade" data-window="0.02,0.16">{{ s.no }}</span>
-            <h3 class="page-heading fade" data-window="0.04,0.2">{{ s.heading }}</h3>
-            <p class="page-note fade" data-window="0.09,0.28">{{ s.note }}</p>
-          </header>
-
-          <div class="collage">
-            <figure v-for="(it, j) in s.items" :key="j" class="item paste"
-              :class="{ 'is-claimed': it.claimed }"
-              :style="{ '--w': it.w + '%', '--rot': it.rot + 'deg' }"
-              :data-window="itemWindow(j, s.items.length)"
-              :data-rot="it.rot"
-              :data-depth="0.3 + j * 0.22">
-              <!-- NOT lazy, and the ratio is reserved: a cut-out with height:auto
-                   is 0px tall until it decodes, which collapses the whole paper
-                   page to its header and makes spreads look like they overlap. -->
-              <div class="lift">
-                <img :src="it.image" :alt="it.name" decoding="async"
-                  :style="{ aspectRatio: it.ratio || '480 / 277' }" />
-                <span class="tape" aria-hidden="true"></span>
-                <span v-if="it.claimed" class="stamp" aria-hidden="true">taken</span>
-              </div>
-              <figcaption :aria-disabled="it.claimed ? 'true' : undefined">
-                <span class="label">{{ it.name }}</span>
-                <span class="cap">{{ it.caption }}</span>
-                <span v-if="it.claimed" class="sr-taken">— already given, thank you</span>
-              </figcaption>
-            </figure>
-          </div>
+        <div v-for="(it, j) in s.items" :key="j" class="gift"
+          :class="[it.x < 50 ? 'side-right' : 'side-left', { 'is-claimed': it.claimed }]"
+          :style="{ '--x': it.x + '%', '--row': j }">
+          <p class="memory">{{ it.memory }}</p>
+          <h3 class="gift-name">{{ it.name }}</h3>
+          <!-- The scrap: torn paper, fades in on hover — or, on touch, when the
+               gift reaches the middle of the screen (see the isNear pass). -->
+          <figure class="scrap" :style="{ clipPath: TORN[j % TORN.length] }">
+            <img :src="it.image" alt="" aria-hidden="true" decoding="async" />
+          </figure>
+          <span v-if="it.claimed" class="taken">already given — thank you</span>
         </div>
       </section>
 
-      <!-- ── Cash · the one call to action in the whole album. ── -->
-      <section v-else-if="s.kind === 'cash'" class="chapter-section album-scene cash-scene" :data-idx="i">
-        <div class="envelope paste" data-window="0.08,0.40" data-rot="-0.7" data-depth="0.3">
-          <span class="flap" aria-hidden="true"></span>
+      <!-- ── Cash · the only thing to click in the whole chapter. ── -->
+      <section v-else-if="s.kind === 'cash'" class="chapter-section love-scene cash-scene" :data-idx="i">
+        <div class="cash-card fade" data-window="0.12,0.34">
           <h3 class="cash-heading">{{ s.heading }}</h3>
           <p class="cash-body">{{ s.body }}</p>
           <a class="cash-cta" :href="s.url">{{ s.cta }}</a>
           <p class="cash-note">{{ s.note }}</p>
         </div>
-        <p class="cash-sign fade" data-window="0.56,0.8">{{ s.sign }}</p>
+      </section>
+
+      <!-- ── Signing · the ink splits in two and signs both names. ── -->
+      <section v-else-if="s.kind === 'sign'" class="chapter-section love-scene sign-scene" :data-idx="i">
+        <div class="closer fade" data-window="0.14,0.34">{{ s.closer }}</div>
+        <div class="sign-block">
+          <svg class="fork" viewBox="0 0 1000 160" preserveAspectRatio="none" aria-hidden="true">
+            <path class="scrub" data-window="0.2,0.4" pathLength="1" d="M 500 0 C 500 40, 500 70, 500 88"
+              :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55" />
+            <path class="scrub" data-window="0.4,0.54" pathLength="1" d="M 500 88 C 440 118, 300 128, 230 160"
+              :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55" />
+            <path class="scrub" data-window="0.4,0.54" pathLength="1" d="M 500 88 C 560 118, 700 128, 770 160"
+              :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55" />
+          </svg>
+          <div class="sig-row">
+            <div class="sig">
+              <span class="sig-name write" data-window="0.52,0.72">{{ s.names[0] }}</span>
+              <svg class="sig-line" viewBox="0 0 360 24" preserveAspectRatio="none" aria-hidden="true">
+                <path class="scrub" data-window="0.7,0.82" pathLength="1" d="M 12 14 C 120 6, 250 6, 348 12"
+                  :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" />
+              </svg>
+            </div>
+            <div class="sig">
+              <span class="sig-name write" data-window="0.64,0.84">{{ s.names[1] }}</span>
+              <svg class="sig-line" viewBox="0 0 360 24" preserveAspectRatio="none" aria-hidden="true">
+                <path class="scrub" data-window="0.82,0.92" pathLength="1" d="M 12 14 C 120 6, 250 6, 348 12"
+                  :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" />
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div class="tail fade" data-window="0.88,1">{{ s.tail }}</div>
       </section>
     </template>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 
 defineProps({
   sections: { type: Array, required: true },
@@ -81,57 +96,162 @@ defineProps({
 
 const ink = '#2E4A52'
 const rootEl = ref(null)
+const box = ref({ w: 1000, h: 1000 })
+const segments = ref([])
+const loops = ref([])
 let rafId = 0
+let ro = null
 
-// Each item gets its own slice of the scene so a spread pastes down in sequence
-// rather than all at once.
-function itemWindow(j, n) {
-  const start = 0.16 + j * (0.42 / Math.max(1, n))
-  return `${start.toFixed(3)},${(start + 0.3).toFixed(3)}`
+// ── Torn-paper edges ────────────────────────────────────────────────────────
+// Three deterministic ragged polygons, built once at module load rather than
+// hand-writing 60 coordinates. Cycled per item so neighbours don't match.
+const TORN = (() => {
+  let seed = 7
+  const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff)
+  const edge = (n, fixed, from, to, horizontal, inward) => {
+    const pts = []
+    for (let i = 0; i <= n; i++) {
+      const t = from + ((to - from) * i) / n
+      const j = fixed + (rnd() - 0.5) * inward
+      pts.push(horizontal ? `${t.toFixed(1)}% ${j.toFixed(1)}%` : `${j.toFixed(1)}% ${t.toFixed(1)}%`)
+    }
+    return pts
+  }
+  return [0, 1, 2].map(() => [
+    ...edge(9, 2, 0, 100, true, 5),      // top
+    ...edge(7, 98, 0, 100, false, 6),    // right
+    ...edge(9, 98, 100, 0, true, 5),     // bottom
+    ...edge(7, 2, 100, 0, false, 6),     // left
+  ]).map((pts) => `polygon(${pts.join(', ')})`)
+})()
+
+// ── Curve helpers ───────────────────────────────────────────────────────────
+// Catmull-Rom through the points, emitted as cubic béziers — used for BOTH the
+// wandering line and the hand-drawn lassos, so they share a hand.
+function crSegment(p0, p1, p2, p3) {
+  const c1 = { x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6 }
+  const c2 = { x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6 }
+  return `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} C ${c1.x.toFixed(1)} ${c1.y.toFixed(1)}, ${c2.x.toFixed(1)} ${c2.y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`
+}
+function crPath(pts) {
+  if (pts.length < 2) return ''
+  let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i]
+    const p1 = pts[i]
+    const p2 = pts[i + 1]
+    const p3 = pts[i + 2] || p2
+    const c1 = { x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6 }
+    const c2 = { x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6 }
+    d += ` C ${c1.x.toFixed(1)} ${c1.y.toFixed(1)}, ${c2.x.toFixed(1)} ${c2.y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`
+  }
+  return d
+}
+// A lasso: 1.05 turns around the word's box with a wobbling radius and a tail,
+// so it reads as drawn by hand rather than stamped.
+function lasso(cx, cy, w, h) {
+  const rx = w / 2 + 26
+  const ry = h / 2 + 14
+  const pts = []
+  const from = Math.PI * 1.1
+  const to = from + Math.PI * 2.15
+  const N = 16
+  for (let i = 0; i <= N; i++) {
+    const a = from + ((to - from) * i) / N
+    const wob = 1 + 0.045 * Math.sin(a * 3.1) - 0.02 * (i / N)
+    pts.push({ x: cx + Math.cos(a) * rx * wob, y: cy + Math.sin(a) * ry * wob })
+  }
+  return crPath(pts)
 }
 
-// Gentle overshoot — the cut-out drops slightly past its resting angle and settles.
-function easeOutBack(t) {
-  const c1 = 1.0
-  const c3 = c1 + 1
-  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2)
+// ── Measure: build the curve from where the words ACTUALLY are ──────────────
+// Authoring a fixed path and positioning words to match breaks at every
+// breakpoint. This measures instead, so `x` and the media queries are free.
+function measure() {
+  const root = rootEl.value
+  const scene = root?.querySelector('.gifts-scene')
+  if (!scene) return
+  const sr = scene.getBoundingClientRect()
+  const names = [...scene.querySelectorAll('.gift-name')]
+  if (!names.length) return
+
+  const vh = window.innerHeight
+  const H = sr.height
+  box.value = { w: sr.width, h: H }
+
+  const anchors = names.map((el) => {
+    const r = el.getBoundingClientRect()
+    return {
+      x: r.left - sr.left + r.width / 2,
+      y: r.top - sr.top + r.height / 2,
+      w: r.width,
+      h: r.height,
+      el,
+    }
+  })
+
+  // Where each gift sits in the SCENE's 0→1 progress when it is centred in the
+  // viewport — the scrub windows hang off this, so the line arrives exactly when
+  // you are looking at the word.
+  const at = anchors.map((a) => (a.y + vh / 2) / (H + vh))
+
+  const pts = [
+    { x: anchors[0].x, y: 0 },
+    ...anchors.map((a) => ({ x: a.x, y: a.y })),
+    { x: anchors[anchors.length - 1].x, y: H },
+  ]
+  const stops = [Math.max(0.01, at[0] - 0.14), ...at, 1]
+
+  const segs = []
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i]
+    const p3 = pts[i + 2] || pts[i + 1]
+    const a = stops[i]
+    const b = Math.max(stops[i + 1], a + 0.02)
+    segs.push({ d: crSegment(p0, pts[i], pts[i + 1], p3), win: `${a.toFixed(3)},${b.toFixed(3)}` })
+  }
+  segments.value = segs
+  loops.value = anchors.map((a, j) => ({
+    d: lasso(a.x, a.y, a.w, a.h),
+    win: `${at[j].toFixed(3)},${(at[j] + 0.045).toFixed(3)}`,
+  }))
+
+  // Text fades in just ahead of the line reaching it.
+  anchors.forEach((a, j) => {
+    const gift = a.el.closest('.gift')
+    gift.dataset.at = String(at[j])
+    const nameW = `${Math.max(0, at[j] - 0.1).toFixed(3)},${Math.max(0.02, at[j] - 0.02).toFixed(3)}`
+    const memW = `${Math.max(0, at[j] - 0.15).toFixed(3)},${Math.max(0.02, at[j] - 0.07).toFixed(3)}`
+    a.el.classList.add('fade'); a.el.dataset.window = nameW
+    const mem = gift.querySelector('.memory')
+    if (mem) { mem.classList.add('fade'); mem.dataset.window = memW }
+  })
 }
 
-// Same rAF scrub engine as BigDay/InFrames — every animated element declares
-// data-window="start,end" (its slice of the SCENE's 0→1 progress). Types:
-//   .fade      opacity
-//   .scrub     SVG stroke draw-on
-//   .drawdown  clip reveal, top → bottom (the binding stitch)
-//   .paste     the cut-out settling onto the page (+ depth parallax)
-// Only transform/opacity are touched per frame; shadows are CSS (a per-frame
-// drop-shadow recompute on a full-size PNG is what makes this kind of page crawl).
+// Touch has no hover: reveal the scrap when its gift is nearest the middle of
+// the screen instead. Pointer devices keep the hover, which feels better.
+const coarse = () => window.matchMedia('(hover: none)').matches
+
 function tick() {
   const root = rootEl.value
   if (root) {
     const vh = window.innerHeight
-    for (const scene of root.querySelectorAll('.album-scene')) {
+    for (const scene of root.querySelectorAll('.love-scene')) {
       const r = scene.getBoundingClientRect()
       const p = Math.min(1, Math.max(0, (vh - r.top) / (r.height + vh)))
-      for (const el of scene.querySelectorAll('.scrub, .fade, .drawdown, .paste')) {
-        const [a, b] = el.dataset.window.split(',').map(Number)
+      for (const el of scene.querySelectorAll('.scrub, .fade, .write')) {
+        const win = el.dataset.window
+        if (!win) continue
+        const [a, b] = win.split(',').map(Number)
         const lp = Math.min(1, Math.max(0, (p - a) / (b - a)))
-
-        if (el.classList.contains('scrub')) {
-          el.style.strokeDashoffset = String(1 - lp)
-        } else if (el.classList.contains('drawdown')) {
-          el.style.clipPath = `inset(0 0 ${((1 - lp) * 100).toFixed(1)}% 0)`
-        } else if (el.classList.contains('paste')) {
-          const e = easeOutBack(lp)
-          const rot = Number(el.dataset.rot || 0)
-          const depth = Number(el.dataset.depth || 0)
-          const drift = (p - 0.5) * depth * 30      // parallax: pages breathe apart
-          const y = (1 - e) * 26 + drift
-          const scale = 1 + (1 - e) * 0.045
-          const tilt = rot - (1 - e) * 4            // lands into its pasted angle
-          el.style.transform = `translate3d(0, ${y.toFixed(2)}px, 0) rotate(${tilt.toFixed(2)}deg) scale(${scale.toFixed(3)})`
-          el.style.opacity = String(Math.min(1, lp * 1.7))
-        } else {
-          el.style.opacity = String(lp)
+        if (el.classList.contains('scrub')) el.style.strokeDashoffset = String(1 - lp)
+        else if (el.classList.contains('write')) el.style.clipPath = `inset(0 ${((1 - lp) * 100).toFixed(1)}% 0 0)`
+        else el.style.opacity = String(lp)
+      }
+      if (coarse() && scene.classList.contains('gifts-scene')) {
+        for (const gift of scene.querySelectorAll('.gift')) {
+          const at = Number(gift.dataset.at || -1)
+          gift.classList.toggle('is-near', at >= 0 && Math.abs(p - at) < 0.035)
         }
       }
     }
@@ -139,269 +259,199 @@ function tick() {
   rafId = requestAnimationFrame(tick)
 }
 
-onMounted(() => { rafId = requestAnimationFrame(tick) })
-onBeforeUnmount(() => cancelAnimationFrame(rafId))
+let resizeT = 0
+const onResize = () => { clearTimeout(resizeT); resizeT = setTimeout(measure, 150) }
+
+onMounted(async () => {
+  await nextTick()
+  measure()
+  // Web fonts change text metrics — the lassos would sit around the wrong box.
+  document.fonts?.ready.then(() => setTimeout(measure, 60))
+  // The scene's own height shifts as images decode; re-measure when it does.
+  const scene = rootEl.value?.querySelector('.gifts-scene')
+  if (scene && 'ResizeObserver' in window) { ro = new ResizeObserver(onResize); ro.observe(scene) }
+  window.addEventListener('resize', onResize)
+  rafId = requestAnimationFrame(tick)
+})
+onBeforeUnmount(() => {
+  cancelAnimationFrame(rafId)
+  window.removeEventListener('resize', onResize)
+  ro?.disconnect()
+  clearTimeout(resizeT)
+})
 </script>
 
 <style scoped>
-/* The chapter's cool blue is the SURFACE; the album pages are warm paper on top. */
-.album {
-  --paper: #f4efe5;
-  --paper-edge: #e2d9c8;
-  color: var(--accent, #2e4a52);
-  background: var(--accentLight, #e8edf2);
-}
-
-.album-scene {
+.love-scene {
   position: relative;
+  color: var(--accent, #2E4A52);
+  background: var(--accentLight, #E8EDF2);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: clamp(4rem, 12vh, 9rem) 1.25rem;
-  min-height: 100vh;
-}
-
-/* ── Cover ────────────────────────────────────────────────────────────────── */
-.cover-card {
-  background: var(--paper);
-  border: 1px solid var(--paper-edge);
-  outline: 1px solid var(--paper);
-  outline-offset: -9px;
-  padding: clamp(2.5rem, 7vw, 5rem) clamp(2rem, 8vw, 6rem);
   text-align: center;
-  max-width: 44rem;
-  box-shadow: 0 22px 40px -26px rgba(20, 24, 28, 0.5);
-  will-change: transform, opacity;
+  padding: 12vh 8vw;
+  box-sizing: border-box;
 }
-.cover-lead {
-  display: block;
-  font-size: 0.78rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  opacity: 0.62;
-}
-.cover-title {
+.scrub { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.fade { opacity: 0; }
+.write { clip-path: inset(0 100% 0 0); }
+
+/* ── opening ── */
+.open-scene { min-height: 128dvh; }
+.lead {
   font-family: 'Bague', sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.26em;
   text-transform: uppercase;
+  opacity: 0.6;
+  margin-bottom: 2.4rem;
+}
+.big-thanks { font-family: 'Over the Rainbow', cursive; font-size: clamp(3.4rem, 12vw, 9rem); line-height: 1; }
+.flourish { width: min(46vw, 30rem); height: 3.4rem; margin-top: -0.4rem; }
+.sub { font-family: 'Italiana', serif; font-size: clamp(1.2rem, 2.4vw, 1.9rem); margin-top: 1.6rem; max-width: 32rem; }
+.pivot {
+  font-family: 'Bague', sans-serif;
+  font-size: 0.82rem;
   letter-spacing: 0.16em;
-  font-size: clamp(2.4rem, 8vw, 4.6rem);
-  line-height: 1;
-  margin: 0.7em 0 0.5em;
-}
-.rule { display: block; width: 100%; height: 12px; }
-.rule .scrub { stroke-dasharray: 1; stroke-dashoffset: 1; }
-.cover-sub {
-  margin: 1.6rem auto 0;
-  max-width: 26rem;
-  font-size: 0.98rem;
-  line-height: 1.65;
-  opacity: 0.78;
-}
-.cover-pivot {
-  margin-top: clamp(2.5rem, 7vh, 5rem);
-  max-width: 34rem;
-  text-align: center;
-  font-size: 1.02rem;
-  line-height: 1.7;
-  opacity: 0;
+  text-transform: uppercase;
+  opacity: 0.55;
+  margin-top: 4rem;
+  max-width: 30rem;
 }
 
-/* ── A page of the album ──────────────────────────────────────────────────── */
-.page {
-  position: relative;
-  width: min(72rem, 100%);
-  background: var(--paper);
-  border: 1px solid var(--paper-edge);
-  padding: clamp(2.25rem, 5vw, 4rem) clamp(1.5rem, 5vw, 4.5rem) clamp(3rem, 7vw, 5rem);
-  box-shadow: 0 26px 50px -34px rgba(20, 24, 28, 0.55);
-  min-height: 62vh;   /* a spread is a PAGE — never let it shrink-wrap its header */
-}
-.stitch {
-  position: absolute;
-  left: 14px;
-  top: 8%;
-  height: 84%;
-  width: 6px;
-}
-
-.page-head { margin-bottom: clamp(2rem, 5vw, 3.25rem); padding-left: 1.5rem; }
-.page-no {
+/* ── the gift map ── */
+.gifts-scene {
   display: block;
+  min-height: calc(var(--rows, 6) * 62vh + 46vh);
+  padding: 0;
+  /* no overflow:hidden — the scraps and lassos deliberately break the box */
+}
+.trace {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+.gift {
+  position: absolute;
+  left: var(--x, 50%);
+  top: calc(var(--row, 0) * 62vh + 30vh);
+  transform: translateX(-50%);
+  width: min(26rem, 60vw);
+  z-index: 1;
+}
+.memory {
+  font-family: 'Over the Rainbow', cursive;
+  font-size: clamp(1.05rem, 2.1vw, 1.6rem);
+  opacity: 0.9;
+  margin: 0 0 1.1rem;
+  line-height: 1.45;
+}
+.gift-name {
+  display: inline-block;
   font-family: 'Bague', sans-serif;
-  font-size: 0.74rem;
-  letter-spacing: 0.34em;
-  text-transform: uppercase;
-  opacity: 0;
-}
-.page-heading {
-  font-family: 'Bague', sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 0.13em;
-  font-size: clamp(1.5rem, 4.2vw, 2.4rem);
-  margin: 0.45em 0 0.3em;
-  opacity: 0;
-}
-.page-note {
-  max-width: 32rem;
-  font-size: 0.94rem;
-  line-height: 1.65;
-  opacity: 0;
-}
-
-/* ── The collage ──────────────────────────────────────────────────────────── */
-.collage {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: center;
-  gap: clamp(1.75rem, 4vw, 3.5rem) clamp(1.5rem, 3.5vw, 3rem);
-}
-.item {
-  width: var(--w, 36%);
-  min-width: 13rem;
+  font-weight: 700;
+  font-size: clamp(1.5rem, 3.4vw, 2.6rem);
   margin: 0;
+  padding: 0.15em 0.35em;
+  cursor: default;
+}
+
+/* the torn scrap — hover on pointers, centre-of-screen on touch */
+.scrap {
+  position: absolute;
+  top: 50%;
+  width: clamp(9rem, 17vw, 14rem);
+  margin: 0;
+  padding: 0.9rem 0.9rem 1.4rem;
+  background: #f4efe5;
   opacity: 0;
-  will-change: transform, opacity;
+  transform: translateY(-42%) scale(0.94) rotate(-2.5deg);
+  transition: opacity 0.55s ease, transform 0.55s cubic-bezier(0.2, 0.7, 0.3, 1);
+  pointer-events: none;
+  filter: drop-shadow(0 14px 18px rgba(20, 24, 28, 0.22));
 }
-.item:nth-child(even) { margin-top: clamp(1.5rem, 4vw, 3.25rem); }
+.side-right .scrap { left: 100%; margin-left: 0.5rem; }
+.side-left .scrap { right: 100%; margin-right: 0.5rem; transform: translateY(-42%) scale(0.94) rotate(2.5deg); }
+.gift:hover .scrap,
+.gift.is-near .scrap { opacity: 1; transform: translateY(-46%) scale(1) rotate(-1.4deg); }
+.side-left .gift:hover .scrap,
+.gift.side-left.is-near .scrap { transform: translateY(-46%) scale(1) rotate(1.4deg); }
+.scrap img { display: block; width: 100%; height: auto; }
 
-.lift {
-  position: relative;
+.is-claimed .gift-name { opacity: 0.45; text-decoration: line-through; }
+.taken {
   display: block;
-  transition: transform 0.55s cubic-bezier(0.2, 0.7, 0.3, 1), filter 0.55s ease;
-  filter: drop-shadow(0 10px 12px rgba(20, 24, 28, 0.22));
-}
-.item:hover .lift {
-  transform: translateY(-9px) scale(1.055) rotate(calc(var(--rot, 0deg) * -1));
-  filter: drop-shadow(0 24px 26px rgba(20, 24, 28, 0.28));
-}
-/* `aspect-ratio` is set inline per item (data `ratio`, default the placeholder's)
-   so the page keeps its height before the image decodes. object-fit: contain
-   means a swapped-in image with a different ratio letterboxes rather than
-   distorts — set `ratio` on the item to fit it exactly. */
-.lift img { display: block; width: 100%; height: auto; object-fit: contain; }
-
-/* One strip of tape, never five. */
-.tape {
-  position: absolute;
-  top: -0.55rem;
-  left: 50%;
-  width: clamp(2.6rem, 7%, 4.2rem);
-  height: 1.15rem;
-  transform: translateX(-50%) rotate(-4deg);
-  background: rgba(255, 253, 245, 0.62);
-  border-left: 1px solid rgba(20, 24, 28, 0.07);
-  border-right: 1px solid rgba(20, 24, 28, 0.07);
-  box-shadow: 0 1px 2px rgba(20, 24, 28, 0.09);
-}
-
-figcaption {
-  display: block;
-  margin-top: 1.1rem;
-  padding-left: 0.15rem;
-}
-.label {
-  display: block;
+  margin-top: 0.5rem;
   font-family: 'Bague', sans-serif;
+  font-size: 0.66rem;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
-  letter-spacing: 0.15em;
-  font-size: 0.76rem;
-}
-.cap {
-  display: block;
-  margin-top: 0.4rem;
-  font-size: 0.87rem;
-  line-height: 1.55;
-  opacity: 0.7;
+  opacity: 0.5;
 }
 
-/* Claimed — supported, unused until gifts are tracked. */
-.is-claimed .lift { filter: grayscale(1) opacity(0.45) drop-shadow(0 6px 8px rgba(20, 24, 28, 0.16)); }
-.is-claimed:hover .lift { transform: none; }
-.is-claimed .label { text-decoration: line-through; opacity: 0.55; }
-.is-claimed .cap { opacity: 0.42; }
-.stamp {
-  position: absolute;
-  bottom: 12%;
-  left: 50%;
-  transform: translateX(-50%) rotate(-7deg);
-  font-family: 'Bague', sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 0.3em;
-  font-size: 0.7rem;
-  padding: 0.3rem 0.75rem;
-  border: 1.5px solid currentColor;
-  opacity: 0.62;
+/* ── cash ── */
+.cash-scene { min-height: 92dvh; }
+.cash-card {
+  border: 1px solid currentColor;
+  padding: clamp(2.2rem, 5vw, 3.2rem) clamp(1.6rem, 5vw, 3.4rem);
+  max-width: 32rem;
 }
-.sr-taken {
-  position: absolute;
-  width: 1px; height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-}
-
-/* ── The cash card ────────────────────────────────────────────────────────── */
-.envelope {
-  position: relative;
-  background: var(--paper);
-  border: 1px solid var(--paper-edge);
-  padding: clamp(3rem, 7vw, 4.5rem) clamp(1.75rem, 6vw, 4rem) clamp(2.25rem, 5vw, 3rem);
-  max-width: 34rem;
-  text-align: center;
-  box-shadow: 0 22px 42px -28px rgba(20, 24, 28, 0.5);
-  will-change: transform, opacity;
-}
-/* the flap */
-.flap {
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 4.5rem;
-  background: linear-gradient(to bottom, rgba(20, 24, 28, 0.045), rgba(20, 24, 28, 0));
-  clip-path: polygon(0 0, 100% 0, 50% 100%);
-  border-bottom: 1px solid var(--paper-edge);
-}
-.cash-heading {
-  font-family: 'Bague', sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  font-size: clamp(1.15rem, 3.4vw, 1.6rem);
-  margin: 0 0 1rem;
-}
-.cash-body { font-size: 0.95rem; line-height: 1.7; opacity: 0.8; margin: 0 0 1.9rem; }
+.cash-heading { font-family: 'Italiana', serif; font-size: clamp(1.3rem, 3vw, 2rem); margin: 0 0 1rem; }
+.cash-body { font-size: 0.95rem; line-height: 1.7; opacity: 0.8; margin: 0 0 1.8rem; }
 .cash-cta {
   display: inline-block;
   font-family: 'Bague', sans-serif;
   text-transform: uppercase;
   letter-spacing: 0.2em;
-  font-size: 0.76rem;
-  padding: 0.85rem 2rem;
+  font-size: 0.74rem;
+  padding: 0.8rem 1.9rem;
   border: 1px solid currentColor;
   color: inherit;
   text-decoration: none;
   transition: background 0.4s ease, color 0.4s ease;
 }
-.cash-cta:hover { background: var(--accent, #2e4a52); color: var(--paper); }
-.cash-note { margin: 1.4rem 0 0; font-size: 0.78rem; line-height: 1.6; opacity: 0.55; }
-.cash-sign {
-  margin-top: clamp(2.5rem, 6vh, 4rem);
+.cash-cta:hover { background: var(--accent, #2e4a52); color: var(--accentLight, #e8edf2); }
+.cash-note { margin: 1.3rem 0 0; font-size: 0.76rem; line-height: 1.6; opacity: 0.55; }
+
+/* ── signing ── */
+.sign-scene { min-height: 150dvh; }
+.closer { font-family: 'Italiana', serif; font-size: clamp(1.4rem, 3vw, 2.4rem); margin-bottom: 2rem; }
+.sign-block { width: min(82vw, 46rem); display: flex; flex-direction: column; align-items: stretch; }
+.fork { width: 100%; height: 6.5rem; pointer-events: none; }
+.sig-row { display: flex; justify-content: space-between; gap: 2rem; }
+.sig { flex: 1; display: flex; flex-direction: column; align-items: center; }
+.sig-name { font-family: 'Over the Rainbow', cursive; font-size: clamp(1.6rem, 4.6vw, 3.2rem); }
+.sig-line { width: min(20rem, 34vw); height: 1.5rem; }
+.tail {
   font-family: 'Bague', sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 0.22em;
   font-size: 0.78rem;
-  opacity: 0;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.55;
+  margin-top: 3rem;
 }
 
-/* ── Portrait ─────────────────────────────────────────────────────────────── */
+/* ── portrait: stack the words; the curve re-measures itself ── */
 @media (max-width: 767px) {
-  .item { width: 82% !important; min-width: 0; }
-  .item:nth-child(even) { margin-top: 0; }
-  .page { padding-left: 1.4rem; padding-right: 1.4rem; }
-  .stitch { left: 6px; }
-  .page-head { padding-left: 0.9rem; }
+  .gift { left: 50% !important; width: 84vw; top: calc(var(--row, 0) * 56vh + 26vh); }
+  .gifts-scene { min-height: calc(var(--rows, 6) * 56vh + 42vh); }
+  .scrap {
+    position: relative;
+    left: auto; right: auto; top: auto;
+    margin: 1.2rem auto 0;
+    width: min(11rem, 46vw);
+    transform: scale(0.96) rotate(-1.6deg);
+  }
+  .side-left .scrap { transform: scale(0.96) rotate(1.6deg); }
+  .gift:hover .scrap, .gift.is-near .scrap { transform: scale(1) rotate(-1.2deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lift { transition: none; }
+  .scrap { transition: opacity 0.3s ease; }
 }
 </style>

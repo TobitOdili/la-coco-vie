@@ -255,85 +255,61 @@ export const CHAPTER_PAGES = {
   // marked in a catalogue, then splits in two to SIGN both names. No shop; each gift is
   // written as the future memory it becomes, and the registry link is the floating card.
   // Fields: kind ('open'|'gift'|'sign'); gift scenes = { memory, gift, popups:[regKey] }.
-  // ── WITH LOVE — "the album": a scrapbook of cut-outs, pasted page by page. ──
-  // No prices, no per-item links (user decision 2026-08-10): the items say what
-  // we'd love, and the ONE call to action is the cash card at the end.
-  // Item shape: { name, caption, image, w (page-width %), rot (deg), claimed }
+  // ── WITH LOVE — "the ink": one line wanders the page and lassoes each gift. ──
+  // The gift words are scattered across the page; a single scroll-drawn line
+  // threads them, looping around each name as it arrives. Hovering a gift (or,
+  // on touch, scrolling it to the middle of the screen) fades its picture in on
+  // a torn scrap of paper.
+  // Item shape: { memory, name, image, x (% across the page), claimed }
+  //   • `x` is the art direction — alternate sides so the line has to travel.
+  //     The CURVE ITSELF IS MEASURED from where the words actually land, so `x`
+  //     can change freely and mobile can stack them centred without breaking it.
   //   • `claimed: true` greys an item out + marks it taken. Supported but unused
   //     until gifts are actually tracked.
+  // No prices, no per-item links (user decision 2026-08-10); the cash card near
+  // the end is the only call to action, and shows NO account details.
   'with-love': {
     sections: [
       {
-        kind: 'cover',
-        big: 'with love',
+        kind: 'open',
         lead: 'before you give us a single thing —',
+        big: 'thank you',
         sub: 'your presence on the day is the whole gift. truly.',
-        pivot: 'but if your love language comes wrapped with a bow, we kept a little book of wishes.',
+        pivot: 'but if your love language comes wrapped with a bow…',
         popups: [],
       },
       {
-        kind: 'spread',
-        no: 'i',
-        heading: 'for the kitchen',
-        note: 'where most of our arguing — and all of our eating — will happen.',
+        kind: 'gifts',
         items: [
           {
+            memory: 'slow sunday mornings — two cups, no hurry.',
             name: 'the espresso machine',
-            caption: 'slow sunday mornings, two cups, no hurry.',
-            image: PLACEHOLDER_ITEM, w: 44, rot: -3.2, claimed: false,
+            image: PLACEHOLDER_ITEM, x: 34, claimed: false,
           },
           {
+            memory: 'every table we will set for the people we love.',
             name: 'dinnerware for twelve',
-            caption: 'every table we will set for the people we love.',
-            image: PLACEHOLDER_ITEM, w: 36, rot: 2.6, claimed: false,
+            image: PLACEHOLDER_ITEM, x: 68, claimed: false,
           },
           {
+            memory: 'the jollof will be judged. we intend to be ready.',
             name: 'a good, heavy pot',
-            caption: 'the jollof will be judged. we intend to be ready.',
-            image: PLACEHOLDER_ITEM, w: 33, rot: -1.4, claimed: false,
+            image: PLACEHOLDER_ITEM, x: 36, claimed: false,
           },
-        ],
-        popups: [],
-      },
-      {
-        kind: 'spread',
-        no: 'ii',
-        heading: 'for the home',
-        note: 'the small things that turn an address into a place you want to be.',
-        items: [
           {
+            memory: 'for the first morning we wake up somewhere that is ours.',
             name: 'linens, the soft kind',
-            caption: 'for the first morning we wake up somewhere that is ours.',
-            image: PLACEHOLDER_ITEM, w: 40, rot: 2.1, claimed: false,
+            image: PLACEHOLDER_ITEM, x: 70, claimed: false,
           },
           {
+            memory: 'the one we will read under, badly, until far too late.',
             name: 'a lamp for the corner',
-            caption: 'the one we will read under, badly, until far too late.',
-            image: PLACEHOLDER_ITEM, w: 32, rot: -2.8, claimed: false,
+            image: PLACEHOLDER_ITEM, x: 32, claimed: false,
           },
           {
-            name: 'frames, empty for now',
-            caption: 'we have a wedding coming. they will not stay empty.',
-            image: PLACEHOLDER_ITEM, w: 37, rot: 1.5, claimed: false,
-          },
-        ],
-        popups: [],
-      },
-      {
-        kind: 'spread',
-        no: 'iii',
-        heading: 'for the going',
-        note: 'because staying in is lovely, and leaving is lovelier.',
-        items: [
-          {
+            memory: 'for everywhere we have not been yet.',
             name: 'a weekender for two',
-            caption: 'for everywhere we have not been yet.',
-            image: PLACEHOLDER_ITEM, w: 42, rot: -2.2, claimed: false,
-          },
-          {
-            name: 'the picnic basket',
-            caption: 'optimistic, in this weather. we are doing it anyway.',
-            image: PLACEHOLDER_ITEM, w: 34, rot: 3.1, claimed: false,
+            image: PLACEHOLDER_ITEM, x: 66, claimed: false,
           },
         ],
         popups: [],
@@ -349,7 +325,13 @@ export const CHAPTER_PAGES = {
         // NO bank details on the page (user decision 2026-08-10).
         url: '#',
         note: 'no account numbers here, on purpose — this just puts you in touch with us.',
-        sign: 'with love, Covenant & Uvie',
+        popups: [],
+      },
+      {
+        kind: 'sign',
+        closer: 'with love,',
+        names: ['Covenant', 'Uvie'],
+        tail: 'see you on october 27.',
         popups: [],
       },
     ],
