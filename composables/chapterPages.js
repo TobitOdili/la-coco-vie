@@ -65,10 +65,11 @@ export const POPUPS = {
     params: ['colours of the day: tbc', 'come beautiful, come comfy'],
   },
 
-  // “In Frames” — album link.
+  // “In Frames” — the shared Drive folder guests upload their own shots into.
+  // ⚠️ PLACEHOLDER url — swap for the real Google Drive folder link.
   fullAlbum: {
-    title: 'The Full Album',
-    params: ['every photo, one place', 'coming soon'],
+    title: 'Add Your Photos',
+    params: ['your shots from the day', 'upload to our shared drive ↗'],
     url: '#',
   },
 
@@ -220,33 +221,49 @@ export const CHAPTER_PAGES = {
   // film through a projector gate — one photo owning the screen at a time. Fields:
   // sections[1].exposures[] = { src, cap } (Roll 01; caps are the subtitles);
   // sections[2].reserved[] = the future rolls' title cards.
+  // “In Frames” renders through the bespoke InFrames component (“The Screening
+  // Room”). Order is deliberate: TITLE → LEADER (the 3·2·1 countdown, scroll-pinned)
+  // → REEL → END. The countdown sits BEFORE any photograph so its pinned scroll
+  // doubles as the window in which the reel media preloads (see InFrames.vue).
+  // The reel is ONE gate that swaps exposures behind a shutter flicker — the film
+  // edges stay put and only the sprockets travel, the way a hand-cranked projector
+  // replaced each frame.
   'in-frames': {
     sections: [
-      { num: '—', title: 'Now Showing', popups: [], align: 'center' },
       {
+        kind: 'title',
+        num: '—',
+        title: 'Our Journey In Frames',
+        present: 'COVENANT & UVIE PRESENT',
+        sub: 'A LOVE STORY, ONE FRAME AT A TIME',
+        popups: [],
+        align: 'center',
+      },
+      {
+        kind: 'leader',
+        num: '—',
+        title: 'Leader',
+        popups: [],
+        align: 'center',
+      },
+      {
+        kind: 'reel',
         num: '01',
-        title: 'The Pre-Wedding',
+        title: 'The Reel',
+        // ⚠️ PLACEHOLDER exposures — two of the couple's own photos on repeat until
+        // the real set arrives. Add/remove freely: the gate reads the array length.
         exposures: [
-          { src: asset('/images/gallery/wine-the-bride-01.jpg'), cap: 'we tried to act natural' },
-          { src: asset('/images/gallery/wine-the-bride-02.jpg'), cap: 'this one survived the laughing fit' },
-          { src: asset('/images/gallery/wine-the-wine-01.jpg'), cap: 'golden hour, borrowed jacket' },
-          { src: asset('/images/gallery/wine-the-wine-02.jpg'), cap: 'the photographer said “again”' },
-          { src: asset('/images/gallery/wine-the-people.jpg'), cap: 'everyone we love, one frame' },
+          { src: asset('/images/reel/car-selfie.jpg'), cap: 'somewhere between here and there' },
+          { src: asset('/images/reel/bw-beanie.jpg'), cap: 'the beanie era' },
+          { src: asset('/images/reel/car-selfie.jpg'), cap: 'we tried to act natural' },
+          { src: asset('/images/reel/bw-beanie.jpg'), cap: 'this one survived the laughing fit' },
+          { src: asset('/images/reel/car-selfie.jpg'), cap: 'everyone we love, one frame' },
+          { src: asset('/images/reel/bw-beanie.jpg'), cap: 'more exposures after october 27' },
         ],
         popups: ['fullAlbum'],
         align: 'center',
       },
-      {
-        num: '02–03',
-        title: 'Reserved',
-        reserved: [
-          { title: 'The Traditional', note: 'date tbc' },
-          { title: 'The White Wedding', note: 'october 27, 2026' },
-        ],
-        popups: [],
-        align: 'center',
-      },
-      { num: '—', title: 'End of Reel', popups: [], align: 'center' },
+      { kind: 'end', num: '—', title: 'End of Reel', popups: [], align: 'center' },
     ],
   },
 

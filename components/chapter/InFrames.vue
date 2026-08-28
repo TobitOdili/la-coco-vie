@@ -1,66 +1,67 @@
 <template>
   <div ref="rootEl" class="in-frames">
-    <!-- ── Scene 0 · The house lights go down. A film-leader title card. ── -->
-    <section class="chapter-section room-scene scene-title" :data-idx="0">
-      <div class="title-card">
-        <div class="present">COVENANT &amp; UVIE PRESENT</div>
-        <div class="film-title">IN FRAMES</div>
-        <div class="present sub">A LOVE STORY IN THREE ROLLS</div>
-      </div>
-    </section>
-
-    <!-- ── Scene 1 · Roll 01 — the strip runs through the gate; scroll advances the film. ── -->
-    <section
-      class="chapter-section room-scene roll-scene"
-      :data-idx="1"
-      :style="{ height: `${100 + (exposures.length - 1) * 85}dvh` }"
-    >
-      <div class="gate-sticky">
-        <div class="roll-head">ROLL 01 — {{ sections[1]?.title?.toUpperCase() }} · {{ String(exposures.length).padStart(2, '0') }} EXPOSURES</div>
-        <div class="gate">
-          <div class="strip" ref="stripEl">
-            <figure v-for="(ex, i) in exposures" :key="i" class="film-frame">
-              <img :src="ex.src" :alt="ex.cap" loading="eager" />
-            </figure>
-          </div>
-          <div class="gate-vignette" aria-hidden="true" />
+    <template v-for="(s, i) in sections" :key="i">
+      <!-- ── Title · the house lights go down. ── -->
+      <section v-if="s.kind === 'title'" class="chapter-section room-scene scene-title" :data-idx="i">
+        <div class="title-card">
+          <div class="present">{{ s.present }}</div>
+          <h2 class="film-title">
+            <span>OUR JOURNEY</span>
+            <span>IN FRAMES</span>
+          </h2>
+          <div class="present sub">{{ s.sub }}</div>
         </div>
-        <div class="subtitle">{{ currentCap }}</div>
-      </div>
-    </section>
+      </section>
 
-    <!-- ── Scene 2 · Leader countdown, then the reserved rolls. ── -->
-    <section class="chapter-section room-scene leader-scene" :data-idx="2">
-      <div class="leader-sticky">
-        <svg class="leader-svg" viewBox="0 0 400 400" aria-hidden="true">
-          <line x1="200" y1="0" x2="200" y2="400" stroke="#EFE8F5" stroke-width="1" opacity="0.25" />
-          <line x1="0" y1="200" x2="400" y2="200" stroke="#EFE8F5" stroke-width="1" opacity="0.25" />
-          <circle cx="200" cy="200" r="150" stroke="#EFE8F5" stroke-width="1.5" fill="none" opacity="0.35" />
-          <circle
-            ref="sweepEl" class="sweep" cx="200" cy="200" r="150" pathLength="1"
-            stroke="#EFE8F5" stroke-width="3" fill="none" transform="rotate(-90 200 200)"
-          />
-        </svg>
-        <div class="leader-num" ref="leaderNumEl">3</div>
-      </div>
-      <div class="reserved">
-        <div v-for="(r, i) in reserved" :key="i" class="film-frame frame-blank">
-          <div class="blank-inner">
-            <div class="blank-roll">ROLL {{ String(i + 2).padStart(2, '0') }}</div>
-            <div class="blank-title">{{ r.title }}</div>
-            <div class="blank-note">exposures reserved — {{ r.note }}</div>
+      <!-- ── Leader · the 3·2·1 countdown, pinned. It runs BEFORE any photograph,
+           which is also the window the reel media loads in (see preload()). ── -->
+      <section v-else-if="s.kind === 'leader'" class="chapter-section room-scene leader-scene" :data-idx="i">
+        <div class="leader-sticky">
+          <svg class="leader-svg" viewBox="0 0 400 400" aria-hidden="true">
+            <line x1="200" y1="0" x2="200" y2="400" stroke="#EFE8F5" stroke-width="1" opacity="0.25" />
+            <line x1="0" y1="200" x2="400" y2="200" stroke="#EFE8F5" stroke-width="1" opacity="0.25" />
+            <circle cx="200" cy="200" r="150" stroke="#EFE8F5" stroke-width="1.5" fill="none" opacity="0.35" />
+            <circle ref="sweepEl" class="sweep" cx="200" cy="200" r="150" pathLength="1"
+              stroke="#EFE8F5" stroke-width="3" fill="none" transform="rotate(-90 200 200)" />
+          </svg>
+          <div class="leader-num" ref="leaderNumEl">3</div>
+          <!-- Honest about the wait rather than hiding it: the countdown IS the loader. -->
+          <div class="threading" :class="{ done: reelReady }">
+            {{ reelReady ? 'REEL THREADED' : `THREADING THE REEL · ${loadPct}%` }}
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- ── Scene 3 · End of reel — the film runs out and the lights come back up. ── -->
-    <section class="chapter-section room-scene scene-end" :data-idx="3">
-      <div class="title-card">
-        <div class="film-title small">END OF REEL</div>
-        <div class="present sub">MORE EXPOSURES AFTER OCTOBER 27</div>
-      </div>
-    </section>
+      <!-- ── The reel · ONE gate. The film edges stay put, the sprockets travel,
+           and the exposure is swapped behind a closed shutter. ── -->
+      <section v-else-if="s.kind === 'reel'" class="chapter-section room-scene reel-scene" :data-idx="i"
+        :style="{ height: `${110 + (exposures.length - 1) * 80}dvh` }">
+        <div class="gate-sticky">
+          <div class="roll-head">
+            ROLL 01 — {{ String(exposures.length).padStart(2, '0') }} EXPOSURES
+          </div>
+          <div class="projector">
+            <div class="sprocket" ref="sprocketL" aria-hidden="true" />
+            <div class="window">
+              <img v-for="(ex, k) in exposures" :key="k" class="exposure"
+                :class="{ on: k === active }" :src="reelReady ? ex.src : undefined"
+                :alt="k === active ? ex.cap : ''" decoding="async" />
+              <div class="shutter" ref="shutterEl" aria-hidden="true" />
+            </div>
+            <div class="sprocket" ref="sprocketR" aria-hidden="true" />
+          </div>
+          <div class="subtitle">{{ currentCap }}</div>
+        </div>
+      </section>
+
+      <!-- ── End of reel · the film runs out and the lights come up. ── -->
+      <section v-else-if="s.kind === 'end'" class="chapter-section room-scene scene-end" :data-idx="i">
+        <div class="title-card">
+          <div class="film-title small">END OF REEL</div>
+          <div class="present sub">MORE EXPOSURES AFTER OCTOBER 27</div>
+        </div>
+      </section>
+    </template>
   </div>
 </template>
 
@@ -71,95 +72,132 @@ const props = defineProps({
   sections: { type: Array, required: true },
 })
 
-const exposures = computed(() => props.sections[1]?.exposures || [])
-const reserved = computed(() => props.sections[2]?.reserved || [])
+const exposures = computed(() => props.sections.find((s) => s.kind === 'reel')?.exposures || [])
 
 const rootEl = ref(null)
-const stripEl = ref(null)
 const sweepEl = ref(null)
 const leaderNumEl = ref(null)
+const shutterEl = ref(null)
+const sprocketL = ref(null)
+const sprocketR = ref(null)
 const currentCap = ref('')
+const active = ref(0)
+const reelReady = ref(false)
+const loadPct = ref(0)
 
 let rafId = 0
+let io = null
 
-// Same scrub engine as BigDay: rAF reads scene rects so everything follows Lenis
-// exactly and reverses for free. The roll scene translates the physical strip;
-// the leader scene sweeps the countdown circle.
+// ── Loading order ───────────────────────────────────────────────────────────
+// The title card and the countdown are type + SVG — they cost nothing and must
+// paint immediately. The photographs are the only heavy thing here, so they are
+// not requested until the countdown is near in view, and the pinned countdown gives
+// them time to arrive. Not a hard gate: if they are slow the reel simply fills
+// in as they land. (Repeated srcs collapse to one request each via the cache.)
+function preload() {
+  const srcs = [...new Set(exposures.value.map((e) => e.src))]
+  if (!srcs.length) { reelReady.value = true; return }
+  let done = 0
+  const bump = () => {
+    done += 1
+    loadPct.value = Math.round((done / srcs.length) * 100)
+    if (done >= srcs.length) reelReady.value = true
+  }
+  for (const src of srcs) {
+    const img = new Image()
+    img.onload = bump
+    img.onerror = bump          // never strand the reel on one bad file
+    img.src = src
+  }
+}
+
+// Same rAF scrub engine as the other bespoke pages: read scene rects each frame
+// so everything follows Lenis exactly and reverses for free.
 function tick() {
   const root = rootEl.value
   if (root) {
     const vh = window.innerHeight
 
-    // Roll: p over the sticky travel drives the strip; per-frame glow + subtitle
-    // come from each frame's real distance to the gate centre.
-    const roll = root.querySelector('.roll-scene')
-    const strip = stripEl.value
-    if (roll && strip) {
-      const r = roll.getBoundingClientRect()
-      const p = Math.min(1, Math.max(0, -r.top / (r.height - vh)))
-      const frames = strip.querySelectorAll('.film-frame')
-      if (frames.length > 1) {
-        const step = frames[1].offsetTop - frames[0].offsetTop
-        // A projector advances in discrete pulls: double-smoothstep the fractional
-        // position so each frame DWELLS centred in the gate and the transition
-        // between frames is quick. Continuous + reversible, but it reads as frames.
-        const q = p * (frames.length - 1)
-        const i0 = Math.floor(q)
-        const x = q - i0
-        const s1 = x * x * (3 - 2 * x)
-        const dwell = s1 * s1 * (3 - 2 * s1)
-        const qq = i0 + dwell
-        strip.style.transform = `translateY(${(-qq * step).toFixed(1)}px)`
-        let cap = ''
-        frames.forEach((f, i) => {
-          const fr = f.getBoundingClientRect()
-          const d = Math.abs(fr.top + fr.height / 2 - vh / 2) / vh
-          const t = Math.min(1, Math.max(0, 1 - d * 2))
-          f.style.opacity = String(0.45 + 0.55 * t)
-          f.style.filter = `brightness(${(0.72 + 0.38 * t).toFixed(2)})`
-        })
-        const near = Math.round(qq)
-        if (Math.abs(qq - near) < 0.3) cap = exposures.value[near]?.cap || ''
-        currentCap.value = cap
-      }
-    }
-
-    // Leader: the countdown sweep. Each third of p is one number's full sweep.
-    const leader = root.querySelector('.leader-scene .leader-sticky')?.parentElement
+    // Leader: each third of the pinned travel is one number's full sweep.
+    const leader = root.querySelector('.leader-scene')
     if (leader && sweepEl.value && leaderNumEl.value) {
       const r = leader.getBoundingClientRect()
       const travel = Math.max(1, r.height - vh)
       const p = Math.min(1, Math.max(0, -r.top / travel)) * 0.999
-      const n = 3 - Math.floor(p * 3)
-      leaderNumEl.value.textContent = String(n)
+      leaderNumEl.value.textContent = String(3 - Math.floor(p * 3))
       sweepEl.value.style.strokeDashoffset = String(1 - ((p * 3) % 1))
+    }
+
+    // The reel. A projector does not slide film past a window — it holds a frame,
+    // closes the shutter, pulls the next one down, and opens again. So the picture
+    // is SWAPPED at the exact moment the shutter is shut, and only the sprocket
+    // holes travel continuously.
+    const reel = root.querySelector('.reel-scene')
+    if (reel && shutterEl.value) {
+      const r = reel.getBoundingClientRect()
+      const p = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - vh)))
+      const n = exposures.value.length
+      const q = p * (n - 1)
+      const nearest = Math.round(q)
+      const d = Math.abs(q - nearest)          // distance to a frame change
+      const shut = Math.min(1, Math.max(0, 1 - d / 0.11))
+
+      active.value = Math.min(n - 1, Math.max(0, nearest))
+      currentCap.value = shut > 0.85 ? '' : exposures.value[active.value]?.cap || ''
+
+      // Shutter blink + a little gate judder while the frame is being pulled.
+      shutterEl.value.style.opacity = (shut * 0.96).toFixed(3)
+      const judder = shut * 5 * Math.sin(q * 47)
+      shutterEl.value.parentElement.style.transform = `translateY(${judder.toFixed(2)}px)`
+
+      // The film edges stay put; the perforations run. 3.2rem per hole (see CSS).
+      const holes = (q * -3.2).toFixed(3)
+      if (sprocketL.value) sprocketL.value.style.backgroundPositionY = `${holes}rem`
+      if (sprocketR.value) sprocketR.value.style.backgroundPositionY = `${holes}rem`
     }
   }
   rafId = requestAnimationFrame(tick)
 }
 
-onMounted(() => { rafId = requestAnimationFrame(tick) })
-onBeforeUnmount(() => cancelAnimationFrame(rafId))
+onMounted(() => {
+  rafId = requestAnimationFrame(tick)
+  const leader = rootEl.value?.querySelector('.leader-scene')
+  if (leader && 'IntersectionObserver' in window) {
+    io = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) { preload(); io.disconnect(); io = null } },
+      { rootMargin: '150% 0px' }
+    )
+    io.observe(leader)
+  } else {
+    preload()
+  }
+})
+onBeforeUnmount(() => { cancelAnimationFrame(rafId); io?.disconnect() })
 </script>
 
 <style scoped>
 /* The dark room. NO overflow:hidden on scene roots — it breaks position:sticky. */
-.room-scene {
-  position: relative;
-  color: #EFE8F5;
-}
+.room-scene { position: relative; color: #EFE8F5; }
+
+/* Long, many-stopped ramps in and out. Two-stop gradients over this much distance
+   band badly and land as a hard edge against the chapter's pale background. */
 .scene-title {
-  min-height: 130dvh;
-  background: linear-gradient(#EFE8F5, #3A2B4A 26%, #241A33 55%, #241A33);
+  min-height: 112dvh;
+  background: linear-gradient(
+    #EFE8F5 0%, #E2D8EC 8%, #BCA9CE 20%, #8E76A8 33%,
+    #5F4A7C 46%, #3E2E52 62%, #2A1E3B 78%, #241A33 92%, #241A33 100%
+  );
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.roll-scene { background: #241A33; }
-.leader-scene { background: #241A33; }
+.reel-scene, .leader-scene { background: #241A33; }
 .scene-end {
-  min-height: 130dvh;
-  background: linear-gradient(#241A33 30%, #3A2B4A 60%, #EFE8F5);
+  min-height: 84dvh;
+  background: linear-gradient(
+    #241A33 0%, #241A33 12%, #2A1E3B 26%, #3E2E52 40%,
+    #5F4A7C 55%, #8E76A8 70%, #BCA9CE 83%, #E2D8EC 94%, #EFE8F5 100%
+  );
   display: flex;
   align-items: center;
   justify-content: center;
@@ -175,13 +213,44 @@ onBeforeUnmount(() => cancelAnimationFrame(rafId))
 }
 .film-title {
   font-family: 'Monoton', cursive;
-  font-size: clamp(2.6rem, 7.5vw, 6.5rem);
-  line-height: 1.1;
+  font-size: clamp(2rem, 6vw, 4.8rem);
+  line-height: 1.18;
   margin: 1.4rem 0;
   color: #EFE8F5;
+  font-weight: 400;
 }
+.film-title span { display: block; }
 .film-title.small { font-size: clamp(1.8rem, 4.5vw, 3.4rem); }
 .sub { opacity: 0.5; }
+
+/* ── the leader ── */
+.leader-scene { min-height: 300dvh; }
+.leader-sticky {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.leader-svg { width: min(44vw, 40dvh); }
+.sweep { stroke-dasharray: 1; stroke-dashoffset: 1; }
+.leader-num {
+  position: absolute;
+  font-family: 'Monoton', cursive;
+  font-size: clamp(4rem, 9vw, 7.5rem);
+  color: #EFE8F5;
+}
+.threading {
+  position: absolute;
+  bottom: 12dvh;
+  font-family: 'Bague', sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.3em;
+  opacity: 0.55;
+  transition: opacity 0.8s ease;
+}
+.threading.done { opacity: 0; }
 
 /* ── the gate ── */
 .gate-sticky {
@@ -200,113 +269,66 @@ onBeforeUnmount(() => cancelAnimationFrame(rafId))
   letter-spacing: 0.3em;
   opacity: 0.6;
 }
-.gate {
-  position: relative;
-  height: 64dvh;
-  overflow: hidden;
+/* The projector: fixed film edges either side of one fixed window. */
+.projector {
   display: flex;
-  justify-content: center;
+  align-items: stretch;
+  background: #170F22;
+  padding: 1.1rem 0;
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.8);
 }
-/* Soft projector vignette above/below the gate window. */
-.gate-vignette {
+.sprocket {
+  width: 3.4rem;
+  flex: none;
+  background-image: radial-gradient(
+    0.6rem 0.85rem at 50% 1.6rem, rgba(239, 232, 245, 0.9) 58%, transparent 63%
+  );
+  background-size: 100% 3.2rem;
+  background-repeat: repeat-y;
+}
+.window {
+  position: relative;
+  width: min(72vw, 84dvh);
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  background: #0E0916;
+  will-change: transform;
+}
+.exposure {
   position: absolute;
   inset: 0;
-  pointer-events: none;
-  background: linear-gradient(#241A33, transparent 18%, transparent 82%, #241A33);
-}
-.strip {
-  will-change: transform;
-  /* The film itself: darker than the room, sprocket holes down both edges. */
-  background: #170F22;
-  padding: 0 3.4rem;
-  background-image:
-    radial-gradient(0.6rem 0.85rem at 1.7rem 50%, rgba(239, 232, 245, 0.85) 58%, transparent 63%),
-    radial-gradient(0.6rem 0.85rem at calc(100% - 1.7rem) 50%, rgba(239, 232, 245, 0.85) 58%, transparent 63%);
-  background-size: 100% 3.2rem;
-}
-.film-frame {
-  width: min(76vw, 92dvh);
-  aspect-ratio: 3 / 2;
-  margin: 3.2rem 0;
-  overflow: hidden;
-  border-radius: 4px;
-}
-.film-frame img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
+  opacity: 0;
+}
+/* No crossfade: a projector cuts. The swap happens behind the closed shutter. */
+.exposure.on { opacity: 1; }
+.shutter {
+  position: absolute;
+  inset: 0;
+  background: #0B0712;
+  opacity: 0;
+  pointer-events: none;
 }
 .subtitle {
   min-height: 1.6rem;
   font-family: 'Over the Rainbow', cursive;
   font-size: 1.15rem;
   opacity: 0.85;
-}
-
-/* ── the leader ── */
-.leader-scene { min-height: 280dvh; }
-.leader-sticky {
-  position: sticky;
-  top: 0;
-  height: 100dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.leader-svg { width: min(44vw, 40dvh); }
-.sweep { stroke-dasharray: 1; stroke-dashoffset: 1; }
-.leader-num {
-  position: absolute;
-  font-family: 'Monoton', cursive;
-  font-size: clamp(4rem, 9vw, 7.5rem);
-  color: #EFE8F5;
-}
-
-/* ── reserved rolls ── */
-.reserved {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4rem;
-  padding: 14dvh 0 20dvh;
-}
-.frame-blank {
-  background: #170F22;
-  border: 1px dashed rgba(239, 232, 245, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.blank-inner { text-align: center; }
-.blank-roll {
-  font-family: 'Bague', sans-serif;
-  font-size: 0.7rem;
-  letter-spacing: 0.3em;
-  opacity: 0.45;
-}
-.blank-title {
-  font-family: 'Italiana', serif;
-  font-size: clamp(1.6rem, 3.4vw, 2.6rem);
-  margin: 0.8rem 0;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-.blank-note {
-  font-family: 'Over the Rainbow', cursive;
-  font-size: 1rem;
-  opacity: 0.6;
+  text-align: center;
+  padding: 0 6vw;
 }
 
 @media (max-width: 768px) {
-  .film-frame { width: 88vw; }
-  .strip { padding: 0 2rem; background-size: 100% 2.6rem;
-    background-image:
-      radial-gradient(0.45rem 0.65rem at 1rem 50%, rgba(239, 232, 245, 0.5) 58%, transparent 62%),
-      radial-gradient(0.45rem 0.65rem at calc(100% - 1rem) 50%, rgba(239, 232, 245, 0.5) 58%, transparent 62%);
+  .window { width: 74vw; }
+  .sprocket { width: 2rem; background-size: 100% 2.6rem;
+    background-image: radial-gradient(0.45rem 0.65rem at 50% 1.3rem, rgba(239, 232, 245, 0.6) 58%, transparent 62%);
   }
-  .gate { height: 56dvh; }
-  .frame-blank { width: 88vw; }
+  .leader-scene { min-height: 260dvh; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .window { will-change: auto; }
 }
 </style>

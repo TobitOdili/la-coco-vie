@@ -290,6 +290,15 @@ body::after {
   font-family: 'Monoton', sans-serif;
   text-transform: uppercase;
 }
+/* IN FRAMES closes tighter than the other chapters: the lights come up through the
+   end-of-reel gradient and land straight on the RSVP, so the chapter-end drops its
+   full-viewport height here only — otherwise there is a dead screen between them. */
+.--in-frames .chapter-end {
+  min-height: auto;
+  padding-top: 4vh;
+  padding-bottom: 14vh;
+}
+
 .--with-love .display {
   font-family: 'Bague', sans-serif;
   letter-spacing: 0.05em;
