@@ -42,6 +42,29 @@ copies (app.vue ×2, chapterPages.js, useChapterScene.js) are gone. `--noise-url
 200 on both. **Method worth reusing: grep the emitted bundle** (`grep -o '"/\(images\|video\|audio\)/[^"]*"'
 .output/public/_nuxt/*.js`) — the bug was invisible in config and only obvious in the build output.
 
+**▶▶ STATE (2026-08-11, later) — IN FRAMES: flat room, real perfs, locked advance, live flicker.**
+Four user notes, all applied on top of the entry below.
+- **NO gradients.** The nine-stop ramps are gone; the room is flat `#241A33` and the page **cuts**
+  in and out. (Verified: `background-image: none` on both end scenes.)
+- **Perforations are rectangular cut-outs**, much larger — a `repeating-linear-gradient` on an inset
+  child (1.6rem hole on a **4.4rem pitch**), not the small ovals a radial-gradient drew.
+  ⚠️ `PITCH_REM` in the script MUST match that gradient or the holes stop landing on their notches.
+- ⚠️ **ONE NOTCH PER FRAME, one number driving everything.** The film no longer glides with scroll:
+  it HOLDS for the first 62% of each frame's scroll range then pulls through exactly one perforation
+  (smootherstep). That single `pull` drives the sprockets, the shutter (shut across the pull), the
+  swap (at `pull === 0.5`, when the shutter is fully shut) and the frame slip — so they cannot drift.
+  The old version glided the sprockets continuously while cutting the picture at integers, which is
+  why the switch never lined up. **Prod-measured:** sprocket Y steps 0 → −70.2 → −140.8 px (= exactly
+  4.4rem × 16), shutter peaks 0.85–1.00 mid-pull, frame index increments across it.
+- ⚠️ **FLICKER MEANS CONTINUOUS, NOT ON-SCROLL.** The first attempt was a scroll-triggered blink;
+  what was wanted is the projector never being steady. Now time-based CSS: uneven lamp swell, fast
+  **stepped** brightness jitter (`steps()` so it jumps, not fades), drifting film grain, gate weave,
+  intermittent hairline scratches, edge halation. **Prod-verified while stationary:** 6 distinct
+  flicker opacities and 12 distinct weave transforms sampled over ~2s with no scrolling.
+  All opacity/transform only, all off under `prefers-reduced-motion`.
+- Follow-up: the artefacts initially **stacked into a muddy picture** — flicker peaks cut to 0.12,
+  halation spread/weight down, grain 0.22→0.15, plus a static `brightness(1.08)` on the exposures.
+
 **▶▶ STATE (2026-08-11) — IN FRAMES REWORKED: countdown first, one gate (`9853e51a`+).**
 Order is now TITLE ("Our Journey In Frames") → **LEADER** → REEL → END. The 3·2·1 countdown runs
 **before any photograph**, pinned for its full 300dvh.
