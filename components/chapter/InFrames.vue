@@ -21,10 +21,10 @@
             <line x1="200" y1="0" x2="200" y2="400" stroke="#EFE8F5" stroke-width="1" opacity="0.25" />
             <line x1="0" y1="200" x2="400" y2="200" stroke="#EFE8F5" stroke-width="1" opacity="0.25" />
             <circle cx="200" cy="200" r="150" stroke="#EFE8F5" stroke-width="1.5" fill="none" opacity="0.35" />
-            <circle ref="sweepEl" class="sweep" cx="200" cy="200" r="150" pathLength="1"
+            <circle class="sweep" cx="200" cy="200" r="150" pathLength="1"
               stroke="#EFE8F5" stroke-width="3" fill="none" transform="rotate(-90 200 200)" />
           </svg>
-          <div class="leader-num" ref="leaderNumEl">3</div>
+          <div class="leader-num">3</div>
           <!-- Honest about the wait rather than hiding it: the countdown IS the loader. -->
           <div class="threading" :class="{ done: reelReady }">
             {{ reelReady ? 'REEL THREADED' : `THREADING THE REEL · ${loadPct}%` }}
@@ -41,14 +41,14 @@
             ROLL 01 — {{ String(exposures.length).padStart(2, '0') }} EXPOSURES
           </div>
           <div class="projector">
-            <div class="sprocket" ref="sprocketL" aria-hidden="true" />
+            <div class="sprocket" aria-hidden="true" />
             <div class="window">
               <img v-for="(ex, k) in exposures" :key="k" class="exposure"
                 :class="{ on: k === active }" :src="reelReady ? ex.src : undefined"
                 :alt="k === active ? ex.cap : ''" decoding="async" />
-              <div class="shutter" ref="shutterEl" aria-hidden="true" />
+              <div class="shutter" aria-hidden="true" />
             </div>
-            <div class="sprocket" ref="sprocketR" aria-hidden="true" />
+            <div class="sprocket" aria-hidden="true" />
           </div>
           <div class="subtitle">{{ currentCap }}</div>
         </div>
@@ -75,11 +75,9 @@ const props = defineProps({
 const exposures = computed(() => props.sections.find((s) => s.kind === 'reel')?.exposures || [])
 
 const rootEl = ref(null)
-const sweepEl = ref(null)
-const leaderNumEl = ref(null)
-const shutterEl = ref(null)
-const sprocketL = ref(null)
-const sprocketR = ref(null)
+// ⚠️ These elements live inside a v-for, and a template ref inside v-for is
+// collected as an ARRAY — `sweepEl.value.style` is then undefined, which threw
+// every frame and killed the rAF loop outright. Query the DOM instead.
 const currentCap = ref('')
 const active = ref(0)
 const reelReady = ref(false)
@@ -120,12 +118,14 @@ function tick() {
 
     // Leader: each third of the pinned travel is one number's full sweep.
     const leader = root.querySelector('.leader-scene')
-    if (leader && sweepEl.value && leaderNumEl.value) {
+    const sweep = leader?.querySelector('.sweep')
+    const num = leader?.querySelector('.leader-num')
+    if (leader && sweep && num) {
       const r = leader.getBoundingClientRect()
       const travel = Math.max(1, r.height - vh)
       const p = Math.min(1, Math.max(0, -r.top / travel)) * 0.999
-      leaderNumEl.value.textContent = String(3 - Math.floor(p * 3))
-      sweepEl.value.style.strokeDashoffset = String(1 - ((p * 3) % 1))
+      num.textContent = String(3 - Math.floor(p * 3))
+      sweep.style.strokeDashoffset = String(1 - ((p * 3) % 1))
     }
 
     // The reel. A projector does not slide film past a window — it holds a frame,
@@ -133,7 +133,9 @@ function tick() {
     // is SWAPPED at the exact moment the shutter is shut, and only the sprocket
     // holes travel continuously.
     const reel = root.querySelector('.reel-scene')
-    if (reel && shutterEl.value) {
+    const shutter = reel?.querySelector('.shutter')
+    const sprockets = reel ? reel.querySelectorAll('.sprocket') : []
+    if (reel && shutter) {
       const r = reel.getBoundingClientRect()
       const p = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - vh)))
       const n = exposures.value.length
@@ -146,14 +148,13 @@ function tick() {
       currentCap.value = shut > 0.85 ? '' : exposures.value[active.value]?.cap || ''
 
       // Shutter blink + a little gate judder while the frame is being pulled.
-      shutterEl.value.style.opacity = (shut * 0.96).toFixed(3)
+      shutter.style.opacity = (shut * 0.96).toFixed(3)
       const judder = shut * 5 * Math.sin(q * 47)
-      shutterEl.value.parentElement.style.transform = `translateY(${judder.toFixed(2)}px)`
+      shutter.parentElement.style.transform = `translateY(${judder.toFixed(2)}px)`
 
       // The film edges stay put; the perforations run. 3.2rem per hole (see CSS).
-      const holes = (q * -3.2).toFixed(3)
-      if (sprocketL.value) sprocketL.value.style.backgroundPositionY = `${holes}rem`
-      if (sprocketR.value) sprocketR.value.style.backgroundPositionY = `${holes}rem`
+      const holes = `${(q * -3.2).toFixed(3)}rem`
+      sprockets.forEach((el) => { el.style.backgroundPositionY = holes })
     }
   }
   rafId = requestAnimationFrame(tick)
