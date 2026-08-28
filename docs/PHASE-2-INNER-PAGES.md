@@ -42,6 +42,35 @@ copies (app.vue ×2, chapterPages.js, useChapterScene.js) are gone. `--noise-url
 200 on both. **Method worth reusing: grep the emitted bundle** (`grep -o '"/\(images\|video\|audio\)/[^"]*"'
 .output/public/_nuxt/*.js`) — the bug was invisible in config and only obvious in the build output.
 
+**▶▶ STATE (2026-08-11) — IN FRAMES REWORKED: countdown first, one gate (`9853e51a`+).**
+Order is now TITLE ("Our Journey In Frames") → **LEADER** → REEL → END. The 3·2·1 countdown runs
+**before any photograph**, pinned for its full 300dvh.
+⚠️ **The gate no longer slides a strip past a window — it IS one window.** A projector holds a
+frame, shuts the shutter, pulls the next down, opens again. So the exposure is **swapped at the
+exact moment the shutter is fully closed** (no crossfade — a projector cuts), with a small gate
+judder during the pull. The film edges stay put; only the perforations travel with scroll
+(`background-position-y`), which cues each frame in. Photos are the couple's own Car Selfie / BW
+beanie on repeat, `public/images/reel/` (1500px, ~300kB).
+**Reserved rolls (Traditional / White Wedding) are GONE** — one reel only. The floating card is now
+**"Add Your Photos" → a shared Drive folder** for guests' own shots (⚠️ url still `'#'`).
+⚠️ **LOADING ORDER (the reason the countdown moved):** title + countdown are type and SVG and paint
+immediately; the photographs are not requested until the leader is within 1.5 viewports
+(IntersectionObserver, `rootMargin: '150% 0px'`), and the pinned countdown is the window they land
+in. **Soft, not a gate** — a slow network just fills the reel in later, and `img.onerror` counts too
+so one bad file can never strand it. Verified on prod: **zero `/images/reel/` requests before
+scrolling**, both fetched during the countdown. The countdown states what it is doing
+("THREADING THE REEL · n%") rather than hiding it.
+**Edges/spacing:** the in/out gradients were two-stop ramps that banded and hit the pale background
+as a hard edge — both are nine-stop now; `.scene-end` lost 46dvh and `.--in-frames .chapter-end`
+(scoped in main.css) drops its full-viewport height so the lights come up straight into the RSVP.
+⚠️⚠️ **BUG WORTH REMEMBERING — a template ref used inside `v-for` is collected as an ARRAY.** Every
+element the frame loop drives sits inside the sections `v-for`, so `sweepEl.value.style` was
+`undefined` and threw on the first frame; because the throw happened *before* the
+`requestAnimationFrame` at the end of `tick()`, **the entire rAF loop died silently** — the page
+looked half-alive (images loaded, nothing moved) rather than broken. Query the DOM inside `tick()`
+instead (`9853e51a`'s follow-up). Applies to every bespoke chapter component that renders scenes
+through `v-for`.
+
 **▶▶ STATE (2026-08-10, latest) — WITH LOVE IS THE INK PAGE AGAIN, EVOLVED (`2c2ba73d`+).**
 The album (below) was **reverted at the user's request** — they preferred the original ink concept.
 What's live now: the opening thank-you and the signing are the originals; the gifts are **scattered
