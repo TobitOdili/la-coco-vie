@@ -343,6 +343,8 @@ onBeforeUnmount(() => { cancelAnimationFrame(rafId); io?.disconnect() })
   height: 100%;
   object-fit: cover;
   opacity: 0;
+  /* a static lift so the artefact stack above does not mud the photograph */
+  filter: brightness(1.08) contrast(1.03);
 }
 /* No crossfade: a projector cuts. The swap happens behind the closed shutter. */
 .exposure.on { opacity: 1; }
@@ -355,7 +357,7 @@ onBeforeUnmount(() => { cancelAnimationFrame(rafId); io?.disconnect() })
 }
 /* the lamp breathing: a slow, uneven swell of light */
 .lamp {
-  background: radial-gradient(120% 90% at 50% 45%, rgba(255, 246, 224, 0.16), transparent 70%);
+  background: radial-gradient(120% 90% at 50% 45%, rgba(255, 246, 224, 0.13), transparent 70%);
   mix-blend-mode: screen;
   animation: lamp-swell 5.5s ease-in-out infinite;
 }
@@ -369,7 +371,7 @@ onBeforeUnmount(() => { cancelAnimationFrame(rafId); io?.disconnect() })
 .grain {
   background-image: var(--noise-url);
   background-size: 200px 200px;
-  opacity: 0.22;
+  opacity: 0.15;
   mix-blend-mode: overlay;
   animation: grain-shift 0.55s steps(1, end) infinite;
 }
@@ -383,7 +385,7 @@ onBeforeUnmount(() => { cancelAnimationFrame(rafId); io?.disconnect() })
 .scratch.s2 { left: 68%; animation: scratch-b 9.3s linear infinite; }
 /* light bleeding around the edge of the gate */
 .halation {
-  box-shadow: inset 0 0 5rem 1.5rem rgba(0, 0, 0, 0.55);
+  box-shadow: inset 0 0 4rem 0.4rem rgba(0, 0, 0, 0.34);
   animation: halation-pulse 4.1s ease-in-out infinite;
 }
 .shutter { background: #0B0712; opacity: 0; }
@@ -403,23 +405,23 @@ onBeforeUnmount(() => { cancelAnimationFrame(rafId); io?.disconnect() })
   81%      { opacity: 0.8 }
 }
 @keyframes gate-flicker {
-  0%   { opacity: 0.04 }
-  6%   { opacity: 0.13 }
-  11%  { opacity: 0.02 }
-  17%  { opacity: 0.09 }
-  23%  { opacity: 0.17 }
-  29%  { opacity: 0.03 }
-  36%  { opacity: 0.07 }
-  43%  { opacity: 0.02 }
-  49%  { opacity: 0.14 }
-  56%  { opacity: 0.05 }
-  62%  { opacity: 0.10 }
-  69%  { opacity: 0.02 }
-  75%  { opacity: 0.19 }
-  82%  { opacity: 0.06 }
-  88%  { opacity: 0.03 }
-  94%  { opacity: 0.11 }
-  100% { opacity: 0.04 }
+  0%   { opacity: 0.02 }
+  6%   { opacity: 0.08 }
+  11%  { opacity: 0.01 }
+  17%  { opacity: 0.05 }
+  23%  { opacity: 0.11 }
+  29%  { opacity: 0.02 }
+  36%  { opacity: 0.04 }
+  43%  { opacity: 0.01 }
+  49%  { opacity: 0.09 }
+  56%  { opacity: 0.03 }
+  62%  { opacity: 0.06 }
+  69%  { opacity: 0.01 }
+  75%  { opacity: 0.12 }
+  82%  { opacity: 0.035 }
+  88%  { opacity: 0.02 }
+  94%  { opacity: 0.07 }
+  100% { opacity: 0.02 }
 }
 @keyframes grain-shift {
   0%   { background-position: 0 0 }
