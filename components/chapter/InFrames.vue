@@ -41,14 +41,28 @@
             ROLL 01 — {{ String(exposures.length).padStart(2, '0') }} EXPOSURES
           </div>
           <div class="projector">
-            <div class="sprocket" aria-hidden="true" />
+            <div class="sprocket" aria-hidden="true"><i /></div>
             <div class="window">
-              <img v-for="(ex, k) in exposures" :key="k" class="exposure"
-                :class="{ on: k === active }" :src="reelReady ? ex.src : undefined"
-                :alt="k === active ? ex.cap : ''" decoding="async" />
+              <!-- gate weave (time) → pull-down (scroll) → the exposures -->
+              <div class="weave">
+                <div class="pull">
+                  <img v-for="(ex, k) in exposures" :key="k" class="exposure"
+                    :class="{ on: k === active }" :src="reelReady ? ex.src : undefined"
+                    :alt="k === active ? ex.cap : ''" decoding="async" />
+                </div>
+              </div>
+              <!-- Projector artefacts. These run on TIME, not scroll: the lamp is
+                   never steady, so the picture is never steady, even when you stop. -->
+              <div class="lamp" aria-hidden="true" />
+              <div class="flicker" aria-hidden="true" />
+              <div class="grain" aria-hidden="true" />
+              <div class="scratch s1" aria-hidden="true" />
+              <div class="scratch s2" aria-hidden="true" />
+              <div class="halation" aria-hidden="true" />
+              <!-- the shutter, driven by scroll: shut while the frame is pulled -->
               <div class="shutter" aria-hidden="true" />
             </div>
-            <div class="sprocket" aria-hidden="true" />
+            <div class="sprocket" aria-hidden="true"><i /></div>
           </div>
           <div class="subtitle">{{ currentCap }}</div>
         </div>
@@ -85,6 +99,13 @@ const loadPct = ref(0)
 
 let rafId = 0
 let io = null
+
+// One perforation per frame. PITCH_REM must match the repeating gradient in the
+// CSS (.sprocket i) or the holes will not land on their notches.
+const PITCH_REM = 4.4
+const PULL_START = 0.62          // hold for this much of each frame, then pull
+let _rem = 0
+const remPx = () => (_rem ||= parseFloat(getComputedStyle(document.documentElement).fontSize) || 16)
 
 // ── Loading order ───────────────────────────────────────────────────────────
 // The title card and the countdown are type + SVG — they cost nothing and must
@@ -128,33 +149,48 @@ function tick() {
       sweep.style.strokeDashoffset = String(1 - ((p * 3) % 1))
     }
 
-    // The reel. A projector does not slide film past a window — it holds a frame,
-    // closes the shutter, pulls the next one down, and opens again. So the picture
-    // is SWAPPED at the exact moment the shutter is shut, and only the sprocket
-    // holes travel continuously.
+    // The reel. A projector holds a frame still, then yanks the next one down in
+    // one quick pull while the shutter is shut. So the film is NOT glided along
+    // with the scroll — it DWELLS, then pulls exactly one perforation, and the
+    // sprockets, the picture and the shutter are all driven by that same pull
+    // value so they cannot drift apart.
     const reel = root.querySelector('.reel-scene')
     const shutter = reel?.querySelector('.shutter')
-    const sprockets = reel ? reel.querySelectorAll('.sprocket') : []
+    const pullEl = reel?.querySelector('.pull')
+    const sprockets = reel ? reel.querySelectorAll('.sprocket i') : []
     if (reel && shutter) {
       const r = reel.getBoundingClientRect()
       const p = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - vh)))
       const n = exposures.value.length
       const q = p * (n - 1)
-      const nearest = Math.round(q)
-      const d = Math.abs(q - nearest)          // distance to a frame change
-      const shut = Math.min(1, Math.max(0, 1 - d / 0.11))
+      const i0 = Math.min(n - 2, Math.floor(q))
+      const frac = Math.min(1, Math.max(0, q - i0))
 
-      active.value = Math.min(n - 1, Math.max(0, nearest))
-      currentCap.value = shut > 0.85 ? '' : exposures.value[active.value]?.cap || ''
+      // Hold for the first ~62% of each frame's scroll, then pull through.
+      const t = Math.min(1, Math.max(0, (frac - PULL_START) / (1 - PULL_START)))
+      const pull = t * t * t * (t * (t * 6 - 15) + 10)   // smootherstep
 
-      // Shutter blink + a little gate judder while the frame is being pulled.
-      shutter.style.opacity = (shut * 0.96).toFixed(3)
-      const judder = shut * 5 * Math.sin(q * 47)
-      shutter.parentElement.style.transform = `translateY(${judder.toFixed(2)}px)`
+      // The film's position in perforations — integer while held, +1 across a pull.
+      const film = i0 + pull
+      const holes = (-(film * PITCH_REM * remPx())).toFixed(2)
+      sprockets.forEach((el) => { el.style.transform = `translate3d(0, ${holes}px, 0)` })
 
-      // The film edges stay put; the perforations run. 3.2rem per hole (see CSS).
-      const holes = `${(q * -3.2).toFixed(3)}rem`
-      sprockets.forEach((el) => { el.style.backgroundPositionY = holes })
+      // Shutter is shut across the pull and fully open while the frame is held.
+      const shut = pull > 0 && pull < 1 ? Math.pow(Math.sin(Math.PI * pull), 0.6) : 0
+      shutter.style.opacity = shut.toFixed(3)
+
+      // The picture swaps at the exact middle of the pull — the instant the
+      // shutter is fully shut — so the cut is never visible.
+      active.value = Math.min(n - 1, pull < 0.5 ? i0 : i0 + 1)
+
+      // …and the frame slips through the gate as it is pulled: the outgoing frame
+      // rides up, the incoming one drops in from below, the jump hidden by the shutter.
+      if (pullEl) {
+        const slip = (pull < 0.5 ? pull : pull - 1) * 42
+        pullEl.style.transform = `translate3d(0, ${(-slip).toFixed(2)}px, 0)`
+      }
+
+      currentCap.value = shut > 0.6 ? '' : exposures.value[active.value]?.cap || ''
     }
   }
   rafId = requestAnimationFrame(tick)
@@ -177,28 +213,18 @@ onBeforeUnmount(() => { cancelAnimationFrame(rafId); io?.disconnect() })
 </script>
 
 <style scoped>
-/* The dark room. NO overflow:hidden on scene roots — it breaks position:sticky. */
-.room-scene { position: relative; color: #EFE8F5; }
-
-/* Long, many-stopped ramps in and out. Two-stop gradients over this much distance
-   band badly and land as a hard edge against the chapter's pale background. */
+/* The dark room. NO overflow:hidden on scene roots — it breaks position:sticky.
+   NO gradients either: the room is one flat colour and the page cuts into it and
+   out of it, the way a cinema does. */
+.room-scene { position: relative; color: #EFE8F5; background: #241A33; }
 .scene-title {
   min-height: 112dvh;
-  background: linear-gradient(
-    #EFE8F5 0%, #E2D8EC 8%, #BCA9CE 20%, #8E76A8 33%,
-    #5F4A7C 46%, #3E2E52 62%, #2A1E3B 78%, #241A33 92%, #241A33 100%
-  );
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.reel-scene, .leader-scene { background: #241A33; }
 .scene-end {
   min-height: 84dvh;
-  background: linear-gradient(
-    #241A33 0%, #241A33 12%, #2A1E3B 26%, #3E2E52 40%,
-    #5F4A7C 55%, #8E76A8 70%, #BCA9CE 83%, #E2D8EC 94%, #EFE8F5 100%
-  );
   display: flex;
   align-items: center;
   justify-content: center;
@@ -270,7 +296,6 @@ onBeforeUnmount(() => { cancelAnimationFrame(rafId); io?.disconnect() })
   letter-spacing: 0.3em;
   opacity: 0.6;
 }
-/* The projector: fixed film edges either side of one fixed window. */
 .projector {
   display: flex;
   align-items: stretch;
@@ -278,23 +303,39 @@ onBeforeUnmount(() => { cancelAnimationFrame(rafId); io?.disconnect() })
   padding: 1.1rem 0;
   box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.8);
 }
+
+/* Perforations: proper rectangular cut-outs, one per frame. The pitch here MUST
+   match PITCH_REM in the script or the holes stop landing on their notches. */
 .sprocket {
-  width: 3.4rem;
+  position: relative;
+  width: 4.4rem;
   flex: none;
-  background-image: radial-gradient(
-    0.6rem 0.85rem at 50% 1.6rem, rgba(239, 232, 245, 0.9) 58%, transparent 63%
-  );
-  background-size: 100% 3.2rem;
-  background-repeat: repeat-y;
+  overflow: hidden;
 }
+.sprocket i {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  top: -60rem;
+  bottom: -60rem;
+  display: block;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    #EFE8F5 0 1.6rem,
+    transparent 1.6rem 4.4rem
+  );
+  will-change: transform;
+}
+
 .window {
   position: relative;
   width: min(72vw, 84dvh);
   aspect-ratio: 3 / 2;
   overflow: hidden;
   background: #0E0916;
-  will-change: transform;
 }
+.weave { position: absolute; inset: 0; animation: gate-weave 2.3s ease-in-out infinite; }
+.pull { position: absolute; inset: 0; will-change: transform; }
 .exposure {
   position: absolute;
   inset: 0;
@@ -305,13 +346,106 @@ onBeforeUnmount(() => { cancelAnimationFrame(rafId); io?.disconnect() })
 }
 /* No crossfade: a projector cuts. The swap happens behind the closed shutter. */
 .exposure.on { opacity: 1; }
-.shutter {
+
+/* ── projector artefacts — all on TIME, so the picture is never still ── */
+.lamp, .flicker, .grain, .scratch, .halation, .shutter {
   position: absolute;
   inset: 0;
-  background: #0B0712;
-  opacity: 0;
   pointer-events: none;
 }
+/* the lamp breathing: a slow, uneven swell of light */
+.lamp {
+  background: radial-gradient(120% 90% at 50% 45%, rgba(255, 246, 224, 0.16), transparent 70%);
+  mix-blend-mode: screen;
+  animation: lamp-swell 5.5s ease-in-out infinite;
+}
+/* the fast, ugly one: the lamp is AC and the shutter is mechanical, so the
+   brightness never settles. steps() so it jumps rather than fades. */
+.flicker {
+  background: #000;
+  animation: gate-flicker 1.9s steps(1, end) infinite;
+}
+/* film grain, shifted every few frames */
+.grain {
+  background-image: var(--noise-url);
+  background-size: 200px 200px;
+  opacity: 0.22;
+  mix-blend-mode: overlay;
+  animation: grain-shift 0.55s steps(1, end) infinite;
+}
+/* dust in the gate: hairline scratches that come and go */
+.scratch {
+  inset: -6% 0;
+  width: 1px;
+  background: linear-gradient(transparent, rgba(239, 232, 245, 0.55) 12%, rgba(239, 232, 245, 0.4) 80%, transparent);
+}
+.scratch.s1 { left: 31%; animation: scratch-a 6.7s linear infinite; }
+.scratch.s2 { left: 68%; animation: scratch-b 9.3s linear infinite; }
+/* light bleeding around the edge of the gate */
+.halation {
+  box-shadow: inset 0 0 5rem 1.5rem rgba(0, 0, 0, 0.55);
+  animation: halation-pulse 4.1s ease-in-out infinite;
+}
+.shutter { background: #0B0712; opacity: 0; }
+
+@keyframes gate-weave {
+  0%   { transform: translate3d(0, 0, 0) }
+  18%  { transform: translate3d(0.5px, -0.7px, 0) }
+  37%  { transform: translate3d(-0.4px, 0.5px, 0) }
+  55%  { transform: translate3d(0.3px, 0.6px, 0) }
+  74%  { transform: translate3d(-0.5px, -0.3px, 0) }
+  100% { transform: translate3d(0, 0, 0) }
+}
+@keyframes lamp-swell {
+  0%, 100% { opacity: 0.55 }
+  30%      { opacity: 0.95 }
+  62%      { opacity: 0.4 }
+  81%      { opacity: 0.8 }
+}
+@keyframes gate-flicker {
+  0%   { opacity: 0.04 }
+  6%   { opacity: 0.13 }
+  11%  { opacity: 0.02 }
+  17%  { opacity: 0.09 }
+  23%  { opacity: 0.17 }
+  29%  { opacity: 0.03 }
+  36%  { opacity: 0.07 }
+  43%  { opacity: 0.02 }
+  49%  { opacity: 0.14 }
+  56%  { opacity: 0.05 }
+  62%  { opacity: 0.10 }
+  69%  { opacity: 0.02 }
+  75%  { opacity: 0.19 }
+  82%  { opacity: 0.06 }
+  88%  { opacity: 0.03 }
+  94%  { opacity: 0.11 }
+  100% { opacity: 0.04 }
+}
+@keyframes grain-shift {
+  0%   { background-position: 0 0 }
+  20%  { background-position: -37px 21px }
+  40%  { background-position: 44px -18px }
+  60%  { background-position: -22px -41px }
+  80%  { background-position: 29px 33px }
+  100% { background-position: 0 0 }
+}
+@keyframes scratch-a {
+  0%, 62%   { opacity: 0 }
+  64%       { opacity: 0.5; transform: translateX(0) }
+  71%       { opacity: 0.28; transform: translateX(6px) }
+  74%, 100% { opacity: 0 }
+}
+@keyframes scratch-b {
+  0%, 34%   { opacity: 0 }
+  36%       { opacity: 0.34; transform: translateX(0) }
+  44%       { opacity: 0.18; transform: translateX(-9px) }
+  47%, 100% { opacity: 0 }
+}
+@keyframes halation-pulse {
+  0%, 100% { opacity: 0.85 }
+  45%      { opacity: 1 }
+}
+
 .subtitle {
   min-height: 1.6rem;
   font-family: 'Over the Rainbow', cursive;
@@ -323,13 +457,15 @@ onBeforeUnmount(() => { cancelAnimationFrame(rafId); io?.disconnect() })
 
 @media (max-width: 768px) {
   .window { width: 74vw; }
-  .sprocket { width: 2rem; background-size: 100% 2.6rem;
-    background-image: radial-gradient(0.45rem 0.65rem at 50% 1.3rem, rgba(239, 232, 245, 0.6) 58%, transparent 62%);
-  }
+  .sprocket { width: 2.6rem; }
+  .sprocket i { left: 0.5rem; right: 0.5rem; }
   .leader-scene { min-height: 260dvh; }
 }
 
+/* The whole point of this page is the flicker, but it is exactly the kind of
+   motion that triggers people — hold the picture still if they asked for that. */
 @media (prefers-reduced-motion: reduce) {
-  .window { will-change: auto; }
+  .weave, .lamp, .flicker, .grain, .scratch, .halation { animation: none; }
+  .flicker { opacity: 0.05; }
 }
 </style>
