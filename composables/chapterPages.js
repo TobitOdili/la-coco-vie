@@ -216,39 +216,33 @@ export const CHAPTER_PAGES = {
     ],
   },
 
-  // “In Frames” renders through the bespoke InFrames component. The page is a
-  // dark room with THREE SPOOLS of one film crossing it diagonally — small frames
-  // nested side by side, all driven by a single scroll-linked advance so they read
-  // as one length of film threaded across the page (it reverses direction between
-  // spools the way real film does around a roller). No countdown, no big gate: you
-  // land on the title, and the spools run across it as you scroll.
+  // “In Frames” renders through the bespoke InFrames component — ONE pinned
+  // sequence, not a stack of sections. Past the hero the page stops moving
+  // vertically: the title fades as the first spool loops in, the other two follow,
+  // three lengths of ONE film run across the room, then they leave in reverse
+  // order while END OF REEL fades in. Vertical scroll resumes after that, into the
+  // RSVP and the outro.
   'in-frames': {
     sections: [
       {
-        kind: 'title',
-        num: '—',
+        kind: 'reel',
+        num: '01',
         title: 'Our Journey In Frames',
         present: 'COVENANT & UVIE PRESENT',
         sub: 'A LOVE STORY, ONE FRAME AT A TIME',
-        popups: [],
-        align: 'center',
-      },
-      {
-        kind: 'spools',
-        num: '01',
-        title: 'The Reel',
+        // The dimmed line the spools run over once the title has gone.
+        watermark: 'COVENANT & UVIE PRESENT',
+        endTitle: 'END OF REEL',
+        endSub: 'MORE EXPOSURES AFTER OCTOBER 27',
         // ⚠️ PLACEHOLDER — the two photos alternate along every spool. Add more and
         // they cycle in order; the component reads the array length.
         frames: [
           asset('/images/reel/car-selfie-sm.jpg'),
           asset('/images/reel/bw-beanie-sm.jpg'),
         ],
-        // The dimmed line the spools run over.
-        watermark: 'COVENANT & UVIE PRESENT',
         popups: ['fullAlbum'],
         align: 'center',
       },
-      { kind: 'end', num: '—', title: 'End of Reel', popups: [], align: 'center' },
     ],
   },
 
