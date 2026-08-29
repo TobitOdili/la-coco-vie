@@ -46,8 +46,9 @@ is that no two pages share a language. Breaking it is what made With Love fail i
   - **THE BIG DAY** — "the hours": scroll scrubs the day from morning light into night; two threads
     **tie the knot** at the ceremony (sticky, reversible). Photo-free.
   - **IN FRAMES** — a dark room with **three spools of one film crossing it**, pinned: the title
-    hands over to the spools, they run at a single scroll-tied speed, then leave as END OF REEL
-    fades in. Frames are monochrome; **hover restores one frame's colour**.
+    hands over as the first spool loops in, **each arrives before the next begins** (one continuous
+    length of film), all three cross, then they **leave in reverse order** as END OF REEL fades in.
+    Frames are monochrome; **hovering anywhere on a strip colours that whole strip**.
   - **WITH LOVE** — the **ink** writes the thank-you, then wanders past gift words scattered across
     the page and **lassoes** each in turn; hover shows the item on a torn paper scrap. Ends by
     splitting in two to sign both names → RSVP.
@@ -136,7 +137,7 @@ components/
   LoadingScreen.vue          Asset-gated loading counter (GSAP)
   chapter/UsStory.vue        ★ US — "the margin notes" (bespoke page)
   chapter/BigDay.vue         ★ THE BIG DAY — "the hours" + the knot (bespoke page)
-  chapter/InFrames.vue       ★ IN FRAMES — three spools of one film crossing a dark room
+  chapter/InFrames.vue       ★ IN FRAMES — three spools of one film; sequential in, reverse out
   chapter/WithLove.vue       ★ WITH LOVE — the ink wanders and lassoes each gift
   chapter/ChapterSection.vue Generic section block — now the unused fallback
   chapter/PopupCard.vue      Floating white card (moment / utility / registry) pinned to the viewport

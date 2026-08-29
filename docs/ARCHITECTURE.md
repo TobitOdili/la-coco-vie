@@ -153,7 +153,7 @@ what made With Love read as a repeat of US and get rebuilt.
 |---|---|---|
 | `UsStory.vue` | margin notes — two handwritten voices, taped polaroids | `.scrub` / `.fade` per scene |
 | `BigDay.vue` | "The Hours" — light falls to night; two threads **tie the knot** (sticky) | `.scrub` / `.fade` per scene |
-| `InFrames.vue` | **three spools of one film crossing a dark room**, one pinned section | a single constant-rate transform |
+| `InFrames.vue` | **three spools of one film crossing a dark room**, one pinned section; they arrive one at a time and leave in reverse | a single constant-rate transform, per-spool film lengths |
 | `WithLove.vue` | the ink wanders past scattered gift words and **lassoes** each | measured spline + `.scrub`/`.write` |
 
 **The shared engine** is an rAF loop per component: it reads each scene's `getBoundingClientRect()`
@@ -171,6 +171,11 @@ paths with `pathLength=1`), `opacity` (`.fade`), an L→R clip reveal (`.write`)
 3. **Never animate an entrance *on top of* something already moving.** The two transforms sum (~2×)
    and a smoothstep peaks at 1.5× its own average on top of that. In Frames' spools start off-screen
    and travel at **one constant rate** for entry, crossing and exit — the entrance IS the run.
+   **Corollary worth knowing:** you can still choreograph order without touching speed. A strip takes
+   `R` of travel to fill and `R` to empty (R = the room's width along its axis) *whatever its length*,
+   so offsets `R` apart give strictly sequential entry, and a **shorter film empties sooner** — which
+   is how In Frames arrives 1·2·3 and leaves 3·2·1 with every spool at the same rate. Reach for
+   geometry before you reach for per-element timing.
 4. **Measure, don't author.** With Love's curve is splined through the words' real positions; In
    Frames solves its slot count, frame pitch, film length, cross distance and stagger from the
    laid-out DOM. That is what makes both survive any breakpoint. **Re-measure after

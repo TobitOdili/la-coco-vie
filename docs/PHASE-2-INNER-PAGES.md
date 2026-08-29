@@ -73,37 +73,46 @@ sample from p=0 to p=0.90 — identical through entrance and exit.**
 Everything is solved from measurement: slot count (film = 3 room-widths, so the room stays covered
 and all three spools overlap), the cross distance `(filmW + spoolW)/2`, the stagger, hence the total
 journey. **The 2-pitch wrap is gone** — the film is genuinely long enough to make the crossing.
-⚠️ **TRADE, deliberate:** spools now leave in the order they arrived. First-in-first-out is what a
-length of film does; a reverse-order exit needs one spool moving at a different speed, which is the
-exact defect being fixed.
+⚠️ **SUPERSEDED — the reversed exit IS possible at one speed.** This once said a reversed exit would
+need per-spool *speeds*. It needs per-spool **lengths** instead; see the sequential-spools entry
+above. Constant speed and a reversed exit are not in conflict.
 ⚠️ **Perforations must be painted INTO `.film`'s background**, not as absolutely-positioned children.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
 
-**▶▶ STATE (2026-08-11, current) — IN FRAMES IS ONE PINNED REEL SEQUENCE.**
-The chapter is a **single `.chapter-section`**, not a stack: past the hero there is no more vertical
-scroll until the reel is done. The order of events: the title fades and lifts away as spool 1 loops
-in → spools 2 and 3 follow on a stagger → the dimmed "COVENANT & UVIE PRESENT" comes up behind them
-and stays → the film runs → the spools leave → END OF REEL fades up. Vertical scroll resumes after
-the section, into the RSVP + outro.
-⚠️ **Timings are NOT authored** — see the motion rule above. The stagger, the distance to cross the
-room, the film length and the slot count are all solved in `measure()`, and every spool moves at one
-constant rate for entry, crossing and exit. An earlier version of this entry listed hand-tuned
-windows and a **reverse-order exit**; both are gone. Spools now leave in **arrival order**, because
-reversing it would require one spool to travel at a different speed.
-Each spool **enters from behind and leaves by carrying ON** in the same direction — a reel running
-THROUGH the room, not backing out of it. ⚠️ The watermark must fade against the end card or it sits
-behind it.
-**Integration (the actual complaint — the strips read as pasted on):** film stock is a
-lavender-tinted `#1B1428` with a faint rim light instead of near-black, perforations take the
-chapter's own `--accentLighter`, and **the frames are monochrome by default** so the page holds one
-palette instead of scattering colour photos over a purple field. **Hover restores a frame's colour**
-and lifts it slightly — the one interaction on the page. Frames are ~9.2vw on taller strips.
-**Prod-verified:** the choreography walked in six steps (title 1.00 with all films off-screen →
-arriving in order → all three crossing → leaving → END OF REEL 1.00 with everything gone), a single
-constant rate of **9272 px/p** measured at every sample from p=0 to p=0.90, and **zero
-`/images/reel/` requests before scrolling** (the photos are fetched only as the scene comes into
-range). 0 console errors.
+**▶▶ STATE (2026-08-11, current) — IN FRAMES: SEQUENTIAL SPOOLS, REVERSED EXIT.**
+The chapter is a **single `.chapter-section`**: past the hero there is no vertical scroll until the
+reel is done. The title fades as spool 1 loops in; **each spool finishes arriving before the next
+begins**, so it reads as one continuous length of film threading into the room; all three cross
+together; then they leave **in reverse order** (3, then 2, then 1) and END OF REEL fades up. Scroll
+resumes after the section, into the RSVP + outro.
+
+⚠️⚠️ **THE GEOMETRY — this is the part worth understanding.** Write **R** for the room's width along
+a spool's axis. A spool takes exactly **R of travel to fill** (first touch → fully covering) and **R
+to empty**, *whatever its film length*. Two consequences the whole page is built on:
+- **Offsets exactly R apart ⇒ strictly sequential entry** — each spool completes as the next starts.
+- **A spool starts emptying at `offset + its own film length`**, so giving the **last** spool the
+  **shortest** film makes it empty **first**. That is a reversed exit **at one single constant
+  speed** — which per-spool *speeds* could never give (they would reintroduce the gear change).
+  Lengths are `(EXIT_START + (N-1-2i)) × R`; **`EXIT_START` is the single knob** — raise it to hold
+  all three on screen together for longer, at the cost of a longer page. It must exceed `N` or the
+  shortest film is shorter than the room.
+Per-spool slot counts, offsets, half-lengths and the total journey are all solved in `measure()`.
+**Consequence, not padding:** the scene is 860dvh (was 640). Sequential entry means no spool's
+arrival overlaps another's, so the film has ~40% further to travel at the speed we settled on.
+
+**Also:** strips are taller (frames `clamp(7rem, 12.5vw, 13.5rem)`, still fluid at both ends), and
+**hovering any part of a strip colours that whole strip** (`.film:hover`, not `.mini:hover`) — a
+spool is one length of film, so it lights as one. The per-frame scale lift was dropped with it.
+Film stock is lavender-tinted `#1B1428` with a faint rim; perforations use the chapter's
+`--accentLighter`; frames are monochrome until hovered.
+
+**Prod-verified:** entry `[1,0,0]` → `[1,1,0]` (p 0.23) → `[1,1,1]` (p 0.32–0.69) → **exit `[1,1,0]`
+at p 0.78 with spool 3 gone first** → `[1,0,0]` at p 0.87. Rate across the journey: 13467 · 13189 ·
+13600 · 13422 · 13256 · 13411 · 13400 · 13422 px/p — **constant**, and ~1.96 px per scroll px, the
+same felt speed as before the page lengthened. Hover asserted directly: hovering one frame turns a
+*different* frame in the same strip to `grayscale(0)` while the other strip stays `grayscale(1)`.
+Slot counts 61 / 40 / 20 (descending, as the lengths require). 0 console errors.
 
 **▶▶ SUPERSEDED — IN FRAMES AS THREE STANDING SPOOLS (`in-frames` rebuilt again).**
 The single gate is gone. The page is a dark room and **three lengths of ONE film cross it

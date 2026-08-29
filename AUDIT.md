@@ -815,8 +815,14 @@ tuning can fix summed motions.**
 ### Fix — `c1c5b8e1`
 The entrance *is* the run: each spool starts far enough back to be off-screen and travels at one
 constant rate for entry, crossing and exit, with no easing on the ends. Prod-measured at **9272 px/p
-across every sample from p=0 to p=0.90**. Trade accepted: spools now leave in arrival order, since a
-reverse-order exit would require one of them to move at a different speed.
+across every sample from p=0 to p=0.90**.
+
+### Correction (same day)
+This entry originally recorded a trade — "spools now leave in arrival order, since a reverse-order
+exit would require one of them to move at a different speed". **That was wrong.** A reversed exit
+needs per-spool film **lengths**, not speeds: a spool empties at `offset + its film length`, so the
+last to arrive empties first if its film is shortest, with every spool still moving at one rate.
+Shipped that way; see the tracker's sequential-spools entry.
 
 ---
 
