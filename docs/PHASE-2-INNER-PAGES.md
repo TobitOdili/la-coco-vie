@@ -42,6 +42,28 @@ copies (app.vue ×2, chapterPages.js, useChapterScene.js) are gone. `--noise-url
 200 on both. **Method worth reusing: grep the emitted bundle** (`grep -o '"/\(images\|video\|audio\)/[^"]*"'
 .output/public/_nuxt/*.js`) — the bug was invisible in config and only obvious in the build output.
 
+**▶▶ STATE (2026-08-11, current) — IN FRAMES IS THE CROSSING SPOOLS (`in-frames` rebuilt again).**
+The single gate is gone. The page is a dark room and **three lengths of ONE film cross it
+diagonally** (−29° / +17° / −21° at 19% / 51% / 80%), small frames nested side by side, running as
+you scroll. You land on the title with nothing moving; the spools scene then pins and the film runs
+over the "COVENANT & UVIE PRESENT" line held centred behind them at low opacity.
+⚠️ **They are one film, not three loops.** One `advance` drives every spool, each starts (`lead`) on
+the exposure the previous one finished with, and **direction alternates** — which is authentic, film
+reverses around a roller. The exposures alternate, so the pattern repeats every 2 frames, which
+means **wrapping the travel at exactly two pitches** runs the film forever without re-assigning a
+single `src`, and the wrap is invisible. **Pitch is MEASURED** from the laid-out frames, never
+assumed, so the wrap lands on the pattern.
+⚠️ **Two sizing traps, both hit on prod:** (1) at 11vw the frames made three ~155px ribbons that
+papered the whole viewport and buried the line they are meant to run over — they are ~7.2vw now;
+(2) `.film` is a flex row inside a 210vw spool, so with too few slots each strip **ran on as bare
+perforated stock** past its last frame — `.film` is `width: max-content`, centred, with 34 slots to
+span the diagonal at any viewport.
+**Dropped with the gate:** the 3·2·1 countdown, the shutter, the reserved rolls, and the heavy
+projector artefacts (flicker/halation were about a *projected picture*; these are physical strips).
+What remains is room grain + a breathing vignette. Mini frames use their own 560px sources
+(`*-sm.jpg`, ~50–65kB), still requested only as the scene comes into range — verified: **nothing
+under `/images/reel/` is fetched on landing**.
+
 **▶▶ STATE (2026-08-11, later) — IN FRAMES: flat room, real perfs, locked advance, live flicker.**
 Four user notes, all applied on top of the entry below.
 - **NO gradients.** The nine-stop ramps are gone; the room is flat `#241A33` and the page **cuts**
