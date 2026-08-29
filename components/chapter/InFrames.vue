@@ -18,7 +18,7 @@
         <div v-for="(sp, k) in SPOOLS" :key="k" class="spool"
           :style="{ '--angle': sp.angle + 'deg', '--top': sp.top + '%', '--z': sp.z }">
           <div class="film" :data-dir="sp.dir" :data-idx="k">
-            <figure v-for="n in slots" :key="n" class="mini">
+            <figure v-for="n in slots[k]" :key="n" class="mini">
               <img :src="ready ? frameSrc(k, n) : undefined" alt="" aria-hidden="true" decoding="async" />
             </figure>
           </div>
@@ -55,16 +55,19 @@ const SPOOLS = [
   { angle: 17, top: 51, dir: -1, lead: 5, z: 2 },
   { angle: -21, top: 80, dir: 1, lead: 11, z: 1 },
 ]
-// How much longer than the room each length of film is. Three room-widths means a
-// spool stays fully covering the room for a long stretch, so all three overlap.
-const FILM_OVER_ROOM = 3
-// How far apart the spools sit ALONG the film, as a fraction of the distance one
-// needs to cross the room. This is what staggers their arrival.
-const STAGGER_OF_CROSS = 0.2
-// Slot count is SOLVED, not fixed: just enough frames to span the spool plus the
-// wrap. Any longer and the film has further to travel to clear the room on entry,
-// which forces the entry to move faster than the run to keep up.
-const slots = ref(18)
+// ── The geometry that makes entry sequential and exit reversed ───────────────
+// Write R for the room's width along a spool's axis. A spool takes exactly R of
+// travel to fill (first touch → fully covering) and R to empty, whatever its film
+// length. So:
+//   • offsets R apart  ⇒ each spool finishes arriving exactly as the next begins;
+//   • a spool starts emptying at (offset + its film length), so giving the LAST
+//     spool the SHORTEST film makes it empty FIRST — a reversed exit at one single
+//     constant speed, which per-spool speeds could never give us.
+// EXIT_START is when the last spool begins to leave, in units of R. It must exceed
+// SPOOLS.length so the shortest film is still longer than the room; higher values
+// hold all three on screen together for longer, at the cost of a longer page.
+const EXIT_START = 3.8
+const slots = ref([18, 18, 18])
 const TITLE_OUT = [0.02, 0.11]
 const MARK_IN = [0.07, 0.18]
 const END_IN = [0.86, 0.98]
@@ -81,7 +84,8 @@ let widths = []
 // motion reads as two different speeds. measure() solves for the duration.
 // Distances, all measured. `cross` is how far a spool travels to go from fully
 // off-screen to fully off the far side; `total` is the whole journey for all three.
-let geom = { cross: 3000, stagger: 600, total: 7000 }
+let geom = []
+let total = 7000
 
 const clamp01 = (v) => Math.min(1, Math.max(0, v))
 const win = (p, [a, b]) => clamp01((p - a) / (b - a))
@@ -121,23 +125,28 @@ function measure() {
   })
   if (!pitches.length) return
 
-  const spoolW = spools[0]?.offsetWidth || 2000
+  const room = spools[0]?.offsetWidth || 2000
   const pitch = Math.max(...pitches) || 200
+  const N = SPOOLS.length
 
-  // Film length is solved, not fixed: long enough to hold the room covered while
-  // it crosses. Too short and the room empties between spools; too long and there
-  // is nothing to gain but DOM.
-  const need = Math.max(10, Math.ceil((spoolW * FILM_OVER_ROOM) / pitch))
-  if (need !== slots.value) {       // converges in one pass: `need` doesn't depend on it
+  // Each spool's own film length. Longest first, one room-width apart, so they
+  // arrive in order and leave in the opposite order (see EXIT_START above).
+  const lengths = SPOOLS.map((_, i) => (EXIT_START + (N - 1 - 2 * i)) * room)
+
+  // Solve each spool's slot count from its own length — they differ now.
+  const need = lengths.map((L) => Math.max(6, Math.ceil(L / pitch) + 1))
+  if (need.some((n, i) => n !== slots.value[i])) {   // converges in one pass
     slots.value = need
     nextTick(measure)
     return
   }
 
-  const filmW = Math.max(...widths) || spoolW * FILM_OVER_ROOM
-  const cross = (filmW + spoolW) / 2          // fully off one side → fully off the other
-  const stagger = cross * STAGGER_OF_CROSS
-  geom = { cross, stagger, total: 2 * cross + (SPOOLS.length - 1) * stagger }
+  geom = SPOOLS.map((_, i) => ({
+    offset: i * room,                                 // R apart ⇒ strictly sequential
+    half: ((widths[i] || lengths[i]) + room) / 2,     // centre offset at first touch
+  }))
+  // The journey ends when the FIRST spool — the one with the longest film — is gone.
+  total = geom[0].offset + (widths[0] || lengths[0]) + room
 }
 
 function tick() {
@@ -178,13 +187,14 @@ function tick() {
       // Consequence, deliberately accepted: the spools leave in the order they
       // arrived. First in, first out is what a length of film actually does; a
       // reverse-order exit would need one of them to move at a different speed.
-      const travelled = p * geom.total
+      const travelled = p * total
       const films = scene.querySelectorAll('.film')
       films.forEach((f, i) => {
-        const sp = SPOOLS[i]
-        // −cross = fully off the incoming side, 0 = centred, +cross = fully gone.
-        const pos = travelled - i * geom.stagger - geom.cross
-        f.style.transform = `translate3d(${(-sp.dir * pos).toFixed(2)}px, 0, 0)`
+        const g = geom[i]
+        if (!g) return
+        // −half = just touching the room, 0 = centred, +half = fully gone.
+        const pos = travelled - g.offset - g.half
+        f.style.transform = `translate3d(${(-SPOOLS[i].dir * pos).toFixed(2)}px, 0, 0)`
       })
     }
   }
@@ -224,7 +234,7 @@ onBeforeUnmount(() => {
 .room-scene { position: relative; color: #EFE8F5; background: #241A33; }
 
 /* The whole chapter is this one pinned block. */
-.reel-scene { min-height: 640dvh; }
+.reel-scene { min-height: 860dvh; }
 .reel-sticky {
   position: sticky;
   top: 0;
@@ -320,7 +330,7 @@ onBeforeUnmount(() => {
 .mini {
   position: relative;
   flex: none;
-  width: clamp(5.6rem, 9.2vw, 10rem);
+  width: clamp(7rem, 12.5vw, 13.5rem);
   aspect-ratio: 3 / 2;
   margin: 0;
   background: #0E0916;
@@ -333,11 +343,10 @@ onBeforeUnmount(() => {
   display: block;
   /* the room is monochrome; a frame remembers its colour when you touch it */
   filter: grayscale(1) brightness(1.04) contrast(1.02);
-  transition: filter 0.45s ease, transform 0.45s ease;
+  transition: filter 0.5s ease;
 }
-.mini:hover img {
+.film:hover .mini img {
   filter: grayscale(0) brightness(1.08) contrast(1.04) saturate(1.04);
-  transform: scale(1.04);
 }
 
 /* ── the room ── */
@@ -369,9 +378,9 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 768px) {
-  .reel-scene { min-height: 540dvh; }
+  .reel-scene { min-height: 720dvh; }
   .spool { width: 215vw; }
-  .mini { width: clamp(4.4rem, 20vw, 7rem); }
+  .mini { width: clamp(5.4rem, 27vw, 9rem); }
   .film { gap: 0.28rem; padding: 0.95rem 0; }
   .film {
     background-image:
