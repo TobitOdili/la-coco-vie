@@ -57,9 +57,9 @@ const frames = computed(() => props.sections.find((s) => s.kind === 'spools')?.f
 // around a roller, so alternating is authentic, not a cheat); `lead` offsets which
 // exposure it starts on, so the one leaving a spool is the one entering the next.
 const SPOOLS = [
-  { angle: -27, top: 25, dir: 1, lead: 0, z: 3 },
-  { angle: 15, top: 52, dir: -1, lead: 5, z: 2 },
-  { angle: -9, top: 79, dir: 1, lead: 11, z: 1 },
+  { angle: -29, top: 19, dir: 1, lead: 0, z: 3 },
+  { angle: 17, top: 51, dir: -1, lead: 5, z: 2 },
+  { angle: -21, top: 84, dir: 1, lead: 11, z: 1 },
 ]
 // Enough frames to overhang both edges at every angle; the film only ever travels
 // two pitches before it wraps, so the ends never come into view.
@@ -204,10 +204,10 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   font-family: 'Bague', sans-serif;
-  font-size: clamp(0.7rem, 1.5vw, 1rem);
-  letter-spacing: 0.4em;
+  font-size: clamp(0.85rem, 2.1vw, 1.55rem);
+  letter-spacing: 0.42em;
   text-align: center;
-  opacity: 0.16;
+  opacity: 0.26;
   padding: 0 10vw;
 }
 
@@ -224,8 +224,8 @@ onBeforeUnmount(() => {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 1.5rem 0;
+  gap: 0.34rem;
+  padding: 1.05rem 0;
   background: #170F22;
   box-shadow: 0 22px 40px -26px rgba(0, 0, 0, 0.9);
   will-change: transform;
@@ -236,21 +236,21 @@ onBeforeUnmount(() => {
   position: absolute;
   left: 0;
   right: 0;
-  height: 0.62rem;
+  height: 0.42rem;
   background-image: repeating-linear-gradient(
     to right,
-    #EFE8F5 0 0.62rem,
-    transparent 0.62rem 1.7rem
+    #EFE8F5 0 0.42rem,
+    transparent 0.42rem 1.15rem
   );
   opacity: 0.82;
 }
-.perf.top { top: 0.42rem; }
-.perf.bot { bottom: 0.42rem; }
+.perf.top { top: 0.3rem; }
+.perf.bot { bottom: 0.3rem; }
 
 .mini {
   position: relative;
   flex: none;
-  width: clamp(7rem, 11vw, 11rem);
+  width: clamp(4.4rem, 7.2vw, 7.6rem);
   aspect-ratio: 3 / 2;
   margin: 0;
   background: #0E0916;
@@ -296,7 +296,7 @@ onBeforeUnmount(() => {
 @media (max-width: 768px) {
   .spools-scene { min-height: 300dvh; }
   .spool { width: 260vw; }
-  .mini { width: clamp(5rem, 22vw, 8rem); }
+  .mini { width: clamp(3.6rem, 17vw, 5.6rem); }
   .film { gap: 0.35rem; padding: 1.1rem 0; }
   .perf { height: 0.45rem; background-image: repeating-linear-gradient(to right, #EFE8F5 0 0.45rem, transparent 0.45rem 1.25rem); }
   .perf.top { top: 0.3rem; }
