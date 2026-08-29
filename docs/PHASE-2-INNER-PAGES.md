@@ -42,7 +42,27 @@ copies (app.vue ×2, chapterPages.js, useChapterScene.js) are gone. `--noise-url
 200 on both. **Method worth reusing: grep the emitted bundle** (`grep -o '"/\(images\|video\|audio\)/[^"]*"'
 .output/public/_nuxt/*.js`) — the bug was invisible in config and only obvious in the build output.
 
-**▶▶ STATE (2026-08-11, current) — IN FRAMES IS THE CROSSING SPOOLS (`in-frames` rebuilt again).**
+**▶▶ STATE (2026-08-11, current) — IN FRAMES IS ONE PINNED REEL SEQUENCE.**
+The chapter is now a **single `.chapter-section`**, not a stack: past the hero there is no more
+vertical scroll until the reel is done. Timeline, all off one scroll progress `p`:
+title fades + lifts away `[0.02,0.13]` → spool 1 loops in `[0.05,0.21]`, spool 2 `[0.12,0.28]`,
+spool 3 `[0.19,0.35]` → the dimmed "COVENANT & UVIE PRESENT" comes up `[0.08,0.20]` and stays →
+the film runs `[0.05,0.88]` → the spools leave in **REVERSE order** (3 first `[0.72,0.84]`, then 2,
+then 1 `[0.84,0.95]`) → END OF REEL fades up `[0.86,0.97]`. Vertical scroll resumes after the
+section, into the RSVP + outro. Each spool **enters from behind and leaves by carrying ON** in the
+same direction — a reel running THROUGH the room, not backing out of it. **Both the pitch and the
+film's own length are measured** (the entrance must travel exactly far enough to start off-screen at
+any viewport). ⚠️ The watermark must fade against the end card or it sits behind it.
+**Integration (the actual complaint — the strips read as pasted on):** film stock is a
+lavender-tinted `#1B1428` with a faint rim light instead of near-black, perforations take the
+chapter's own `--accentLighter`, and **the frames are monochrome by default** so the page holds one
+palette instead of scattering colour photos over a purple field. **Hover restores a frame's colour**
+and lifts it slightly — the one interaction on the page. Frames are bigger (9.2vw) on taller strips.
+**Prod-verified phase table:** p=0.01 title 1.00 / films all off ±4715; p=0.21 title 0 / mark 0.30 /
+films −54, −2023, 4518 (arriving in order); p=0.41–0.61 all three in the wrap range; p=0.81 leaving
+(−256, 818, −4043); p=1.01 mark 0 / end 1.00 / all off. 0 console errors.
+
+**▶▶ SUPERSEDED — IN FRAMES AS THREE STANDING SPOOLS (`in-frames` rebuilt again).**
 The single gate is gone. The page is a dark room and **three lengths of ONE film cross it
 diagonally** (−29° / +17° / −21° at 19% / 51% / 80%), small frames nested side by side, running as
 you scroll. You land on the title with nothing moving; the spools scene then pins and the film runs
