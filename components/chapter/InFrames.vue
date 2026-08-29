@@ -59,11 +59,13 @@ const frames = computed(() => props.sections.find((s) => s.kind === 'spools')?.f
 const SPOOLS = [
   { angle: -29, top: 19, dir: 1, lead: 0, z: 3 },
   { angle: 17, top: 51, dir: -1, lead: 5, z: 2 },
-  { angle: -21, top: 84, dir: 1, lead: 11, z: 1 },
+  { angle: -21, top: 80, dir: 1, lead: 11, z: 1 },
 ]
-// Enough frames to overhang both edges at every angle; the film only ever travels
-// two pitches before it wraps, so the ends never come into view.
-const SLOTS = 16
+// Enough frames to span the full 210vw spool at any viewport, plus overhang: the
+// film is centred in the spool and only ever travels two pitches, so its ends
+// stay off-screen. Too few and the strip runs on as BARE STOCK past the last
+// frame, which is exactly what the first pass did.
+const SLOTS = 34
 const ADVANCE_FRAMES = 15   // frames of film pulled across the whole scene
 
 const rootEl = ref(null)
@@ -217,6 +219,8 @@ onBeforeUnmount(() => {
   top: var(--top);
   width: 210vw;
   z-index: var(--z, 1);
+  display: flex;
+  justify-content: center;
   transform: translate(-50%, -50%) rotate(var(--angle));
   transform-origin: 50% 50%;
 }
@@ -224,6 +228,7 @@ onBeforeUnmount(() => {
   position: relative;
   display: flex;
   align-items: center;
+  width: max-content;        /* exactly as long as its frames — no bare tail */
   gap: 0.34rem;
   padding: 1.05rem 0;
   background: #170F22;
