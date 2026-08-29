@@ -244,6 +244,29 @@ export function useChapterScene() {
   let mouse = new THREE.Vector2(-10.0, -10.0)  // matches original x start
   let prevMouse = new THREE.Vector2(-10.0, -10.0)
   let raycaster = new THREE.Raycaster()
+  // Card geometry — the hover territory is derived from these, so they must match
+  // the PlaneGeometry below.
+  const CARD_W = 24, CARD_H = 32
+  const CARD_HALF_H = CARD_H / 2
+  const CARD_ASPECT = CARD_W / CARD_H
+  // Release territory is 1.45x the acquire territory. Big enough that a card lifting
+  // out from under the pointer never releases it; small enough that moving off the
+  // card still does.
+  const HOVER_RELEASE_GROW = 1.45
+  // ── Card lean (uAngle) ──────────────────────────────────────────────────────
+  // uAngle Z-ROTATES every card before the cylindrical bend, so it is literally how
+  // far the deck leans. It used to be `mouse.x * 10 + 10`, and the intro tweens the
+  // mouse proxy to 0.5 — so the deck came to rest permanently leaning 15°, and on
+  // TOUCH, where no mousemove ever fires, there was nothing to bring it back. That is
+  // the "cards are offset to the left, worse on mobile" report. Rest is now 0° (upright)
+  // and input only ever deflects it from there.
+  const LEAN_MAX_DEG = 10        // deflection at full mouse travel / a hard swipe
+  const LEAN_EASE = 0.06         // how fast the deck follows
+  const SWIPE_LEAN_PER_VEL = 9   // touch: lean per unit of scroll velocity
+  const SWIPE_DECAY = 0.90       // …and how quickly that settles back upright
+  let leanDeg = 0
+  let swipeVel = 0
+  let hasPointer = false         // a real pointer has moved at least once
   let hoveredIndex = -1
   // Last known cursor position (screen px). animate() re-resolves the hover target from this
   // each frame, so a wheel scroll (which fires no mousemove) still hands the lift to whatever
@@ -598,7 +621,7 @@ export function useChapterScene() {
       })
       // What does a click at screen (x,y) resolve to, vs the front-facing card?
       window.__probe = (x, y) => {
-        const slot = getHoveredPoster(x, y)
+        const slot = resolveHoverTarget(x, y)   // what hover/click really resolve to
         const slugs = CHAPTERS.map((c) => c.slug)
         const fc = frontChapterIdx()
         const hc = chapterIdxForSlot(slot)
@@ -636,7 +659,7 @@ export function useChapterScene() {
     const photoTex = videoTextures[chapterIdx]
 
     // Create geometry: 24x32 plane, 40x40 segments
-    const geometry = new THREE.PlaneGeometry(24, 32, 40, 40)
+    const geometry = new THREE.PlaneGeometry(CARD_W, CARD_H, 40, 40)
 
     const material = new THREE.ShaderMaterial({
       vertexShader,
@@ -845,9 +868,23 @@ export function useChapterScene() {
     // angle = x.x*10 - (-0 - 10) = x.x*10 + 10
     // At rest after intro (x.x=0.5): angle = 5 + 10 = 15°
     // During intro (x.x=-10): angle = -100 + 10 = -90°
-    // Same post-intro clamp as the camera parallax (background-tab robustness).
-    const uax = introComplete ? Math.max(-1.2, Math.min(1.2, mouse.x)) : mouse.x
-    const currentUAngle = uax * 10 + 10  // using mouse.x = x.x equivalent
+    // Lean. During the intro this stays on the original curve (the deck swings in from
+    // -90°); afterwards it eases to an UPRIGHT rest and is deflected only by live input —
+    // the pointer on desktop, the swipe on touch, where the deck now follows the finger
+    // instead of being frozen wherever the intro left the mouse proxy.
+    swipeVel *= SWIPE_DECAY
+    let leanTarget
+    if (!introComplete) {
+      leanTarget = mouse.x * 10 + 10        // unchanged intro sweep
+    } else if (isMobile) {
+      leanTarget = Math.max(-LEAN_MAX_DEG, Math.min(LEAN_MAX_DEG, swipeVel * SWIPE_LEAN_PER_VEL))
+    } else {
+      const mx = hasPointer ? Math.max(-1.2, Math.min(1.2, mouse.x)) : 0
+      leanTarget = mx * LEAN_MAX_DEG
+    }
+    // Eased rather than snapped, so intro → upright is a settle, not a jump.
+    leanDeg += (leanTarget - leanDeg) * (introComplete ? LEAN_EASE : 1)
+    const currentUAngle = leanDeg
     posters.forEach((p) => {
       if (p.material.uniforms) {
         p.material.uniforms.aspectRatio.value = aspectRatio
@@ -927,21 +964,10 @@ export function useChapterScene() {
   // Each chapter has two copies on the ring (front + mirrored back) sharing a
   // chapterIdx; hovering must affect only the one slot the cursor is over
   // (Issue #13). Use chapterIdxForSlot() to resolve the chapter when needed.
-  function getHoveredPoster(clientX, clientY) {
-    const ndcX = (clientX / width) * 2 - 1
-    const ndcY = -(clientY / height) * 2 + 1
-    raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera)
-    // hitboxes are now children of meshes, use recursive intersect
-    const meshes = posters.map((p) => p.mesh)
-    const intersects = raycaster.intersectObjects(meshes, true)
-    if (intersects.length > 0) {
-      // find userData from the hit object or its parent
-      const obj = intersects[0].object
-      const data = obj.userData.isPosterHitbox ? obj.userData : (obj.parent && obj.parent.userData)
-      if (data && data.i !== undefined) return data.i
-    }
-    return -1
-  }
+  // (The old raycast picker lived here. It was removed once hover moved to screen-space
+  // containment: the flat hitboxes don't follow the shader's cylindrical bend, so a raycast
+  // could never say WHICH card was under the pointer — and a lifting card moved its own
+  // hitbox off the cursor, which is what made the bottom edge flicker.)
 
   // Resolve the chapter index (0–3) for a given slot index (i). Used for
   // chapter-keyed behaviour: video playback, txt swap, audio, selection.
@@ -953,6 +979,7 @@ export function useChapterScene() {
   function onMouseMove(e) {
     // Original: x.x = de.x/width*2-1 (NDC), x.y = de.y/height*2-1 (NDC)
     // Camera parallax uses x.x and x.y directly (not be)
+    hasPointer = true
     mouse.x = (e.clientX / width) * 2 - 1
     mouse.y = (e.clientY / height) * 2 - 1
 
@@ -1009,11 +1036,47 @@ export function useChapterScene() {
     return best
   }
 
-  // Which VISIBLE card is under the cursor. The flat hitboxes don't follow the shader bend,
-  // so `getHoveredPoster` can't tell WHICH card was struck (it long forced the front card).
-  // Instead: project each poster's world centre to screen and pick the nearest to the cursor,
-  // restricted to the front half of the ring (the far copies are faded ghosts behind). This
-  // resolves any visible card — front OR side — so each can be hovered/clicked independently.
+  // ── Which VISIBLE card is under the cursor ──────────────────────────────────
+  // The flat hitboxes don't follow the shader bend, so a raycast can't tell WHICH card
+  // was struck. Instead we work in screen space: project each poster's centre and test
+  // whether the pointer is inside that card's own territory.
+  //
+  // Two rules this enforces, both of which were bugs:
+  //  • Only cards with VISIBLE CONTENT are hoverable. The far half of the ring is faded
+  //    by the depth fade, and hovering one of those swapped the centre wordmark to a
+  //    chapter the viewer can't even see.
+  //  • Hover is CONTAINMENT, not nearest-neighbour. Picking the nearest centre meant a
+  //    pointer over a faded back card still grabbed some front card.
+  const HOVER_MIN_OPACITY = 0.75   // below this the card is a background ghost
+  const _hb1 = new THREE.Vector3(), _hb2 = new THREE.Vector3()
+
+  // Centre + half-extents of a poster in SCREEN px (derived from the card's real
+  // geometry, so it stays right at any zoom, distance or viewport).
+  function posterScreenBox(p) {
+    p.mesh.getWorldPosition(_hb1)
+    _hb2.copy(_hb1)
+    _hb2.y += CARD_HALF_H
+    _hb1.project(camera)
+    _hb2.project(camera)
+    const cx = ((_hb1.x + 1) / 2) * width
+    const cy = ((1 - _hb1.y) / 2) * height
+    const ry = Math.abs(cy - ((1 - _hb2.y) / 2) * height)
+    return { cx, cy, rx: ry * CARD_ASPECT, ry }
+  }
+
+  // Is (x,y) inside this card's territory? `grow` widens it for the RELEASE test.
+  function posterContains(p, x, y, grow = 1) {
+    const b = posterScreenBox(p)
+    const nx = (x - b.cx) / (b.rx * grow)
+    const ny = (y - b.cy) / (b.ry * grow)
+    return nx * nx + ny * ny <= 1
+  }
+
+  function posterVisible(p) {
+    const o = p.material.uniforms?.uOpacity?.value
+    return o === undefined || o >= HOVER_MIN_OPACITY
+  }
+
   function posterAtScreen(clientX, clientY) {
     let sum = 0
     for (const p of posters) { p.mesh.getWorldPosition(_sv); sum += _sv.distanceTo(camera.position) }
@@ -1021,12 +1084,14 @@ export function useChapterScene() {
     let best = null, bestD = Infinity
     for (const p of posters) {
       p.mesh.getWorldPosition(_sv)
-      if (_sv.distanceTo(camera.position) > meanD) continue   // far/faded copy — not hoverable
+      if (_sv.distanceTo(camera.position) > meanD) continue   // far copy — behind the ring
+      if (!posterVisible(p)) continue                          // faded ghost — not hoverable
+      if (!posterContains(p, clientX, clientY)) continue        // pointer isn't on THIS card
       _sv.project(camera)
-      const sx = (_sv.x + 1) / 2 * width
-      const sy = (1 - _sv.y) / 2 * height
+      const sx = ((_sv.x + 1) / 2) * width
+      const sy = ((1 - _sv.y) / 2) * height
       const d = (sx - clientX) ** 2 + (sy - clientY) ** 2
-      if (d < bestD) { bestD = d; best = p }
+      if (d < bestD) { bestD = d; best = p }                    // overlap → the nearer centre wins
     }
     return best
   }
@@ -1036,8 +1101,19 @@ export function useChapterScene() {
   // scroll re-target, and click — so all three agree on the card under the pointer.
   function resolveHoverTarget(x, y) {
     if (!introComplete || selectedIndex !== -1) return -1
-    if (getHoveredPoster(x, y) === -1) return -1   // not over the carousel
-    return posterAtScreen(x, y)?.i ?? -1
+    const found = posterAtScreen(x, y)
+    if (found) return found.i
+
+    // ── RELEASE HYSTERESIS ──────────────────────────────────────────────────
+    // A hovered card LIFTS, which moves its own hitbox up off the pointer. At a
+    // card's bottom edge that produced a loop: lift → pointer now outside → unhover
+    // → card drops → pointer inside again → lift … i.e. the flicker. Acquiring needs
+    // the pointer inside the card; RELEASING needs it outside a deliberately larger
+    // region, so the lift alone can never trigger it. Classic hysteresis: the two
+    // thresholds must differ or a boundary will always oscillate.
+    const held = hoveredIndex !== -1 ? posters[hoveredIndex] : null
+    if (held && posterContains(held, x, y, HOVER_RELEASE_GROW)) return hoveredIndex
+    return -1
   }
 
   // Move the lift to `targetSlot` (or clear it at -1): only the one poster lifts (#13), and
@@ -1121,10 +1197,11 @@ export function useChapterScene() {
   function onClick(e) {
     if (!introComplete || selectedIndex !== -1) return
 
-    // Open the card actually under the pointer — front OR side — matching what hover lifts
-    // (posterAtScreen, gated on being over the deck via the raycast so a tap on empty screen
-    // selects nothing). selectChapter rotates the chosen card to front and opens it, so a
-    // side card animates forward first. (Touch uses the parked EXPLORE button → front chapter.)
+    // Open the card actually under the pointer — front OR side — matching what hover lifts.
+    // resolveHoverTarget requires the pointer to be INSIDE a visible card, so a click on
+    // empty screen or on a faded background card selects nothing. selectChapter rotates the
+    // chosen card to front and opens it, so a side card animates forward first.
+    // (Touch uses the parked EXPLORE button → front chapter.)
     const slot = resolveHoverTarget(e.clientX, e.clientY)
     if (slot === -1) return
     selectChapter(chapterIdxForSlot(slot))
@@ -1503,6 +1580,8 @@ export function useChapterScene() {
     // reacting would fire spurious mid-page exits. Only the homepage carousel scrolls.
     if (selectedIndex !== -1) return
     scrollRotationY -= delta * 0.0008
+    // Touch: the deck leans with the swipe, then settles upright (see LEAN_* above).
+    swipeVel += delta * 0.0008
   }
 
   // Inner-page scroll position (px), pushed in from the page's Lenis instance.

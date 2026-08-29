@@ -42,7 +42,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, provide } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, provide, nextTick } from 'vue'
 import { CHAPTERS } from '~/composables/useChapterScene'
 import { SITE } from '~/site.config'
 import { asset } from '~/utils/asset'
@@ -101,6 +101,7 @@ function onExploreTap() {
   if (!isHome.value) return
   const idx = frontChapterIdx.value
   if (idx < 0) return
+  cursorRef.value?.confirm()
   webglSceneRef.value?.scene?.selectChapter?.(idx)
 }
 const chapterClass = computed(() => (currentChapter.value ? `--${currentChapter.value.slug}` : ''))
@@ -140,6 +141,11 @@ async function initAudio() {
 // Scene fired a click-select → reflect it in the URL. The route watcher sees the
 // scene is already animating and won't re-trigger.
 function onChapterSelect(idx) {
+  // Acknowledge the input immediately: the circle lights up and stays expanded until the
+  // chapter page is actually up (see the route watcher). Selecting takes ~1.5s, and the
+  // circle used to collapse to the 24px dot the moment hover ended — so a tap looked
+  // like it had done nothing while the page was still coming.
+  cursorRef.value?.confirm()
   const slug = CHAPTERS[idx].slug
   if (route.params.slug !== slug) router.push(`/${slug}`)
 }
@@ -205,6 +211,26 @@ function syncSceneToRoute() {
 }
 watch(() => route.params.slug, syncSceneToRoute)
 
+// The confirmation holds from the tap until the chapter is actually ON SCREEN. A route
+// change is the wrong anchor — router.push lands within a tick, so releasing there would
+// flash the confirmation for a single frame and defeat the point. The real "page loaded"
+// moment is the end of the scene's select animation (~1.5s), when the card has finished
+// becoming the page. Polled, with a cap so a stalled animation can never strand the circle.
+let confirmTimer = null
+watch(() => route.params.slug, async () => {
+  await nextTick()
+  clearInterval(confirmTimer)
+  const started = Date.now()
+  confirmTimer = setInterval(() => {
+    const st = webglSceneRef.value?.scene?.getState?.()
+    if (!st || !st.isSelecting || Date.now() - started > 2500) {
+      clearInterval(confirmTimer)
+      confirmTimer = null
+      cursorRef.value?.endConfirm()
+    }
+  }, 100)
+})
+
 const initAudioOnce = () => initAudio()
 
 onMounted(() => {
@@ -225,6 +251,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  clearInterval(confirmTimer)
   if (resyncTimer) clearTimeout(resyncTimer)
   sounds.forEach((s) => s.unload())
   tickSound?.unload()

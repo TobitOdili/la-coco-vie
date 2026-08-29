@@ -91,10 +91,21 @@ body {
 }
 
 .cursor.active {
-  width: 140px;
-  height: 140px;
+  /* 140px read as a dinner plate over the cards; 104 still holds "Explore" comfortably. */
+  width: 104px;
+  height: 104px;
   /* No margin offset — JS centres via top = mouseY - cursorHeight/2 */
 }
+
+/* Tap/click confirmation. The circle acknowledges the input straight away and HOLDS
+   its expanded state until the next page has loaded — it used to collapse to the 24px
+   dot the instant hover ended, so a tap read as "nothing happened" during the wait. */
+.cursor.confirming > .cursor-box {
+  transform: scale(0.92);
+  filter: brightness(1.35);
+  transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), filter 0.18s ease;
+}
+.cursor.confirming > .cursor-box > .explore { opacity: 1; }
 
 .cursor-box {
   align-items: center;

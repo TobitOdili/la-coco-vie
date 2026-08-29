@@ -2,7 +2,7 @@
   <div
     ref="cursorRef"
     class="cursor"
-    :class="{ active: isActive || parkedVisible, parked: isTouch, ready: parkedVisible }"
+    :class="{ active: isActive || parkedVisible || confirming, parked: isTouch, ready: parkedVisible, confirming }"
     :style="{ '--cursorAccent': accent }"
     @click="onExploreTap"
   >
@@ -26,6 +26,9 @@ const emit = defineEmits(['explore'])
 
 const cursorRef = ref(null)
 const isActive = ref(false)
+// Set the moment a card is chosen, cleared once the destination page is up. While it is
+// set the circle stays expanded and lit, so the tap is acknowledged for the whole wait.
+const confirming = ref(false)
 // The parked EXPLORE button shows only on touch AND once the cards have settled.
 const parkedVisible = computed(() => isTouch.value && props.exploreReady)
 // Touch devices have no pointer to follow, so the circle would sit at its off-screen start
@@ -79,8 +82,14 @@ function activate() {
 }
 
 function deactivate() {
+  // A confirmed tap owns the circle until the page lands — an unhover fired by the
+  // select animation must not shrink it back to the dot mid-transition.
+  if (confirming.value) return
   isActive.value = false
 }
+
+function confirm() { confirming.value = true }
+function endConfirm() { confirming.value = false }
 
 onMounted(() => {
   isTouch.value =
@@ -96,7 +105,7 @@ onUnmounted(() => {
   cancelAnimationFrame(rafId)
 })
 
-defineExpose({ activate, deactivate })
+defineExpose({ activate, deactivate, confirm, endConfirm })
 </script>
 
 <style scoped>
