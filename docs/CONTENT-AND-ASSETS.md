@@ -11,6 +11,7 @@
 > in-frames,with-love}.mp4`, one per chapter, named off the slugs. See
 > [Swapping the card films](#swapping-the-card-films) for the encode recipe; the Milla Nova
 > `*-intro.mp4` films are deleted (recoverable from git before `5d44726c`).
+> **✅ The IN FRAMES reel photos are the couple's own too** (2026-08-11) — `public/images/reel/`.
 > **Still Milla Nova PLACEHOLDERS, to swap for the couple's own:** the gallery **stills**, the
 > **favicon**, and the 4 ambient **audio** tracks (`public/audio/*.mp3` — Howler.js loops, one per
 > chapter, matching the reference; keep the wiring, replace the files + rename off the old slugs,
@@ -90,7 +91,10 @@ public/
 │   ├── cu-logo.png              The C&U wordmark rendered into the shader (⚠️ alpha = accent mask)
 │   ├── logo.png                 Legacy Milla Nova logo (unused by the scene)
 │   ├── noise.png                Film-grain overlay (animated via body::after) — 792 KB
-│   ├── gallery/ · dresses/      Inner-page imagery (see below)
+│   ├── reel/                    In Frames spool photos — the couple's own (`-sm` = what's used)
+│   ├── registry/                With Love item art — ONE watermarked clipart placeholder
+│   ├── gallery/                 Inner-page stills — Milla Nova placeholders; only 4 still referenced
+│   ├── dresses/                 ⚠️ DEAD (848 KB) — the dress popups were retired in the pivot
 │   └── favicon.ico              ⚠️ still Milla Nova's
 ├── video/
 │   ├── us.mp4                   Chapter films — the couple's own, played as VideoTexture
@@ -109,25 +113,28 @@ public/
     └── Movie.woff               "Movie"-style display font (About copy)
 ```
 
-### Inner-page COPY (Phase 2) — real, not placeholder
+### Inner-page COPY — ⚠️ ALL PLACEHOLDER
 
-`composables/chapterPages.js` holds `CHAPTER_PAGES` + `DRESSES` and is **the only per-chapter thing** —
-all four chapters render through the same components, so a layout change lands on every chapter at once
-and a content swap is a change *there* plus the images.
+`composables/chapterPages.js` holds `CHAPTER_PAGES` + `POPUPS`. **Every word of it is written to
+demonstrate placement and tone, not fact** — dates, venues, story beats and gift items are invented,
+and `[bracketed notes]` mark what the couple must fill in.
 
-The copy is the reference's own, **verbatim** (harvested 2026-07-22). Two things to know before editing:
-- **Section counts are NOT uniform** — wine 3, eat-marry-love 5, la-storia 5, amour-getaway 3. Code that
-  assumes 3 will be wrong.
-- **Reference quirks are preserved deliberately** — e.g. "pallete" (sic) in wine II. Their duplicated
-  "Chapter IV" label on eat-marry-love is the one thing corrected (to IV + V).
+⚠️ **This section used to say the copy was the reference's own verbatim harvest. That has been false
+since the 2026-07-23 pivot** — the harvested Milla Nova copy was replaced wholesale by the wedding
+content and survives only in git at `a4224399`. (The harvest method is still recorded in the file
+header, and the reference's inner pages remain readable via the recipe in the tracker, should anyone
+ever need them again.)
 
-An earlier pass wrongly concluded this copy was unobtainable and shipped invented text; the file header
-records the harvest method so that mistake isn't repeated.
+**Section shapes are NOT uniform and are per-page by design** — each bespoke component reads its own
+fields (`kind`, and then whatever that page needs). Code that assumes a common shape will be wrong.
 
 ### Inner-page assets (Phase 2 — all 4 chapters built)
 
-See attribution in [ROADMAP](ROADMAP.md). **Provenance differs per asset class — this matters
-for the re-skin, because only the film stills are ours to regenerate.**
+See attribution in [ROADMAP](ROADMAP.md). **Provenance differs per asset class.** Only four gallery
+stills are still referenced (US's polaroids + its two popups); In Frames now uses `images/reel/` and
+With Love uses `images/registry/`, so most of `images/gallery/` (3.8 MB) and all of `images/dresses/`
+(848 KB) are **dead weight awaiting the couple's real photos** — don't delete blindly, the US page
+still pulls four of them.
 
 ```
 public/images/gallery/
@@ -149,34 +156,62 @@ public/images/dresses/
 `*-intro.mp4` films, which have since been deleted (recoverable from git before `5d44726c`). They are
 the next media swap: the couple's photos are already in `new frames/`.
 
-### The registry album (With Love)
+### The gift list (With Love)
 
-The With Love page is an **album of pasted cut-outs** (rebuilt 2026-08-10). Its items live in
-`CHAPTER_PAGES['with-love'].sections[].items[]`:
+⚠️ **The "album of pasted cut-outs" this section used to describe was REVERTED** (2026-08-10) — the
+user preferred the original ink treatment. What is live: the ink wanders past gift words scattered
+across the page and lassoes each; hovering one shows the item on a torn paper scrap.
+
+Items live in `CHAPTER_PAGES['with-love'].sections[].items[]`:
 
 ```js
-{ name, caption, image, w /* % of page width */, rot /* deg */, claimed }
+{ memory, name, image, x /* % across the page */, claimed }
 ```
 
-- **No prices, no per-item links** (user decision) — the items say what the couple would love; the
-  single call to action is the `kind: 'cash'` card at the end, which shows **no account details**
+- **No prices and no per-item links** (user decision) — the items say what the couple would love, and
+  the single call to action is the `kind: 'cash'` card, which shows **no account details**
   (a payment link or a get-in-touch destination; `url` is still `'#'`).
-- `claimed: true` greys the item, strikes its label, adds a "taken" stamp and marks it
-  `aria-disabled`. **Built but unused** until gifts are actually tracked.
-- `w` and `rot` are the art direction — vary them so a spread reads as composed rather than
-  gridded. Keep rotation under ~4°.
+- `x` is the art direction — alternate sides so the line has to travel. **The curve itself is
+  measured** from where the words actually land, so `x` can change freely and portrait can stack them
+  centred without the path lying.
+- `claimed: true` greys the item and strikes its label. **Built but unused** until gifts are tracked.
 
 ⚠️ **The item art is ONE placeholder** — `public/images/registry/placeholder-item.png`, a stock
-clipart cut-out standing in for every item so the layout could be judged before the real list
-exists. It **carries the vendor's watermark on purpose**: it's a free preview, not a licensed
-asset, and the mark is a reminder to replace it. Swap per item by setting `image:`.
+clipart cut-out standing in for every item. It **carries the vendor's watermark on purpose**: it is a
+free preview, not a licensed asset. Swap per item by setting `image:`.
 
-**Making a cut-out from a white/checkerboard-backed source:** flood-fill the background from the
-border rather than keying the colour globally, or white *inside* the object (a plate, a mug) gets
-eaten too. The scratchpad script that did it is ~40 lines of `sharp` raw-pixel work: BFS from every
-border pixel where R,G,B ≥ 225, set those to alpha 0, blur the alpha channel by 0.6px to soften the
-anti-aliased fringe, trim, resize. Don't pass `png({ palette: true })` on the way out — it silently
-flattens the alpha you just made.
+### The reel photos (In Frames)
+
+`CHAPTER_PAGES['in-frames']` is a **single section** (`kind: 'reel'`) holding a `frames[]` array; the
+photos alternate along every spool and the component reads the array length. They are the couple's
+own, from `new frames/`:
+
+```
+public/images/reel/
+  car-selfie.jpg  bw-beanie.jpg          1500px — full size, kept for future use
+  car-selfie-sm.jpg  bw-beanie-sm.jpg    560px (~50–65 kB) — WHAT THE PAGE USES
+```
+
+The mini frames render ~110–160px wide, so they use the `-sm` files; shipping the 1500px versions for
+them was ~500kB of waste. They are requested only as the scene comes into range.
+
+### Making a cut-out from a white/checkerboard-backed source
+
+Flood-fill the background **from the border** rather than keying the colour globally, or white
+*inside* the object (a plate, a mug) gets eaten too. ~40 lines of `sharp` raw-pixel work: BFS from
+every border pixel where R,G,B ≥ 225, set those to alpha 0, blur the alpha channel by 0.6px to soften
+the anti-aliased fringe, trim, resize. **Don't pass `png({ palette: true })` on the way out** — it
+silently flattens the alpha you just made.
+
+⚠️ **Asset-sourcing dead ends, so nobody repeats them:** Openverse CC0 → rawpixel's "png sticker"
+collection looks ideal but the public preview URLs have a **checkerboard baked into the pixels**
+(`hasAlpha: false`, background alternating 238/255) and are clipart regardless; Wikimedia Commons has
+essentially no public-domain PNGs with real alpha; CC0 photography is all *scenes*, nothing isolated
+on white. For a registry, the real answer is the retailer's own product images of the actual items.
+
+⚠️ **The scratchpad `node_modules` gets wiped by macOS tmp cleanup** mid-session (sharp and ffprobe
+both vanished this way). Reinstall, or use macOS `sips` for straight resizing — no dependencies:
+`sips -Z 1500 -s format jpeg -s formatOptions 82 in.JPG --out out.jpg`.
 
 ### Swapping the card films
 

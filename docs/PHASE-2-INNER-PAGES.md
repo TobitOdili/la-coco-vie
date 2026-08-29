@@ -4,29 +4,49 @@ Scope and build plan for the per-chapter inner pages. **This doc is the single l
 start here. (It grew from the original Milla Nova replica build; the ▼ HANDOFF box is the current
 state, everything below it is history — newest first.)
 
-> ## ▶▶▶ HANDOFF SNAPSHOT (2026-07-23) — read this first
+> ## ▶▶▶ HANDOFF SNAPSHOT (2026-08-11) — read this first
 > **What this is:** the **wedding site of Covenant (Odili) & Uvie (Dan-Egua)** — "A Love Story in
 > Chapters." A Three.js carousel of 4 poster cards; each opens a bespoke scroll page. Built on an
 > engine that began as a Milla Nova replica (`chapter.millanova.com`) and was re-skinned.
-> **DONE & LIVE (all prod-verified):** the four chapters US / THE BIG DAY / IN FRAMES / WITH LOVE,
-> each a **bespoke inner page** (the "thread" motif — see the STATE entries); homepage carousel with
-> per-card hover/click (`posterAtScreen`), scroll-following lift, live cursor tint, names + date +
-> countdown, welcome note, RSVP; both exit edges; mobile/touch; the **wedding colour palette**
-> (per-chapter hexes in the ▼ palette entry); and **AMBIENT AUDIO** (Howler.js inline in `app.vue`:
-> a per-chapter looping track from `CHAPTERS[i].audio` + a `tick` sound, lazy-init on first gesture,
-> volume fades hover 0.12 / select 0.5, sound toggle in `SiteNav`). Repo cleaned up + docs current.
-> **PLACEHOLDER (waiting on the couple):** all copy, the date's YEAR (Oct 27 confirmed, 2026 assumed),
-> venues, the registry items, the RSVP destination (`#rsvp`), gallery photos (Milla Nova stills), the
-> card films, the favicon (still Milla Nova's), **and the 4 AUDIO tracks** — currently the reference's
-> own files (`eat-merry-love`/`la-storia`/`wine-time`/`amour-getway`.mp3), to be replaced with the
-> couple's wedding music (one loop per chapter; rename to the new slugs + update `CHAPTERS[i].audio`).
-> **NEXT / OPEN:** real content + media (incl. audio); per-page polish (In Frames flagged "could be
-> better"; Big Day wants the traditional-wedding date + thread-motion consistency); portrait
-> card-sizing ("passable"); code-health (split the ~1500-line `useChapterScene.js`;
-> `prefers-reduced-motion`; 34M MP4s).
+>
+> **THE FOUR PAGES, as they stand today** (each is its own world — the rule is that no two share a
+> visual vocabulary, and breaking it is what made With Love fail once already):
+> | chapter | what it is now | driven by |
+> |---|---|---|
+> | **US** | margin notes: the story in two handwritten voices, taped polaroids | `.scrub`/`.fade` |
+> | **THE BIG DAY** | "the hours": light falls from morning to night; two threads **tie the knot** (sticky) | `.scrub`/`.fade` |
+> | **IN FRAMES** | **three spools of ONE film crossing a dark room**, pinned; hover restores a frame's colour | one constant-rate transform |
+> | **WITH LOVE** | the ink wanders past scattered gift words and **lassoes** each; hover shows the item on torn paper | measured spline + `.scrub`/`.write` |
+>
+> **ALSO DONE & LIVE (prod-verified):** the homepage carousel (per-card hover/click via
+> `posterAtScreen`, scroll-following lift, live cursor tint, names + date + countdown, welcome note,
+> RSVP); both exit edges; mobile/touch; the wedding palette; ambient audio (Howler inline in
+> `app.vue`); **the couple's own card films**; and the **GitHub Pages asset fix** (see below).
+>
+> **⚠️ THE FIVE RULES THIS CODEBASE KEEPS RE-LEARNING** — read before touching a bespoke page:
+> 1. **`import.meta.env.BASE_URL` cannot build asset URLs.** Use `utils/asset.js`. (Nuxt pins Vite's
+>    client `base` to `'./'` in production, so it is `'./'` no matter what `app.baseURL` is.)
+> 2. **A template ref inside `v-for` is an ARRAY.** `el.value.style` is then `undefined`, throws on
+>    frame 1, and — because the throw precedes the `requestAnimationFrame` at the end of `tick()` —
+>    **kills the whole rAF loop silently**. Query the DOM inside `tick()`.
+> 3. **The entrance IS the run.** Never animate an entrance *on top of* a moving element: the two
+>    transforms stack (~2×) and a smoothstep peaks at 1.5× its own average on top of that. Start it
+>    off-screen and give it one constant rate.
+> 4. **Measure, don't author.** Curve paths, frame pitch, film length, slot counts and timing windows
+>    are all derived from the laid-out DOM, so they survive any breakpoint. Re-measure after
+>    `document.fonts.ready` — web fonts change text metrics.
+> 5. **`overflow:hidden` on a scene root kills `position:sticky`.** Put it on the sticky child.
+>
+> **PLACEHOLDER (waiting on the couple):** all copy; the date's YEAR (Oct 27 confirmed, 2026 assumed);
+> venues; the registry list; **the RSVP destination (`#rsvp`)**; **the Drive folder** behind In Frames'
+> "Add Your Photos"; **the With Love cash link**; the inner-page gallery stills (still Milla Nova's);
+> the favicon (still Milla Nova's); the 4 audio tracks; and the With Love item art (one watermarked
+> clipart stand-in). The card films and the In Frames reel photos ARE the couple's own.
+>
+> **NEXT / OPEN:** real content + media; Big Day follow-ups (traditional-wedding date, thread-motion
+> consistency, a real map card); portrait card-sizing ("passable"); code-health (split the ~1500-line
+> `useChapterScene.js`).
 > **Regenerate card art:** `npm run gen:textures` (see [`scripts/README.md`](../scripts/README.md)).
-> **Audio matches the reference** (verified 2026-07-23 via Browserless: `chapter.millanova.com` uses
-> the same Howler.js + the same 4 loop files + tick — our audio is a faithful port, not missing).
 
 **▶▶ FIXED (2026-08-10, `67693fd3`) — GITHUB PAGES ASSETS (every image on every inner page).**
 `import.meta.env.BASE_URL` **cannot** build public-asset URLs in Nuxt: Vite's client `base` is

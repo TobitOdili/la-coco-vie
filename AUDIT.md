@@ -1,7 +1,9 @@
-# Homepage Audit — Replica vs Original
-> Conducted: 2026-05-19  
-> Tools: Browserless (Playwright/CDP), original JS bundle analysis, side-by-side Browserless screenshots  
-> Scope: Homepage only (chapter.millanova.com vs the replica)
+# Issue History — root causes, fixes, commits
+> Started 2026-05-19 as a homepage audit (replica vs `chapter.millanova.com`); **since the
+> 2026-07-23 pivot it is the project-wide bug ledger** for the wedding site. Issues #1–#16 are the
+> original replica audit and are framed against the reference; **#17+ are wedding-site bugs** and
+> have nothing to do with fidelity.
+> Tools: Browserless (Playwright/CDP) against the live prod URL, bundle greps, DOM/computed-style probes.
 
 > **Doc map:** this file is the **forensic issue history** — per-issue root causes, fixes,
 > and commit refs (numbered #1–#15). For orientation start at [`README.md`](README.md);
@@ -715,6 +717,109 @@ Pre-existing (not introduced by the `site.config` work — that only changed the
 
 ---
 
+## Issue #17 — Every image 404s on GitHub Pages (base URL) 🔴 HIGH (found & fixed 2026-08-10)
+
+### Symptom
+On https://tobitodili.github.io/la-coco-vie/ every image on every inner chapter page failed —
+card art, noise, taglines, the lot. Vercel was unaffected, so it went unnoticed for months.
+
+### Root cause
+Asset URLs were built from `import.meta.env.BASE_URL`. **Nuxt pins Vite's client `base` to `'./'`
+for production builds** (its own bundle assets resolve through the build manifest instead), so
+`BASE_URL` is `'./'` regardless of `app.baseURL` — `NUXT_APP_BASE_URL=/la-coco-vie/` never reached
+it. The generated bundle literally contained `"./".replace(/\/$/,"")`. Every asset URL was therefore
+**relative**, and:
+- **Vercel worked by luck** — served at the root, and `/with-love` has no trailing slash, so
+  `./images/…` resolved to `/images/…`;
+- **Pages 404'd** — it serves prerendered routes **with** a trailing slash, so the same string
+  resolved one directory too deep: `/la-coco-vie/with-love/images/cu-p1.png`.
+
+### Fix — `67693fd3`
+Base is baked in at build time via `vite.define.__APP_BASE__` and consumed by **one** helper,
+`utils/asset.js`. The four hand-rolled copies (app.vue ×2, chapterPages.js, useChapterScene.js) are
+gone — four copies of one line is how this reached every asset in the project. `--noise-url` now
+resolves against `window.location.origin` rather than `.href` (trailing-slash-proof).
+
+### Verified
+Both hosts: 8/8 page images load, srcs correctly prefixed (`/la-coco-vie/images/…` vs `/images/…`),
+**zero failed requests**; video/audio/fonts/favicon 200 on both. **Method worth reusing: grep the
+emitted bundle** — the bug was invisible in the config and obvious in `.output/public/_nuxt/*.js`.
+
+---
+
+## Issue #18 — A template ref inside `v-for` silently killed the rAF loop 🔴 HIGH (2026-08-11)
+
+### Symptom
+In Frames deployed looking half-alive: images loaded, popups tracked, **nothing animated**. No
+visible error to a casual look.
+
+### Root cause
+Every element the frame loop drives sat inside the sections `v-for`, and **Vue collects a template
+ref used inside `v-for` as an ARRAY**. `sweepEl.value.style` was therefore `undefined` and threw on
+the first frame — and because the throw happened *before* the `requestAnimationFrame` call at the end
+of `tick()`, **the entire loop died after one frame**. The IntersectionObserver preload was
+independent, so media still loaded, which is what made it look half-working rather than broken.
+
+### Fix — `5d19b9e7`
+Query the DOM inside `tick()` instead of holding refs. Applies to any bespoke chapter component that
+renders its scenes through `v-for`.
+
+---
+
+## Issue #19 — Lazy cut-outs collapsed the layout 🟡 MEDIUM (2026-08-10)
+
+### Symptom
+With Love's paper pages shrink-wrapped to their headers; spreads appeared to overlap and one page
+rendered with no page around it at all.
+
+### Root cause
+An `<img>` with `height:auto` is **0px tall until it decodes**. With `loading="lazy"` the frames had
+no height until scrolled into view, so each page had nothing to hold it open.
+
+### Fix — `8f60e207`
+Eager loading (eight images, one shared file) plus an inline `aspect-ratio` per item to reserve the
+box, `object-fit: contain` so a swapped-in image of a different shape letterboxes rather than
+distorts, and a `min-height` on the page.
+
+---
+
+## Issue #20 — Perforations lagged the film they belong to 🟢 LOW (2026-08-11)
+
+### Symptom
+When the In Frames spools stopped, the sprocket-hole strips along the outer edges kept moving for a
+moment — "almost like it's catching up".
+
+### Root cause
+The perforations were two absolutely-positioned children spanning the full length of a very long
+transformed strip. Each becomes **its own rasterised layer**, and those settle a beat after the
+element they sit inside.
+
+### Fix — `c1c5b8e1`
+Painted into `.film`'s own `background-image` (two repeating gradients positioned top and bottom), so
+they are part of the same paint as the film stock and cannot lag by construction.
+
+---
+
+## Issue #21 — Entrance animation stacked on a moving element 🟡 MEDIUM (2026-08-11)
+
+### Symptom
+The In Frames spools whipped in far faster than they then ran, with a visible gear change as they
+settled — even though both were scroll-tied.
+
+### Root cause
+During its entrance a spool was doing two things at once: running (its own transform) and arriving (a
+second transform added on top). The two **summed** to roughly double speed — and the entrance used a
+smoothstep, whose rate peaks at 1.5× its own average, so the worst moment was around 3×. **No window
+tuning can fix summed motions.**
+
+### Fix — `c1c5b8e1`
+The entrance *is* the run: each spool starts far enough back to be off-screen and travels at one
+constant rate for entry, crossing and exit, with no easing on the ends. Prod-measured at **9272 px/p
+across every sample from p=0 to p=0.90**. Trade accepted: spools now leave in arrival order, since a
+reverse-order exit would require one of them to move at a different speed.
+
+---
+
 ## Updated Priority Order (as of 2026-05-27)
 
 | # | Issue | Priority | Status |
@@ -735,3 +840,8 @@ Pre-existing (not introduced by the `site.config` work — that only changed the
 | ~~7~~ | ~~Scroll-driven chapter exit~~ | ~~🟢 Low~~ | ✅ Fixed (`bcc9b342`) — back-scroll past threshold runs the reverse animation via `onScroll`; `onDeselect` callback resets app state. Verified live. |
 | ~~15~~ | ~~Chapter selection broken — hit layer click-transparent~~ | 🔴 High | ✅ Fixed (`bbedb5ec`) — `#canvas-hit-layer` inherited `pointer-events:none`; clicks fell through to `.app-root` so `@click` never fired. Set `pointer-events:auto`. Found while verifying #7; verified live (clicking now selects). |
 | 16 | About panel gray-on-gray when opened from homepage | 🟢 Low | Open (found 2026-05-29) — pre-existing; accent CSS vars default to `gray` until a chapter is selected. See §Issue #16. |
+| ~~17~~ | ~~Every image 404s on GitHub Pages — `import.meta.env.BASE_URL` is `'./'` in Nuxt production builds~~ | ~~🔴 High~~ | ✅ Fixed (`67693fd3`) — baked via `vite.define.__APP_BASE__`, one helper `utils/asset.js`. Verified on both hosts. See §Issue #17. |
+| ~~18~~ | ~~Template ref inside `v-for` is an array → threw on frame 1 → killed the whole rAF loop~~ | ~~🔴 High~~ | ✅ Fixed (`5d19b9e7`) — query the DOM inside `tick()`. See §Issue #18. |
+| ~~19~~ | ~~`loading="lazy"` cut-outs are 0px tall until decode, collapsing the page layout~~ | ~~🟡 Medium~~ | ✅ Fixed (`8f60e207`) — eager + reserved `aspect-ratio` + page `min-height`. See §Issue #19. |
+| ~~20~~ | ~~Perforations rasterise as their own layers and settle after the film stops~~ | ~~🟢 Low~~ | ✅ Fixed (`c1c5b8e1`) — painted into `.film`'s background. See §Issue #20. |
+| ~~21~~ | ~~Entrance animated on top of a moving element → ~2–3× speed, then a gear change~~ | ~~🟡 Medium~~ | ✅ Fixed (`c1c5b8e1`) — the entrance IS the run; one constant rate, prod-measured 9272 px/p throughout. See §Issue #21. |

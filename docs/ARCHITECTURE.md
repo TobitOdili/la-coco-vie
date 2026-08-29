@@ -145,19 +145,49 @@ Inner-page content (`CHAPTER_PAGES[slug].sections[]` + the `DRESSES` table). Lig
 module — no three/gsap. Only Wine O'Clock is filled in; others fall back to the scaffold.
 
 ### Inner-page components (`components/chapter/`)
-Each chapter has a **bespoke** page component, selected by slug in `pages/[slug].vue` — they share
-one motif (the "thread") but no layout: `UsStory.vue` (margin-notes scrapbook), `BigDay.vue`
-("The Hours" — scroll scrubs the day, the two threads tie the knot), `InFrames.vue` ("The Screening
-Room" — dark, the film strip runs through a projector gate), `WithLove.vue` ("Thank-You in Advance"
-— ink writes + circles + signs). All four run on one **scroll-scrubbed line-drawing engine**: an rAF
-loop reads each scene's `getBoundingClientRect()` and drives per-element `data-window="a,b"` attrs →
-`strokeDashoffset` (`.scrub` SVG paths, `pathLength=1`), `opacity` (`.fade`), or L→R clip reveal
-(`.write`). Reversible, follows Lenis, ~zero media. ⚠️ Bespoke components MUST render
-`.chapter-section` roots with `data-idx` — the floating-card observer in `[slug].vue` keys on them.
-`ChapterSection.vue` is the generic section block (numbered heading + gallery + fade-up), now only
-the unused fallback. `PopupCard.vue` is the floating card pinned bottom-centre (photo + url both
-optional — moment polaroids, map/calendar cards, registry items). `ChapterEnd.vue` = the shared
-"See you there — RSVP" footer.
+Each chapter has a **bespoke** page component, selected by slug in `pages/[slug].vue`. **They
+deliberately share no visual vocabulary** — that rule matters more than any motif, and breaking it is
+what made With Love read as a repeat of US and get rebuilt.
+
+| file | what it is | how it moves |
+|---|---|---|
+| `UsStory.vue` | margin notes — two handwritten voices, taped polaroids | `.scrub` / `.fade` per scene |
+| `BigDay.vue` | "The Hours" — light falls to night; two threads **tie the knot** (sticky) | `.scrub` / `.fade` per scene |
+| `InFrames.vue` | **three spools of one film crossing a dark room**, one pinned section | a single constant-rate transform |
+| `WithLove.vue` | the ink wanders past scattered gift words and **lassoes** each | measured spline + `.scrub`/`.write` |
+
+**The shared engine** is an rAF loop per component: it reads each scene's `getBoundingClientRect()`
+every frame and drives per-element `data-window="a,b"` attributes → `strokeDashoffset` (`.scrub` SVG
+paths with `pathLength=1`), `opacity` (`.fade`), an L→R clip reveal (`.write`), or a top→bottom clip
+(`.drawdown`). Reversible, follows Lenis exactly, ~zero media.
+
+⚠️ **Five rules these components keep re-learning the hard way:**
+1. **Bespoke components MUST render `.chapter-section` roots with `data-idx`** — the floating-card
+   observer in `[slug].vue` keys on them.
+2. **A template ref used inside `v-for` is collected as an ARRAY.** `el.value.style` is then
+   `undefined` and throws on the first frame; because the throw precedes the `requestAnimationFrame`
+   at the end of `tick()`, **the entire rAF loop dies silently** — the page looks half-alive (images
+   load, nothing animates) rather than broken. Query the DOM inside `tick()` instead.
+3. **Never animate an entrance *on top of* something already moving.** The two transforms sum (~2×)
+   and a smoothstep peaks at 1.5× its own average on top of that. In Frames' spools start off-screen
+   and travel at **one constant rate** for entry, crossing and exit — the entrance IS the run.
+4. **Measure, don't author.** With Love's curve is splined through the words' real positions; In
+   Frames solves its slot count, frame pitch, film length, cross distance and stagger from the
+   laid-out DOM. That is what makes both survive any breakpoint. **Re-measure after
+   `document.fonts.ready`** — web fonts change text metrics and leave geometry pointing at where the
+   text used to be.
+5. **`overflow:hidden` on a scene root kills `position:sticky`** (the root becomes the containment
+   box). Put it on the sticky child.
+
+⚠️ **Two rendering traps worth knowing:** a wide absolutely-positioned child of a long transformed
+strip rasterises as **its own layer and settles a beat late** (In Frames' perforations "caught up"
+after the film stopped until they became background layers on the film itself); and an `<img>` with
+`height:auto` is **0px tall until it decodes**, so `loading="lazy"` can collapse a whole layout —
+reserve the ratio or load eagerly.
+
+`ChapterSection.vue` is the generic section block, now only the unused fallback. `PopupCard.vue` is
+the floating card pinned bottom-centre (photo + url both optional). `ChapterEnd.vue` = the shared
+"See you there — RSVP" footer; In Frames tightens it via `.--in-frames .chapter-end` in `main.css`.
 
 Textures (`public/images/cu-*`) are generated — see [`scripts/README.md`](../scripts/README.md)
 (`npm run gen:textures`).
@@ -205,9 +235,10 @@ The whole 3D experience. Detailed below.
 
 ### `composables/chapterPages.js`
 Inner-page content as pure data: `CHAPTER_PAGES[slug].sections[]` (each bespoke component reads the
-fields it needs — `notes`/`caption` for US, `time`/`lines`/`vow` for Big Day, `exposures`/`reserved`
-for In Frames, `kind`/`memory`/`gift`/`names` for With Love) + the `POPUPS` table (floating-card
-content). All copy/dates/registry here are PLACEHOLDERS.
+fields it needs — `notes`/`caption` for US; `time`/`lines`/`vow` for Big Day; a single `kind:'reel'`
+section with `frames[]` for In Frames; `kind`/`memory`/`items[]` for With Love) + the `POPUPS` table
+(floating-card content). All copy/dates/registry here are PLACEHOLDERS. ⚠️ Four `reg*` popup entries
+are **orphaned** — With Love shows its items in the page now.
 
 ---
 
@@ -448,6 +479,9 @@ for any future CSS-var asset paths.
 | Debug instrumentation | `__heroDebug` / `__camDebug` / `__probe` / `__exitBegin/Scrub/End` and `__gsdev()` (GSAP DevTools) are gated behind **`?debug` on the initial load URL**. Inert otherwise. Fine to ship; remove if you want them gone. |
 | **Palette** | The wedding colours live in `CHAPTERS` (`composables/useChapterScene.js`) + the `.--{slug}` vars in `assets/css/main.css` + the `CH` array in `scripts/gen-textures.mjs` — keep all three in sync. The four bespoke components also hardcode family tones (Big Day day→night gradient, In Frames' `#241A33` room, With Love's teal ink). |
 | `dist` symlink | Was tracked pointing at a stale path; now gitignored. |
+| **Dead inner-page assets** | `public/images/dresses/` (848 KB) is fully unreferenced since the dress popups were retired; most of `public/images/gallery/` (3.8 MB) is too — but **US still pulls four files from it**, so don't clear the directory blindly. They go when the couple's photos arrive. |
+| **Three dead links** | The RSVP destination (`SITE.nav.collectionUrl`), In Frames' "Add Your Photos" Drive folder, and With Love's cash card all point at `'#'`. These are the only interactive dead ends on the site. |
+| **Claude-in-Chrome not connected** | The real-browser QA tier was unavailable as of 2026-08-11, and Browserless cannot decode H.264 — so **how the card films actually look is unverified by tooling**; it needs a human or a reconnected extension. |
 | **God-module** | `useChapterScene.js` is ~1500 lines. Splitting it (shaders / intro / select-exit / hover) is the main open refactor; deferred (high-risk, low-urgency). |
 | ~~`onDeselect` / `useAudio.js` dead code~~ | Removed 2026-07-23. |
 | `#4` ring tilt | Parked — replica reads slightly more face-on than the original. Needs the original's exact group rotation (couldn't extract cleanly). See AUDIT #4. |

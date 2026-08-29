@@ -33,9 +33,11 @@ Remaining homepage polish (optional, low priority):
 **Built & live:** real `/{slug}` routes on a persistent WebGL shell (URL = source of truth,
 deep-links + back/forward, per-slug prerender); the card-select animation *is* the transition;
 the **"card becomes the page"** rework (hero scroll-coupling + edge-gated exits — the **top edge
-reverse-spins back into the ring** and is done/stable; the **bottom edge is the scroll-driven "cluster-unfurl" outro** and is **DONE/user-approved**); **all four** inner pages, data-driven from the reference's real copy (3–5 sub-chapters each, galleries, viewport-pinned dress popups, chapter-end); a 2026-06-12
-re-review + fix batch (interrupt-safety, video lifecycle, input hardening), prod- and
-real-browser-verified.
+reverse-spins back into the ring** and is done/stable; the **bottom edge is the scroll-driven "cluster-unfurl" outro** and is **DONE/user-approved**); and **all four inner pages as bespoke components**,
+each with its own visual language (⚠️ they were originally a shared data-driven layout with the
+reference's copy and dress popups — that model is gone; only the unused `ChapterSection` fallback
+remains). A 2026-06-12 re-review + fix batch (interrupt-safety, video lifecycle, input hardening),
+prod- and real-browser-verified.
 
 **Decisions settled** (were open questions in Phase 1):
 - **Routing**, not an in-place overlay (real shareable URLs; matches the original).
@@ -49,8 +51,9 @@ real-browser-verified.
   the ring rises + un-tilts to the homepage and the bg fades. Radius grows **monotonically** (an earlier dip
   read as "shrinks first, then expands"). Reversible; spins in the down-scroll direction. 9 "morph the page
   into a card" attempts were rejected and removed — don't reintroduce them.
-- ✅ **All 4 chapters built, with the reference's REAL copy.** Section counts differ (wine 3, eat-marry-love
-  5, la-storia 5, amour 3). Galleries are placeholder film stills; dresses are real.
+- ✅ **All 4 chapters built.** ⚠️ Superseded: this described the pre-pivot shared-layout build using the
+  reference's harvested copy. All four are now bespoke wedding pages with placeholder copy; In Frames
+  and With Love were each rebuilt again in August (film spools / wandering ink).
 - ✅ **Mobile / touch.** Carousel swipe + momentum, tap-vs-swipe guard, parked EXPLORE tap target, touch
   top-edge exit, and portrait geometry fixes. All gated on `isMobile`.
 
@@ -61,19 +64,29 @@ real-browser-verified.
 - **Homepage card sizing on portrait** — cards read oversized/cropped. Root cause understood (three's `fov`
   is vertical, so portrait collapses the horizontal view), but every lever also moves the hero, which is
   currently correct — needs a compensating hero adjustment rather than a guess.
-- **Real gallery photos** — now the couple's own, waiting in `new frames/` (the card films were
-  swapped in 2026-08-10; the inner-page galleries are still Milla Nova stills).
+- **Real gallery photos** — partly done: the **card films** (2026-08-10) and the **In Frames reel
+  photos** (2026-08-11) are the couple's own, from `new frames/`. The inner-page galleries (US's
+  polaroids) are still Milla Nova stills, and With Love's item art is one watermarked clipart
+  stand-in.
+- **Three dead links to fill** — the RSVP destination, In Frames' "Add Your Photos" Drive folder,
+  and the With Love cash card. These are the only interactive dead ends left on the site.
 - Richer ScrollTrigger/Lenis parallax + inline films; section bg alternation (**G**).
 - Code-health debt: split the ~1500-line `useChapterScene.js` god-module; perf/a11y (no
   `prefers-reduced-motion`). *(The 34M of MP4s is resolved — the new films total 6.6M.)*
 
 ### QA habit (carried from Phase 1)
-Verify at each step: Browserless probes/geometry on prod + a real-browser pass (Claude-in-Chrome)
-for video/textures/feel. See ARCHITECTURE → QA workflow.
+Verify at each step: **deploy first, then probe the live prod URL** — never trust local rendering.
+Browserless covers structure, geometry, timing and network (token in `.env.bless`). ⚠️ It **cannot
+decode H.264**, so the card films need a real browser; Claude-in-Chrome was that tier but was **not
+connected** as of 2026-08-11. See ARCHITECTURE → QA workflow.
 
 ---
 
-## Phase 3 — Re-skin for a new project 🔮 (later)
+## Phase 3 — Re-skin for a new project ✅ (done — this is the wedding site)
+
+> ⚠️ This phase is **complete**: the re-skin happened on 2026-07-23 and the "new project" is
+> Covenant &amp; Uvie's wedding site. The mechanics below are kept because they are still the exact
+> levers for changing content — and because a future re-skin of this codebase would follow them again.
 
 Keep **all functionality and interaction design**, swap **media, content, and branding** for
 a separate project — with full credit to the original creators.

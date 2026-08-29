@@ -15,17 +15,27 @@
 > [`docs/ROADMAP.md`](docs/ROADMAP.md) · issue forensics → [`AUDIT.md`](AUDIT.md).
 > **This file is the living status log** (what works, resolved/open issues, dev workflow, sessions).
 
-> Last updated: 2026-07-22 (**bottom exit DONE + user-approved** as the "cluster-unfurl" outro; **all 4 chapters built with the reference's REAL harvested copy**; **mobile/touch built**. HEAD `ce885d53`.)
+> Last updated: **2026-08-11**. All four inner pages are bespoke and live; the couple's own card
+> films and In Frames reel photos are in; asset URLs are base-path correct on both hosts.
+> **In Frames and With Love were both rebuilt from scratch this cycle** — see the tracker.
 >
-> ⚠️ **Verification is uneven — see the VERIFICATION STATUS table in [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md) before trusting any "done" here.** The exit and the carousel are confirmed; **the chapter inner pages on a real phone are NOT** — the last three mobile fixes shipped without a device check and the final one (`17da487c`) was never rendered at all. No desktop regression pass was run after `722ed89e` either, and two of the bugs fixed this session were not mobile-only.
+> ⚠️ **Verification is uneven — see the VERIFICATION STATUS table in [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md) before trusting any "done" here.** Everything shipped in
+> August was prod-probed via Browserless (structure, geometry, timing, network) — but **Browserless
+> cannot decode H.264 and Claude-in-Chrome was not connected**, so *how the card films look* is
+> unverified by tooling. The chapter inner pages were last confirmed on a real phone in July
+> ("workable for now"); the two August rebuilds have **not** been device-checked.
 
 ---
 
 ## 🎯 What We're Building
 
-A **pixel-perfect replica** of [chapter.millanova.com](https://chapter.millanova.com/) — a luxurious, WebGL-driven bridal fashion experience by Milla Nova.
+**Covenant &amp; Uvie's wedding site** — "A Love Story in Chapters": a spinning 3D carousel of four
+poster cards, each opening into its own bespoke scroll page (US · THE BIG DAY · IN FRAMES · WITH LOVE).
 
-The original site is a showpiece of interactive 3D web design: a spinning carousel of poster cards built in Three.js, rich GLSL shaders, GSAP animations, spatial audio, and cinematic chapter transitions. Our goal is to match it as closely as possible — visually, technically, and in feel.
+> ⚠️ This section used to read *"a pixel-perfect replica of chapter.millanova.com"*. That was the
+> **engine's origin, not the goal** — the replica was built as a technical study and re-skinned into
+> the wedding site on 2026-07-23. Fidelity to the reference is no longer a success criterion; the
+> couple's story is. Reference-fidelity notes in older entries below should be read in that light.
 
 **Repo:** https://github.com/TobitOdili/la-coco-vie  
 **Local path:** `/Users/tobitodili/Documents/GitHub/la-coco-vie` (macOS)  

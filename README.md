@@ -28,8 +28,10 @@ opens into its own bespoke scroll page.
 
 ## Status
 
-**The four-chapter journey is fully built, all live. Every inner page is a bespoke scroll
-experience unified by one motif — a thread that runs through the whole site.**
+**The four-chapter journey is fully built, all live.** Each inner page is a bespoke scroll
+experience with **its own visual vocabulary** — deliberately so. (The "one thread through the whole
+site" framing held until In Frames became the film spools; the rule that survived, and matters more,
+is that no two pages share a language. Breaking it is what made With Love fail its first review.)
 
 > 📋 **The single live tracker is [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md)** —
 > read it first for a cold pickup (current state, the full change log, next steps). This README is
@@ -43,15 +45,18 @@ experience unified by one motif — a thread that runs through the whole site.**
   - **US** — "the margin notes": the story in two handwritten voices, taped polaroids.
   - **THE BIG DAY** — "the hours": scroll scrubs the day from morning light into night; two threads
     **tie the knot** at the ceremony (sticky, reversible). Photo-free.
-  - **IN FRAMES** — "the screening room": the page goes dark, the thread becomes a **film strip**
-    that scroll-advances through a projector gate; academy countdowns; future galleries are
-    "reserved" title cards.
-  - **WITH LOVE** — "thank-you in advance": the thread becomes **ink** that writes the thank-you,
-    circles each gift like a catalogue, and **splits in two to sign** both names → RSVP.
+  - **IN FRAMES** — a dark room with **three spools of one film crossing it**, pinned: the title
+    hands over to the spools, they run at a single scroll-tied speed, then leave as END OF REEL
+    fades in. Frames are monochrome; **hover restores one frame's colour**.
+  - **WITH LOVE** — the **ink** writes the thank-you, then wanders past gift words scattered across
+    the page and **lassoes** each in turn; hover shows the item on a torn paper scrap. Ends by
+    splitting in two to sign both names → RSVP.
 - ✅ **Shared engine** — persistent WebGL shell (no intro replay across routes), URL = source of
-  truth, real `/{slug}` routes + prerender, deep-links + browser back/forward. A shared
-  scroll-scrubbed line-drawing engine (`.scrub`/`.fade`/`.write`, rAF vs scene rects) powers the
-  inner pages; floating white "moment/utility/registry" cards recur on every page.
+  truth, real `/{slug}` routes + prerender, deep-links + browser back/forward. Every bespoke page
+  runs the same rAF pattern (read scene rects each frame → follows Lenis exactly, reverses for free)
+  with per-page scrub types (`.scrub`/`.fade`/`.write`/`.drawdown`); floating white cards recur on
+  US, Big Day and In Frames. With Love and In Frames additionally **derive their geometry from
+  measurement** — see ARCHITECTURE → Bespoke inner pages.
 - ✅ **Exits** — top edge reverse-rewinds into the ring; bottom edge is the scroll-driven
   **cluster-unfurl outro** (user-approved). Both reversible.
 - ✅ **Mobile / touch** — swipe + momentum, tap-vs-swipe guard, parked EXPLORE button, portrait
@@ -59,14 +64,18 @@ experience unified by one motif — a thread that runs through the whole site.**
 - ✅ **Wedding colour palette** — one hue family per chapter (US beige/chocolate · Big Day sage/olive ·
   In Frames lavender/purple · With Love dusty-blue/teal). Card art is **generated**:
   `npm run gen:textures` (see [`scripts/README.md`](scripts/README.md)).
-- ✅ **The couple's own card films** — one per chapter (`public/video/{slug}.mp4`), replacing the
-  Milla Nova placeholders. Raw media is dropped in **`new frames/`** at the repo root; see
-  [CONTENT-AND-ASSETS → Swapping the card films](docs/CONTENT-AND-ASSETS.md#swapping-the-card-films)
-  for the 900×1200 crop-encode recipe.
-- 🔧 **Open** — the rest of the real content/media (copy, gallery photos, ambient audio, registry,
-  RSVP destination); per-page polish (In Frames flagged, Big Day: traditional-wedding date + thread
-  motion); favicon still Milla Nova's; portrait card-sizing; code-health (split the ~1500-line scene
-  module, `prefers-reduced-motion`).
+- ✅ **The couple's own media, starting to land** — the four **card films**
+  (`public/video/{slug}.mp4`) and the In Frames **reel photos** (`public/images/reel/`) are theirs.
+  Raw media is dropped in **`new frames/`** at the repo root; see
+  [CONTENT-AND-ASSETS](docs/CONTENT-AND-ASSETS.md) for the encode/cut-out recipes.
+- ✅ **Asset URLs are base-path correct on both hosts** — everything goes through
+  [`utils/asset.js`](utils/asset.js). ⚠️ `import.meta.env.BASE_URL` **cannot** be used for this in
+  Nuxt; it silently broke every image on the GitHub Pages deploy. See ARCHITECTURE → Base URL.
+- 🔧 **Open** — the rest of the real content/media (copy, gallery stills, ambient audio, the
+  registry list + its item art); **three dead links to fill: the RSVP destination, the Drive folder
+  behind In Frames' "Add Your Photos", and the With Love cash card**; Big Day follow-ups
+  (traditional-wedding date, thread-motion consistency, a real map card); favicon still Milla Nova's;
+  portrait card-sizing; code-health (split the ~1500-line scene module).
 
 Full live status → [`PROGRESS.md`](PROGRESS.md) · issue history → [`AUDIT.md`](AUDIT.md) · plan → [`docs/ROADMAP.md`](docs/ROADMAP.md)
 
@@ -106,7 +115,7 @@ npm run preview   # preview a production build
 | Styling | Tailwind v4 (via `@tailwindcss/vite`) + `assets/css/main.css` |
 | Fonts | Bague & Movie (local `.woff`) + Italiana / Monoton / Over the Rainbow (Google Fonts) |
 | Hosting | **Vercel** (primary, auto-deploys `main`) + GitHub Pages (CI fallback) |
-| QA tooling | **Browserless** (cloud headless, geometry/probes) + **Claude-in-Chrome** (real browser: video/textures) — see ARCHITECTURE → QA workflow |
+| QA tooling | **Browserless** (cloud headless — geometry, probes, screenshots; token in `.env.bless`). ⚠️ It cannot decode H.264, so how the **films** look needs a real browser. Claude-in-Chrome was the real-browser tier but was **not connected** as of 2026-08-11. See ARCHITECTURE → QA workflow |
 
 ---
 
@@ -135,6 +144,7 @@ components/
 composables/
   useChapterScene.js         ★ The whole 3D experience: scene, shaders, intro, select/exit + CHAPTERS
   chapterPages.js            Inner-page content: CHAPTER_PAGES + POPUPS (data only)
+utils/asset.js               ★ The ONLY way to build a public-asset URL (base-path aware)
 assets/css/main.css          Fonts, cursor, noise overlay, container, per-chapter color vars
 public/                      Static assets — posters, films, audio, fonts (see CONTENT-AND-ASSETS)
 new frames/                  📁 Media drop — the couple's raw photos/films, processed into public/
