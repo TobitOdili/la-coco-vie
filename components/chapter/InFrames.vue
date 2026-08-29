@@ -1,74 +1,39 @@
 <template>
   <div ref="rootEl" class="in-frames">
     <template v-for="(s, i) in sections" :key="i">
-      <!-- ── Title · the house lights go down. ── -->
+      <!-- ── Title · you land here. Nothing running yet. ── -->
       <section v-if="s.kind === 'title'" class="chapter-section room-scene scene-title" :data-idx="i">
         <div class="title-card">
           <div class="present">{{ s.present }}</div>
-          <h2 class="film-title">
-            <span>OUR JOURNEY</span>
-            <span>IN FRAMES</span>
-          </h2>
+          <h2 class="film-title"><span>OUR JOURNEY</span><span>IN FRAMES</span></h2>
           <div class="present sub">{{ s.sub }}</div>
         </div>
       </section>
 
-      <!-- ── Leader · the 3·2·1 countdown, pinned. It runs BEFORE any photograph,
-           which is also the window the reel media loads in (see preload()). ── -->
-      <section v-else-if="s.kind === 'leader'" class="chapter-section room-scene leader-scene" :data-idx="i">
-        <div class="leader-sticky">
-          <svg class="leader-svg" viewBox="0 0 400 400" aria-hidden="true">
-            <line x1="200" y1="0" x2="200" y2="400" stroke="#EFE8F5" stroke-width="1" opacity="0.25" />
-            <line x1="0" y1="200" x2="400" y2="200" stroke="#EFE8F5" stroke-width="1" opacity="0.25" />
-            <circle cx="200" cy="200" r="150" stroke="#EFE8F5" stroke-width="1.5" fill="none" opacity="0.35" />
-            <circle class="sweep" cx="200" cy="200" r="150" pathLength="1"
-              stroke="#EFE8F5" stroke-width="3" fill="none" transform="rotate(-90 200 200)" />
-          </svg>
-          <div class="leader-num">3</div>
-          <!-- Honest about the wait rather than hiding it: the countdown IS the loader. -->
-          <div class="threading" :class="{ done: reelReady }">
-            {{ reelReady ? 'REEL THREADED' : `THREADING THE REEL · ${loadPct}%` }}
-          </div>
-        </div>
-      </section>
+      <!-- ── Spools · three lengths of ONE film crossing the page. Every spool is
+           driven by the same advance, so they run as a single unit; the direction
+           alternates the way film reverses around a roller. ── -->
+      <section v-else-if="s.kind === 'spools'" class="chapter-section room-scene spools-scene" :data-idx="i">
+        <div class="spools-sticky">
+          <div class="watermark" aria-hidden="true">{{ s.watermark }}</div>
 
-      <!-- ── The reel · ONE gate. The film edges stay put, the sprockets travel,
-           and the exposure is swapped behind a closed shutter. ── -->
-      <section v-else-if="s.kind === 'reel'" class="chapter-section room-scene reel-scene" :data-idx="i"
-        :style="{ height: `${110 + (exposures.length - 1) * 80}dvh` }">
-        <div class="gate-sticky">
-          <div class="roll-head">
-            ROLL 01 — {{ String(exposures.length).padStart(2, '0') }} EXPOSURES
-          </div>
-          <div class="projector">
-            <div class="sprocket" aria-hidden="true"><i /></div>
-            <div class="window">
-              <!-- gate weave (time) → pull-down (scroll) → the exposures -->
-              <div class="weave">
-                <div class="pull">
-                  <img v-for="(ex, k) in exposures" :key="k" class="exposure"
-                    :class="{ on: k === active }" :src="reelReady ? ex.src : undefined"
-                    :alt="k === active ? ex.cap : ''" decoding="async" />
-                </div>
-              </div>
-              <!-- Projector artefacts. These run on TIME, not scroll: the lamp is
-                   never steady, so the picture is never steady, even when you stop. -->
-              <div class="lamp" aria-hidden="true" />
-              <div class="flicker" aria-hidden="true" />
-              <div class="grain" aria-hidden="true" />
-              <div class="scratch s1" aria-hidden="true" />
-              <div class="scratch s2" aria-hidden="true" />
-              <div class="halation" aria-hidden="true" />
-              <!-- the shutter, driven by scroll: shut while the frame is pulled -->
-              <div class="shutter" aria-hidden="true" />
+          <div v-for="(sp, k) in SPOOLS" :key="k" class="spool"
+            :style="{ '--angle': sp.angle + 'deg', '--top': sp.top + '%', '--z': sp.z }">
+            <div class="film" :data-dir="sp.dir">
+              <span class="perf top" aria-hidden="true" />
+              <span class="perf bot" aria-hidden="true" />
+              <figure v-for="n in SLOTS" :key="n" class="mini">
+                <img :src="ready ? frameSrc(k, n) : undefined" alt="" aria-hidden="true" decoding="async" />
+              </figure>
             </div>
-            <div class="sprocket" aria-hidden="true"><i /></div>
           </div>
-          <div class="subtitle">{{ currentCap }}</div>
+
+          <div class="grain" aria-hidden="true" />
+          <div class="vignette" aria-hidden="true" />
         </div>
       </section>
 
-      <!-- ── End of reel · the film runs out and the lights come up. ── -->
+      <!-- ── End of reel ── -->
       <section v-else-if="s.kind === 'end'" class="chapter-section room-scene scene-end" :data-idx="i">
         <div class="title-card">
           <div class="film-title small">END OF REEL</div>
@@ -86,151 +51,125 @@ const props = defineProps({
   sections: { type: Array, required: true },
 })
 
-const exposures = computed(() => props.sections.find((s) => s.kind === 'reel')?.exposures || [])
+const frames = computed(() => props.sections.find((s) => s.kind === 'spools')?.frames || [])
+
+// The three lengths of film. `dir` is which way this one runs (film reverses
+// around a roller, so alternating is authentic, not a cheat); `lead` offsets which
+// exposure it starts on, so the one leaving a spool is the one entering the next.
+const SPOOLS = [
+  { angle: -27, top: 25, dir: 1, lead: 0, z: 3 },
+  { angle: 15, top: 52, dir: -1, lead: 5, z: 2 },
+  { angle: -9, top: 79, dir: 1, lead: 11, z: 1 },
+]
+// Enough frames to overhang both edges at every angle; the film only ever travels
+// two pitches before it wraps, so the ends never come into view.
+const SLOTS = 16
+const ADVANCE_FRAMES = 15   // frames of film pulled across the whole scene
 
 const rootEl = ref(null)
-// ⚠️ These elements live inside a v-for, and a template ref inside v-for is
-// collected as an ARRAY — `sweepEl.value.style` is then undefined, which threw
-// every frame and killed the rAF loop outright. Query the DOM instead.
-const currentCap = ref('')
-const active = ref(0)
-const reelReady = ref(false)
-const loadPct = ref(0)
-
+const ready = ref(false)
 let rafId = 0
 let io = null
+let pitches = []
 
-// One perforation per frame. PITCH_REM must match the repeating gradient in the
-// CSS (.sprocket i) or the holes will not land on their notches.
-const PITCH_REM = 4.4
-const PULL_START = 0.62          // hold for this much of each frame, then pull
-let _rem = 0
-const remPx = () => (_rem ||= parseFloat(getComputedStyle(document.documentElement).fontSize) || 16)
+// Alternate the exposures along each spool, continuing the count from the spool
+// before it — so it reads as one strip of film, not three loops.
+function frameSrc(spoolIdx, slot) {
+  const list = frames.value
+  if (!list.length) return undefined
+  return list[(SPOOLS[spoolIdx].lead + slot) % list.length]
+}
 
-// ── Loading order ───────────────────────────────────────────────────────────
-// The title card and the countdown are type + SVG — they cost nothing and must
-// paint immediately. The photographs are the only heavy thing here, so they are
-// not requested until the countdown is near in view, and the pinned countdown gives
-// them time to arrive. Not a hard gate: if they are slow the reel simply fills
-// in as they land. (Repeated srcs collapse to one request each via the cache.)
+// Two files, both small. Requested as the spools come into range rather than on
+// load, so the title paints first; soft, never a gate.
 function preload() {
-  const srcs = [...new Set(exposures.value.map((e) => e.src))]
-  if (!srcs.length) { reelReady.value = true; return }
+  const srcs = [...new Set(frames.value)]
+  if (!srcs.length) { ready.value = true; return }
   let done = 0
-  const bump = () => {
-    done += 1
-    loadPct.value = Math.round((done / srcs.length) * 100)
-    if (done >= srcs.length) reelReady.value = true
-  }
+  const bump = () => { if (++done >= srcs.length) ready.value = true }
   for (const src of srcs) {
     const img = new Image()
     img.onload = bump
-    img.onerror = bump          // never strand the reel on one bad file
+    img.onerror = bump
     img.src = src
   }
 }
 
-// Same rAF scrub engine as the other bespoke pages: read scene rects each frame
-// so everything follows Lenis exactly and reverses for free.
+// Pitch = the real distance between two frames, measured rather than assumed, so
+// the wrap lands exactly on the pattern and never shows a seam.
+function measure() {
+  const films = rootEl.value?.querySelectorAll('.film') || []
+  pitches = [...films].map((f) => {
+    const m = f.querySelectorAll('.mini')
+    return m.length > 1 ? m[1].offsetLeft - m[0].offsetLeft : 220
+  })
+}
+
 function tick() {
   const root = rootEl.value
   if (root) {
     const vh = window.innerHeight
-
-    // Leader: each third of the pinned travel is one number's full sweep.
-    const leader = root.querySelector('.leader-scene')
-    const sweep = leader?.querySelector('.sweep')
-    const num = leader?.querySelector('.leader-num')
-    if (leader && sweep && num) {
-      const r = leader.getBoundingClientRect()
-      const travel = Math.max(1, r.height - vh)
-      const p = Math.min(1, Math.max(0, -r.top / travel)) * 0.999
-      num.textContent = String(3 - Math.floor(p * 3))
-      sweep.style.strokeDashoffset = String(1 - ((p * 3) % 1))
-    }
-
-    // The reel. A projector holds a frame still, then yanks the next one down in
-    // one quick pull while the shutter is shut. So the film is NOT glided along
-    // with the scroll — it DWELLS, then pulls exactly one perforation, and the
-    // sprockets, the picture and the shutter are all driven by that same pull
-    // value so they cannot drift apart.
-    const reel = root.querySelector('.reel-scene')
-    const shutter = reel?.querySelector('.shutter')
-    const pullEl = reel?.querySelector('.pull')
-    const sprockets = reel ? reel.querySelectorAll('.sprocket i') : []
-    if (reel && shutter) {
-      const r = reel.getBoundingClientRect()
+    const scene = root.querySelector('.spools-scene')
+    if (scene) {
+      const r = scene.getBoundingClientRect()
       const p = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - vh)))
-      const n = exposures.value.length
-      const q = p * (n - 1)
-      const i0 = Math.min(n - 2, Math.floor(q))
-      const frac = Math.min(1, Math.max(0, q - i0))
+      const advance = p * ADVANCE_FRAMES
 
-      // Hold for the first ~62% of each frame's scroll, then pull through.
-      const t = Math.min(1, Math.max(0, (frac - PULL_START) / (1 - PULL_START)))
-      const pull = t * t * t * (t * (t * 6 - 15) + 10)   // smootherstep
-
-      // The film's position in perforations — integer while held, +1 across a pull.
-      const film = i0 + pull
-      const holes = (-(film * PITCH_REM * remPx())).toFixed(2)
-      sprockets.forEach((el) => { el.style.transform = `translate3d(0, ${holes}px, 0)` })
-
-      // Shutter is shut across the pull and fully open while the frame is held.
-      const shut = pull > 0 && pull < 1 ? Math.pow(Math.sin(Math.PI * pull), 0.6) : 0
-      shutter.style.opacity = shut.toFixed(3)
-
-      // The picture swaps at the exact middle of the pull — the instant the
-      // shutter is fully shut — so the cut is never visible.
-      active.value = Math.min(n - 1, pull < 0.5 ? i0 : i0 + 1)
-
-      // …and the frame slips through the gate as it is pulled: the outgoing frame
-      // rides up, the incoming one drops in from below, the jump hidden by the shutter.
-      if (pullEl) {
-        const slip = (pull < 0.5 ? pull : pull - 1) * 42
-        pullEl.style.transform = `translate3d(0, ${(-slip).toFixed(2)}px, 0)`
-      }
-
-      currentCap.value = shut > 0.6 ? '' : exposures.value[active.value]?.cap || ''
+      // The exposures alternate, so the pattern repeats every 2 frames: wrapping
+      // the travel at two pitches keeps the film running forever without ever
+      // needing to re-assign a src, and the wrap is invisible.
+      const films = root.querySelectorAll('.film')
+      films.forEach((f, i) => {
+        const pitch = pitches[i] || 220
+        const dir = Number(f.dataset.dir || 1)
+        const off = (((advance % 2) + 2) % 2) * pitch
+        f.style.transform = `translate3d(${(-dir * off).toFixed(2)}px, 0, 0)`
+      })
     }
   }
   rafId = requestAnimationFrame(tick)
 }
 
+let resizeT = 0
+const onResize = () => { clearTimeout(resizeT); resizeT = setTimeout(measure, 150) }
+
 onMounted(() => {
+  measure()
   rafId = requestAnimationFrame(tick)
-  const leader = rootEl.value?.querySelector('.leader-scene')
-  if (leader && 'IntersectionObserver' in window) {
+  window.addEventListener('resize', onResize)
+  const scene = rootEl.value?.querySelector('.spools-scene')
+  if (scene && 'IntersectionObserver' in window) {
     io = new IntersectionObserver(
-      (entries) => { if (entries[0].isIntersecting) { preload(); io.disconnect(); io = null } },
-      { rootMargin: '150% 0px' }
+      (e) => { if (e[0].isIntersecting) { preload(); io.disconnect(); io = null } },
+      { rootMargin: '120% 0px' }
     )
-    io.observe(leader)
+    io.observe(scene)
   } else {
     preload()
   }
+  // The frames have no intrinsic size until they decode; re-measure once they do.
+  document.fonts?.ready.then(() => setTimeout(measure, 60))
 })
-onBeforeUnmount(() => { cancelAnimationFrame(rafId); io?.disconnect() })
+onBeforeUnmount(() => {
+  cancelAnimationFrame(rafId)
+  window.removeEventListener('resize', onResize)
+  io?.disconnect()
+  clearTimeout(resizeT)
+})
 </script>
 
 <style scoped>
-/* The dark room. NO overflow:hidden on scene roots — it breaks position:sticky.
-   NO gradients either: the room is one flat colour and the page cuts into it and
-   out of it, the way a cinema does. */
+/* One flat room, cut into and out of. NO gradients, and no overflow:hidden on a
+   scene root — it breaks position:sticky. */
 .room-scene { position: relative; color: #EFE8F5; background: #241A33; }
-.scene-title {
-  min-height: 112dvh;
+.scene-title, .scene-end {
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.scene-end {
-  min-height: 84dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+.scene-title { min-height: 104dvh; }
+.scene-end { min-height: 84dvh; }
 
-/* ── title cards ── */
 .title-card { text-align: center; padding: 0 8vw; }
 .present {
   font-family: 'Bague', sans-serif;
@@ -250,178 +189,96 @@ onBeforeUnmount(() => { cancelAnimationFrame(rafId); io?.disconnect() })
 .film-title.small { font-size: clamp(1.8rem, 4.5vw, 3.4rem); }
 .sub { opacity: 0.5; }
 
-/* ── the leader ── */
-.leader-scene { min-height: 300dvh; }
-.leader-sticky {
+/* ── the spools ── */
+.spools-scene { min-height: 330dvh; }
+.spools-sticky {
   position: sticky;
   top: 0;
   height: 100dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;          /* on the STICKY child, never the scene root */
 }
-.leader-svg { width: min(44vw, 40dvh); }
-.sweep { stroke-dasharray: 1; stroke-dashoffset: 1; }
-.leader-num {
-  position: absolute;
-  font-family: 'Monoton', cursive;
-  font-size: clamp(4rem, 9vw, 7.5rem);
-  color: #EFE8F5;
-}
-.threading {
-  position: absolute;
-  bottom: 12dvh;
-  font-family: 'Bague', sans-serif;
-  font-size: 0.68rem;
-  letter-spacing: 0.3em;
-  opacity: 0.55;
-  transition: opacity 0.8s ease;
-}
-.threading.done { opacity: 0; }
-
-/* ── the gate ── */
-.gate-sticky {
-  position: sticky;
-  top: 0;
-  height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.2rem;
-}
-.roll-head {
-  font-family: 'Bague', sans-serif;
-  font-size: 0.72rem;
-  letter-spacing: 0.3em;
-  opacity: 0.6;
-}
-.projector {
-  display: flex;
-  align-items: stretch;
-  background: #170F22;
-  padding: 1.1rem 0;
-  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.8);
-}
-
-/* Perforations: proper rectangular cut-outs, one per frame. The pitch here MUST
-   match PITCH_REM in the script or the holes stop landing on their notches. */
-.sprocket {
-  position: relative;
-  width: 4.4rem;
-  flex: none;
-  overflow: hidden;
-}
-.sprocket i {
-  position: absolute;
-  left: 1rem;
-  right: 1rem;
-  top: -60rem;
-  bottom: -60rem;
-  display: block;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    #EFE8F5 0 1.6rem,
-    transparent 1.6rem 4.4rem
-  );
-  will-change: transform;
-}
-
-.window {
-  position: relative;
-  width: min(72vw, 84dvh);
-  aspect-ratio: 3 / 2;
-  overflow: hidden;
-  background: #0E0916;
-}
-.weave { position: absolute; inset: 0; animation: gate-weave 2.3s ease-in-out infinite; }
-.pull { position: absolute; inset: 0; will-change: transform; }
-.exposure {
+.watermark {
   position: absolute;
   inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Bague', sans-serif;
+  font-size: clamp(0.7rem, 1.5vw, 1rem);
+  letter-spacing: 0.4em;
+  text-align: center;
+  opacity: 0.16;
+  padding: 0 10vw;
+}
+
+.spool {
+  position: absolute;
+  left: 50%;
+  top: var(--top);
+  width: 210vw;
+  z-index: var(--z, 1);
+  transform: translate(-50%, -50%) rotate(var(--angle));
+  transform-origin: 50% 50%;
+}
+.film {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 0;
+  background: #170F22;
+  box-shadow: 0 22px 40px -26px rgba(0, 0, 0, 0.9);
+  will-change: transform;
+}
+/* Perforations run the length of the film, above and below the frames, and
+   travel with it because they live inside the translated element. */
+.perf {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0.62rem;
+  background-image: repeating-linear-gradient(
+    to right,
+    #EFE8F5 0 0.62rem,
+    transparent 0.62rem 1.7rem
+  );
+  opacity: 0.82;
+}
+.perf.top { top: 0.42rem; }
+.perf.bot { bottom: 0.42rem; }
+
+.mini {
+  position: relative;
+  flex: none;
+  width: clamp(7rem, 11vw, 11rem);
+  aspect-ratio: 3 / 2;
+  margin: 0;
+  background: #0E0916;
+  overflow: hidden;
+}
+.mini img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0;
-  /* a static lift so the artefact stack above does not mud the photograph */
-  filter: brightness(1.08) contrast(1.03);
+  display: block;
+  filter: brightness(1.05) contrast(1.02);
 }
-/* No crossfade: a projector cuts. The swap happens behind the closed shutter. */
-.exposure.on { opacity: 1; }
 
-/* ── projector artefacts — all on TIME, so the picture is never still ── */
-.lamp, .flicker, .grain, .scratch, .halation, .shutter {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-/* the lamp breathing: a slow, uneven swell of light */
-.lamp {
-  background: radial-gradient(120% 90% at 50% 45%, rgba(255, 246, 224, 0.13), transparent 70%);
-  mix-blend-mode: screen;
-  animation: lamp-swell 5.5s ease-in-out infinite;
-}
-/* the fast, ugly one: the lamp is AC and the shutter is mechanical, so the
-   brightness never settles. steps() so it jumps rather than fades. */
-.flicker {
-  background: #000;
-  animation: gate-flicker 1.9s steps(1, end) infinite;
-}
-/* film grain, shifted every few frames */
+/* The room, not the picture: a little grain and a vignette so the spools sit in
+   a space rather than on a flat panel. Runs on time, independent of scroll. */
+.grain, .vignette { position: absolute; inset: 0; pointer-events: none; }
 .grain {
   background-image: var(--noise-url);
   background-size: 200px 200px;
-  opacity: 0.15;
+  opacity: 0.13;
   mix-blend-mode: overlay;
-  animation: grain-shift 0.55s steps(1, end) infinite;
+  animation: grain-shift 0.6s steps(1, end) infinite;
+  z-index: 6;
 }
-/* dust in the gate: hairline scratches that come and go */
-.scratch {
-  inset: -6% 0;
-  width: 1px;
-  background: linear-gradient(transparent, rgba(239, 232, 245, 0.55) 12%, rgba(239, 232, 245, 0.4) 80%, transparent);
-}
-.scratch.s1 { left: 31%; animation: scratch-a 6.7s linear infinite; }
-.scratch.s2 { left: 68%; animation: scratch-b 9.3s linear infinite; }
-/* light bleeding around the edge of the gate */
-.halation {
-  box-shadow: inset 0 0 4rem 0.4rem rgba(0, 0, 0, 0.34);
-  animation: halation-pulse 4.1s ease-in-out infinite;
-}
-.shutter { background: #0B0712; opacity: 0; }
-
-@keyframes gate-weave {
-  0%   { transform: translate3d(0, 0, 0) }
-  18%  { transform: translate3d(0.5px, -0.7px, 0) }
-  37%  { transform: translate3d(-0.4px, 0.5px, 0) }
-  55%  { transform: translate3d(0.3px, 0.6px, 0) }
-  74%  { transform: translate3d(-0.5px, -0.3px, 0) }
-  100% { transform: translate3d(0, 0, 0) }
-}
-@keyframes lamp-swell {
-  0%, 100% { opacity: 0.55 }
-  30%      { opacity: 0.95 }
-  62%      { opacity: 0.4 }
-  81%      { opacity: 0.8 }
-}
-@keyframes gate-flicker {
-  0%   { opacity: 0.02 }
-  6%   { opacity: 0.08 }
-  11%  { opacity: 0.01 }
-  17%  { opacity: 0.05 }
-  23%  { opacity: 0.11 }
-  29%  { opacity: 0.02 }
-  36%  { opacity: 0.04 }
-  43%  { opacity: 0.01 }
-  49%  { opacity: 0.09 }
-  56%  { opacity: 0.03 }
-  62%  { opacity: 0.06 }
-  69%  { opacity: 0.01 }
-  75%  { opacity: 0.12 }
-  82%  { opacity: 0.035 }
-  88%  { opacity: 0.02 }
-  94%  { opacity: 0.07 }
-  100% { opacity: 0.02 }
+.vignette {
+  box-shadow: inset 0 0 14rem 4rem rgba(10, 6, 16, 0.7);
+  z-index: 5;
+  animation: room-breathe 6s ease-in-out infinite;
 }
 @keyframes grain-shift {
   0%   { background-position: 0 0 }
@@ -431,43 +288,22 @@ onBeforeUnmount(() => { cancelAnimationFrame(rafId); io?.disconnect() })
   80%  { background-position: 29px 33px }
   100% { background-position: 0 0 }
 }
-@keyframes scratch-a {
-  0%, 62%   { opacity: 0 }
-  64%       { opacity: 0.5; transform: translateX(0) }
-  71%       { opacity: 0.28; transform: translateX(6px) }
-  74%, 100% { opacity: 0 }
-}
-@keyframes scratch-b {
-  0%, 34%   { opacity: 0 }
-  36%       { opacity: 0.34; transform: translateX(0) }
-  44%       { opacity: 0.18; transform: translateX(-9px) }
-  47%, 100% { opacity: 0 }
-}
-@keyframes halation-pulse {
-  0%, 100% { opacity: 0.85 }
-  45%      { opacity: 1 }
-}
-
-.subtitle {
-  min-height: 1.6rem;
-  font-family: 'Over the Rainbow', cursive;
-  font-size: 1.15rem;
-  opacity: 0.85;
-  text-align: center;
-  padding: 0 6vw;
+@keyframes room-breathe {
+  0%, 100% { opacity: 0.9 }
+  50%      { opacity: 1 }
 }
 
 @media (max-width: 768px) {
-  .window { width: 74vw; }
-  .sprocket { width: 2.6rem; }
-  .sprocket i { left: 0.5rem; right: 0.5rem; }
-  .leader-scene { min-height: 260dvh; }
+  .spools-scene { min-height: 300dvh; }
+  .spool { width: 260vw; }
+  .mini { width: clamp(5rem, 22vw, 8rem); }
+  .film { gap: 0.35rem; padding: 1.1rem 0; }
+  .perf { height: 0.45rem; background-image: repeating-linear-gradient(to right, #EFE8F5 0 0.45rem, transparent 0.45rem 1.25rem); }
+  .perf.top { top: 0.3rem; }
+  .perf.bot { bottom: 0.3rem; }
 }
 
-/* The whole point of this page is the flicker, but it is exactly the kind of
-   motion that triggers people — hold the picture still if they asked for that. */
 @media (prefers-reduced-motion: reduce) {
-  .weave, .lamp, .flicker, .grain, .scratch, .halation { animation: none; }
-  .flicker { opacity: 0.05; }
+  .grain, .vignette { animation: none; }
 }
 </style>

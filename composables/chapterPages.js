@@ -216,18 +216,12 @@ export const CHAPTER_PAGES = {
     ],
   },
 
-  // “In Frames” renders through the bespoke InFrames component (“The Screening Room”):
-  // the page goes dark, the thread becomes the film strip, and scroll advances the
-  // film through a projector gate — one photo owning the screen at a time. Fields:
-  // sections[1].exposures[] = { src, cap } (Roll 01; caps are the subtitles);
-  // sections[2].reserved[] = the future rolls' title cards.
-  // “In Frames” renders through the bespoke InFrames component (“The Screening
-  // Room”). Order is deliberate: TITLE → LEADER (the 3·2·1 countdown, scroll-pinned)
-  // → REEL → END. The countdown sits BEFORE any photograph so its pinned scroll
-  // doubles as the window in which the reel media preloads (see InFrames.vue).
-  // The reel is ONE gate that swaps exposures behind a shutter flicker — the film
-  // edges stay put and only the sprockets travel, the way a hand-cranked projector
-  // replaced each frame.
+  // “In Frames” renders through the bespoke InFrames component. The page is a
+  // dark room with THREE SPOOLS of one film crossing it diagonally — small frames
+  // nested side by side, all driven by a single scroll-linked advance so they read
+  // as one length of film threaded across the page (it reverses direction between
+  // spools the way real film does around a roller). No countdown, no big gate: you
+  // land on the title, and the spools run across it as you scroll.
   'in-frames': {
     sections: [
       {
@@ -240,26 +234,17 @@ export const CHAPTER_PAGES = {
         align: 'center',
       },
       {
-        kind: 'leader',
-        num: '—',
-        title: 'Leader',
-        popups: [],
-        align: 'center',
-      },
-      {
-        kind: 'reel',
+        kind: 'spools',
         num: '01',
         title: 'The Reel',
-        // ⚠️ PLACEHOLDER exposures — two of the couple's own photos on repeat until
-        // the real set arrives. Add/remove freely: the gate reads the array length.
-        exposures: [
-          { src: asset('/images/reel/car-selfie.jpg'), cap: 'somewhere between here and there' },
-          { src: asset('/images/reel/bw-beanie.jpg'), cap: 'the beanie era' },
-          { src: asset('/images/reel/car-selfie.jpg'), cap: 'we tried to act natural' },
-          { src: asset('/images/reel/bw-beanie.jpg'), cap: 'this one survived the laughing fit' },
-          { src: asset('/images/reel/car-selfie.jpg'), cap: 'everyone we love, one frame' },
-          { src: asset('/images/reel/bw-beanie.jpg'), cap: 'more exposures after october 27' },
+        // ⚠️ PLACEHOLDER — the two photos alternate along every spool. Add more and
+        // they cycle in order; the component reads the array length.
+        frames: [
+          asset('/images/reel/car-selfie-sm.jpg'),
+          asset('/images/reel/bw-beanie-sm.jpg'),
         ],
+        // The dimmed line the spools run over.
+        watermark: 'COVENANT & UVIE PRESENT',
         popups: ['fullAlbum'],
         align: 'center',
       },
