@@ -18,8 +18,6 @@
         <div v-for="(sp, k) in SPOOLS" :key="k" class="spool"
           :style="{ '--angle': sp.angle + 'deg', '--top': sp.top + '%', '--z': sp.z }">
           <div class="film" :data-dir="sp.dir" :data-idx="k">
-            <span class="perf top" aria-hidden="true" />
-            <span class="perf bot" aria-hidden="true" />
             <figure v-for="n in SLOTS" :key="n" class="mini">
               <img :src="ready ? frameSrc(k, n) : undefined" alt="" aria-hidden="true" decoding="async" />
             </figure>
@@ -53,16 +51,17 @@ const frames = computed(() => props.sections.find((s) => s.kind === 'reel')?.fra
 // `in`/`out` are its slice of the sequence: they stagger so the spools arrive one
 // after another and leave in REVERSE order.
 const SPOOLS = [
-  { angle: -29, top: 19, dir: 1, lead: 0, z: 3, in: [0.05, 0.21], out: [0.84, 0.95] },
-  { angle: 17, top: 51, dir: -1, lead: 5, z: 2, in: [0.12, 0.28], out: [0.78, 0.90] },
-  { angle: -21, top: 80, dir: 1, lead: 11, z: 1, in: [0.19, 0.35], out: [0.72, 0.84] },
+  { angle: -29, top: 19, dir: 1, lead: 0, z: 3 },
+  { angle: 17, top: 51, dir: -1, lead: 5, z: 2 },
+  { angle: -21, top: 80, dir: 1, lead: 11, z: 1 },
 ]
-const SLOTS = 34
-const ADVANCE_FRAMES = 13
-const RUN = [0.05, 0.88]          // the film is moving the whole time it is on screen
-const TITLE_OUT = [0.02, 0.13]
-const MARK_IN = [0.08, 0.20]
-const END_IN = [0.86, 0.97]
+const SLOTS = 24
+const ADVANCE_FRAMES = 40
+const RUN = [0.03, 0.92]          // the film is moving the whole time it is on screen
+const TITLE_OUT = [0.02, 0.11]
+const MARK_IN = [0.07, 0.18]
+const STAGGER = 0.05              // gap between one spool arriving and the next
+const PLATEAU = 0.14              // all three on screen together before they leave
 
 const rootEl = ref(null)
 const ready = ref(false)
@@ -70,6 +69,11 @@ let rafId = 0
 let io = null
 let pitches = []
 let widths = []
+// Entry/exit windows are DERIVED, not authored: a spool has to travel roughly
+// (filmWidth + spoolWidth)/2 to clear the room, and it should cover that ground at
+// the same px-per-scroll the running film does — otherwise it whips in and the
+// motion reads as two different speeds. measure() solves for the duration.
+const sched = ref({ enter: [], exit: [], end: [0.86, 0.97] })
 
 const clamp01 = (v) => Math.min(1, Math.max(0, v))
 const win = (p, [a, b]) => clamp01((p - a) / (b - a))
@@ -99,6 +103,7 @@ function preload() {
 // travel exactly far enough to start off-screen.
 function measure() {
   const films = rootEl.value?.querySelectorAll('.film') || []
+  const spools = rootEl.value?.querySelectorAll('.spool') || []
   pitches = []
   widths = []
   films.forEach((f) => {
@@ -106,6 +111,25 @@ function measure() {
     pitches.push(m.length > 1 ? m[1].offsetLeft - m[0].offsetLeft : 220)
     widths.push(f.offsetWidth || 3000)
   })
+  if (!pitches.length) return
+
+  const spoolW = spools[0]?.offsetWidth || 2000
+  const travel = (Math.max(...widths) + spoolW) / 2          // distance to clear the room
+  const runSpeed = (ADVANCE_FRAMES * Math.max(...pitches)) / (RUN[1] - RUN[0])  // px per unit p
+  // Match the run's speed where the timeline allows it; cap it so the sequence
+  // still fits, and floor it so it never crawls.
+  const dur = Math.min(0.34, Math.max(0.16, travel / runSpeed))
+
+  const enter = SPOOLS.map((_, k) => [0.03 + k * STAGGER, 0.03 + k * STAGGER + dur])
+  const lastIn = enter[enter.length - 1][1]
+  const xStart = Math.min(0.97 - (2 * STAGGER + dur), lastIn + PLATEAU)
+  // They leave in reverse order: the last to arrive is the first to go.
+  const exit = SPOOLS.map((_, k) => {
+    const slot = SPOOLS.length - 1 - k
+    return [xStart + slot * STAGGER, xStart + slot * STAGGER + dur]
+  })
+  const lastOut = xStart + 2 * STAGGER + dur
+  sched.value = { enter, exit, end: [Math.max(0.5, lastOut - 0.12), Math.min(1, lastOut + 0.01)] }
 }
 
 function tick() {
@@ -126,7 +150,7 @@ function tick() {
         lead.style.opacity = o.toFixed(3)
         lead.style.transform = `translate3d(0, ${(-14 * (1 - o)).toFixed(1)}px, 0)`
       }
-      const endIn = smooth(win(p, END_IN))
+      const endIn = smooth(win(p, sched.value.end))
       // the dimmed line belongs to the spools — it leaves with them, so it never
       // sits behind END OF REEL
       if (mark) mark.style.opacity = (0.3 * smooth(win(p, MARK_IN)) * (1 - endIn)).toFixed(3)
@@ -148,8 +172,10 @@ function tick() {
         const run = -sp.dir * ((((advance % 2) + 2) % 2) * pitch)
         // Enters from behind, leaves by carrying on in the same direction — a reel
         // running THROUGH the room, not backing out of it.
-        const enter = (1 - smooth(win(p, sp.in))) * sp.dir * W
-        const exit = smooth(win(p, sp.out)) * -sp.dir * W
+        const inWin = sched.value.enter[i] || [0, 0.2]
+        const outWin = sched.value.exit[i] || [0.8, 1]
+        const enter = (1 - smooth(win(p, inWin))) * sp.dir * W
+        const exit = smooth(win(p, outWin)) * -sp.dir * W
         f.style.transform = `translate3d(${(run + enter + exit).toFixed(2)}px, 0, 0)`
       })
     }
@@ -190,7 +216,7 @@ onBeforeUnmount(() => {
 .room-scene { position: relative; color: #EFE8F5; background: #241A33; }
 
 /* The whole chapter is this one pinned block. */
-.reel-scene { min-height: 460dvh; }
+.reel-scene { min-height: 640dvh; }
 .reel-sticky {
   position: sticky;
   top: 0;
@@ -250,7 +276,7 @@ onBeforeUnmount(() => {
   position: absolute;
   left: 50%;
   top: var(--top);
-  width: 210vw;
+  width: 132vw;
   z-index: var(--z, 1);
   display: flex;
   justify-content: center;
@@ -264,30 +290,25 @@ onBeforeUnmount(() => {
   width: max-content;        /* exactly as long as its frames — no bare tail */
   gap: 0.4rem;
   padding: 1.35rem 0;
-  /* film stock, tinted toward the chapter's lavender rather than pure black, with
-     a faint rim so the strips sit in the room instead of on top of it */
-  background: #1B1428;
+  /* Film stock AND its perforations in a single paint. They used to be two wide
+     absolutely-positioned children, which rasterise as their own layers on a strip
+     this long and visibly settle a beat after the film itself stops — the edges
+     appeared to "catch up". As background layers they cannot lag: same paint.
+     (The colour is the chapter's --accentLighter at 62%; a background layer can't
+     take an opacity of its own.) */
+  background-color: #1B1428;
+  background-image:
+    repeating-linear-gradient(to right, rgba(195, 166, 216, 0.62) 0 0.5rem, transparent 0.5rem 1.4rem),
+    repeating-linear-gradient(to right, rgba(195, 166, 216, 0.62) 0 0.5rem, transparent 0.5rem 1.4rem);
+  background-size: 100% 0.5rem;
+  background-position: 0 0.34rem, 0 calc(100% - 0.34rem);
+  background-repeat: repeat-x;
   box-shadow:
     inset 0 1px 0 rgba(195, 166, 216, 0.16),
     inset 0 -1px 0 rgba(195, 166, 216, 0.1),
     0 22px 44px -26px rgba(0, 0, 0, 0.9);
   will-change: transform;
 }
-.perf {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 0.5rem;
-  background-image: repeating-linear-gradient(
-    to right,
-    var(--accentLighter, #C3A6D8) 0 0.5rem,
-    transparent 0.5rem 1.4rem
-  );
-  opacity: 0.6;
-}
-.perf.top { top: 0.34rem; }
-.perf.bot { bottom: 0.34rem; }
-
 .mini {
   position: relative;
   flex: none;
@@ -340,13 +361,17 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 768px) {
-  .reel-scene { min-height: 400dvh; }
-  .spool { width: 280vw; }
+  .reel-scene { min-height: 540dvh; }
+  .spool { width: 215vw; }
   .mini { width: clamp(4.4rem, 20vw, 7rem); }
   .film { gap: 0.28rem; padding: 0.95rem 0; }
-  .perf { height: 0.36rem; background-image: repeating-linear-gradient(to right, var(--accentLighter, #C3A6D8) 0 0.36rem, transparent 0.36rem 1rem); }
-  .perf.top { top: 0.26rem; }
-  .perf.bot { bottom: 0.26rem; }
+  .film {
+    background-image:
+      repeating-linear-gradient(to right, rgba(195, 166, 216, 0.62) 0 0.36rem, transparent 0.36rem 1rem),
+      repeating-linear-gradient(to right, rgba(195, 166, 216, 0.62) 0 0.36rem, transparent 0.36rem 1rem);
+    background-size: 100% 0.36rem;
+    background-position: 0 0.26rem, 0 calc(100% - 0.26rem);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
