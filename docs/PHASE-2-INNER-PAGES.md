@@ -80,6 +80,30 @@ above. Constant speed and a reversed exit are not in conflict.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
 
+**▶▶ STATE (2026-08-11, latest) — HOMEPAGE: HOVER, LEAN AND THE EXPLORE CIRCLE.**
+Five reports, fixed and prod-verified. Full root causes in AUDIT #22–#24.
+- **Bottom-edge hover flicker (reported twice).** Hover is now screen-space **containment** with
+  **two thresholds** — acquire inside the card, release outside a 1.45× region — and the territory is
+  measured from the card's **RESTING** position so it can't travel with the hover lift. Both halves
+  matter: hysteresis alone failed because the boundary itself was moving. **Prod: 14/14 stable when
+  parked at the edge; one clean release when creeping through it (was five flips).**
+- **Background cards are no longer hoverable** — candidates need the near half, `uOpacity ≥ 0.75`
+  and containment. Hovering a faded card had been swapping the centre wordmark to a chapter that
+  isn't on screen. **Prod: hoverable = slots [2,3,4] (opacity 0.96/1.0/1.0); slot 5 at 0.73 and the
+  0.20–0.22 ghosts excluded.**
+- **The deck sits upright.** `uAngle` rested at a permanent **15°** lean (`mouse.x*10 + 10`, and the
+  intro tweens the mouse proxy to 0.5) — which touch could never correct, hence "worse on mobile".
+  Rest is 0°; the pointer deflects it on desktop, the **ring's angular velocity** on touch.
+  **Prod: rest 0.24°, swipe peak 10.2°, settles back.**
+- **The EXPLORE circle is 104px** (was 140 — it read as a dinner plate over the cards), and a tap
+  **confirms**: it lights and holds its expanded state until the chapter is on screen. ⚠️ Releasing
+  on the route change would be wrong — `router.push` lands within a tick — so it holds until the
+  scene's select animation ends, capped at 2.5s.
+⚠️ **Calibration lesson:** the touch lean shipped twice off an accumulator over raw scroll deltas and
+produced **<1°** both times, because that accumulator isn't observable from outside. Driving it from
+the ring's per-frame rotation — a value the `?debug` probes now report (`leanDeg`, `rotVel`) — made
+it both correct and checkable. **If a value can't be measured, don't tune it; find one that can.**
+
 **▶▶ STATE (2026-08-11, current) — IN FRAMES: SEQUENTIAL SPOOLS, REVERSED EXIT.**
 The chapter is a **single `.chapter-section`**: past the hero there is no vertical scroll until the
 reel is done. The title fades as spool 1 loops in; **each spool finishes arriving before the next

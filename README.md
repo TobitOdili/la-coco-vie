@@ -38,9 +38,12 @@ is that no two pages share a language. Breaking it is what made With Love fail i
 > the orientation; that doc is the source of truth.
 
 - ✅ **Homepage carousel** — intro animation, rotate-on-scroll (wheel + touch), **per-card
-  hover/click** (any visible card lifts + its film plays, not just the front — `posterAtScreen`),
-  the hover lift **follows the ring** as it scrolls, live cursor tint, click-to-open, the couple's
-  names + date + **countdown**, a welcome note (the About panel), and RSVP.
+  hover/click** (any *visible* card lifts + its film plays — resolved by screen-space containment,
+  so faded background cards are not hoverable), the hover lift **follows the ring** as it scrolls,
+  live cursor tint, click-to-open with a **tap confirmation** that holds until the chapter is up,
+  the couple's names + date + **countdown**, a welcome note (the About panel), and RSVP.
+  The deck rests **upright** and leans only with live input — the pointer on desktop, the swipe on
+  touch.
 - ✅ **The four bespoke inner pages** (the *thread* narrative — one line runs the whole site):
   - **US** — "the margin notes": the story in two handwritten voices, taped polaroids.
   - **THE BIG DAY** — "the hours": scroll scrubs the day from morning light into night; two threads

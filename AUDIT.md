@@ -826,6 +826,75 @@ Shipped that way; see the tracker's sequential-spools entry.
 
 ---
 
+## Issue #22 — Hover flickers at a card's bottom edge 🔴 HIGH (2026-08-11)
+
+### Symptom
+Resting the cursor at the very bottom edge of any card made it oscillate between hovered and
+not-hovered. Reported twice; an earlier fix (`4ab2c880`) reduced but did not remove it.
+
+### Root cause — two moving parts, both self-inflicted
+1. A hovered card **lifts** (`baseY + 7`), which moves its own hitbox up off the pointer. The
+   raycast then misses → unhover → the card drops → the hitbox returns under the pointer → hover.
+   `4ab2c880` stopped the per-frame re-resolve from unhovering, but `onMouseMove` still could, so
+   the smallest movement at the edge resumed the loop.
+2. After switching to a screen-space test, **the release region itself still travelled with the
+   lift** — so releasing dropped the card, which slid the region back under the pointer, which
+   re-acquired. Same oscillation, one step removed. Hysteresis cannot fix a moving boundary.
+
+### Fix — `de1d05f9` + follow-up
+Hover is resolved by **containment in screen space**, with two different thresholds: ACQUIRE
+requires the pointer inside the card's projected territory, RELEASE requires it outside a **1.45×**
+larger one. And the territory is measured from the card's **resting** position (the hover lift is
+subtracted back out, rotated through the ring's tilt quaternion), so what a card owns never depends
+on whether it is currently hovered.
+
+### Verified on prod
+Parked at the edge: 14/14 samples stable. Creeping down through the edge in 4px steps: **one** clean
+release (was five flips).
+
+---
+
+## Issue #23 — Background cards were hoverable 🟡 MEDIUM (2026-08-11)
+
+### Symptom
+Hovering could latch onto a faded card at the back of the ring — which swapped the centre wordmark
+to a chapter that isn't visible on screen.
+
+### Root cause
+Hover picked the **nearest projected centre** among the near half of the ring. There was no
+containment test (so a pointer over a back card still grabbed some front card) and no visibility
+test (so a depth-faded ghost was a legal target).
+
+### Fix
+Candidates must now be in the near half, **at or above 0.75 `uOpacity`**, and actually contain the
+pointer. Verified on prod: hoverable slots are exactly `[2,3,4]` — the cards at opacity 0.96/1.0/1.0
+— while slot 5 (0.73) and slots 1,6,7,8 (0.20–0.22) are correctly excluded.
+
+---
+
+## Issue #24 — The deck rested leaning left (worse on mobile) 🟡 MEDIUM (2026-08-11)
+
+### Symptom
+Cards looked tilted/offset to the left on both screens, noticeably worse on phones.
+
+### Root cause
+`uAngle` Z-rotates every card before the cylindrical bend, and it was `mouse.x * 10 + 10`. The intro
+tweens its mouse proxy to **0.5**, so the deck came to rest at a permanent **15° lean** — and on
+touch, where no `mousemove` ever fires, nothing could ever bring it back. Desktop hid this because
+moving the pointer varied it; mobile froze at the intro's value forever.
+
+### Fix
+Rest is **0° (upright)**; input only deflects from there. Desktop follows the pointer (and only once
+a real pointer has moved — `hasPointer`, so a touch device can't inherit a stale value). Touch leans
+with **the ring's own angular velocity** and settles upright.
+
+⚠️ **Calibration note:** the touch lean was first driven by an accumulator over raw scroll deltas
+and shipped twice at constants that produced **under 1°** — invisible. That accumulator was not
+measurable from outside; the ring's per-frame rotation is. Prod-measured after the change: rest
+0.24°, peak 10.2° during a swipe (the `LEAN_MAX_DEG` clamp), tracking the ring's direction.
+
+---
+
 ## Updated Priority Order (as of 2026-05-27)
 
 | # | Issue | Priority | Status |
@@ -851,3 +920,6 @@ Shipped that way; see the tracker's sequential-spools entry.
 | ~~19~~ | ~~`loading="lazy"` cut-outs are 0px tall until decode, collapsing the page layout~~ | ~~🟡 Medium~~ | ✅ Fixed (`8f60e207`) — eager + reserved `aspect-ratio` + page `min-height`. See §Issue #19. |
 | ~~20~~ | ~~Perforations rasterise as their own layers and settle after the film stops~~ | ~~🟢 Low~~ | ✅ Fixed (`c1c5b8e1`) — painted into `.film`'s background. See §Issue #20. |
 | ~~21~~ | ~~Entrance animated on top of a moving element → ~2–3× speed, then a gear change~~ | ~~🟡 Medium~~ | ✅ Fixed (`c1c5b8e1`) — the entrance IS the run; one constant rate, prod-measured 9272 px/p throughout. See §Issue #21. |
+| ~~22~~ | ~~Hover flickers at a card's bottom edge (lift moves the hitbox, then moved the release region too)~~ | ~~🔴 High~~ | ✅ Fixed — screen-space containment, 1.45× release hysteresis, territory measured from the card's RESTING position. Prod: 14/14 stable parked, 1 clean release moving through. See §Issue #22. |
+| ~~23~~ | ~~Faded background cards were hoverable and swapped the centre wordmark~~ | ~~🟡 Medium~~ | ✅ Fixed — near half + `uOpacity ≥ 0.75` + containment. Prod: hoverable = slots [2,3,4] only. See §Issue #23. |
+| ~~24~~ | ~~Deck rested leaning 15° (permanent on touch — no mousemove to correct it)~~ | ~~🟡 Medium~~ | ✅ Fixed — rest 0°, pointer deflects on desktop, ring angular velocity on touch. Prod: rest 0.24°, swipe peak 10.2°. See §Issue #24. |
