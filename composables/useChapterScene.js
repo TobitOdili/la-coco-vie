@@ -262,11 +262,14 @@ export function useChapterScene() {
   // and input only ever deflects it from there.
   const LEAN_MAX_DEG = 10        // deflection at full mouse travel / a hard swipe
   const LEAN_EASE = 0.06         // how fast the deck follows
-  const SWIPE_LEAN_PER_VEL = 90  // touch: lean per unit of scroll velocity. Calibrated on prod:
-                                 // a normal swipe settles swipeVel near 0.1, so 9 gave <1° — invisible.
-  const SWIPE_DECAY = 0.90       // …and how quickly that settles back upright
+  // Touch lean is driven by the RING'S OWN angular velocity, not by an accumulator over
+  // raw scroll deltas. The accumulator was unmeasurable from outside and calibrating it
+  // blind produced a <1° lean twice; the ring's per-frame rotation is something we can
+  // read and reason about. It also means the lean matches what the deck is visibly doing.
+  const SWIPE_LEAN_PER_ROTVEL = 1300
   let leanDeg = 0
-  let swipeVel = 0
+  let rotVel = 0
+  let prevRotY = 0
   let hasPointer = false         // a real pointer has moved at least once
   let hoveredIndex = -1
   // Last known cursor position (screen px). animate() re-resolves the hover target from this
@@ -619,7 +622,7 @@ export function useChapterScene() {
         groupRot: { x: +groupG.rotation.x.toFixed(3), y: +groupG.rotation.y.toFixed(3), z: +groupG.rotation.z.toFixed(3) },
         carouselRotY: +carousel.rotation.y.toFixed(3), carouselPosY: +carousel.position.y.toFixed(1),
         scrollRotY: +scrollRotationY.toFixed(4), animRotY: +(carousel.animatedRotationY || 0).toFixed(4),
-        leanDeg: +leanDeg.toFixed(2), swipeVel: +swipeVel.toFixed(4),
+        leanDeg: +leanDeg.toFixed(2), rotVel: +rotVel.toFixed(5),
       })
       // What does a click at screen (x,y) resolve to, vs the front-facing card?
       window.__probe = (x, y) => {
@@ -628,7 +631,7 @@ export function useChapterScene() {
         const fc = frontChapterIdx()
         const hc = chapterIdxForSlot(slot)
         return {
-          leanDeg: +leanDeg.toFixed(2),
+          leanDeg: +leanDeg.toFixed(2), rotVel: +rotVel.toFixed(5),
           frontChapter: fc, frontSlug: slugs[fc],
           hoverSlot: slot, hoverChapter: hc, hoverSlug: slugs[hc],
           selectedIndex, carouselRotY: +carousel.rotation.y.toFixed(3),
@@ -875,12 +878,13 @@ export function useChapterScene() {
     // -90°); afterwards it eases to an UPRIGHT rest and is deflected only by live input —
     // the pointer on desktop, the swipe on touch, where the deck now follows the finger
     // instead of being frozen wherever the intro left the mouse proxy.
-    swipeVel *= SWIPE_DECAY
+    rotVel = carousel.rotation.y - prevRotY
+    prevRotY = carousel.rotation.y
     let leanTarget
     if (!introComplete) {
       leanTarget = mouse.x * 10 + 10        // unchanged intro sweep
     } else if (isMobile) {
-      leanTarget = Math.max(-LEAN_MAX_DEG, Math.min(LEAN_MAX_DEG, swipeVel * SWIPE_LEAN_PER_VEL))
+      leanTarget = Math.max(-LEAN_MAX_DEG, Math.min(LEAN_MAX_DEG, rotVel * SWIPE_LEAN_PER_ROTVEL))
     } else {
       const mx = hasPointer ? Math.max(-1.2, Math.min(1.2, mouse.x)) : 0
       leanTarget = mx * LEAN_MAX_DEG
@@ -1596,8 +1600,6 @@ export function useChapterScene() {
     // reacting would fire spurious mid-page exits. Only the homepage carousel scrolls.
     if (selectedIndex !== -1) return
     scrollRotationY -= delta * 0.0008
-    // Touch: the deck leans with the swipe, then settles upright (see LEAN_* above).
-    swipeVel += delta * 0.0008
   }
 
   // Inner-page scroll position (px), pushed in from the page's Lenis instance.
