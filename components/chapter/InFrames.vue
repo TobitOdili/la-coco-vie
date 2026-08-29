@@ -18,7 +18,7 @@
         <div v-for="(sp, k) in SPOOLS" :key="k" class="spool"
           :style="{ '--angle': sp.angle + 'deg', '--top': sp.top + '%', '--z': sp.z }">
           <div class="film" :data-dir="sp.dir" :data-idx="k">
-            <figure v-for="n in SLOTS" :key="n" class="mini">
+            <figure v-for="n in slots" :key="n" class="mini">
               <img :src="ready ? frameSrc(k, n) : undefined" alt="" aria-hidden="true" decoding="async" />
             </figure>
           </div>
@@ -37,7 +37,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 
 const props = defineProps({
   sections: { type: Array, required: true },
@@ -55,8 +55,11 @@ const SPOOLS = [
   { angle: 17, top: 51, dir: -1, lead: 5, z: 2 },
   { angle: -21, top: 80, dir: 1, lead: 11, z: 1 },
 ]
-const SLOTS = 24
-const ADVANCE_FRAMES = 40
+// Slot count is SOLVED, not fixed: just enough frames to span the spool plus the
+// wrap. Any longer and the film has further to travel to clear the room on entry,
+// which forces the entry to move faster than the run to keep up.
+const slots = ref(18)
+const ADVANCE_FRAMES = 48
 const RUN = [0.03, 0.92]          // the film is moving the whole time it is on screen
 const TITLE_OUT = [0.02, 0.11]
 const MARK_IN = [0.07, 0.18]
@@ -114,6 +117,12 @@ function measure() {
   if (!pitches.length) return
 
   const spoolW = spools[0]?.offsetWidth || 2000
+  const need = Math.max(8, Math.ceil(spoolW / (Math.max(...pitches) || 200)) + 3)
+  if (need !== slots.value) {       // converges in one pass: `need` doesn't depend on it
+    slots.value = need
+    nextTick(measure)
+    return
+  }
   const travel = (Math.max(...widths) + spoolW) / 2          // distance to clear the room
   const runSpeed = (ADVANCE_FRAMES * Math.max(...pitches)) / (RUN[1] - RUN[0])  // px per unit p
   // Match the run's speed where the timeline allows it; cap it so the sequence
