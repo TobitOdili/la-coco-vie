@@ -126,9 +126,12 @@ function tick() {
         lead.style.opacity = o.toFixed(3)
         lead.style.transform = `translate3d(0, ${(-14 * (1 - o)).toFixed(1)}px, 0)`
       }
-      if (mark) mark.style.opacity = (0.3 * smooth(win(p, MARK_IN))).toFixed(3)
+      const endIn = smooth(win(p, END_IN))
+      // the dimmed line belongs to the spools — it leaves with them, so it never
+      // sits behind END OF REEL
+      if (mark) mark.style.opacity = (0.3 * smooth(win(p, MARK_IN)) * (1 - endIn)).toFixed(3)
       if (end) {
-        const o = smooth(win(p, END_IN))
+        const o = endIn
         end.style.opacity = o.toFixed(3)
         end.style.transform = `translate3d(0, ${(14 * (1 - o)).toFixed(1)}px, 0)`
       }
