@@ -81,24 +81,29 @@ As children on a strip this long they rasterise as their own layers and visibly 
 the film stops — the edges appear to "catch up".
 
 **▶▶ STATE (2026-08-11, current) — IN FRAMES IS ONE PINNED REEL SEQUENCE.**
-The chapter is now a **single `.chapter-section`**, not a stack: past the hero there is no more
-vertical scroll until the reel is done. Timeline, all off one scroll progress `p`:
-title fades + lifts away `[0.02,0.13]` → spool 1 loops in `[0.05,0.21]`, spool 2 `[0.12,0.28]`,
-spool 3 `[0.19,0.35]` → the dimmed "COVENANT & UVIE PRESENT" comes up `[0.08,0.20]` and stays →
-the film runs `[0.05,0.88]` → the spools leave in **REVERSE order** (3 first `[0.72,0.84]`, then 2,
-then 1 `[0.84,0.95]`) → END OF REEL fades up `[0.86,0.97]`. Vertical scroll resumes after the
-section, into the RSVP + outro. Each spool **enters from behind and leaves by carrying ON** in the
-same direction — a reel running THROUGH the room, not backing out of it. **Both the pitch and the
-film's own length are measured** (the entrance must travel exactly far enough to start off-screen at
-any viewport). ⚠️ The watermark must fade against the end card or it sits behind it.
+The chapter is a **single `.chapter-section`**, not a stack: past the hero there is no more vertical
+scroll until the reel is done. The order of events: the title fades and lifts away as spool 1 loops
+in → spools 2 and 3 follow on a stagger → the dimmed "COVENANT & UVIE PRESENT" comes up behind them
+and stays → the film runs → the spools leave → END OF REEL fades up. Vertical scroll resumes after
+the section, into the RSVP + outro.
+⚠️ **Timings are NOT authored** — see the motion rule above. The stagger, the distance to cross the
+room, the film length and the slot count are all solved in `measure()`, and every spool moves at one
+constant rate for entry, crossing and exit. An earlier version of this entry listed hand-tuned
+windows and a **reverse-order exit**; both are gone. Spools now leave in **arrival order**, because
+reversing it would require one spool to travel at a different speed.
+Each spool **enters from behind and leaves by carrying ON** in the same direction — a reel running
+THROUGH the room, not backing out of it. ⚠️ The watermark must fade against the end card or it sits
+behind it.
 **Integration (the actual complaint — the strips read as pasted on):** film stock is a
 lavender-tinted `#1B1428` with a faint rim light instead of near-black, perforations take the
 chapter's own `--accentLighter`, and **the frames are monochrome by default** so the page holds one
 palette instead of scattering colour photos over a purple field. **Hover restores a frame's colour**
-and lifts it slightly — the one interaction on the page. Frames are bigger (9.2vw) on taller strips.
-**Prod-verified phase table:** p=0.01 title 1.00 / films all off ±4715; p=0.21 title 0 / mark 0.30 /
-films −54, −2023, 4518 (arriving in order); p=0.41–0.61 all three in the wrap range; p=0.81 leaving
-(−256, 818, −4043); p=1.01 mark 0 / end 1.00 / all off. 0 console errors.
+and lifts it slightly — the one interaction on the page. Frames are ~9.2vw on taller strips.
+**Prod-verified:** the choreography walked in six steps (title 1.00 with all films off-screen →
+arriving in order → all three crossing → leaving → END OF REEL 1.00 with everything gone), a single
+constant rate of **9272 px/p** measured at every sample from p=0 to p=0.90, and **zero
+`/images/reel/` requests before scrolling** (the photos are fetched only as the scene comes into
+range). 0 console errors.
 
 **▶▶ SUPERSEDED — IN FRAMES AS THREE STANDING SPOOLS (`in-frames` rebuilt again).**
 The single gate is gone. The page is a dark room and **three lengths of ONE film cross it
