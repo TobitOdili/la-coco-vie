@@ -262,7 +262,8 @@ export function useChapterScene() {
   // and input only ever deflects it from there.
   const LEAN_MAX_DEG = 10        // deflection at full mouse travel / a hard swipe
   const LEAN_EASE = 0.06         // how fast the deck follows
-  const SWIPE_LEAN_PER_VEL = 9   // touch: lean per unit of scroll velocity
+  const SWIPE_LEAN_PER_VEL = 90  // touch: lean per unit of scroll velocity. Calibrated on prod:
+                                 // a normal swipe settles swipeVel near 0.1, so 9 gave <1° — invisible.
   const SWIPE_DECAY = 0.90       // …and how quickly that settles back upright
   let leanDeg = 0
   let swipeVel = 0
@@ -618,6 +619,7 @@ export function useChapterScene() {
         groupRot: { x: +groupG.rotation.x.toFixed(3), y: +groupG.rotation.y.toFixed(3), z: +groupG.rotation.z.toFixed(3) },
         carouselRotY: +carousel.rotation.y.toFixed(3), carouselPosY: +carousel.position.y.toFixed(1),
         scrollRotY: +scrollRotationY.toFixed(4), animRotY: +(carousel.animatedRotationY || 0).toFixed(4),
+        leanDeg: +leanDeg.toFixed(2), swipeVel: +swipeVel.toFixed(4),
       })
       // What does a click at screen (x,y) resolve to, vs the front-facing card?
       window.__probe = (x, y) => {
@@ -626,6 +628,7 @@ export function useChapterScene() {
         const fc = frontChapterIdx()
         const hc = chapterIdxForSlot(slot)
         return {
+          leanDeg: +leanDeg.toFixed(2),
           frontChapter: fc, frontSlug: slugs[fc],
           hoverSlot: slot, hoverChapter: hc, hoverSlug: slugs[hc],
           selectedIndex, carouselRotY: +carousel.rotation.y.toFixed(3),
