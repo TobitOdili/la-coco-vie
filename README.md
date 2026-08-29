@@ -136,8 +136,8 @@ components/
   LoadingScreen.vue          Asset-gated loading counter (GSAP)
   chapter/UsStory.vue        ★ US — "the margin notes" (bespoke page)
   chapter/BigDay.vue         ★ THE BIG DAY — "the hours" + the knot (bespoke page)
-  chapter/InFrames.vue       ★ IN FRAMES — "the screening room" film strip (bespoke page)
-  chapter/WithLove.vue       ★ WITH LOVE — the ink that writes and signs (bespoke page)
+  chapter/InFrames.vue       ★ IN FRAMES — three spools of one film crossing a dark room
+  chapter/WithLove.vue       ★ WITH LOVE — the ink wanders and lassoes each gift
   chapter/ChapterSection.vue Generic section block — now the unused fallback
   chapter/PopupCard.vue      Floating white card (moment / utility / registry) pinned to the viewport
   chapter/ChapterEnd.vue     Chapter-end: "See you there — RSVP" + socials + disclaimer
