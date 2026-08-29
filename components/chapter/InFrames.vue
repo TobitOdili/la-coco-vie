@@ -55,16 +55,19 @@ const SPOOLS = [
   { angle: 17, top: 51, dir: -1, lead: 5, z: 2 },
   { angle: -21, top: 80, dir: 1, lead: 11, z: 1 },
 ]
+// How much longer than the room each length of film is. Three room-widths means a
+// spool stays fully covering the room for a long stretch, so all three overlap.
+const FILM_OVER_ROOM = 3
+// How far apart the spools sit ALONG the film, as a fraction of the distance one
+// needs to cross the room. This is what staggers their arrival.
+const STAGGER_OF_CROSS = 0.2
 // Slot count is SOLVED, not fixed: just enough frames to span the spool plus the
 // wrap. Any longer and the film has further to travel to clear the room on entry,
 // which forces the entry to move faster than the run to keep up.
 const slots = ref(18)
-const ADVANCE_FRAMES = 48
-const RUN = [0.03, 0.92]          // the film is moving the whole time it is on screen
 const TITLE_OUT = [0.02, 0.11]
 const MARK_IN = [0.07, 0.18]
-const STAGGER = 0.05              // gap between one spool arriving and the next
-const PLATEAU = 0.14              // all three on screen together before they leave
+const END_IN = [0.86, 0.98]
 
 const rootEl = ref(null)
 const ready = ref(false)
@@ -76,7 +79,9 @@ let widths = []
 // (filmWidth + spoolWidth)/2 to clear the room, and it should cover that ground at
 // the same px-per-scroll the running film does — otherwise it whips in and the
 // motion reads as two different speeds. measure() solves for the duration.
-const sched = ref({ enter: [], exit: [], end: [0.86, 0.97] })
+// Distances, all measured. `cross` is how far a spool travels to go from fully
+// off-screen to fully off the far side; `total` is the whole journey for all three.
+let geom = { cross: 3000, stagger: 600, total: 7000 }
 
 const clamp01 = (v) => Math.min(1, Math.max(0, v))
 const win = (p, [a, b]) => clamp01((p - a) / (b - a))
@@ -117,28 +122,22 @@ function measure() {
   if (!pitches.length) return
 
   const spoolW = spools[0]?.offsetWidth || 2000
-  const need = Math.max(8, Math.ceil(spoolW / (Math.max(...pitches) || 200)) + 3)
+  const pitch = Math.max(...pitches) || 200
+
+  // Film length is solved, not fixed: long enough to hold the room covered while
+  // it crosses. Too short and the room empties between spools; too long and there
+  // is nothing to gain but DOM.
+  const need = Math.max(10, Math.ceil((spoolW * FILM_OVER_ROOM) / pitch))
   if (need !== slots.value) {       // converges in one pass: `need` doesn't depend on it
     slots.value = need
     nextTick(measure)
     return
   }
-  const travel = (Math.max(...widths) + spoolW) / 2          // distance to clear the room
-  const runSpeed = (ADVANCE_FRAMES * Math.max(...pitches)) / (RUN[1] - RUN[0])  // px per unit p
-  // Match the run's speed where the timeline allows it; cap it so the sequence
-  // still fits, and floor it so it never crawls.
-  const dur = Math.min(0.34, Math.max(0.16, travel / runSpeed))
 
-  const enter = SPOOLS.map((_, k) => [0.03 + k * STAGGER, 0.03 + k * STAGGER + dur])
-  const lastIn = enter[enter.length - 1][1]
-  const xStart = Math.min(0.97 - (2 * STAGGER + dur), lastIn + PLATEAU)
-  // They leave in reverse order: the last to arrive is the first to go.
-  const exit = SPOOLS.map((_, k) => {
-    const slot = SPOOLS.length - 1 - k
-    return [xStart + slot * STAGGER, xStart + slot * STAGGER + dur]
-  })
-  const lastOut = xStart + 2 * STAGGER + dur
-  sched.value = { enter, exit, end: [Math.max(0.5, lastOut - 0.12), Math.min(1, lastOut + 0.01)] }
+  const filmW = Math.max(...widths) || spoolW * FILM_OVER_ROOM
+  const cross = (filmW + spoolW) / 2          // fully off one side → fully off the other
+  const stagger = cross * STAGGER_OF_CROSS
+  geom = { cross, stagger, total: 2 * cross + (SPOOLS.length - 1) * stagger }
 }
 
 function tick() {
@@ -159,7 +158,7 @@ function tick() {
         lead.style.opacity = o.toFixed(3)
         lead.style.transform = `translate3d(0, ${(-14 * (1 - o)).toFixed(1)}px, 0)`
       }
-      const endIn = smooth(win(p, sched.value.end))
+      const endIn = smooth(win(p, END_IN))
       // the dimmed line belongs to the spools — it leaves with them, so it never
       // sits behind END OF REEL
       if (mark) mark.style.opacity = (0.3 * smooth(win(p, MARK_IN)) * (1 - endIn)).toFixed(3)
@@ -169,23 +168,23 @@ function tick() {
         end.style.transform = `translate3d(0, ${(14 * (1 - o)).toFixed(1)}px, 0)`
       }
 
-      // The film runs continuously the whole time it is on screen; the exposures
-      // alternate, so wrapping the travel at two pitches runs it forever with no
-      // src reassignment and no visible seam.
-      const advance = win(p, RUN) * ADVANCE_FRAMES
+      // ── ONE constant rate for entry, run AND exit ──
+      // The entrance is not a separate animation on top of the run: it IS the run.
+      // The film simply starts far enough back to be off-screen and travels at a
+      // single speed for the whole sequence, so there is no gear change when a
+      // spool arrives or leaves. (The previous version added an entrance transform
+      // to a running film, so during entry the two stacked and it moved at roughly
+      // double speed — with a smoothstep peaking 1.5x on top of that.)
+      // Consequence, deliberately accepted: the spools leave in the order they
+      // arrived. First in, first out is what a length of film actually does; a
+      // reverse-order exit would need one of them to move at a different speed.
+      const travelled = p * geom.total
       const films = scene.querySelectorAll('.film')
       films.forEach((f, i) => {
         const sp = SPOOLS[i]
-        const pitch = pitches[i] || 220
-        const W = widths[i] || 3000
-        const run = -sp.dir * ((((advance % 2) + 2) % 2) * pitch)
-        // Enters from behind, leaves by carrying on in the same direction — a reel
-        // running THROUGH the room, not backing out of it.
-        const inWin = sched.value.enter[i] || [0, 0.2]
-        const outWin = sched.value.exit[i] || [0.8, 1]
-        const enter = (1 - smooth(win(p, inWin))) * sp.dir * W
-        const exit = smooth(win(p, outWin)) * -sp.dir * W
-        f.style.transform = `translate3d(${(run + enter + exit).toFixed(2)}px, 0, 0)`
+        // −cross = fully off the incoming side, 0 = centred, +cross = fully gone.
+        const pos = travelled - i * geom.stagger - geom.cross
+        f.style.transform = `translate3d(${(-sp.dir * pos).toFixed(2)}px, 0, 0)`
       })
     }
   }
