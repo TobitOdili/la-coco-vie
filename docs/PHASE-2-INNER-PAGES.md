@@ -42,6 +42,24 @@ copies (app.vue ×2, chapterPages.js, useChapterScene.js) are gone. `--noise-url
 200 on both. **Method worth reusing: grep the emitted bundle** (`grep -o '"/\(images\|video\|audio\)/[^"]*"'
 .output/public/_nuxt/*.js`) — the bug was invisible in config and only obvious in the build output.
 
+**⚠️⚠️ MOTION RULE (2026-08-11, the fix): the entrance IS the run — never an animation on top of it.**
+The first version added an entrance transform to an already-running film. The two **stacked**, so a
+spool arrived at ~2x the run speed, and the entrance used a smoothstep (rate peaks at 1.5x its own
+average) → ~3x at the worst moment, then a visible gear change into the run. **No window tuning can
+fix that** — it is two motions summed. Now each spool simply starts far enough back to be off-screen
+and travels at ONE constant rate for the whole sequence; entry, crossing and exit are one movement.
+No easing at the ends, because the film does not accelerate. **Prod-measured: 9272 px/p across every
+sample from p=0 to p=0.90 — identical through entrance and exit.**
+Everything is solved from measurement: slot count (film = 3 room-widths, so the room stays covered
+and all three spools overlap), the cross distance `(filmW + spoolW)/2`, the stagger, hence the total
+journey. **The 2-pitch wrap is gone** — the film is genuinely long enough to make the crossing.
+⚠️ **TRADE, deliberate:** spools now leave in the order they arrived. First-in-first-out is what a
+length of film does; a reverse-order exit needs one spool moving at a different speed, which is the
+exact defect being fixed.
+⚠️ **Perforations must be painted INTO `.film`'s background**, not as absolutely-positioned children.
+As children on a strip this long they rasterise as their own layers and visibly settle a beat after
+the film stops — the edges appear to "catch up".
+
 **▶▶ STATE (2026-08-11, current) — IN FRAMES IS ONE PINNED REEL SEQUENCE.**
 The chapter is now a **single `.chapter-section`**, not a stack: past the hero there is no more
 vertical scroll until the reel is done. Timeline, all off one scroll progress `p`:
