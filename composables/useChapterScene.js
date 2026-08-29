@@ -1049,11 +1049,24 @@ export function useChapterScene() {
   //    pointer over a faded back card still grabbed some front card.
   const HOVER_MIN_OPACITY = 0.75   // below this the card is a background ghost
   const _hb1 = new THREE.Vector3(), _hb2 = new THREE.Vector3()
+  const _hbOff = new THREE.Vector3(), _hbQ = new THREE.Quaternion()
 
   // Centre + half-extents of a poster in SCREEN px (derived from the card's real
   // geometry, so it stays right at any zoom, distance or viewport).
+  //
+  // ⚠️ Measured from the card's RESTING position, with the hover lift subtracted back
+  // out. If the territory moved with the lift it would drag itself out from under the
+  // pointer, and hysteresis cannot help: releasing drops the card, which slides the
+  // region back under the pointer, which re-acquires… the same flicker, one step out.
+  // The territory a card owns must not depend on whether it is currently hovered.
   function posterScreenBox(p) {
     p.mesh.getWorldPosition(_hb1)
+    const lift = p.mesh.position.y - (p.baseY ?? p.mesh.position.y)
+    if (lift) {
+      // local +Y through the ring's tilt → world, so this is exact under the tilted group
+      _hbOff.set(0, lift, 0).applyQuaternion(p.mesh.parent.getWorldQuaternion(_hbQ))
+      _hb1.sub(_hbOff)
+    }
     _hb2.copy(_hb1)
     _hb2.y += CARD_HALF_H
     _hb1.project(camera)
