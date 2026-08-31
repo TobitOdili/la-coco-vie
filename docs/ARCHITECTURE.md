@@ -153,7 +153,7 @@ what made With Love read as a repeat of US and get rebuilt.
 |---|---|---|
 | `UsStory.vue` | margin notes — two handwritten voices, taped polaroids | `.scrub` / `.fade` per scene |
 | `BigDay.vue` | "The Calendar" — October 2026 as a wall-calendar page, the two wedding days ringed in marker; hover/tap a ringed date to swap the detail panel | IntersectionObserver latch: it sets, then holds still |
-| `InFrames.vue` | a **projector** in front, **three spools of the same film crossing behind it**; the 3·2·1 leader runs inside the gate, then exposures are pulled through notch by notch | notch-locked pull for the gate; one constant-rate transform for the spools |
+| `InFrames.vue` | a **deck of mounted prints** you flip through, with three spools of the same film crossing far behind | **no scroll at all**: a time loop for the spools, interaction + an autoflip timer for the deck |
 | `WithLove.vue` | the ink wanders past scattered gift words and **lassoes** each | measured spline + `.scrub`/`.write` |
 
 **The shared engine** is an rAF loop per component: it reads each scene's `getBoundingClientRect()`
@@ -202,13 +202,20 @@ the viewport bottom, and once a scene outgrows `100dvh` its sheet is pinned by p
 raising padding-bottom just grows the section and leaves the copy at the same viewport y (measured:
 identical with 11rem and with 0). Shorten the column instead, and keep popup `params` to one line.
 
-⚠️ **A pinned section should be as long as its FOREGROUND needs** (In Frames, 2026-08-31). The
-scene's height comes from `exposures.length`, and the background spools are driven at a fixed
-px-of-film-per-px-of-scroll (`SPOOL_REF_TRAVEL_VH`, their original pace) instead of `progress ×
-total`. That decoupling is the whole trick: the pin can be re-cut to whatever the projection needs
-without the background changing speed, and the reel is simply still crossing when the section
-releases. Tying the pin to the background's full journey is what made this section outstay its
-welcome at 8.6 screens; it is 5.4 now.
+⚠️ **Not every idea wants scroll** (In Frames, 2026-08-31). This chapter was pinned three times —
+spools driven by progress, then a projector driven by progress — and each version was rejected. The
+version that stuck **is not scroll-driven at all**: the section is a plain `100dvh`, the spools
+autoplay on a time loop, and the deck responds to clicking, dragging and a timer. Scroll passes
+straight through. When a section keeps being "too long", check whether scroll should be driving it
+at all before tuning its length again.
+⚠️ **A seamless film loop needs no duplicated DOM.** The strip repeats every `frames.length` frames,
+so translating by exactly `pitch × frames.length` puts an identical frame in every position — the
+wrap is invisible. The film only has to overhang the room by one repeat at each end (`measure()`
+solves the slot count for that).
+⚠️ **`z-index` on a wrapper creates a STACKING CONTEXT, and children can't escape it.** The opened
+card carried `z-index: 60` and was still painted over by a scrim at `z-index: 50`, because the card
+sits inside `.deck-wrap { z-index: 10 }` and resolves *within* it. The wrapper is what has to clear
+the scrim — and then its other children need dimming by hand, since they come up with it.
 
 ⚠️ **In Frames' reel is BACKGROUND, not overlay** (2026-08-31). The spools carry the room's own
 colour wash and its grain, and have **no shadow and no rim light** — both are "I am above the

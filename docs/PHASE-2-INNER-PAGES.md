@@ -15,7 +15,7 @@ state, everything below it is history — newest first.)
 > |---|---|---|
 > | **US** | margin notes: the story in two handwritten voices, taped polaroids | `.scrub`/`.fade` |
 > | **THE BIG DAY** | **the calendar** — October 2026, the two wedding days ringed in marker; hover/tap one for its detail | a latch: it sets, then holds still |
-> | **IN FRAMES** | a **projector** in front; three spools of the same film cross UNDER the page behind it; 3·2·1 inside the gate, then exposures pulled notch by notch | notch-locked pull + one constant-rate transform |
+> | **IN FRAMES** | a **deck of mounted prints** you flip through; three spools cross far behind | **no scroll**: time loop + autoflip + click/drag |
 > | **WITH LOVE** | the ink wanders past scattered gift words and **lassoes** each; hover shows the item on torn paper | measured spline + `.scrub`/`.write` |
 >
 > **ALSO DONE & LIVE (prod-verified):** the homepage carousel (per-card hover/click via
@@ -128,7 +128,36 @@ produced **<1°** both times, because that accumulator isn't observable from out
 the ring's per-frame rotation — a value the `?debug` probes now report (`leanDeg`, `rotVel`) — made
 it both correct and checkable. **If a value can't be measured, don't tune it; find one that can.**
 
-**▶▶ STATE (2026-08-31, latest) — IN FRAMES: THE PROJECTOR IS BACK, IN FRONT OF THE SPOOLS.**
+**▶▶ STATE (2026-08-31, latest) — IN FRAMES v3: THE DECK. NOTHING IS SCROLL-DRIVEN.**
+The projector merge below was rejected in one look ("this doesn't seem right"). The user's v3:
+keep the spools but **lower their opacity further**, make them **autoplay rather than scroll-driven**,
+**never lock the section**, and put a **stack of picture cards** in front — each a card with a smaller
+frame inside holding the picture and a **handwritten note underneath**. Clicking brings the card up
+as a popup, **animated all the way**; on mobile you **flip through the deck** (also animated); the
+deck **autoflips** on its own.
+- ⚠️⚠️ **THE LESSON, and it took four iterations: this section never wanted scroll.** Every rejected
+  version pinned the page and drove something with progress. v3 is a plain `100dvh` section that
+  scroll passes straight through; the spools run on a **time loop**, the deck on **interaction + a
+  timer**. When a section keeps reading as "too long", ask whether scroll should drive it at all.
+- **The spools autoplay seamlessly with no duplicated DOM:** the strip repeats every
+  `frames.length` frames, so translating by exactly `pitch × frames.length` puts an identical frame
+  in every position. `measure()` solves the slot count so the film overhangs the room by one repeat
+  at each end. Veil **0.30 → 0.16** — deep background now.
+- **The card is a MOUNT, not a polaroid:** dark stock, a lavender hairline, the picture inset in its
+  own frame, the note under it in **'Shadows Into Light'** — In Frames' own hand, deliberately not
+  US's 'Over the Rainbow' or the Big Day's 'Caveat'. That distinction is the whole reason the deck
+  doesn't read as US's taped polaroids.
+- **Open = FLIP:** measure the card where it sits, then transform it to the viewport centre, so it
+  travels the whole way instead of cutting. Prod-measured: 272→544px on desktop, 240→328 on a phone,
+  centred to the pixel (offset 0,0), and it animates back into the stack on close.
+- ⚠️ **`z-index` on `.deck-wrap` made a stacking context**, so the opened card (z 60) was painted
+  over by the scrim (z 50). The WRAPPER has to clear the scrim — and then the title and footer come
+  up with it and need dimming by hand.
+- Verified desktop + phone: section exactly 1 screen, scroll passes through (900px in, 900px moved),
+  spools move with zero scrolling, autoflip fires on its own, open/close both animate, zero console
+  errors, zero failed requests.
+
+**▶▶ SUPERSEDED (2026-08-31) — THE PROJECTOR MERGE (v2). Rejected on sight; kept for the record.**
 User: merge the background-spools iteration with the **round-2 projector** (`1b4f97a1` — flat room,
 notch-locked advance, continuous flicker). Projection in the FOREGROUND, spools behind; keep the
 spools' entrance as it is; **release the section once the projected images are done, regardless of

@@ -257,23 +257,22 @@ export const CHAPTER_PAGES = {
     ],
   },
 
-  // “In Frames” renders through the bespoke InFrames component — ONE pinned
-  // sequence: the PROJECTOR in the foreground, three lengths of the same film
-  // crossing the room BEHIND it at low opacity. The title hands over as the spools
-  // thread in, the 3·2·1 leader runs INSIDE the gate while they arrive, then the
-  // projector pulls the exposures through notch by notch, and END OF REEL releases
-  // the pin.
-  //   ⚠️ 2026-08-31 — this merged two earlier iterations at the user's request: the
-  //   background spools (Aug 11) and the round-2 projector (notch-locked advance,
-  //   live flicker). ⚠️ THE PIN IS OWNED BY THE PROJECTION: the scene's height comes
-  //   from `exposures.length`, and the spools run at their own fixed rate rather
-  //   than being stretched to fit — so the reel is still crossing when the section
-  //   releases, which is deliberate.
+  // “In Frames” renders through the bespoke InFrames component — A DECK OF
+  // MOUNTED PRINTS in a dark room, with three lengths of the same film crossing
+  // far behind them.
+  //   ⚠️ 2026-08-31 (v3) — NOTHING on this page is scroll-driven and NOTHING pins
+  //   the section. The spools autoplay on time in a seamless loop; the deck is
+  //   driven by clicking, dragging and an autoflip timer. The three iterations
+  //   before this one all locked the scroll, and that is what kept making the
+  //   chapter outstay its welcome. Clicking a card animates it all the way from
+  //   its place in the stack to the middle of the screen (FLIP) and back.
   // Fields (one section, kind 'reel'):
-  //   frames[]    — the SPOOL thumbs (background). Small; they render ~13rem wide.
-  //   exposures[] — { src, cap } for the PROJECTED images. 3:2, ~1400px: the gate is
-  //                 min(64vw, 74dvh). Add more and the scene grows to fit them
-  //                 (200 + (n−1)×85 dvh) — no other change needed.
+  //   frames[] — the SPOOL thumbs (background). The strip repeats every
+  //              frames.length frames, which is what makes the loop seamless.
+  //   cards[]  — { src, note } for the DECK. `src` wants to be good enough to be
+  //              enlarged (these are 1400px), `note` is the handwritten line under
+  //              the mount. ⚠️ Every note is the same placeholder for now, at the
+  //              user's request — real captions when the couple write them.
   'in-frames': {
     sections: [
       {
@@ -282,9 +281,6 @@ export const CHAPTER_PAGES = {
         title: 'Our Journey In Frames',
         present: 'COVENANT & UVIE PRESENT',
         sub: 'A LOVE STORY, ONE FRAME AT A TIME',
-        // The dimmed line the spools thread in behind; it leaves as the gate takes over.
-        watermark: 'COVENANT & UVIE PRESENT',
-        endTitle: 'END OF REEL',
         endSub: 'MORE EXPOSURES AFTER OCTOBER 29',
         frames: [
           asset('/images/reel/car-selfie-sm.jpg'),
@@ -293,15 +289,12 @@ export const CHAPTER_PAGES = {
           asset('/images/reel/dinner-date-sm.jpg'),
           asset('/images/reel/hanging-ledge-sm.jpg'),
         ],
-        // ⚠️ PLACEHOLDER CAPTIONS — the photographs are the couple's own, the words
-        // under them are not. Five exposures chosen from `new frames/` to give the
-        // projector a real sequence; swap freely, the scene resizes itself.
-        exposures: [
-          { src: asset('/images/reel/proj-car-selfie.jpg'), cap: 'somewhere on the way there' },
-          { src: asset('/images/reel/proj-summer-fit.jpg'), cap: 'the one where we matched on purpose' },
-          { src: asset('/images/reel/proj-dinner-date.jpg'), cap: 'dinner, and the long way home' },
-          { src: asset('/images/reel/proj-hanging-ledge.jpg'), cap: 'he said it was safe' },
-          { src: asset('/images/reel/proj-bw-beanie.jpg'), cap: 'and then it was winter' },
+        cards: [
+          { src: asset('/images/reel/proj-car-selfie.jpg'), note: 'Lagos Beach, 2021' },
+          { src: asset('/images/reel/proj-summer-fit.jpg'), note: 'Lagos Beach, 2021' },
+          { src: asset('/images/reel/proj-dinner-date.jpg'), note: 'Lagos Beach, 2021' },
+          { src: asset('/images/reel/proj-hanging-ledge.jpg'), note: 'Lagos Beach, 2021' },
+          { src: asset('/images/reel/proj-bw-beanie.jpg'), note: 'Lagos Beach, 2021' },
         ],
         popups: ['fullAlbum'],
         align: 'center',

@@ -53,14 +53,13 @@ is that no two pages share a language. Breaking it is what made With Love fail i
     Hovering — or tapping — a ringed date swaps the detail below the grid: times, venue, map,
     dress code. The grid is computed from the month, so the weekday alignment can't go stale.
     Photo-free, and it holds **completely still** while you read it.
-  - **IN FRAMES** — a **projector** running in a dark room, with **three spools of the same film
-    crossing behind it**. The title hands over as the first spool threads in; the **3·2·1 academy
-    leader runs inside the gate** while the others arrive; then the projector **pulls the exposures
-    through notch by notch** — dwell, shutter shut, pull one perforation, cut — and END OF REEL
-    releases the pin. The spools run **under the page** (the room's colour and grain wash over them,
-    no shadow), monochrome, and **hovering a strip surfaces that whole strip** in colour.
-    ⚠️ The pin belongs to the **projection**: the scene is exactly as long as the exposures need, so
-    the reel is still crossing when the section lets go.
+  - **IN FRAMES** — a **deck of mounted prints** in a dark room, with three lengths of the same film
+    crossing far behind them. Each card is a dark mount with the picture inset in its own frame and a
+    handwritten note underneath. The face of the deck lifts on hover; **clicking animates the card
+    all the way** from its place in the stack to the middle of the screen and back; you can **drag or
+    swipe to flip**, and the deck **autoflips** on its own. ⚠️ Nothing here is scroll-driven and
+    **nothing pins the page** — the spools autoplay on a seamless time loop, and scroll passes
+    straight through.
   - **WITH LOVE** — the **ink** writes the thank-you, then wanders past gift words scattered across
     the page and **lassoes** each in turn; hover shows the item on a torn paper scrap. Ends by
     splitting in two to sign both names → RSVP.
