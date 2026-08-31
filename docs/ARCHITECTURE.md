@@ -153,7 +153,7 @@ what made With Love read as a repeat of US and get rebuilt.
 |---|---|---|
 | `UsStory.vue` | margin notes — two handwritten voices, taped polaroids | `.scrub` / `.fade` per scene |
 | `BigDay.vue` | "The Hours" — light falls to night; two threads **tie the knot** (sticky) | `.scrub` / `.fade` per scene |
-| `InFrames.vue` | **three spools of one film crossing a dark room**, one pinned section; they arrive one at a time and leave in reverse | a single constant-rate transform, per-spool film lengths |
+| `InFrames.vue` | **three spools of one film crossing a dark room**, one pinned section; they arrive one at a time and leave in reverse, and they run **UNDER the page** rather than over it | a single constant-rate transform, per-spool film lengths |
 | `WithLove.vue` | the ink wanders past scattered gift words and **lassoes** each | measured spline + `.scrub`/`.write` |
 
 **The shared engine** is an rAF loop per component: it reads each scene's `getBoundingClientRect()`
@@ -183,6 +183,16 @@ paths with `pathLength=1`), `opacity` (`.fade`), an L→R clip reveal (`.write`)
    text used to be.
 5. **`overflow:hidden` on a scene root kills `position:sticky`** (the root becomes the containment
    box). Put it on the sticky child.
+
+⚠️ **In Frames' reel is BACKGROUND, not overlay** (2026-08-31). The spools carry the room's own
+colour wash and its grain, and have **no shadow and no rim light** — both are "I am above the
+surface" cues. One knob does it: `--reel-veil` on `.reel-sticky` (0.34; `--reel-veil-hover` 0.62
+surfaces a strip you touch). Because the backdrop is the room's flat colour, a plain group opacity
+*is* the colour overlay — no separate tint layer is needed, and compositing the strip as one group
+stops the stock, perforations and frames dimming each other where they overlap.
+⚠️ The dimmed "COVENANT & UVIE PRESENT" line now paints **above** the spools (it is page text; the
+reel is the page's backdrop). It is `inset: 0`, so it needs `pointer-events: none` — otherwise it
+also hit-tests above the strips and silently eats the whole-strip hover.
 
 ⚠️ **Two rendering traps worth knowing:** a wide absolutely-positioned child of a long transformed
 strip rasterises as **its own layer and settles a beat late** (In Frames' perforations "caught up"

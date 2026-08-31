@@ -240,6 +240,14 @@ onBeforeUnmount(() => {
   top: 0;
   height: 100dvh;
   overflow: hidden;
+
+  /* ── ONE KNOB: how far out of the background the reel comes ──
+     The spools are BACKGROUND, not overlay: the room's colour shows through them,
+     and because the backdrop is the room's own flat colour, a plain opacity IS the
+     room's colour wash — no separate tint layer needed. Raise to bring the reel
+     forward, lower to sink it further under the page. */
+  --reel-veil: 0.34;
+  --reel-veil-hover: 0.62;
 }
 
 /* ── the cards that hand over to each other ── */
@@ -286,7 +294,12 @@ onBeforeUnmount(() => {
   text-align: center;
   opacity: 0;
   padding: 0 10vw;
-  z-index: 1;
+  /* Above the spools, not behind them. The line used to be the reel's backdrop;
+     now the reel is the page's backdrop, so the order inverts.
+     ⚠️ pointer-events is load-bearing: this element is inset:0, so once it paints
+     above the spools it also HIT-TESTS above them and silently eats strip hover. */
+  z-index: 4;
+  pointer-events: none;
 }
 
 /* ── the spools ── */
@@ -312,19 +325,22 @@ onBeforeUnmount(() => {
      absolutely-positioned children, which rasterise as their own layers on a strip
      this long and visibly settle a beat after the film itself stops — the edges
      appeared to "catch up". As background layers they cannot lag: same paint.
-     (The colour is the chapter's --accentLighter at 62%; a background layer can't
-     take an opacity of its own.) */
-  background-color: #1B1428;
+     (A background layer can't take an opacity of its own, so the alpha is baked in.)
+     The stock is now a SHADE OF THE ROOM rather than its own near-black — a
+     different black would read as a separate object sitting on the page. */
+  background-color: #221A30;
   background-image:
-    repeating-linear-gradient(to right, rgba(195, 166, 216, 0.62) 0 0.5rem, transparent 0.5rem 1.4rem),
-    repeating-linear-gradient(to right, rgba(195, 166, 216, 0.62) 0 0.5rem, transparent 0.5rem 1.4rem);
+    repeating-linear-gradient(to right, rgba(195, 166, 216, 0.4) 0 0.5rem, transparent 0.5rem 1.4rem),
+    repeating-linear-gradient(to right, rgba(195, 166, 216, 0.4) 0 0.5rem, transparent 0.5rem 1.4rem);
   background-size: 100% 0.5rem;
   background-position: 0 0.34rem, 0 calc(100% - 0.34rem);
   background-repeat: repeat-x;
-  box-shadow:
-    inset 0 1px 0 rgba(195, 166, 216, 0.16),
-    inset 0 -1px 0 rgba(195, 166, 216, 0.1),
-    0 22px 44px -26px rgba(0, 0, 0, 0.9);
+  /* NO shadow and NO rim light. Both are "I am above the surface" cues, and the
+     reel is meant to read as though it runs UNDER the page. The veil below is what
+     seats it: the room's own colour shows through the whole strip, composited as
+     one group, and the room's grain + vignette already paint over the top of it. */
+  opacity: var(--reel-veil);
+  transition: opacity 0.5s ease;
   will-change: transform;
 }
 .mini {
@@ -333,7 +349,7 @@ onBeforeUnmount(() => {
   width: clamp(7rem, 12.5vw, 13.5rem);
   aspect-ratio: 3 / 2;
   margin: 0;
-  background: #0E0916;
+  background: #1B1428;
   overflow: hidden;
 }
 .mini img {
@@ -341,12 +357,19 @@ onBeforeUnmount(() => {
   height: 100%;
   object-fit: cover;
   display: block;
-  /* the room is monochrome; a frame remembers its colour when you touch it */
-  filter: grayscale(1) brightness(1.04) contrast(1.02);
+  /* Monochrome and flattened — under the veil a contrasty frame punches back
+     through and reads as a pasted-on photo. A frame remembers its colour when you
+     touch it. */
+  filter: grayscale(1) brightness(1.1) contrast(0.9);
   transition: filter 0.5s ease;
 }
+/* Hover SURFACES a strip: it rises out of the background and takes its colour
+   back, whole-spool (a reel is one length of film, not forty buttons). */
+.film:hover {
+  opacity: var(--reel-veil-hover);
+}
 .film:hover .mini img {
-  filter: grayscale(0) brightness(1.08) contrast(1.04) saturate(1.04);
+  filter: grayscale(0) brightness(1.02) contrast(1) saturate(1.02);
 }
 
 /* ── the room ── */
@@ -384,8 +407,8 @@ onBeforeUnmount(() => {
   .film { gap: 0.28rem; padding: 0.95rem 0; }
   .film {
     background-image:
-      repeating-linear-gradient(to right, rgba(195, 166, 216, 0.62) 0 0.36rem, transparent 0.36rem 1rem),
-      repeating-linear-gradient(to right, rgba(195, 166, 216, 0.62) 0 0.36rem, transparent 0.36rem 1rem);
+      repeating-linear-gradient(to right, rgba(195, 166, 216, 0.4) 0 0.36rem, transparent 0.36rem 1rem),
+      repeating-linear-gradient(to right, rgba(195, 166, 216, 0.4) 0 0.36rem, transparent 0.36rem 1rem);
     background-size: 100% 0.36rem;
     background-position: 0 0.26rem, 0 calc(100% - 0.26rem);
   }
@@ -393,6 +416,6 @@ onBeforeUnmount(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .grain, .vignette { animation: none; }
-  .mini img { transition: none; }
+  .mini img, .film { transition: none; }
 }
 </style>

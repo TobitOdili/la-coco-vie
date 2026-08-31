@@ -51,7 +51,9 @@ is that no two pages share a language. Breaking it is what made With Love fail i
   - **IN FRAMES** — a dark room with **three spools of one film crossing it**, pinned: the title
     hands over as the first spool loops in, **each arrives before the next begins** (one continuous
     length of film), all three cross, then they **leave in reverse order** as END OF REEL fades in.
-    Frames are monochrome; **hovering anywhere on a strip colours that whole strip**.
+    The strips run **under the page** — the room's colour and grain wash over them, and they cast
+    no shadow — so the reel reads as background rather than as objects laid on top. Frames are
+    monochrome; **hovering anywhere on a strip surfaces that whole strip** and gives it its colour.
   - **WITH LOVE** — the **ink** writes the thank-you, then wanders past gift words scattered across
     the page and **lassoes** each in turn; hover shows the item on a torn paper scrap. Ends by
     splitting in two to sign both names → RSVP.

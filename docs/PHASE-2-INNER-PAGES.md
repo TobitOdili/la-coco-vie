@@ -15,7 +15,7 @@ state, everything below it is history — newest first.)
 > |---|---|---|
 > | **US** | margin notes: the story in two handwritten voices, taped polaroids | `.scrub`/`.fade` |
 > | **THE BIG DAY** | "the hours": light falls from morning to night; two threads **tie the knot** (sticky) | `.scrub`/`.fade` |
-> | **IN FRAMES** | **three spools of ONE film crossing a dark room**, pinned; hover restores a frame's colour | one constant-rate transform |
+> | **IN FRAMES** | **three spools of ONE film crossing a dark room**, pinned, running UNDER the page; hover surfaces a strip | one constant-rate transform |
 > | **WITH LOVE** | the ink wanders past scattered gift words and **lassoes** each; hover shows the item on torn paper | measured spline + `.scrub`/`.write` |
 >
 > **ALSO DONE & LIVE (prod-verified):** the homepage carousel (per-card hover/click via
@@ -119,6 +119,27 @@ Five reports, fixed and prod-verified. Full root causes in AUDIT #22–#24.
 produced **<1°** both times, because that accumulator isn't observable from outside. Driving it from
 the ring's per-frame rotation — a value the `?debug` probes now report (`leanDeg`, `rotVel`) — made
 it both correct and checkable. **If a value can't be measured, don't tune it; find one that can.**
+
+**▶▶ STATE (2026-08-31, latest) — IN FRAMES: THE REEL IS BACKGROUND NOW.**
+User: keep the spools and all their mechanics, but put them **in the background of the page rather
+than overlaid on it** — same colour overlay and grain as the actual background, no shadows, "just
+imagine it was right under the page". Nothing about the motion changed: entry is still sequential,
+the exit still reverses, everything is still solved in `measure()` at one constant rate.
+- **One knob, `--reel-veil` on `.reel-sticky` (0.34).** The backdrop is the room's flat colour, so a
+  group opacity on `.film` **is** the room's colour wash — a separate tint layer would be redundant.
+  Compositing the whole strip as one group also stops the stock/perfs/frames dimming each other
+  where they overlap. `--reel-veil-hover` (0.62) surfaces a strip you touch, colour and all.
+- **Shadow and rim light DELETED**, not softened. A drop shadow is the single strongest "this object
+  sits above the page" cue; keeping a faint one would have fought everything else.
+- **Stock is a shade of the room** (`#221A30` against the room's `#241A33`), perforations 0.62→0.4,
+  frames flattened (`brightness(1.1) contrast(0.9)`) — under a veil a contrasty frame punches back
+  through and reads as a pasted-on photo.
+- ⚠️ **The dimmed line moved ABOVE the spools** (z 1 → 4) — it is page text and the reel is now the
+  page's backdrop. It is `inset: 0`, so it needed `pointer-events: none` in the same breath:
+  without it, it hit-tests over the whole room and **silently kills strip hover**. Caught only
+  because the probe read hover opacities rather than trusting the screenshot.
+- Prod-build verified at 1440×900 and 390×844: veil 0.34 on all three strips, `box-shadow: none`,
+  hovered strip 0.62 while its neighbours stay 0.34, zero console errors.
 
 **▶▶ STATE (2026-08-11, current) — IN FRAMES: SEQUENTIAL SPOOLS, REVERSED EXIT.**
 The chapter is a **single `.chapter-section`**: past the hero there is no vertical scroll until the
