@@ -15,7 +15,7 @@ state, everything below it is history — newest first.)
 > |---|---|---|
 > | **US** | margin notes: the story in two handwritten voices, taped polaroids | `.scrub`/`.fade` |
 > | **THE BIG DAY** | **the calendar** — October 2026, the two wedding days ringed in marker; hover/tap one for its detail | a latch: it sets, then holds still |
-> | **IN FRAMES** | **three spools of ONE film crossing a dark room**, pinned, running UNDER the page; hover surfaces a strip | one constant-rate transform |
+> | **IN FRAMES** | a **projector** in front; three spools of the same film cross UNDER the page behind it; 3·2·1 inside the gate, then exposures pulled notch by notch | notch-locked pull + one constant-rate transform |
 > | **WITH LOVE** | the ink wanders past scattered gift words and **lassoes** each; hover shows the item on torn paper | measured spline + `.scrub`/`.write` |
 >
 > **ALSO DONE & LIVE (prod-verified):** the homepage carousel (per-card hover/click via
@@ -128,7 +128,35 @@ produced **<1°** both times, because that accumulator isn't observable from out
 the ring's per-frame rotation — a value the `?debug` probes now report (`leanDeg`, `rotVel`) — made
 it both correct and checkable. **If a value can't be measured, don't tune it; find one that can.**
 
-**▶▶ STATE (2026-08-31, latest) — THE BIG DAY IS THE CALENDAR.**
+**▶▶ STATE (2026-08-31, latest) — IN FRAMES: THE PROJECTOR IS BACK, IN FRONT OF THE SPOOLS.**
+User: merge the background-spools iteration with the **round-2 projector** (`1b4f97a1` — flat room,
+notch-locked advance, continuous flicker). Projection in the FOREGROUND, spools behind; keep the
+spools' entrance as it is; **release the section once the projected images are done, regardless of
+where the spools have got to**; and put the **3·2·1 inside the projector box**, starting as the
+spools thread in and cueing the photos.
+- **One pinned scene, two layers.** Spools (z 1–3, veiled at `--reel-veil` 0.30) behind; the
+  projector (z 5) in front, with a radial scrim seating it so the roll head and caption don't
+  compete with whatever strip is crossing.
+- ⚠️ **THE PIN IS OWNED BY THE PROJECTION.** Scene height = `200 + (n−1)×85` dvh from
+  `exposures.length`. The spools are driven by **scroll pixels × a fixed rate**
+  (`SPOOL_REF_TRAVEL_VH = 7.6`, their original pace) instead of `progress × total`, so re-cutting
+  the pin cannot change their speed. **8.6 screens → 5.4**, and the reel is still crossing when the
+  section releases — which is the point.
+- **The leader is inside the gate**, not a screen of its own: crosshairs + sweep + the numeral over
+  the gate's own black, cutting out (not fading — a leader cuts) the instant exposure 1 is up. It
+  doubles as the loader: "THREADING THE REEL · n%" while the exposures arrive.
+- **The gate keeps round 2's mechanics verbatim:** dwell 62% of each frame, then one smootherstep
+  pull of exactly one perforation; sprockets, picture swap and shutter all come off that same
+  `pull` value so they cannot drift; the swap happens at pull 0.5, behind a fully shut shutter.
+  Artefacts (lamp, flicker, grain, scratches, halation) run on TIME, so the picture is never still.
+- **Five exposures now** (`proj-*.jpg`, 3:2 at 1400px) — two were not a sequence. The captions are
+  mine and are placeholders; the photographs are the couple's.
+- The caption is **Bague, not 'Over the Rainbow'** — that is US's hand (round 2 predated the rule).
+- Prod-verified desktop + mobile: title out by p=0.18, leader 3·2·1 across 0.13–0.34 while spools 1→2
+  arrive, exposures 0→4 with the shutter shut mid-pull, all three spools crossing by 0.62, end card
+  at 0.95, zero console errors, zero failed requests.
+
+**▶▶ STATE (2026-08-31) — THE BIG DAY IS THE CALENDAR.**
 The "Two Invitations" pass below lasted one review: *"the page has lost its flair. Looks like every
 other page on the internet"*, plus two specifics — **"we're getting married twice" is out**, and
 **spelled-out dates are "confusing and terrible UX"**. The user picked **The Calendar** from the

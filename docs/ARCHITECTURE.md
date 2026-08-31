@@ -153,7 +153,7 @@ what made With Love read as a repeat of US and get rebuilt.
 |---|---|---|
 | `UsStory.vue` | margin notes — two handwritten voices, taped polaroids | `.scrub` / `.fade` per scene |
 | `BigDay.vue` | "The Calendar" — October 2026 as a wall-calendar page, the two wedding days ringed in marker; hover/tap a ringed date to swap the detail panel | IntersectionObserver latch: it sets, then holds still |
-| `InFrames.vue` | **three spools of one film crossing a dark room**, one pinned section; they arrive one at a time and leave in reverse, and they run **UNDER the page** rather than over it | a single constant-rate transform, per-spool film lengths |
+| `InFrames.vue` | a **projector** in front, **three spools of the same film crossing behind it**; the 3·2·1 leader runs inside the gate, then exposures are pulled through notch by notch | notch-locked pull for the gate; one constant-rate transform for the spools |
 | `WithLove.vue` | the ink wanders past scattered gift words and **lassoes** each | measured spline + `.scrub`/`.write` |
 
 **The shared engine** is an rAF loop per component: it reads each scene's `getBoundingClientRect()`
@@ -201,6 +201,14 @@ Use the scrub engine when the motion IS the content; use a latch when the conten
 the viewport bottom, and once a scene outgrows `100dvh` its sheet is pinned by padding-**top** — so
 raising padding-bottom just grows the section and leaves the copy at the same viewport y (measured:
 identical with 11rem and with 0). Shorten the column instead, and keep popup `params` to one line.
+
+⚠️ **A pinned section should be as long as its FOREGROUND needs** (In Frames, 2026-08-31). The
+scene's height comes from `exposures.length`, and the background spools are driven at a fixed
+px-of-film-per-px-of-scroll (`SPOOL_REF_TRAVEL_VH`, their original pace) instead of `progress ×
+total`. That decoupling is the whole trick: the pin can be re-cut to whatever the projection needs
+without the background changing speed, and the reel is simply still crossing when the section
+releases. Tying the pin to the background's full journey is what made this section outstay its
+welcome at 8.6 screens; it is 5.4 now.
 
 ⚠️ **In Frames' reel is BACKGROUND, not overlay** (2026-08-31). The spools carry the room's own
 colour wash and its grain, and have **no shadow and no rim light** — both are "I am above the
