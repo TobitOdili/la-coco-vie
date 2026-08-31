@@ -38,10 +38,19 @@ state, everything below it is history — newest first.)
 > 5. **`overflow:hidden` on a scene root kills `position:sticky`.** Put it on the sticky child.
 >
 > **PLACEHOLDER (waiting on the couple):** all copy; the date's YEAR (Oct 27 confirmed, 2026 assumed);
-> venues; the registry list; **the RSVP destination (`#rsvp`)**; **the Drive folder** behind In Frames'
-> "Add Your Photos"; **the With Love cash link**; the inner-page gallery stills (still Milla Nova's);
-> the favicon (still Milla Nova's); the 4 audio tracks; and the With Love item art (one watermarked
-> clipart stand-in). The card films and the In Frames reel photos ARE the couple's own.
+> venues; the registry list; the inner-page gallery stills (still Milla Nova's); the favicon (still
+> Milla Nova's); the 4 audio tracks; and the With Love item art (one watermarked clipart stand-in).
+> The card films and the In Frames reel photos ARE the couple's own.
+>
+> **The seven dead destinations** (every one is reachable by a guest today):
+> 1. **RSVP** — `SITE.nav.collectionUrl` = `'#rsvp'`. The site's primary call to action, in the nav
+>    AND at the end of all four chapters. Nothing else on this list matters as much.
+> 2. **The cash card** (With Love) — `'#'`.
+> 3. **"Add Your Photos"** (In Frames) — the shared Drive folder, `'#'`.
+> 4. **📍 The Ceremony** map — `'#'`.
+> 5. **🗓 Add to Calendar** — `'#'` (needs a real `.ics`).
+> 6. **📍 The Reception** map — `'#'`.
+> 7. **The bottom-left credit** — `SITE.credit.url` = `'#'`.
 >
 > **NEXT / OPEN:** real content + media; Big Day follow-ups (traditional-wedding date, thread-motion
 > consistency, a real map card); portrait card-sizing ("passable"); code-health (split the ~1500-line

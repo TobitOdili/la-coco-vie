@@ -68,8 +68,9 @@ prod- and real-browser-verified.
   photos** (2026-08-11) are the couple's own, from `new frames/`. The inner-page galleries (US's
   polaroids) are still Milla Nova stills, and With Love's item art is one watermarked clipart
   stand-in.
-- **Three dead links to fill** — the RSVP destination, In Frames' "Add Your Photos" Drive folder,
-  and the With Love cash card. These are the only interactive dead ends left on the site.
+- **Seven dead links to fill** — RSVP (nav + all four chapter ends, so it is the one that matters),
+  the With Love cash card, In Frames' "Add Your Photos" Drive folder, both maps, Add to Calendar
+  (needs a real `.ics`), and the footer credit. Counted properly 2026-08-31; earlier notes said three.
 - Richer ScrollTrigger/Lenis parallax + inline films; section bg alternation (**G**).
 - Code-health debt: split the ~1500-line `useChapterScene.js` god-module; perf/a11y (no
   `prefers-reduced-motion`). *(The 34M of MP4s is resolved — the new films total 6.6M.)*

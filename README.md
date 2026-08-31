@@ -76,8 +76,9 @@ is that no two pages share a language. Breaking it is what made With Love fail i
   [`utils/asset.js`](utils/asset.js). ⚠️ `import.meta.env.BASE_URL` **cannot** be used for this in
   Nuxt; it silently broke every image on the GitHub Pages deploy. See ARCHITECTURE → Base URL.
 - 🔧 **Open** — the rest of the real content/media (copy, gallery stills, ambient audio, the
-  registry list + its item art); **three dead links to fill: the RSVP destination, the Drive folder
-  behind In Frames' "Add Your Photos", and the With Love cash card**; Big Day follow-ups
+  registry list + its item art); **seven dead links to fill — RSVP (the primary CTA, on every page),
+  the With Love cash card, the In Frames Drive folder, both maps, Add to Calendar, and the footer
+  credit**; Big Day follow-ups
   (traditional-wedding date, thread-motion consistency, a real map card); favicon still Milla Nova's;
   portrait card-sizing; code-health (split the ~1500-line scene module).
 
