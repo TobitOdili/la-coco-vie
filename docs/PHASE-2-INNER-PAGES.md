@@ -14,7 +14,7 @@ state, everything below it is history — newest first.)
 > | chapter | what it is now | driven by |
 > |---|---|---|
 > | **US** | margin notes: the story in two handwritten voices, taped polaroids | `.scrub`/`.fade` |
-> | **THE BIG DAY** | "the hours": light falls from morning to night; two threads **tie the knot** (sticky) | `.scrub`/`.fade` |
+> | **THE BIG DAY** | **two invitations** — a cover, then one formal sheet per wedding (25th · 29th) | a latch: it sets, then holds still |
 > | **IN FRAMES** | **three spools of ONE film crossing a dark room**, pinned, running UNDER the page; hover surfaces a strip | one constant-rate transform |
 > | **WITH LOVE** | the ink wanders past scattered gift words and **lassoes** each; hover shows the item on torn paper | measured spline + `.scrub`/`.write` |
 >
@@ -37,7 +37,11 @@ state, everything below it is history — newest first.)
 >    `document.fonts.ready` — web fonts change text metrics.
 > 5. **`overflow:hidden` on a scene root kills `position:sticky`.** Put it on the sticky child.
 >
-> **PLACEHOLDER (waiting on the couple):** all copy; the date's YEAR (Oct 27 confirmed, 2026 assumed);
+> **DATES ARE REAL (user, 2026-08-31):** the **traditional on Sun 25 Oct 2026** and the **white
+> wedding + reception on Thu 29 Oct 2026** — they replaced the single placeholder Oct 27, and the
+> homepage countdown now rolls over from the first to the second. ⚠️ Those weekdays (Sunday and
+> Thursday) are what October 2026 actually gives; if that looks wrong, the MONTH is wrong.
+> **PLACEHOLDER (waiting on the couple):** all copy; the times;
 > venues; the registry list; the favicon (still Milla Nova's); the 4 audio tracks; and the With Love
 > item art (one watermarked clipart stand-in). The card films, the In Frames reel photos and **every
 > photo on US** ARE the couple's own — which leaves `public/images/gallery/` (3.8 MB of Milla Nova
@@ -45,21 +49,24 @@ state, everything below it is history — newest first.)
 > ⚠️ **US's copy is deliberate LOREM IPSUM** (2026-08-31, user's request — the page is being reviewed
 > for layout, not words). Only the three section HEADINGS are real; the popup card titles are lorem too.
 >
-> **The seven dead destinations** (every one is reachable by a guest today):
+> **The eight dead destinations** (every one is reachable by a guest today). It was seven until
+> 2026-08-31 — the two-wedding rebuild added a THIRD map, since the traditional has its own venue:
 > 1. **RSVP** — `SITE.nav.collectionUrl` = `'#rsvp'`. The site's primary call to action, in the nav
 >    AND at the end of all four chapters. Nothing else on this list matters as much.
 > 2. **The cash card** (With Love) — `'#'`.
 > 3. **"Add Your Photos"** (In Frames) — the shared Drive folder, `'#'`.
-> 4. **📍 The Ceremony** map — `'#'`.
-> 5. **🗓 Add to Calendar** — `'#'` (needs a real `.ics`).
-> 6. **📍 The Reception** map — `'#'`.
-> 7. **The bottom-left credit** — `SITE.credit.url` = `'#'`.
+> 4. **📍 The Traditional** map (25 Oct) — `'#'`.
+> 5. **📍 The Ceremony** map (29 Oct) — `'#'`.
+> 6. **📍 The Reception** map (29 Oct) — `'#'`.
+> 7. **🗓 Add to Calendar** — `'#'`. ONE card on the Big Day cover, so the `.ics` it needs must
+>    carry **both** days as two events.
+> 8. **The bottom-left credit** — `SITE.credit.url` = `'#'`.
 >
 > **VERIFIED (user, 2026-08-31):** everything built in August looks right **on desktop and mobile**,
 > and the **card films work**. The only thing still unchecked by a human is the **mobile swipe lean**
 > (emulation says rest 0.24° / peak 10.2°; `LEAN_MAX_DEG` is the knob).
 >
-> **NEXT / OPEN:** real content + media; the seven dead links above; Big Day follow-ups
+> **NEXT / OPEN:** real content + media; the eight dead links above; Big Day follow-ups
 > (traditional-wedding date, thread-motion consistency, a real map card); portrait card-sizing
 > ("passable"); code-health (split the ~1500-line `useChapterScene.js`).
 > **Regenerate card art:** `npm run gen:textures` (see [`scripts/README.md`](../scripts/README.md)).
@@ -120,7 +127,37 @@ produced **<1°** both times, because that accumulator isn't observable from out
 the ring's per-frame rotation — a value the `?debug` probes now report (`leanDeg`, `rotVel`) — made
 it both correct and checkable. **If a value can't be measured, don't tune it; find one that can.**
 
-**▶▶ STATE (2026-08-31, latest) — IN FRAMES: THE REEL IS BACKGROUND NOW.**
+**▶▶ STATE (2026-08-31, latest) — THE BIG DAY IS "TWO INVITATIONS" NOW.**
+User: *"I like the idea behind it, I just don't know… I like the line moving through, but somehow
+takes the attention off the info."* Plus the real dates: **traditional 25 Oct, white wedding 29 Oct**.
+⚠️ **Two problems, and the dates were the bigger one.** "The Hours" is a ONE-DAY armature — a single
+falling light from 07:00 to 22:00 — so two weddings on two days could not hang on it at all. And the
+thread drew *continuously while you read*, so peripheral motion beat the addresses it was meant to
+present. (This user normally supplies their own direction; here they explicitly asked for ideas, and
+picked "Two Invitations" from four.)
+- **The page is now the site's only piece of formal print.** A cover answers *which days?* in one
+  image (**25** · **29**, weekday and label under each), then ONE INVITATION PER WEDDING.
+- **Two stocks, two typographies, nothing explained in words:** the traditional is a deep olive
+  field (`#2E3620`), centred, ornamented, all Italiana; the white wedding is the pale sheet,
+  asymmetric and spare, Bague for the title with the order of the day as a time/event grid. This
+  also finally delivers the long-open **"G — section bg alternates dark/light"** for this chapter.
+- ⚠️ **NO rAF LOOP.** An IntersectionObserver latches each sheet, a ~1.3s stagger sets it, then the
+  page is completely still. **Prod-build verified as actually still:** two samples of every animated
+  element 600ms apart are byte-identical. Rules `scaleX` once and stop; they are furniture, not a
+  thread being pulled.
+- ⚠️ **Bottom padding cannot clear the floating popup dock.** `.popup-stack` is `fixed` to the
+  viewport bottom; once a scene outgrows `100dvh` the sheet is pinned by padding-TOP, so raising
+  padding-bottom only grows the section and leaves the copy at the same viewport y — measured
+  identical at 11rem and at 0. Fixed by shortening the column (8vh top offset, tighter rhythm) and
+  cutting the map cards to ONE line of params. Phone now: both sheets fit 100dvh exactly, copy
+  clears the dock by 131px and 64px.
+- **The date watermark bleeds off the BOTTOM edge**, not behind the copy — centred behind centred
+  text it fought the very information the page exists to present.
+- Closes two of the four Big Day follow-ups: the traditional date is in, and the page is no longer
+  content-thin. Thread-motion consistency is moot (there is no thread). A real map widget is still
+  open, as are the times, venues and the city.
+
+**▶▶ STATE (2026-08-31) — IN FRAMES: THE REEL IS BACKGROUND NOW.**
 User: keep the spools and all their mechanics, but put them **in the background of the page rather
 than overlaid on it** — same colour overlay and grain as the actual background, no shadows, "just
 imagine it was right under the page". Nothing about the motion changed: entry is still sequential,

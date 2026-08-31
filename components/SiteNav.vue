@@ -53,12 +53,13 @@
           >
             {{ SITE.subtitle }}
           </div>
-          <!-- Countdown to the big day (homepage only; date is a PLACEHOLDER in site.config). -->
+          <!-- Countdown (homepage only). Two weddings: it counts to the traditional,
+               then rolls over to the white wedding. Times in site.config are placeholders. -->
           <div
             v-if="isHome && daysToGo > 0"
             class="text-accent uppercase text-[10px] lg:text-xs tracking-[0.2em] mt-1 opacity-70"
           >
-            {{ SITE.dateLabel }} · {{ daysToGo }} days to go
+            {{ countLabel }} · {{ daysToGo }} days to go
           </div>
         </div>
       </div>
@@ -111,9 +112,22 @@
 import { computed } from 'vue'
 import { SITE } from '~/site.config'
 
-// Whole days until the wedding (static per page load — day-resolution needs no timer).
+// Whole days until the next wedding (static per page load — day resolution needs no
+// timer). There are TWO days, so the count ROLLS OVER: it targets the traditional
+// until that has passed, then the white wedding. While both are ahead it shows the
+// pair label ("October 25 & 29"); after the rollover it names the day it is counting
+// to, so the number and the date on screen can never disagree.
+const nextEvent = computed(() => {
+  const now = Date.now()
+  return (SITE.events || []).find((e) => new Date(e.date).getTime() > now) || null
+})
 const daysToGo = computed(() =>
-  Math.max(0, Math.ceil((new Date(SITE.weddingDate) - Date.now()) / 86400000))
+  nextEvent.value
+    ? Math.max(0, Math.ceil((new Date(nextEvent.value.date) - Date.now()) / 86400000))
+    : 0
+)
+const countLabel = computed(() =>
+  nextEvent.value === (SITE.events || [])[0] ? SITE.dateLabel : nextEvent.value?.label
 )
 
 defineProps({

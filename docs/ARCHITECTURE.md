@@ -152,7 +152,7 @@ what made With Love read as a repeat of US and get rebuilt.
 | file | what it is | how it moves |
 |---|---|---|
 | `UsStory.vue` | margin notes — two handwritten voices, taped polaroids | `.scrub` / `.fade` per scene |
-| `BigDay.vue` | "The Hours" — light falls to night; two threads **tie the knot** (sticky) | `.scrub` / `.fade` per scene |
+| `BigDay.vue` | "Two Invitations" — a cover, then one formal invitation per wedding, on two different stocks | IntersectionObserver latch: it sets, then holds still |
 | `InFrames.vue` | **three spools of one film crossing a dark room**, one pinned section; they arrive one at a time and leave in reverse, and they run **UNDER the page** rather than over it | a single constant-rate transform, per-spool film lengths |
 | `WithLove.vue` | the ink wanders past scattered gift words and **lassoes** each | measured spline + `.scrub`/`.write` |
 
@@ -183,6 +183,17 @@ paths with `pathLength=1`), `opacity` (`.fade`), an L→R clip reveal (`.write`)
    text used to be.
 5. **`overflow:hidden` on a scene root kills `position:sticky`** (the root becomes the containment
    box). Put it on the sticky child.
+
+⚠️ **Motion has to stop where the page's job is to be READ** (The Big Day, 2026-08-31). That page
+was a thread drawn continuously through every scene with the venue and times hung off it, and the
+user's note was that it "takes the attention off the info". Peripheral motion beats static text every
+time, so an address could never hold the eye. It now has **no rAF loop at all**: an IntersectionObserver
+latches each sheet on first enter, a ~1.3s stagger sets it, and then nothing on the page moves again.
+Use the scrub engine when the motion IS the content; use a latch when the content is the content.
+⚠️ **Bottom padding cannot push copy clear of the floating popup dock.** `.popup-stack` is `fixed` to
+the viewport bottom, and once a scene outgrows `100dvh` its sheet is pinned by padding-**top** — so
+raising padding-bottom just grows the section and leaves the copy at the same viewport y (measured:
+identical with 11rem and with 0). Shorten the column instead, and keep popup `params` to one line.
 
 ⚠️ **In Frames' reel is BACKGROUND, not overlay** (2026-08-31). The spools carry the room's own
 colour wash and its grain, and have **no shadow and no rim light** — both are "I am above the
@@ -493,10 +504,10 @@ for any future CSS-var asset paths.
 | **Hover/click resolution** | The flat raycast hitboxes don't follow the shader bend, so a raycast can't say *which* card was hit — the picker was deleted 2026-08-11. Hover is now **screen-space containment**: project each poster's box and test whether the pointer is inside it. Three rules, each fixing a real bug — (1) candidates must be in the **near half** and **`uOpacity ≥ 0.75`**, so faded background cards can't be hovered (they were swapping the centre wordmark to an invisible chapter); (2) **acquire ≠ release** — the release territory is 1.45× the acquire one, because a single threshold at a boundary always oscillates; (3) the territory is measured from the card's **RESTING** position, with the hover lift subtracted back out through the ring's tilt quaternion — otherwise the region travels with the lift and the hysteresis is defeated. Shared by `onMouseMove`, the per-frame scroll re-target, and `onClick`. See AUDIT #22/#23. |
 | **Card lean (`uAngle`)** | `uAngle` Z-rotates every card before the bend, i.e. it is how far the deck leans. It rests at **0° (upright)** and is deflected only by live input: the pointer on desktop (gated on `hasPointer`, so a touch device never inherits a stale value), and **the ring's own angular velocity** on touch, which settles back upright. ⚠️ It used to be `mouse.x * 10 + 10` while the intro tweens the mouse proxy to 0.5 — a permanent 15° lean that touch could never correct (AUDIT #24). `LEAN_MAX_DEG` (10) is the tunable; a fast coast sits near that clamp. |
 | Debug instrumentation | `__heroDebug` / `__camDebug` / `__probe` / `__exitBegin/Scrub/End` and `__gsdev()` (GSAP DevTools) are gated behind **`?debug` on the initial load URL**. Inert otherwise. Fine to ship; remove if you want them gone. |
-| **Palette** | The wedding colours live in `CHAPTERS` (`composables/useChapterScene.js`) + the `.--{slug}` vars in `assets/css/main.css` + the `CH` array in `scripts/gen-textures.mjs` — keep all three in sync. The four bespoke components also hardcode family tones (Big Day day→night gradient, In Frames' `#241A33` room, With Love's teal ink). |
+| **Palette** | The wedding colours live in `CHAPTERS` (`composables/useChapterScene.js`) + the `.--{slug}` vars in `assets/css/main.css` + the `CH` array in `scripts/gen-textures.mjs` — keep all three in sync. The four bespoke components also hardcode family tones (Big Day's deep olive `#2E3620` invitation stock, In Frames' `#241A33` room, With Love's teal ink). |
 | `dist` symlink | Was tracked pointing at a stale path; now gitignored. |
 | **Dead inner-page assets** | `public/images/dresses/` (848 KB) is fully unreferenced since the dress popups were retired; most of `public/images/gallery/` (3.8 MB) is too — but **US still pulls four files from it**, so don't clear the directory blindly. They go when the couple's photos arrive. |
-| **Seven dead links** | Everything a guest can click that goes nowhere: **RSVP** (`SITE.nav.collectionUrl`, in the nav *and* every chapter end — the primary CTA), With Love's **cash card**, In Frames' **"Add Your Photos"** Drive folder, **both maps**, **Add to Calendar** (needs a real `.ics`), and the bottom-left **credit** link. (An earlier version of this row said "three" — it undercounted the Big Day popups.) |
+| **Eight dead links** | Everything a guest can click that goes nowhere: **RSVP** (`SITE.nav.collectionUrl`, in the nav *and* every chapter end — the primary CTA), With Love's **cash card**, In Frames' **"Add Your Photos"** Drive folder, **all three maps** (the traditional's, plus the ceremony's and the reception's), **Add to Calendar** (one card on the Big Day cover, so its `.ics` must carry BOTH days), and the bottom-left **credit** link. (It was seven until the two-wedding rebuild added the third map; an earlier version said "three" and undercounted the Big Day popups entirely.) |
 | **No real-browser QA tier** | Claude-in-Chrome was unavailable as of 2026-08-11 and Browserless has no H.264 decoder, so **nothing automated can see the card films or judge feel**. Not currently blocking: the user confirmed the films working and both breakpoints looking right on 2026-08-31. But it means any future change to the films, or to motion feel, needs a human — plan for that rather than assuming a probe will catch it. |
 | **God-module** | `useChapterScene.js` is ~1500 lines. Splitting it (shaders / intro / select-exit / hover) is the main open refactor; deferred (high-risk, low-urgency). |
 | ~~`onDeselect` / `useAudio.js` dead code~~ | Removed 2026-07-23. |

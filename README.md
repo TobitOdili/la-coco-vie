@@ -22,7 +22,9 @@ opens into its own bespoke scroll page.
 > **aspect-correct placeholders** awaiting their own, and are **not** for redistribution.
 >
 > ⚠️ **ALL copy, dates, venues, and the registry are PLACEHOLDERS** pending the couple's real
-> details. The wedding date (October 27, 2026) is user-confirmed; the year is assumed 2026.
+> details. The dates are the couple's real ones, confirmed 2026-08-31: the **traditional
+> marriage on Sunday 25 October 2026** and the **white wedding + reception on Thursday 29
+> October 2026**. (They replaced a single placeholder date of October 27.)
 
 ---
 
@@ -46,8 +48,11 @@ is that no two pages share a language. Breaking it is what made With Love fail i
   touch.
 - ✅ **The four bespoke inner pages** (the *thread* narrative — one line runs the whole site):
   - **US** — "the margin notes": the story in two handwritten voices, taped polaroids.
-  - **THE BIG DAY** — "the hours": scroll scrubs the day from morning light into night; two threads
-    **tie the knot** at the ceremony (sticky, reversible). Photo-free.
+  - **THE BIG DAY** — "two invitations": the site's only piece of formal print. A cover answers
+    *which days?* in one image (**25** and **29**, side by side), then one invitation per wedding —
+    the traditional on a deep olive stock, centred and ornamented; the white wedding on the pale
+    sheet, asymmetric and spare. Each sheet sets itself and then holds **completely still** while
+    you read it. Photo-free.
   - **IN FRAMES** — a dark room with **three spools of one film crossing it**, pinned: the title
     hands over as the first spool loops in, **each arrives before the next begins** (one continuous
     length of film), all three cross, then they **leave in reverse order** as END OF REEL fades in.
@@ -78,9 +83,9 @@ is that no two pages share a language. Breaking it is what made With Love fail i
   [`utils/asset.js`](utils/asset.js). ⚠️ `import.meta.env.BASE_URL` **cannot** be used for this in
   Nuxt; it silently broke every image on the GitHub Pages deploy. See ARCHITECTURE → Base URL.
 - 🔧 **Open** — the rest of the real content/media (copy, gallery stills, ambient audio, the
-  registry list + its item art); **seven dead links to fill — RSVP (the primary CTA, on every page),
-  the With Love cash card, the In Frames Drive folder, both maps, Add to Calendar, and the footer
-  credit**; Big Day follow-ups
+  registry list + its item art); **eight dead links to fill — RSVP (the primary CTA, on every page),
+  the With Love cash card, the In Frames Drive folder, all three maps, Add to Calendar (one `.ics`
+  carrying both wedding days), and the footer credit**; Big Day follow-ups
   (traditional-wedding date, thread-motion consistency, a real map card); favicon still Milla Nova's;
   portrait card-sizing; code-health (split the ~1500-line scene module).
 
@@ -142,7 +147,7 @@ components/
   AboutPanel.vue             Full-screen About overlay
   LoadingScreen.vue          Asset-gated loading counter (GSAP)
   chapter/UsStory.vue        ★ US — "the margin notes" (bespoke page)
-  chapter/BigDay.vue         ★ THE BIG DAY — "the hours" + the knot (bespoke page)
+  chapter/BigDay.vue         ★ THE BIG DAY — "two invitations", one per wedding (bespoke page)
   chapter/InFrames.vue       ★ IN FRAMES — three spools of one film; sequential in, reverse out
   chapter/WithLove.vue       ★ WITH LOVE — the ink wanders and lassoes each gift
   chapter/ChapterSection.vue Generic section block — now the unused fallback

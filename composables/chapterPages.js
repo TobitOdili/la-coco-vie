@@ -49,20 +49,31 @@ export const POPUPS = {
     photo: asset('/images/us/love-big-ben.jpg'),
   },
 
-  // “The Big Day” — utility cards (maps / calendar / dress code).
-  mapCeremony: {
-    title: '📍 The Ceremony',
-    params: ['oct 27, 2026 · 12 noon', 'venue tbc — open in maps'],
+  // “The Big Day” — utility cards (maps / calendar / dress code). Two weddings, so
+  // each day carries its own map(s); ONE calendar card on the cover covers both days
+  // (a single .ics with two events), which also keeps the dock to two cards wide —
+  // three would overflow a 390px phone, since .popup-stack is one flex row.
+  calBoth: {
+    title: '🗓 Add to Calendar',
+    params: ['both days · one file'],
     url: '#',
   },
-  calCeremony: {
-    title: '🗓 Add to Calendar',
-    params: ['placeholder — ics link coming'],
+  // ⚠️ Keep params SHORT (ideally one line each). Two of these dock side by side at
+  // the viewport bottom on a phone, and every extra wrapped line raises the dock over
+  // the invitation's closing copy.
+  mapTraditional: {
+    title: '📍 The Traditional',
+    params: ['sun 25 oct · open in maps'],
+    url: '#',
+  },
+  mapCeremony: {
+    title: '📍 The Ceremony',
+    params: ['thu 29 oct · open in maps'],
     url: '#',
   },
   mapReception: {
     title: '📍 The Reception',
-    params: ['oct 27, 2026 · 4 pm', 'venue tbc — open in maps'],
+    params: ['thu 29 oct · open in maps'],
     url: '#',
   },
   dressCode: {
@@ -171,55 +182,88 @@ export const CHAPTER_PAGES = {
     ],
   },
 
-  // “The Big Day” renders through the bespoke BigDay component (“The Hours”): scroll
-  // scrubs the day from morning light into night; the two threads TIE THE KNOT at
-  // 12:00 (sticky, reversible). Scenes are info signposts hung off the thread — this
-  // page is deliberately photo-free. Fields: time, lines[] (short skimmable facts),
-  // vow (the caption at the knot), body (scene 0’s subtitle). No images.
+  // “The Big Day” renders through the bespoke BigDay component (“Two Invitations”):
+  // a cover that answers "which days?" in one image, then ONE INVITATION PER WEDDING —
+  // the traditional on a deep olive stock, centred and ornamented; the white wedding on
+  // the pale sheet, asymmetric and spare. The page is logistics, so the information IS
+  // the composition: each sheet sets itself and then holds completely still.
+  //   ⚠️ 2026-08-31 — this replaced “The Hours” (one day, hour by hour, a thread drawn
+  //   continuously through every scene). Two reasons, both from the user: the thread
+  //   "takes the attention off the info", and there are TWO weddings on TWO days, which
+  //   a single falling-light-through-one-day armature cannot hold.
+  // Fields: kind ('cover'|'invitation'); cover = { eyebrow, lead, dates[], note };
+  // invitation = { variant, rank, label, weekday, dateWords, yearWords, dateNumerals,
+  // events[{ time, name, venue, address }], dress, note }. Photo-free by design.
   'the-big-day': {
     sections: [
       {
+        kind: 'cover',
         num: '—',
-        time: '07:00',
-        title: 'Daybreak',
-        body: 'the day, hour by hour',
-        popups: [],
+        title: 'The Invitations',
+        eyebrow: 'Lagos · October 2026',
+        lead: 'We are getting married twice.',
+        dates: [
+          { n: '25', weekday: 'Sunday', label: 'The Traditional' },
+          { n: '29', weekday: 'Thursday', label: 'The White Wedding' },
+        ],
+        note:
+          'Four days apart, in [city — placeholder]. Everything you need for each ' +
+          'day is on its own invitation below.',
+        popups: ['calBoth'],
         align: 'center',
       },
       {
+        kind: 'invitation',
+        variant: 'traditional',
         num: 'I',
-        time: '12:00',
-        title: 'The Ceremony',
-        vow: 'we do.',
-        lines: [
-          'doors open 11:30 — sit close, sing loud',
-          '[venue name + address — placeholder]',
+        rank: 'Invitation I',
+        title: 'The Traditional Marriage',
+        label: 'The Traditional Marriage',
+        weekday: 'Sunday',
+        dateWords: 'the twenty-fifth of October',
+        yearWords: 'two thousand and twenty-six',
+        dateNumerals: '25.10.26',
+        events: [
+          {
+            time: '[time]',
+            name: 'The Ceremony',
+            venue: '[venue name]',
+            address: '[address]',
+          },
         ],
-        popups: ['mapCeremony', 'calCeremony'],
+        dress: 'Colours of the day: [tbc]',
+        note: 'Come in colour, and come hungry. [Placeholder — anything guests should know.]',
+        popups: ['mapTraditional'],
         align: 'center',
       },
       {
+        kind: 'invitation',
+        variant: 'white',
         num: 'II',
-        time: '16:00',
-        title: 'The Reception',
-        lines: [
-          'dinner · toasts · the first dance',
-          '[venue name + address — placeholder]',
-          'if you leave hungry, that is on you',
+        rank: 'Invitation II',
+        title: 'The White Wedding',
+        label: 'The White Wedding',
+        weekday: 'Thursday',
+        dateWords: 'the twenty-ninth of October',
+        yearWords: 'two thousand and twenty-six',
+        dateNumerals: '29.10.26',
+        events: [
+          {
+            time: '[time]',
+            name: 'The Ceremony',
+            venue: '[venue name]',
+            address: '[address]',
+          },
+          {
+            time: '[time]',
+            name: 'The Reception',
+            venue: '[venue name]',
+            address: '[address]',
+          },
         ],
-        popups: ['mapReception'],
-        align: 'right',
-      },
-      {
-        num: 'III',
-        time: '22:00',
-        title: 'The Party',
-        lines: [
-          'the floor opens and does not close',
-          'until they beg us to stop',
-          'dress to celebrate [colours — placeholder]',
-        ],
-        popups: ['dressCode'],
+        dress: 'Dress code: [tbc]',
+        note: 'Doors open [time]. Sit close, sing loud. If you leave hungry, that is on you.',
+        popups: ['mapCeremony', 'mapReception'],
         align: 'left',
       },
     ],
@@ -242,7 +286,7 @@ export const CHAPTER_PAGES = {
         // The dimmed line the spools run over once the title has gone.
         watermark: 'COVENANT & UVIE PRESENT',
         endTitle: 'END OF REEL',
-        endSub: 'MORE EXPOSURES AFTER OCTOBER 27',
+        endSub: 'MORE EXPOSURES AFTER OCTOBER 29',
         // ⚠️ PLACEHOLDER — the two photos alternate along every spool. Add more and
         // they cycle in order; the component reads the array length.
         frames: [
@@ -336,7 +380,7 @@ export const CHAPTER_PAGES = {
         kind: 'sign',
         closer: 'with love,',
         names: ['Covenant', 'Uvie'],
-        tail: 'see you on october 27.',
+        tail: 'see you on october 25 & 29.',
         popups: [],
       },
     ],

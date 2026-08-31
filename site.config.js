@@ -7,7 +7,9 @@
 // credit), AboutPanel.vue (welcome-note copy).
 //
 // ⚠️ PLACEHOLDERS (2026-07-23, awaiting the couple's real details):
-//   • weddingDate / dateLabel — user-confirmed Oct 27; YEAR assumed 2026
+//   • events / dateLabel — user-confirmed 2026-08-31: TWO weddings, the traditional
+//     on Sun 25 Oct 2026 and the white wedding + reception on Thu 29 Oct 2026.
+//     (This replaced a single placeholder date of Oct 27.)
 //   • rsvpUrl — dead link until an RSVP destination exists
 //   • the welcome-note copy below — tone draft for correction
 //
@@ -21,9 +23,16 @@ export const SITE = {
   // Brand name, used to build document titles + the nav wordmark.
   brand: 'Covenant & Uvie',
 
-  // The big day. Drives the countdown in SiteNav. PLACEHOLDER date.
-  weddingDate: '2026-10-27T12:00:00+01:00',
-  dateLabel: 'October 27, 2026 · Lagos',
+  // The big day is TWO days. In order — the countdown in SiteNav targets whichever
+  // is still ahead and ROLLS OVER to the next once one has passed, so keep these
+  // sorted ascending. Times are placeholders; the DATES are the couple's real ones.
+  events: [
+    { name: 'The Traditional',  date: '2026-10-25T12:00:00+01:00', label: 'October 25, 2026 · Lagos' },
+    { name: 'The White Wedding', date: '2026-10-29T12:00:00+01:00', label: 'October 29, 2026 · Lagos' },
+  ],
+  // Shown while both days are still ahead; after the first passes, the countdown
+  // switches to that event's own label.
+  dateLabel: 'October 25 & 29, 2026 · Lagos',
 
   // Subtitle shown under the nav wordmark on the homepage.
   subtitle: 'A love story in chapters',
@@ -55,7 +64,7 @@ export const SITE = {
   about: [
     { text: 'WELCOME to OUR CORNER of the INTERNET — and THANK YOU for BEING HERE.' },
     {
-      text: 'WE ARE COVENANT & UVIE, and on OCTOBER 27, 2026 we are GETTING MARRIED.',
+      text: 'WE ARE COVENANT & UVIE, and on OCTOBER 25 & 29, 2026 we are GETTING MARRIED.',
       gap: true,
     },
     {
