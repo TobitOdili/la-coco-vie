@@ -120,7 +120,7 @@ npm run preview   # preview a production build
 | Styling | Tailwind v4 (via `@tailwindcss/vite`) + `assets/css/main.css` |
 | Fonts | Bague & Movie (local `.woff`) + Italiana / Monoton / Over the Rainbow (Google Fonts) |
 | Hosting | **Vercel** (primary, auto-deploys `main`) + GitHub Pages (CI fallback) |
-| QA tooling | **Browserless** (cloud headless — geometry, probes, screenshots; token in `.env.bless`). ⚠️ It cannot decode H.264, so how the **films** look needs a real browser. Claude-in-Chrome was the real-browser tier but was **not connected** as of 2026-08-11. See ARCHITECTURE → QA workflow |
+| QA tooling | **Browserless** (cloud headless — geometry, probes, screenshots; token in `.env.bless`). ⚠️ It cannot decode H.264, so the **films** and anything about *feel* need a human (Claude-in-Chrome, the real-browser tier, was not connected as of 2026-08-11). Films + both breakpoints were user-confirmed 2026-08-31. See ARCHITECTURE → QA workflow |
 
 ---
 

@@ -19,11 +19,14 @@
 > films and In Frames reel photos are in; asset URLs are base-path correct on both hosts.
 > **In Frames and With Love were both rebuilt from scratch this cycle** — see the tracker.
 >
-> ⚠️ **Verification is uneven — see the VERIFICATION STATUS table in [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md) before trusting any "done" here.** Everything shipped in
-> August was prod-probed via Browserless (structure, geometry, timing, network) — but **Browserless
-> cannot decode H.264 and Claude-in-Chrome was not connected**, so *how the card films look* is
-> unverified by tooling. The chapter inner pages were last confirmed on a real phone in July
-> ("workable for now"); the two August rebuilds have **not** been device-checked.
+> ✅ **User sign-off, 2026-08-31:** everything built in August "looks good on desktop and mobile",
+> and the **card films are working** — the one thing no headless tier could ever check (Browserless
+> has no H.264 decoder). Both were the open verification gaps; both are now closed by a human on
+> real hardware.
+>
+> ⚠️ **Still unverified: the mobile SWIPE LEAN** — the user has not reviewed it carefully. It is
+> measured under emulation only (rest 0.24°, peak 10.2° during a swipe); `LEAN_MAX_DEG` in
+> `useChapterScene.js` is the knob if a fast coast over-leans on a real phone.
 
 ---
 

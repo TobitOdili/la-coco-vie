@@ -52,9 +52,13 @@ state, everything below it is history — newest first.)
 > 6. **📍 The Reception** map — `'#'`.
 > 7. **The bottom-left credit** — `SITE.credit.url` = `'#'`.
 >
-> **NEXT / OPEN:** real content + media; Big Day follow-ups (traditional-wedding date, thread-motion
-> consistency, a real map card); portrait card-sizing ("passable"); code-health (split the ~1500-line
-> `useChapterScene.js`).
+> **VERIFIED (user, 2026-08-31):** everything built in August looks right **on desktop and mobile**,
+> and the **card films work**. The only thing still unchecked by a human is the **mobile swipe lean**
+> (emulation says rest 0.24° / peak 10.2°; `LEAN_MAX_DEG` is the knob).
+>
+> **NEXT / OPEN:** real content + media; the seven dead links above; Big Day follow-ups
+> (traditional-wedding date, thread-motion consistency, a real map card); portrait card-sizing
+> ("passable"); code-health (split the ~1500-line `useChapterScene.js`).
 > **Regenerate card art:** `npm run gen:textures` (see [`scripts/README.md`](../scripts/README.md)).
 
 **▶▶ FIXED (2026-08-10, `67693fd3`) — GITHUB PAGES ASSETS (every image on every inner page).**
@@ -483,6 +487,9 @@ has been seen on a real phone**, and the last commit of the session was never re
 | Ring-card clearance, corrected (−101, derived) | `17da487c` | 2026-07-23 local-headless→prod @390×844: non-hero cards at world y −90…−138 (frustum floor −62), screenshot clean (hero + accent, no card shapes); hero at y=11 | ✅ Emulated, measured |
 | Desktop regression pass (post-`722ed89e`) | — | 2026-07-23 local-headless→prod @1440×900: intro rests 4π, tilt 25/70/15°, wheel rotates; hero `SELECTED_Y −43`/`scaleX 3.31` (bit-identical fill-width), ring at −73…−121; popups pinned 820–896 at 3 scroll positions; striped wordmark band leads the hero; 0 errors | ✅ Emulated |
 | Inner pages on a real phone | — | User, 2026-07-23: **"workable for now. Still not perfect"** — first device sign-off since the fixes; fidelity gaps remain (hero leads with photo, card sizing) | 🟡 **Confirmed workable** |
+| **Everything built in August (In Frames + With Love rebuilds, homepage hover/lean/cursor)** | `9853e51a`…`560cdfd9` | **User, 2026-08-31: "looks good on desktop and mobile"** | ✅ **Confirmed on device** |
+| **The card films** | `9c4eecd1` | **User, 2026-08-31: "card films are working."** No headless tier can decode H.264, so this could only ever come from a human | ✅ **Confirmed** |
+| **Mobile swipe lean** | `7f39d347` | Emulation only — rest 0.24°, peak 10.2° during a swipe. **User has NOT reviewed it carefully.** `LEAN_MAX_DEG` is the knob if a fast coast over-leans | ⚠️ **UNVERIFIED on device** |
 
 **RESOLVED 2026-07-23:** the user confirmed the inner pages are **"workable for now. Still not
 perfect"** on a real phone, and a desktop regression pass (homepage + chapter, geometry + popups +
