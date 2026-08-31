@@ -8,6 +8,9 @@
 //     venue, time and story beat is invented; [bracketed notes] mark what to fill.
 //   • IMAGES — reused Milla Nova film stills (right aspect ratios, wrong people).
 //     Swap for the couple's shoots, keeping roughly the same counts per section.
+//     ✅ DONE for the whole US page (2026-08-31 — polaroids AND both popup cards)
+//     and the In Frames reel. ⚠️ NOTHING references `/images/gallery/` any more:
+//     all 3.8 MB of Milla Nova stills there are now unused (kept, not deleted).
 //   • POPUPS — dummy registry items / map links; urls are '#' dead links.
 //
 // (The previous Milla Nova replica content — the reference's verbatim harvested
@@ -33,15 +36,17 @@ const PLACEHOLDER_ITEM = asset('/images/registry/placeholder-item.png')
 // ── The floating popup cards ─────────────────────────────────────────────────
 export const POPUPS = {
   // “Us” — captioned moments (polaroids that follow the story).
+  // ⚠️ 2026-08-31 — the couple’s own photos, and LOREM IPSUM copy to match the US page
+  // (see the `us` chapter below). Real words + card titles land with the real content.
   momentHello: {
-    title: 'The First Hello',
-    params: ['lagos · march 2019', 'placeholder moment'],
-    photo: asset('/images/gallery/eat-marry-love-01.jpg'),
+    title: 'Lorem Ipsum',
+    params: ['dolor sit amet · adipiscing', 'consectetur elit'],
+    photo: asset('/images/us/neon-restaurant.jpg'),
   },
   momentYes: {
-    title: 'She Said Yes',
-    params: ['the proposal · placeholder'],
-    photo: asset('/images/gallery/eat-marry-love-04.jpg'),
+    title: 'Dolor Sit Amet',
+    params: ['sed do eiusmod · tempor'],
+    photo: asset('/images/us/love-big-ben.jpg'),
   },
 
   // “The Big Day” — utility cards (maps / calendar / dress code).
@@ -105,57 +110,61 @@ export const CHAPTER_PAGES = {
   // which reads the extra per-scene fields: date (the stitch line), notes[] (the
   // two-voice handwritten margin notes; voice 'c' = Covenant, 'u' = Uvie), caption
   // (under the taped polaroid — images[0] only; this page is deliberately media-light).
+  //
+  // ⚠️ 2026-08-31 — the POLAROIDS are now the couple’s OWN photos (from `new frames/`,
+  // resized to 900px into `/images/us/`), and every string except the section HEADINGS
+  // is deliberate LOREM IPSUM at the user’s request — the page is being reviewed for
+  // layout/typography, not for copy. Real words land when the couple write them.
   us: {
     sections: [
       {
         num: 'I',
         title: 'The Meeting',
-        date: 'MARCH 2019',
+        date: 'LOREM IPSUM',
         body:
-          'Every story has a page one. Ours was an ordinary afternoon that refused to stay ' +
-          'ordinary — a mutual friend, a borrowed seat, and a conversation neither of us ' +
-          'wanted to end. [Placeholder — the real how-we-met story goes here, 3–5 sentences.]',
+          'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor ' +
+          'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis ' +
+          'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
         notes: [
-          { voice: 'c', text: 'he swears it was instant' },
-          { voice: 'u', text: 'it took me a week. worth it.' },
+          { voice: 'c', text: 'lorem ipsum dolor sit amet' },
+          { voice: 'u', text: 'consectetur adipiscing elit' },
         ],
-        images: [asset('/images/gallery/eat-marry-love-01.jpg')],
-        caption: 'the first hello',
+        images: [asset('/images/us/tower-bridge.jpg')],
+        caption: 'lorem ipsum dolor',
         popups: ['momentHello'],
         align: 'left',
       },
       {
         num: 'II',
         title: 'The Question',
-        date: 'THE QUESTION',
+        date: 'DOLOR SIT AMET',
         body:
-          'Years, road trips, and a hundred small kindnesses later — one of us got down on ' +
-          'one knee. There was a speech, and there were tears. [Placeholder — the proposal ' +
-          'story: where it happened, who was in on it, what was said.]',
+          'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu ' +
+          'fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in ' +
+          'culpa qui officia deserunt mollit anim id est laborum.',
         notes: [
-          { voice: 'c', text: 'rehearsed for weeks. forgot every word.' },
-          { voice: 'u', text: 'the tears came first. his.' },
+          { voice: 'c', text: 'sed do eiusmod tempor incididunt' },
+          { voice: 'u', text: 'ut labore et dolore magna' },
         ],
-        images: [asset('/images/gallery/eat-marry-love-03.jpg')],
-        caption: 'she said yes',
+        images: [asset('/images/us/brunch-day.jpg')],
+        caption: 'consectetur adipiscing',
         popups: ['momentYes'],
         align: 'right',
       },
       {
         num: 'III',
         title: 'The Yes',
-        date: 'AND NOW',
+        date: 'CONSECTETUR ELIT',
         body:
-          'Two families becoming one, two names on one invitation. We are Covenant Odili ' +
-          'and Uvie Dan-Egua, and we cannot wait to write the next chapter with everyone ' +
-          'we love in the room. [Placeholder — a short closing note that hands the reader ' +
-          'on to The Big Day.]',
+          'Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium ' +
+          'doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore ' +
+          'veritatis et quasi architecto beatae vitae dicta sunt explicabo.',
         notes: [
-          { voice: 'c', text: 'two names, one invitation' },
-          { voice: 'u', text: 'see you there — U & C' },
+          { voice: 'c', text: 'quis nostrud exercitation' },
+          { voice: 'u', text: 'ullamco laboris nisi ut aliquip' },
         ],
-        images: [asset('/images/gallery/eat-marry-love-05.jpg')],
-        caption: 'october twenty-seven',
+        images: [asset('/images/us/trad-portrait.jpg')],
+        caption: 'sed do eiusmod',
         popups: [],
         align: 'left',
       },

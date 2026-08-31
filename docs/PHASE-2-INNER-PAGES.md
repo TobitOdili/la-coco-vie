@@ -38,9 +38,12 @@ state, everything below it is history — newest first.)
 > 5. **`overflow:hidden` on a scene root kills `position:sticky`.** Put it on the sticky child.
 >
 > **PLACEHOLDER (waiting on the couple):** all copy; the date's YEAR (Oct 27 confirmed, 2026 assumed);
-> venues; the registry list; the inner-page gallery stills (still Milla Nova's); the favicon (still
-> Milla Nova's); the 4 audio tracks; and the With Love item art (one watermarked clipart stand-in).
-> The card films and the In Frames reel photos ARE the couple's own.
+> venues; the registry list; the favicon (still Milla Nova's); the 4 audio tracks; and the With Love
+> item art (one watermarked clipart stand-in). The card films, the In Frames reel photos and **every
+> photo on US** ARE the couple's own — which leaves `public/images/gallery/` (3.8 MB of Milla Nova
+> stills) referenced by nothing at all; it can be deleted.
+> ⚠️ **US's copy is deliberate LOREM IPSUM** (2026-08-31, user's request — the page is being reviewed
+> for layout, not words). Only the three section HEADINGS are real; the popup card titles are lorem too.
 >
 > **The seven dead destinations** (every one is reachable by a guest today):
 > 1. **RSVP** — `SITE.nav.collectionUrl` = `'#rsvp'`. The site's primary call to action, in the nav

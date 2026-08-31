@@ -12,6 +12,9 @@
 > [Swapping the card films](#swapping-the-card-films) for the encode recipe; the Milla Nova
 > `*-intro.mp4` films are deleted (recoverable from git before `5d44726c`).
 > **✅ The IN FRAMES reel photos are the couple's own too** (2026-08-11) — `public/images/reel/`.
+> **✅ The whole US page is the couple's own** (2026-08-31) — `public/images/us/`: three 900px
+> verticals for the polaroids + two 400px thumbs for its popup cards, all from `new frames/`.
+> ⚠️ That leaves **`images/gallery/` referenced by nothing at all** — see below.
 > **Still Milla Nova PLACEHOLDERS, to swap for the couple's own:** the gallery **stills**, the
 > **favicon**, and the 4 ambient **audio** tracks (`public/audio/*.mp3` — Howler.js loops, one per
 > chapter, matching the reference; keep the wiring, replace the files + rename off the old slugs,
@@ -91,9 +94,10 @@ public/
 │   ├── cu-logo.png              The C&U wordmark rendered into the shader (⚠️ alpha = accent mask)
 │   ├── logo.png                 Legacy Milla Nova logo (unused by the scene)
 │   ├── noise.png                Film-grain overlay (animated via body::after) — 792 KB
+│   ├── us/                      US polaroids — the couple's own (900px verticals)
 │   ├── reel/                    In Frames spool photos — the couple's own (`-sm` = what's used)
 │   ├── registry/                With Love item art — ONE watermarked clipart placeholder
-│   ├── gallery/                 Inner-page stills — Milla Nova placeholders; only 4 still referenced
+│   ├── gallery/                 ⚠️ DEAD (3.8 MB) — Milla Nova stills; nothing references them now
 │   ├── dresses/                 ⚠️ DEAD (848 KB) — the dress popups were retired in the pivot
 │   └── favicon.ico              ⚠️ still Milla Nova's
 ├── video/
@@ -130,13 +134,15 @@ fields (`kind`, and then whatever that page needs). Code that assumes a common s
 
 ### Inner-page assets (Phase 2 — all 4 chapters built)
 
-See attribution in [ROADMAP](ROADMAP.md). **Provenance differs per asset class.** Only four gallery
-stills are still referenced (US's polaroids + its two popups); In Frames now uses `images/reel/` and
-With Love uses `images/registry/`, so most of `images/gallery/` (3.8 MB) and all of `images/dresses/`
-(848 KB) are **dead weight awaiting the couple's real photos** — don't delete blindly, the US page
-still pulls four of them.
+See attribution in [ROADMAP](ROADMAP.md). **Provenance differs per asset class.** As of 2026-08-31
+**no code references `images/gallery/` at all** — US was the last consumer and moved to `images/us/`.
+In Frames uses `images/reel/`, With Love `images/registry/`, and the Big Day is photo-free. So all of
+`images/gallery/` (3.8 MB) and all of `images/dresses/` (848 KB) are **dead weight** and could now be
+deleted outright (they are Milla Nova's, and no longer stand in for anything).
 
 ```
+public/images/us/
+  tower-bridge.jpg  brunch-day.jpg  trad-portrait.jpg   US polaroids (900×1200/1266)  ── the couple's
 public/images/gallery/
   wine-the-bride-01.jpg  wine-the-bride-02.jpg     THE BRIDE  (900×1200 / 1400×900)  ── from the reference
   wine-the-wine-01.jpg   …-02.jpg  …-03.jpg        THE WINE   (900×1200)             ── from the reference
