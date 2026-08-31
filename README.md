@@ -48,11 +48,11 @@ is that no two pages share a language. Breaking it is what made With Love fail i
   touch.
 - ✅ **The four bespoke inner pages** (the *thread* narrative — one line runs the whole site):
   - **US** — "the margin notes": the story in two handwritten voices, taped polaroids.
-  - **THE BIG DAY** — "two invitations": the site's only piece of formal print. A cover answers
-    *which days?* in one image (**25** and **29**, side by side), then one invitation per wedding —
-    the traditional on a deep olive stock, centred and ornamented; the white wedding on the pale
-    sheet, asymmetric and spare. Each sheet sets itself and then holds **completely still** while
-    you read it. Photo-free.
+  - **THE BIG DAY** — "the calendar": October 2026 as a page off a wall calendar, with the two
+    wedding days **ringed in marker** and annotated by hand (*traditional* · *the big one*).
+    Hovering — or tapping — a ringed date swaps the detail below the grid: times, venue, map,
+    dress code. The grid is computed from the month, so the weekday alignment can't go stale.
+    Photo-free, and it holds **completely still** while you read it.
   - **IN FRAMES** — a dark room with **three spools of one film crossing it**, pinned: the title
     hands over as the first spool loops in, **each arrives before the next begins** (one continuous
     length of film), all three cross, then they **leave in reverse order** as END OF REEL fades in.
@@ -84,8 +84,9 @@ is that no two pages share a language. Breaking it is what made With Love fail i
   Nuxt; it silently broke every image on the GitHub Pages deploy. See ARCHITECTURE → Base URL.
 - 🔧 **Open** — the rest of the real content/media (copy, gallery stills, ambient audio, the
   registry list + its item art); **eight dead links to fill — RSVP (the primary CTA, on every page),
-  the With Love cash card, the In Frames Drive folder, all three maps, Add to Calendar (one `.ics`
-  carrying both wedding days), and the footer credit**; Big Day follow-ups
+  the With Love cash card, the In Frames Drive folder, all three maps (now inline links inside the
+  calendar's day card), Add to Calendar (one `.ics` carrying both wedding days), and the footer
+  credit**; Big Day follow-ups
   (traditional-wedding date, thread-motion consistency, a real map card); favicon still Milla Nova's;
   portrait card-sizing; code-health (split the ~1500-line scene module).
 
@@ -147,7 +148,7 @@ components/
   AboutPanel.vue             Full-screen About overlay
   LoadingScreen.vue          Asset-gated loading counter (GSAP)
   chapter/UsStory.vue        ★ US — "the margin notes" (bespoke page)
-  chapter/BigDay.vue         ★ THE BIG DAY — "two invitations", one per wedding (bespoke page)
+  chapter/BigDay.vue         ★ THE BIG DAY — "the calendar", days ringed in marker (bespoke page)
   chapter/InFrames.vue       ★ IN FRAMES — three spools of one film; sequential in, reverse out
   chapter/WithLove.vue       ★ WITH LOVE — the ink wanders and lassoes each gift
   chapter/ChapterSection.vue Generic section block — now the unused fallback

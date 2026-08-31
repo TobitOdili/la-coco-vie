@@ -14,7 +14,7 @@ state, everything below it is history — newest first.)
 > | chapter | what it is now | driven by |
 > |---|---|---|
 > | **US** | margin notes: the story in two handwritten voices, taped polaroids | `.scrub`/`.fade` |
-> | **THE BIG DAY** | **two invitations** — a cover, then one formal sheet per wedding (25th · 29th) | a latch: it sets, then holds still |
+> | **THE BIG DAY** | **the calendar** — October 2026, the two wedding days ringed in marker; hover/tap one for its detail | a latch: it sets, then holds still |
 > | **IN FRAMES** | **three spools of ONE film crossing a dark room**, pinned, running UNDER the page; hover surfaces a strip | one constant-rate transform |
 > | **WITH LOVE** | the ink wanders past scattered gift words and **lassoes** each; hover shows the item on torn paper | measured spline + `.scrub`/`.write` |
 >
@@ -55,9 +55,10 @@ state, everything below it is history — newest first.)
 >    AND at the end of all four chapters. Nothing else on this list matters as much.
 > 2. **The cash card** (With Love) — `'#'`.
 > 3. **"Add Your Photos"** (In Frames) — the shared Drive folder, `'#'`.
-> 4. **📍 The Traditional** map (25 Oct) — `'#'`.
-> 5. **📍 The Ceremony** map (29 Oct) — `'#'`.
-> 6. **📍 The Reception** map (29 Oct) — `'#'`.
+> 4. **open in maps** — the traditional (25 Oct), `marks[0].events[0].map`.
+> 5. **open in maps** — the ceremony (29 Oct).
+> 6. **open in maps** — the reception (29 Oct). *(All three are now inline links inside the
+>    calendar's day card, not popup cards.)*
 > 7. **🗓 Add to Calendar** — `'#'`. ONE card on the Big Day cover, so the `.ics` it needs must
 >    carry **both** days as two events.
 > 8. **The bottom-left credit** — `SITE.credit.url` = `'#'`.
@@ -127,7 +128,30 @@ produced **<1°** both times, because that accumulator isn't observable from out
 the ring's per-frame rotation — a value the `?debug` probes now report (`leanDeg`, `rotVel`) — made
 it both correct and checkable. **If a value can't be measured, don't tune it; find one that can.**
 
-**▶▶ STATE (2026-08-31, latest) — THE BIG DAY IS "TWO INVITATIONS" NOW.**
+**▶▶ STATE (2026-08-31, latest) — THE BIG DAY IS THE CALENDAR.**
+The "Two Invitations" pass below lasted one review: *"the page has lost its flair. Looks like every
+other page on the internet"*, plus two specifics — **"we're getting married twice" is out**, and
+**spelled-out dates are "confusing and terrible UX"**. The user picked **The Calendar** from the
+same four options and specified it: an actual calendar, circled dates, notes written over them like
+with a marker, hover/click to expand more info, "in a way that blends".
+- **October 2026 as a wall-calendar page.** The GRID IS COMPUTED from `monthISO` — never author the
+  weekday alignment; a wrong month is then a one-line data edit. (Prod-verified: 35 cells, 4 leading
+  blanks, the 1st on Thursday.)
+- **Ringed and annotated in marker.** One rough SVG loop that overshoots and doesn't close (a clean
+  ellipse reads as UI), drawn once on reveal; the scrawls (*traditional* · *the big one*) are
+  **Caveat** — deliberately NOT US's 'Over the Rainbow', so the two pages don't share a hand. Marker
+  colour `#77854A`: brighter and warmer than the printed ink, still inside the chapter's family.
+- **Hover or tap a ringed date** to swap the detail panel (times, venue, map link, dress code).
+  Default state shows the FIRST wedding rather than an empty panel, the panel height is reserved so
+  swapping never shifts the page, and the hint reads "tap" on touch via `(hover: none)`.
+- **DATES ARE NUMERALS EVERYWHERE** (`SUN · 25.10.26`). This is now a rule for this site.
+- ⚠️ **Two traps caught by measuring, both now in AUDIT (#25, #26):** a deep link left the EXPLORE
+  cursor stuck expanded over the content (set/release lived in different places), and `class="ring"`
+  collided with **Tailwind's `.ring` utility**, box-shadowing a square around every ringed date.
+- ⚠️ **The month and its detail panel must fit ONE viewport** — the panel was below the fold, so you
+  could not see what you were hovering. Measured, not guessed: scene 1177px → 900px at 900px tall.
+
+**▶▶ SUPERSEDED (2026-08-31) — "TWO INVITATIONS", kept for the two rules it produced.**
 User: *"I like the idea behind it, I just don't know… I like the line moving through, but somehow
 takes the attention off the info."* Plus the real dates: **traditional 25 Oct, white wedding 29 Oct**.
 ⚠️ **Two problems, and the dates were the bigger one.** "The Hours" is a ONE-DAY armature — a single

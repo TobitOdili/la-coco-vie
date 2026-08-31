@@ -78,7 +78,10 @@ export const SITE = {
 
   // Google Fonts loaded in <head>. The CSS2 URL is built from this list in nuxt.config.ts.
   // (Local fonts Bague/Movie are declared via @font-face in assets/css/main.css.)
-  googleFonts: ['Italiana', 'Monoton', 'Over the Rainbow'],
+  // ⚠️ 'Caveat' is THE BIG DAY's marker hand (annotations on the calendar). It is
+  // deliberately NOT 'Over the Rainbow' — that is US's voice, a thin looping pen, and
+  // the two pages must not share a hand. Caveat is a chunkier felt-tip scrawl.
+  googleFonts: ['Italiana', 'Monoton', 'Over the Rainbow', 'Caveat:wght@600;700'],
 }
 
 // Build the Google Fonts CSS2 URL from the family list above.

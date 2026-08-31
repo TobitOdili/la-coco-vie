@@ -58,24 +58,13 @@ export const POPUPS = {
     params: ['both days · one file'],
     url: '#',
   },
-  // ⚠️ Keep params SHORT (ideally one line each). Two of these dock side by side at
-  // the viewport bottom on a phone, and every extra wrapped line raises the dock over
-  // the invitation's closing copy.
-  mapTraditional: {
-    title: '📍 The Traditional',
-    params: ['sun 25 oct · open in maps'],
-    url: '#',
-  },
-  mapCeremony: {
-    title: '📍 The Ceremony',
-    params: ['thu 29 oct · open in maps'],
-    url: '#',
-  },
-  mapReception: {
-    title: '📍 The Reception',
-    params: ['thu 29 oct · open in maps'],
-    url: '#',
-  },
+  // ⚠️ Keep params SHORT (ideally one line each). These dock at the viewport bottom on
+  // a phone, and every extra wrapped line raises the dock over the page's own copy.
+  // ⚠️ The three MAP links moved INTO the calendar's expanding card (2026-08-31) — a
+  // docked card would have covered the very panel it duplicated. They live on
+  // `marks[].events[].map` in the-big-day below; there are no map popups any more.
+  // ⚠️ ORPHANED 2026-08-31 — each day's dress code is now written on its own card in
+  // the calendar (`marks[].dress`). Kept only in case a docked version is wanted again.
   dressCode: {
     title: 'The Dress Code',
     params: ['colours of the day: tbc', 'come beautiful, come comfy'],
@@ -182,88 +171,87 @@ export const CHAPTER_PAGES = {
     ],
   },
 
-  // “The Big Day” renders through the bespoke BigDay component (“Two Invitations”):
-  // a cover that answers "which days?" in one image, then ONE INVITATION PER WEDDING —
-  // the traditional on a deep olive stock, centred and ornamented; the white wedding on
-  // the pale sheet, asymmetric and spare. The page is logistics, so the information IS
-  // the composition: each sheet sets itself and then holds completely still.
-  //   ⚠️ 2026-08-31 — this replaced “The Hours” (one day, hour by hour, a thread drawn
-  //   continuously through every scene). Two reasons, both from the user: the thread
-  //   "takes the attention off the info", and there are TWO weddings on TWO days, which
-  //   a single falling-light-through-one-day armature cannot hold.
-  // Fields: kind ('cover'|'invitation'); cover = { eyebrow, lead, dates[], note };
-  // invitation = { variant, rank, label, weekday, dateWords, yearWords, dateNumerals,
-  // events[{ time, name, venue, address }], dress, note }. Photo-free by design.
+  // “The Big Day” renders through the bespoke BigDay component (“The Calendar”):
+  // October 2026 as a page off a wall calendar, with the two wedding days RINGED in
+  // marker and annotated by hand. Hovering (or tapping) a ringed date swaps the detail
+  // panel below the grid — motion is navigation, never decoration.
+  //   ⚠️ 2026-08-31 — this replaced a “Two Invitations” pass, which the user said "lost
+  //   its flair… looks like every other page on the internet", and before that “The
+  //   Hours”, whose drawn thread "takes the attention off the info". Two rules came out
+  //   of those: DATES ARE NUMERALS (spelled-out dates were "confusing and terrible UX"),
+  //   and nothing on this page may move while a guest is reading it.
+  // Fields: kind ('calendar'|'notes').
+  //   calendar = { monthISO, marks[{ day, label, scrawl, rot, dress,
+  //                events[{ time, name, venue, address, map }] }] }
+  //     • The GRID IS COMPUTED from monthISO — never hand-write the weekday alignment.
+  //     • `scrawl` is the marker note written across the day; keep it 1–2 short words
+  //       or it overruns its cell on a phone. `rot` is its angle in degrees.
+  //     • No floating popups on this scene: the expanding card IS the detail, and a
+  //       docked card would sit on top of it.
+  //   notes = { title, lines[{ label, value }] } — the practical leftovers.
   'the-big-day': {
     sections: [
       {
-        kind: 'cover',
-        num: '—',
-        title: 'The Invitations',
-        eyebrow: 'Lagos · October 2026',
-        lead: 'We are getting married twice.',
-        dates: [
-          { n: '25', weekday: 'Sunday', label: 'The Traditional' },
-          { n: '29', weekday: 'Thursday', label: 'The White Wedding' },
-        ],
-        note:
-          'Four days apart, in [city — placeholder]. Everything you need for each ' +
-          'day is on its own invitation below.',
-        popups: ['calBoth'],
-        align: 'center',
-      },
-      {
-        kind: 'invitation',
-        variant: 'traditional',
+        kind: 'calendar',
         num: 'I',
-        rank: 'Invitation I',
-        title: 'The Traditional Marriage',
-        label: 'The Traditional Marriage',
-        weekday: 'Sunday',
-        dateWords: 'the twenty-fifth of October',
-        yearWords: 'two thousand and twenty-six',
-        dateNumerals: '25.10.26',
-        events: [
+        title: 'October 2026',
+        monthISO: '2026-10',
+        marks: [
           {
-            time: '[time]',
-            name: 'The Ceremony',
-            venue: '[venue name]',
-            address: '[address]',
+            day: 25,
+            label: 'The Traditional Marriage',
+            scrawl: 'traditional',
+            rot: -7,
+            dress: 'Colours of the day: [tbc]',
+            events: [
+              {
+                time: '[time]',
+                name: 'The Ceremony',
+                venue: '[venue name]',
+                address: '[address]',
+                map: '#',
+              },
+            ],
+          },
+          {
+            day: 29,
+            label: 'The White Wedding',
+            scrawl: 'the big one',
+            rot: 5,
+            dress: 'Dress code: [tbc]',
+            events: [
+              {
+                time: '[time]',
+                name: 'The Ceremony',
+                venue: '[venue name]',
+                address: '[address]',
+                map: '#',
+              },
+              {
+                time: '[time]',
+                name: 'The Reception',
+                venue: '[venue name]',
+                address: '[address]',
+                map: '#',
+              },
+            ],
           },
         ],
-        dress: 'Colours of the day: [tbc]',
-        note: 'Come in colour, and come hungry. [Placeholder — anything guests should know.]',
-        popups: ['mapTraditional'],
+        popups: [],
         align: 'center',
       },
       {
-        kind: 'invitation',
-        variant: 'white',
+        kind: 'notes',
         num: 'II',
-        rank: 'Invitation II',
-        title: 'The White Wedding',
-        label: 'The White Wedding',
-        weekday: 'Thursday',
-        dateWords: 'the twenty-ninth of October',
-        yearWords: 'two thousand and twenty-six',
-        dateNumerals: '29.10.26',
-        events: [
-          {
-            time: '[time]',
-            name: 'The Ceremony',
-            venue: '[venue name]',
-            address: '[address]',
-          },
-          {
-            time: '[time]',
-            name: 'The Reception',
-            venue: '[venue name]',
-            address: '[address]',
-          },
+        title: 'Good to know',
+        lines: [
+          { label: 'Where', value: '[city — placeholder]. Both days are in the same city.' },
+          { label: 'The days between', value: 'The 26th, 27th and 28th are yours — [placeholder: anything for guests staying through].' },
+          { label: 'Getting there', value: '[placeholder — airport, transfers, anything guests travelling in should know.]' },
+          { label: 'Staying', value: '[placeholder — hotel block or recommendations.]' },
+          { label: 'Children', value: '[placeholder — whether the day is one for the little ones.]' },
         ],
-        dress: 'Dress code: [tbc]',
-        note: 'Doors open [time]. Sit close, sing loud. If you leave hungry, that is on you.',
-        popups: ['mapCeremony', 'mapReception'],
+        popups: ['calBoth'],
         align: 'left',
       },
     ],

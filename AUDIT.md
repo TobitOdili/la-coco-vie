@@ -895,6 +895,51 @@ measurable from outside; the ring's per-frame rotation is. Prod-measured after t
 
 ---
 
+## Issue #25 — Deep-linking to a chapter left the EXPLORE cursor stuck expanded 🟠 HIGH (2026-08-31)
+
+### Symptom
+Opening any chapter URL directly (`/the-big-day`, a shared link, a refresh) left the custom cursor
+parked in its expanded 104px **EXPLORE** state for the entire visit, dragging a filled blob over the
+page's own content. Clicking through from the homepage was fine. Found while building the calendar,
+where the blob sat exactly on top of the dates a guest is meant to hover.
+
+### Root cause
+`confirm()` and its release lived in two different places. The scene auto-selects the chapter on a
+deep link and emits select → `onChapterSelect` → `cursorRef.confirm()`. The release was a
+`watch(() => route.params.slug, …)` poll — but on a deep link **the slug never changes**, it was
+already the destination, so the watcher never fired and nothing ever called `endConfirm()`. Adding
+`immediate: true` would not have fixed it either: on mount the scene has not started selecting, so
+the poll would clear the flag *before* `confirm()` set it.
+
+### Fix
+`releaseConfirmWhenSettled()` is now kicked off from `onChapterSelect` itself, right after
+`confirm()` — set and release in one place — and the route watcher still calls it for the
+click-through path. **Verified on prod:** the cursor's class on a deep-linked chapter page is now
+plain `cursor` (was `cursor active confirming`).
+
+---
+
+## Issue #26 — A square outline around every ringed calendar date 🟡 MEDIUM (2026-08-31)
+
+### Symptom
+Each marked day on the new calendar carried a crisp 1px square outline in the marker colour — as if
+the button had a border. `border: 0`, `outline: none`, `background: none` and `appearance: none` all
+made no difference.
+
+### Root cause
+**A class-name collision with Tailwind's utility layer.** The marker circle's SVG was
+`class="ring"`, and Tailwind v4 emits `.ring { --tw-ring-shadow: 0 0 0 1px currentcolor }` — the
+utility applied its own box-shadow ring to the SVG's box. Scoped component CSS does **not** scope the
+class NAME: it still matches global utility rules. Nothing in the component could have overridden it,
+which is why every "remove the border" fix failed.
+
+### Fix
+Renamed to `.marker-ring` (and `.grid` → `.cal-grid` for the same reason). **Check new class names
+against Tailwind's utility list** — `ring`, `grid`, `container`, `hidden`, `block`, `fixed`, `shadow`
+and friends are all taken.
+
+---
+
 ## Updated Priority Order (as of 2026-05-27)
 
 | # | Issue | Priority | Status |

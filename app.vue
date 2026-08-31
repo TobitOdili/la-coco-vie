@@ -142,10 +142,16 @@ async function initAudio() {
 // scene is already animating and won't re-trigger.
 function onChapterSelect(idx) {
   // Acknowledge the input immediately: the circle lights up and stays expanded until the
-  // chapter page is actually up (see the route watcher). Selecting takes ~1.5s, and the
-  // circle used to collapse to the 24px dot the moment hover ended — so a tap looked
-  // like it had done nothing while the page was still coming.
+  // chapter page is actually up. Selecting takes ~1.5s, and the circle used to collapse to
+  // the 24px dot the moment hover ended — so a tap looked like it had done nothing while
+  // the page was still coming.
   cursorRef.value?.confirm()
+  // ⚠️ Release from HERE as well as from the route watcher. On a DEEP LINK the scene
+  // auto-selects and calls this, but `route.params.slug` never CHANGES — it was already
+  // the destination — so the watcher never fired and the circle stayed expanded for the
+  // whole visit, parking a 104px EXPLORE blob over the page's own content. Set and
+  // release now live together.
+  releaseConfirmWhenSettled()
   const slug = CHAPTERS[idx].slug
   if (route.params.slug !== slug) router.push(`/${slug}`)
 }
@@ -217,19 +223,23 @@ watch(() => route.params.slug, syncSceneToRoute)
 // moment is the end of the scene's select animation (~1.5s), when the card has finished
 // becoming the page. Polled, with a cap so a stalled animation can never strand the circle.
 let confirmTimer = null
-watch(() => route.params.slug, async () => {
+async function releaseConfirmWhenSettled() {
   await nextTick()
   clearInterval(confirmTimer)
   const started = Date.now()
   confirmTimer = setInterval(() => {
     const st = webglSceneRef.value?.scene?.getState?.()
+    // `!st` guards a scene that never mounted; the 2.5s cap guards a stalled animation.
+    // Neither may be reached before the animation actually starts, which is why this is
+    // kicked off from onChapterSelect (after confirm()) rather than on mount.
     if (!st || !st.isSelecting || Date.now() - started > 2500) {
       clearInterval(confirmTimer)
       confirmTimer = null
       cursorRef.value?.endConfirm()
     }
   }, 100)
-})
+}
+watch(() => route.params.slug, releaseConfirmWhenSettled)
 
 const initAudioOnce = () => initAudio()
 
