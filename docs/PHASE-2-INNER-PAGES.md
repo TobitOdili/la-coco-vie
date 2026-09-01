@@ -128,7 +128,37 @@ produced **<1°** both times, because that accumulator isn't observable from out
 the ring's per-frame rotation — a value the `?debug` probes now report (`leanDeg`, `rotVel`) — made
 it both correct and checkable. **If a value can't be measured, don't tune it; find one that can.**
 
-**▶▶ STATE (2026-08-31, latest) — IN FRAMES v5: THE PROCESSION.**
+**▶▶ STATE (2026-08-31, latest) — IN FRAMES v6: THE PRINT RISES, TURNS AND LAYS BACK DOWN.**
+Four notes on the live v5, all addressed:
+1. **The print itself rises**, rather than a copy of it appearing in an overlay. The raised card is
+   the same DOM element, transformed in the same rAF loop, so it **keeps its cursor parallax** and
+   tips toward the pointer while it is up. **Click again turns it over** — the note is written on
+   the back with a rule and its number — and clicking away lays it back into the deck.
+2. **No more bounce.** The drag used to scrub `target` continuously and `Math.round()` it on
+   release, so any swipe short of a whole slot moved forward and sprang back. The gesture is
+   **discrete** now: the finger leads the front card by ≤34px for feedback, and on release it either
+   commits one step or does nothing. The departing print goes **up and back** into the deck instead
+   of flying past the camera.
+3. **Vertical scroll can no longer steal a swipe.** The axis is decided once in the first few pixels
+   and then held; horizontal moves are `preventDefault()`ed from a **non-passive** touchmove
+   listener, because `touch-action: pan-y` alone leaves the browser free to change its mind.
+4. **The written directions are gone.** On arrival the front print **nudges left, then right, then
+   settles** — measured: rest 0 → −20px → +7px → 0, once, then still.
+- ⚠️⚠️ **TWO TRAPS, both of which looked like "the feature just doesn't work":**
+  • **`<img>` is natively draggable.** Starting a swipe on a photograph made Chrome begin an HTML5
+    drag and fire `pointercancel`, ending the gesture on its first move. Found by instrumenting the
+    handler and seeing it run **twice**, the first time with the state already reset — not by
+    reading the code, which looked correct. Needs `draggable="false"` + `-webkit-user-drag: none`.
+  • **`will-change: opacity` forces `transform-style: flat`**, silently disabling
+    `backface-visibility` — so the flipped card showed its own front, MIRRORED. The turn now lives
+    on a dedicated `.faces` wrapper carrying `preserve-3d` and nothing else.
+- Parallax is gated on `(pointer: fine)`: on touch a tap set mx/my once and left the raised print
+  permanently offset from the middle of the screen.
+- Prod-build verified both widths: a 20px drag does nothing, a real swipe advances exactly one, the
+  raised print is the same element centred to a few px, parallax alive on desktop and correctly
+  inert on touch, the turn reaches 180°, it lays back down, zero console errors.
+
+**▶▶ SUPERSEDED (2026-08-31) — v5: THE PROCESSION, as first built.**
 The brief changed shape: *"I'm no designer… step into the shoes of a world class UI/UX designer,
 take all the ideas I've had, discard any that aren't the best… the inspiration is the homepage."*
 So this one was designed **from the homepage's grammar** rather than from the previous iteration.

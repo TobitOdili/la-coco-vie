@@ -30,7 +30,7 @@
           :style="{ '--angle': sp.angle + 'deg', '--top': sp.top + '%' }">
           <div class="film">
             <figure v-for="q in slots" :key="q" class="mini">
-              <img :src="ready ? frameSrc(k, q) : undefined" alt="" decoding="async" />
+              <img :src="ready ? frameSrc(k, q) : undefined" alt="" decoding="async" draggable="false" />
             </figure>
           </div>
         </div>
@@ -51,6 +51,7 @@
         @pointerup="onUp"
         @pointercancel="onUp"
         @pointerleave="onUp"
+        @dragstart.prevent
         @mouseenter="hovering = true"
         @mouseleave="hovering = false"
       >
@@ -64,35 +65,32 @@
             :aria-label="`${p.note} — ${k === presented ? 'open' : 'bring forward'}`"
             @click="onPrintClick(k)"
           >
-            <span class="mat">
+            <span class="faces">
+            <span class="mat face">
               <span class="glass">
-                <img :src="ready ? p.src : undefined" :alt="p.note" decoding="async" />
+                <img :src="ready ? p.src : undefined" :alt="p.note" decoding="async" draggable="false" />
               </span>
               <span class="note">{{ p.note }}</span>
             </span>
+            <!-- the back of the print, the way you'd write on one in pencil -->
+            <span class="mat back" aria-hidden="true">
+              <span class="back-note">{{ p.back || p.note }}</span>
+              <span class="back-rule" />
+              <span class="back-no">N<sup>o</sup> {{ String(k + 1).padStart(2, '0') }}</span>
+            </span>
+            </span>
           </button>
         </div>
+        <!-- lays a raised print back into the deck -->
+        <div class="catcher" :class="{ on: open !== null }" @click="lay()" aria-hidden="true" />
       </div>
 
       <footer class="proc-foot">
         <div class="counter">
           {{ String(presented + 1).padStart(2, '0') }}<i>/</i>{{ String(prints.length).padStart(2, '0') }}
         </div>
-        <div class="hint">{{ hintText }}</div>
         <div class="more">{{ s.endSub }}</div>
       </footer>
-
-      <!-- ── the opened print: a plain fixed overlay, deliberately OUTSIDE the 3D
-           stage so its FLIP can't compose with the field's perspective ── -->
-      <div class="lightbox" :class="{ on: open !== null }">
-        <div class="lb-scrim" @click="close()" />
-        <figure v-if="open !== null" class="lb-card">
-          <span class="glass">
-            <img :src="prints[open]?.src" :alt="prints[open]?.note" />
-          </span>
-          <figcaption class="note">{{ prints[open]?.note }}</figcaption>
-        </figure>
-      </div>
     </section>
   </div>
 </template>
@@ -129,6 +127,8 @@ const FADE_OVER = 5.2       // …and how many it takes to reach the floor
 
 const AUTO_MS = 5600
 const SPRING = 6.2          // how hard progress chases its target
+const RAISE_SPRING = 7.5
+const RAISE_Z = 90          // a little toward the viewer, so it clears the deck
 
 const rootEl = ref(null)
 const ready = ref(false)
@@ -137,11 +137,21 @@ const presented = ref(0)
 const open = ref(null)
 const hovering = ref(false)
 const inView = ref(false)
-const hintText = ref('drag to move through · click to open')
+// raise/flip are animated in the SAME rAF loop as everything else. A CSS
+// transition would fight the per-frame transform writes, and the raised card has
+// to keep its cursor parallax alive while it is up.
+let raise = 0
+let raiseTarget = 0
+let flip = 0
+let flipTarget = 0
+let dragDx = 0            // the small lead the front card takes under the finger
+let cueT = -1             // >=0 while the one-time "you can swipe this" nudge runs
+let cued = false
 
 let rafId = 0
 let io = null
 let autoTimer = 0
+let layT = 0
 let last = 0
 // motion model: `progress` chases `target`; the drag moves the target directly and
 // a release snaps it to a whole slot, so a print always settles dead centre.
@@ -170,24 +180,88 @@ function slotOf(k) {
   return u
 }
 
-function place(el, u) {
+// How big a raised print gets: as large as the room allows, capped so the mat and
+// its note always fit the viewport.
+function raisedScale() {
+  const w = Math.min(window.innerWidth * 0.84, 44 * 16, (window.innerHeight * 0.74) / 0.8)
+  return Math.max(1, w / Math.max(1, printW)) / (1 + RAISE_Z / 1400)
+}
+
+function place(el, u, k) {
   const a = Math.abs(u)
   const r = printW * R_PER_W * (a / (a + R_K))
   const phi = u * D_PHI
-  const x = r * Math.cos(phi - Math.PI / 2)
-  const y = r * Math.sin(phi - Math.PI / 2) * Y_SQUASH
-  const z = -u * printW * Z_PER_W
-  // depth falloff to faint ghosts, plus a fast dissolve once it has passed you
+  let x = r * Math.cos(phi - Math.PI / 2)
+  let y = r * Math.sin(phi - Math.PI / 2) * Y_SQUASH
+  let z = -u * printW * Z_PER_W
+  let rotZ = u * TILT
+
   let o = 1 - Math.max(0, a - FADE_FROM) / FADE_OVER * (1 - GHOST_FLOOR)
   o = Math.max(GHOST_FLOOR, Math.min(1, o))
-  if (u < 0) o = Math.max(0, 1 + u * 1.6)          // dissolves as it sweeps past
+
+  // ⚠️ The card leaving the front goes UP AND BACK, not toward the camera. Sending
+  // it past the viewer read as a card being thrown at you; this reads as the top
+  // one being lifted off and put behind, which is what it is.
+  if (u < 0) {
+    const t = Math.min(1, -u)
+    y -= 0.34 * printW * t
+    z = -t * printW * Z_PER_W * 1.7
+    rotZ = -t * 7
+    o = Math.max(0, 1 - t * 1.9)
+  }
+
+  // the front card carries the finger a little, and the one-time nudge cue
+  if (a < 0.5) x += dragDx + cueOffset()
+
+  let sc = 1
+  let rotY = 0
+  let rotX = 0
+  if (open.value === k && raise > 0) {
+    // ── the print rises out of the deck, and keeps its parallax while it is up ──
+    const S = raisedScale()
+    x = x * (1 - raise) + px * 2.4 * raise
+    y = y * (1 - raise) + (raisedY() + py * 2.4) * raise
+    z = z * (1 - raise) + RAISE_Z * raise
+    rotZ *= 1 - raise
+    sc = 1 + (S - 1) * raise
+    rotY = mx * 7 * raise             // a physical thing tips toward the cursor
+    rotX = -my * 5 * raise
+    o = 1
+  }
+
   el.style.transform =
-    `translate3d(${(x + px).toFixed(1)}px, ${(y + py).toFixed(1)}px, ${z.toFixed(1)}px)` +
-    ` rotateZ(${(u * TILT).toFixed(2)}deg)`
+    `translate3d(${(x + (open.value === k ? 0 : px)).toFixed(1)}px,` +
+    ` ${(y + (open.value === k ? 0 : py)).toFixed(1)}px, ${z.toFixed(1)}px)` +
+    ` rotateY(${rotY.toFixed(2)}deg) rotateX(${rotX.toFixed(2)}deg)` +
+    ` rotateZ(${rotZ.toFixed(2)}deg) scale(${sc.toFixed(3)})`
   el.style.opacity = o.toFixed(3)
-  el.style.zIndex = String(Math.round(500 - a * 10))
-  el.classList.toggle('is-front', a < 0.5)
-  el.style.pointerEvents = o > 0.35 ? 'auto' : 'none'
+  // ⚠️ The TURN goes on the inner wrapper, not on .print. An element with
+  // `opacity`/`will-change: opacity` is forced to `transform-style: flat`, which
+  // silently disables backface-visibility on its children — the card flipped to
+  // show its own front, mirrored, instead of its back.
+  const faces = el.firstElementChild
+  if (faces) faces.style.transform = `rotateY(${(open.value === k ? flip : 0).toFixed(2)}deg)`
+  el.style.zIndex = String(open.value === k ? 900 : Math.round(500 - a * 10))
+  el.classList.toggle('is-front', a < 0.5 && open.value === null)
+  el.classList.toggle('is-raised', open.value === k)
+  el.style.pointerEvents = (open.value !== null ? open.value === k : o > 0.35) ? 'auto' : 'none'
+}
+
+// The stage is not vertically centred in the section (the footer takes room), so a
+// raised print has to be offset to land in the middle of the SCREEN.
+function raisedY() {
+  const st = rootEl.value?.querySelector('.stage')
+  if (!st) return 0
+  const r = st.getBoundingClientRect()
+  return window.innerHeight / 2 - (r.top + r.height / 2)
+}
+
+// A one-time nudge when the section arrives: the front print swings left, then
+// right, then settles. It replaces the written instructions.
+function cueOffset() {
+  if (cueT < 0) return 0
+  const t = Math.min(1, cueT / 1.5)
+  return -26 * Math.sin(t * Math.PI * 2) * (1 - t)
 }
 
 // ── moving through ──────────────────────────────────────────────────────────
@@ -214,26 +288,24 @@ let dragging = false
 let dragged = false
 let downX = 0
 let downY = 0
-let startTarget = 0
-let lastX = 0
-let lastT = 0
-let vel = 0
-function slotsPerPx() {
-  const w = rootEl.value?.querySelector('.print')?.offsetWidth || 240
-  return 1 / (w * 0.9)
-}
+let axis = null            // null until the gesture declares itself 'x' or 'y'
+const SWIPE_MIN = 46       // px before a swipe counts
+
 function onDown(e) {
   if (open.value !== null) return
   dragging = true
   dragged = false
-  downX = lastX = e.clientX
+  axis = null
+  downX = e.clientX
   downY = e.clientY
-  startTarget = target
-  lastT = performance.now()
-  vel = 0
+  dragDx = 0
+  cueT = -1                // any touch cancels the cue; they already know
 }
 function onMove(e) {
-  const el = rootEl.value?.querySelector('.proc-scene')
+  // ⚠️ Parallax only where there is a real pointer. On touch a tap would set mx/my
+  // once and leave the raised print permanently offset from the middle of the
+  // screen — the homepage gates its deck lean on the same test.
+  const el = hasPointer ? rootEl.value?.querySelector('.proc-scene') : null
   if (el) {
     const r = el.getBoundingClientRect()
     mx = ((e.clientX - r.left) / Math.max(1, r.width)) * 2 - 1
@@ -241,75 +313,62 @@ function onMove(e) {
   }
   if (!dragging) return
   const dx = e.clientX - downX
-  if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(e.clientY - downY)) dragged = true
-  target = startTarget - dx * slotsPerPx()
-  const now = performance.now()
-  const dt = Math.max(16, now - lastT)
-  vel = ((e.clientX - lastX) * slotsPerPx()) / (dt / 1000)
-  lastX = e.clientX
-  lastT = now
+  const dy = e.clientY - downY
+  // decide once, then stay decided — a gesture that keeps changing its mind is
+  // what makes a swipe scroll the page half way through
+  if (!axis && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+    axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'
+  }
+  if (axis !== 'x') return
+  dragged = true
+  // ⚠️ The finger only LEADS the front card by a few px. It used to scrub the
+  // target continuously and then Math.round() it on release, so any swipe short of
+  // a whole slot visibly moved forward and sprang back — that was the bounce.
+  dragDx = Math.max(-34, Math.min(34, dx * 0.3))
 }
 function onUp() {
   if (!dragging) return
+  const committed = axis === 'x' && Math.abs(dragDx) >= SWIPE_MIN * 0.3
   dragging = false
-  // a throw carries on, then settles on a whole slot so a print is always centred
-  target = Math.round(target - vel * 0.22)
-  vel = 0
-  restartAuto()
+  axis = null
+  if (committed) {
+    target += dragDx < 0 ? 1 : -1     // one card off the top, no rubber band
+    restartAuto()
+  }
+  dragDx = 0
   setTimeout(() => { dragged = false }, 50)
 }
 
 function onPrintClick(k) {
   if (dragged) return
-  if (open.value !== null) { close(); return }
+  if (open.value === k) { turn(); return }        // tap a raised print → turn it over
+  if (open.value !== null) { lay(); return }
   if (k === presented.value) openPrint(k)
   else glideTo(k)
 }
 
-// ── the lightbox: FLIP from the print's real position on screen ──────────────
 function openPrint(k) {
-  const src = rootEl.value?.querySelector(`.print[data-k="${k}"]`)
-  if (!src) return
-  const s = src.getBoundingClientRect()
   open.value = k
+  raiseTarget = 1
+  flipTarget = 0
   stopAuto()
-  nextTick(() => {
-    // ⚠️ NOT a template ref: this <figure> lives inside the sections v-for, so a
-    // ref would be collected as an ARRAY and `.getBoundingClientRect` would not
-    // exist on it (the codebase has learned this one twice now).
-    const el = rootEl.value?.querySelector('.lb-card')
-    if (!el) return
-    const t = el.getBoundingClientRect()
-    const sc = s.width / t.width
-    el.style.transition = 'none'
-    el.style.transform =
-      `translate(${(s.left + s.width / 2 - (t.left + t.width / 2)).toFixed(1)}px,` +
-      ` ${(s.top + s.height / 2 - (t.top + t.height / 2)).toFixed(1)}px) scale(${sc.toFixed(3)})`
-    el.style.opacity = '0.6'
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      el.style.transition = ''
-      el.style.transform = 'none'
-      el.style.opacity = '1'
-    }))
-  })
 }
-function close() {
+// tapping a raised print turns it over; tapping outside lays it back in the deck
+function turn() { flipTarget = flipTarget ? 0 : 180 }
+function lay() {
   if (open.value === null) return
-  const k = open.value
-  const src = rootEl.value?.querySelector(`.print[data-k="${k}"]`)
-  const el = rootEl.value?.querySelector('.lb-card')
-  if (src && el) {
-    const s = src.getBoundingClientRect()
-    const t = el.getBoundingClientRect()
-    el.style.transform =
-      `translate(${(s.left + s.width / 2 - (t.left + t.width / 2)).toFixed(1)}px,` +
-      ` ${(s.top + s.height / 2 - (t.top + t.height / 2)).toFixed(1)}px) scale(${(s.width / t.width).toFixed(3)})`
-    el.style.opacity = '0'
-    setTimeout(() => { open.value = null; restartAuto() }, 420)
-  } else {
-    open.value = null
-    restartAuto()
-  }
+  raiseTarget = 0
+  flipTarget = 0
+  restartAuto()
+  // hold the identity until it has actually settled back, or it snaps home
+  clearTimeout(layT)
+  layT = setTimeout(() => { if (raiseTarget === 0) open.value = null }, 620)
+}
+
+let stageEl = null
+let hasPointer = true
+function onTouchMove(e) {
+  if (axis === 'x' || open.value !== null) e.preventDefault()
 }
 
 function onKey(e) {
@@ -378,8 +437,13 @@ function tick(now) {
     px += (mx * 14 - px) * (1 - Math.exp(-dt * 3))
     py += (my * 9 - py) * (1 - Math.exp(-dt * 3))
 
+    raise += (raiseTarget - raise) * (1 - Math.exp(-dt * RAISE_SPRING))
+    flip += (flipTarget - flip) * (1 - Math.exp(-dt * RAISE_SPRING))
+    if (cueT >= 0) { cueT += dt; if (cueT > 1.5) cueT = -1 }
+
     rootEl.value.querySelectorAll('.print').forEach((el) => {
-      place(el, slotOf(Number(el.dataset.k)))
+      const k = Number(el.dataset.k)
+      place(el, slotOf(k), k)
     })
 
     phase += dt
@@ -397,18 +461,27 @@ let resizeT = 0
 const onResize = () => { clearTimeout(resizeT); resizeT = setTimeout(measure, 150) }
 
 onMounted(() => {
-  if (window.matchMedia?.('(hover: none)').matches) {
-    hintText.value = 'swipe to move through · tap to open'
-  }
+  hasPointer = !!window.matchMedia?.('(pointer: fine)').matches
   measure()
   rafId = requestAnimationFrame(tick)
   window.addEventListener('resize', onResize)
   window.addEventListener('keydown', onKey)
+  // ⚠️ `touch-action: pan-y` alone is not enough: the browser keeps the option of
+  // scrolling, so a swipe that drifts a few px vertically gets taken as a scroll
+  // mid-gesture. Once the gesture has declared itself horizontal we preventDefault
+  // it — which needs a NON-PASSIVE listener, hence this rather than @touchmove.
+  stageEl = rootEl.value?.querySelector('.stage')
+  stageEl?.addEventListener('touchmove', onTouchMove, { passive: false })
   const scene = rootEl.value?.querySelector('.proc-scene')
   if (scene && 'IntersectionObserver' in window) {
     io = new IntersectionObserver((e) => {
       inView.value = e[0].isIntersecting
-      if (inView.value) { preload(); restartAuto() } else { stopAuto() }
+      if (inView.value) {
+        preload()
+        restartAuto()
+        // the visual cue replaces the written directions — once, on arrival
+        if (!cued) { cued = true; setTimeout(() => { if (open.value === null) cueT = 0 }, 900) }
+      } else stopAuto()
     }, { rootMargin: '80% 0px', threshold: 0 })
     io.observe(scene)
   } else {
@@ -423,8 +496,10 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', onResize)
   window.removeEventListener('keydown', onKey)
   io?.disconnect()
+  stageEl?.removeEventListener('touchmove', onTouchMove)
   stopAuto()
   clearTimeout(resizeT)
+  clearTimeout(layT)
 })
 </script>
 
@@ -546,8 +621,10 @@ onBeforeUnmount(() => {
   perspective-origin: 50% 50%;
   touch-action: pan-y;     /* the page keeps vertical scroll; we take the x-drag */
 }
+/* the raised card has to clear the catcher, and the catcher has to clear the deck */
 .field {
   position: relative;
+  z-index: 3;
   width: var(--print-w);
   /* the mat's real height: 6% top + a 3:2 window at 88% width + the note + 6%.
      It was 1.3× the width, which left two thirds of the board empty. */
@@ -556,9 +633,16 @@ onBeforeUnmount(() => {
 }
 
 /* A mounted print: mat board, the picture behind glass, the note on the mat. */
+/* ⚠️ `user-drag` is load-bearing, not cosmetic: without it Chrome starts a native
+   image drag the moment a swipe begins on a photograph, fires pointercancel, and
+   the swipe dies on its first move. */
 .print {
   position: absolute;
   inset: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  perspective: 1400px;
   padding: 0;
   margin: 0;
   border: 0;
@@ -569,9 +653,22 @@ onBeforeUnmount(() => {
   font: inherit;
   cursor: none;
   transform-style: preserve-3d;
-  will-change: transform, opacity;
+  will-change: transform;
 }
+/* The turn happens here, in its own clean 3D context. */
+.faces {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+/* Two faces on one card. `backface-visibility: hidden` on both is what makes the
+   turn work — without it the front shows through, mirrored, from behind. */
 .mat {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -587,6 +684,41 @@ onBeforeUnmount(() => {
 /* ⚠️ The window FILLS the mat's remaining height rather than declaring its own
    aspect-ratio. With a fixed ratio the mat kept a band of dead board under the
    note whenever the two did not happen to add up. */
+.back {
+  transform: rotateY(180deg);
+  align-items: center;
+  justify-content: center;
+  gap: 1.1rem;
+  padding: 12%;
+  text-align: center;
+}
+.back-note {
+  font-family: 'Shadows Into Light', 'Bradley Hand', cursive;
+  font-size: clamp(1rem, 2.4vw, 1.6rem);
+  line-height: 1.35;
+  color: #C3A6D8;
+}
+.back-rule { display: block; width: 38%; height: 1px; background: currentColor; opacity: 0.22; }
+.back-no {
+  font-family: 'Bague', sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.3em;
+  opacity: 0.45;
+}
+.back-no sup { font-size: 0.7em; }
+
+/* lays a raised print back down; sits under the raised card, over the rest */
+.catcher {
+  position: absolute;
+  inset: -50vmax;
+  z-index: 2;
+  background: rgba(10, 6, 16, 0.72);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+.catcher.on { opacity: 1; pointer-events: auto; }
+
 .glass {
   display: block;
   width: 100%;
@@ -622,6 +754,16 @@ onBeforeUnmount(() => {
 /* the one at the front: lit, in colour, its note legible */
 .print.is-front .glass img { filter: none; }
 .print.is-front .note { opacity: 0.92; }
+.print.is-raised { z-index: 900; }
+.print.is-raised .mat {
+  box-shadow:
+    inset 0 0 0 1px rgba(195, 166, 216, 0.34),
+    0 0 9rem 1.4rem rgba(159, 123, 184, 0.2),
+    0 60px 90px -34px rgba(0, 0, 0, 0.95);
+}
+.print.is-raised .glass img { filter: none; }
+.print.is-raised .note { opacity: 0.92; }
+
 .print.is-front .mat {
   background: #1D1429;
   box-shadow:
@@ -648,12 +790,6 @@ onBeforeUnmount(() => {
   letter-spacing: 0.3em;
 }
 .counter i { font-style: normal; opacity: 0.35; margin: 0 0.45em; }
-.hint {
-  font-family: 'Shadows Into Light', cursive;
-  font-size: 1rem;
-  color: #C3A6D8;
-  opacity: 0.6;
-}
 .more {
   font-family: 'Bague', sans-serif;
   font-size: 0.6rem;
@@ -661,45 +797,6 @@ onBeforeUnmount(() => {
   opacity: 0.34;
 }
 
-/* ── the opened print ── */
-.lightbox {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-.lightbox.on { pointer-events: auto; }
-.lb-scrim {
-  position: absolute;
-  inset: 0;
-  background: rgba(10, 6, 16, 0.86);
-  opacity: 0;
-  transition: opacity 0.45s ease;
-}
-.lightbox.on .lb-scrim { opacity: 1; }
-.lb-card {
-  position: relative;
-  margin: 0;
-  width: min(86vw, 46rem);
-  box-sizing: border-box;
-  padding: 2.2% 2.2% 0;
-  background: #1D1429;
-  box-shadow:
-    inset 0 0 0 1px rgba(195, 166, 216, 0.3),
-    0 50px 90px -30px rgba(0, 0, 0, 0.95);
-  transform-origin: 50% 50%;
-  transition: transform 0.62s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.42s ease;
-}
-.lb-card .glass { aspect-ratio: 3 / 2; }
-.lb-card .glass img { filter: none; }
-.lb-card .note {
-  opacity: 0.92;
-  font-size: clamp(1rem, 2vw, 1.35rem);
-  padding: 1.1rem 0.4rem 1.2rem;
-}
 
 @media (max-width: 768px) {
   .proc-scene { padding: 6vh 5vw 7rem; --print-w: min(74vw, 20rem); }
@@ -708,11 +805,10 @@ onBeforeUnmount(() => {
   .film { gap: 0.28rem; padding: 0.8rem 0; }
   .wordmark { font-size: clamp(1.6rem, 10vw, 3rem); padding-top: 12vh; }
   .proc-foot { padding-bottom: 3rem; }
-  .lb-card { width: 88vw; }
+  .back { padding: 10%; gap: 0.8rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .room-grain { animation: none; }
-  .lb-card { transition: opacity 0.3s ease; }
 }
 </style>

@@ -202,6 +202,23 @@ the viewport bottom, and once a scene outgrows `100dvh` its sheet is pinned by p
 raising padding-bottom just grows the section and leaves the copy at the same viewport y (measured:
 identical with 11rem and with 0). Shorten the column instead, and keep popup `params` to one line.
 
+⚠️ **`will-change: opacity` (or any opacity < 1) forces `transform-style: flat`,** which silently
+disables `backface-visibility` on the children. A card flipped 180° then showed its own front,
+mirrored, instead of its back. Put the turn on a dedicated inner wrapper that carries `preserve-3d`
+and nothing else; keep opacity and positioning on the outer element.
+⚠️ **An `<img>` is natively draggable, and that kills swipe gestures.** Starting a drag on a
+photograph makes Chrome begin an HTML5 drag and fire `pointercancel`, which ended the gesture on its
+very first move — the swipe simply did nothing. Needs `draggable="false"` on the images plus
+`-webkit-user-drag: none` on the card. Symptom to recognise: your pointerup handler runs twice, the
+first time with the drag state already reset.
+⚠️ **`touch-action: pan-y` does not stop the page stealing a horizontal swipe.** The browser keeps
+the option open, so a swipe that drifts a few pixels vertically becomes a scroll mid-gesture. Decide
+the axis ONCE on the first few pixels, then `preventDefault()` horizontal moves from a **non-passive**
+`touchmove` listener.
+⚠️ **A drag that scrubs a value and then rounds it on release will bounce.** Any gesture short of a
+whole step visibly moves and springs back. If the outcome is discrete, make the GESTURE discrete:
+let the finger lead by a few pixels for feedback, and commit or don't on release.
+
 ⚠️ **Deriving a page from the homepage means copying its GRAMMAR, not its shape.** In Frames is
 built from what actually makes the homepage work — one physical object, one continuous gesture,
 depth-based opacity falloff to faint ghosts (`GHOST_FLOOR` 0.16 mirrors the scene's

@@ -55,9 +55,11 @@ is that no two pages share a language. Breaking it is what made With Love fail i
     Photo-free, and it holds **completely still** while you read it.
   - **IN FRAMES** — **the procession**: the couple's photographs, mounted, spiralling out of the
     dark toward you in real 3D. One is always **presented** at the front — lit, in colour, its
-    handwritten note legible — while the rest orbit away into the room as faint ghosts. **Drag or
-    swipe** to bring the next one forward, **click** the front one and it comes all the way up to
-    you, and it advances on its own if you leave it alone. Built from the **homepage's grammar** —
+    handwritten note legible — while the rest orbit away into the room as faint ghosts. **Swipe or drag** to take the top print off and put it behind, **click** the front one and it
+    **physically rises** out of the deck — keeping its cursor parallax and tipping toward the
+    pointer — **click again to turn it over** (the note is written on the back), and click away to
+    lay it back down. It advances on its own if you leave it alone, and nudges itself left-then-right
+    once when you arrive, instead of printing instructions. Built from the **homepage's grammar** —
     one physical object, one continuous gesture, depth-opacity falloff, the big faint wordmark
     behind, lerped pointer parallax — but deliberately not its geometry: this **recedes** rather
     than orbiting. ⚠️ Nothing is scroll-driven and **nothing pins the page**.
