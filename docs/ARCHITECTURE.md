@@ -153,7 +153,7 @@ what made With Love read as a repeat of US and get rebuilt.
 |---|---|---|
 | `UsStory.vue` | margin notes — two handwritten voices, taped polaroids | `.scrub` / `.fade` per scene |
 | `BigDay.vue` | "The Calendar" — October 2026 as a wall-calendar page, the two wedding days ringed in marker; hover/tap a ringed date to swap the detail panel | IntersectionObserver latch: it sets, then holds still |
-| `InFrames.vue` | a **deck of mounted prints** you flip through, with three spools of the same film crossing far behind | **no scroll at all**: a time loop for the spools, interaction + an autoflip timer for the deck |
+| `InFrames.vue` | **the procession** — mounted prints spiralling out of the dark in CSS 3D, one presented at the front | **no scroll at all**: a spring toward a slot target, drag + autoflip; a time loop for the room's film |
 | `WithLove.vue` | the ink wanders past scattered gift words and **lassoes** each | measured spline + `.scrub`/`.write` |
 
 **The shared engine** is an rAF loop per component: it reads each scene's `getBoundingClientRect()`
@@ -201,6 +201,19 @@ Use the scrub engine when the motion IS the content; use a latch when the conten
 the viewport bottom, and once a scene outgrows `100dvh` its sheet is pinned by padding-**top** — so
 raising padding-bottom just grows the section and leaves the copy at the same viewport y (measured:
 identical with 11rem and with 0). Shorten the column instead, and keep popup `params` to one line.
+
+⚠️ **Deriving a page from the homepage means copying its GRAMMAR, not its shape.** In Frames is
+built from what actually makes the homepage work — one physical object, one continuous gesture,
+depth-based opacity falloff to faint ghosts (`GHOST_FLOOR` 0.16 mirrors the scene's
+`DEPTH_FADE_FLOOR` 0.2), a big faint wordmark behind the subject, pointer parallax on an
+exponential lerp, and a front item that is the active one. Its geometry is deliberately different:
+a ring of cards seen from outside would have read as the homepage repeated.
+⚠️ **Spatial constants are MEASURED in units of the subject.** The procession's depth step and orbit
+are multiples of the print's own measured width (`Z_PER_W`, `R_PER_W`), so the sculpture holds its
+proportions from a 390px phone to a 1440px desktop with no breakpoints.
+⚠️ **CSS 3D, not a second WebGL context.** `perspective` on the stage + `preserve-3d` on the field +
+per-element `translate3d(x, y, z)` written from the rAF loop. Nine elements; the DOM keeps images,
+text and focus handling for free, and the homepage's Three.js renderer stays the only one.
 
 ⚠️ **Not every idea wants scroll** (In Frames, 2026-08-31). This chapter was pinned three times —
 spools driven by progress, then a projector driven by progress — and each version was rejected. The

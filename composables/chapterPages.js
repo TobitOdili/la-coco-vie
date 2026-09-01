@@ -257,22 +257,23 @@ export const CHAPTER_PAGES = {
     ],
   },
 
-  // “In Frames” renders through the bespoke InFrames component — A DECK OF
-  // MOUNTED PRINTS in a dark room, with three lengths of the same film crossing
-  // far behind them.
-  //   ⚠️ 2026-08-31 (v3) — NOTHING on this page is scroll-driven and NOTHING pins
-  //   the section. The spools autoplay on time in a seamless loop; the deck is
-  //   driven by clicking, dragging and an autoflip timer. The three iterations
-  //   before this one all locked the scroll, and that is what kept making the
-  //   chapter outstay its welcome. Clicking a card animates it all the way from
-  //   its place in the stack to the middle of the screen (FLIP) and back.
+  // “In Frames” renders through the bespoke InFrames component — THE PROCESSION:
+  // the couple's photographs, mounted, spiralling out of the dark toward you. One
+  // is always PRESENTED at the front in colour with its note; the rest orbit away
+  // as faint ghosts. Drag/swipe to bring the next forward, click the front one to
+  // open it, and it advances on its own if left alone.
+  //   ⚠️ 2026-08-31 (v5) — designed FROM THE HOMEPAGE'S GRAMMAR: one physical
+  //   object, one continuous gesture, a depth-opacity falloff to faint ghosts, the
+  //   big faint wordmark behind it, lerped pointer parallax, and a front item that
+  //   is the active one. NOT its geometry — a ring seen from outside would read as
+  //   the homepage repeated, so this RECEDES instead of orbiting.
+  //   ⚠️ Nothing is scroll-driven and nothing pins. Four earlier iterations locked
+  //   the scroll and every one was rejected.
   // Fields (one section, kind 'reel'):
-  //   frames[] — the SPOOL thumbs (background). The strip repeats every
-  //              frames.length frames, which is what makes the loop seamless.
-  //   cards[]  — { src, note } for the DECK. `src` wants to be good enough to be
-  //              enlarged (these are 1400px), `note` is the handwritten line under
-  //              the mount. ⚠️ Every note is the same placeholder for now, at the
-  //              user's request — real captions when the couple write them.
+  //   frames[] — the SPOOL thumbs: the room's texture, drifting far behind at 0.12.
+  //   prints[] — { src, note } for the procession. 3:2 at 1200px (they get opened
+  //              large). Add or remove freely; the geometry is computed from the
+  //              count, so nothing else needs touching.
   'in-frames': {
     sections: [
       {
@@ -289,11 +290,17 @@ export const CHAPTER_PAGES = {
           asset('/images/reel/dinner-date-sm.jpg'),
           asset('/images/reel/hanging-ledge-sm.jpg'),
         ],
-        cards: [
+        // ⚠️ PLACEHOLDER NOTES — every one is the same line at the user's request.
+        // The photographs are the couple's own; the words under them are not.
+        prints: [
           { src: asset('/images/reel/proj-car-selfie.jpg'), note: 'Lagos Beach, 2021' },
           { src: asset('/images/reel/proj-summer-fit.jpg'), note: 'Lagos Beach, 2021' },
+          { src: asset('/images/reel/proj-coco-still.jpg'), note: 'Lagos Beach, 2021' },
           { src: asset('/images/reel/proj-dinner-date.jpg'), note: 'Lagos Beach, 2021' },
+          { src: asset('/images/reel/proj-mirrors.jpg'), note: 'Lagos Beach, 2021' },
+          { src: asset('/images/reel/proj-uvie-still.jpg'), note: 'Lagos Beach, 2021' },
           { src: asset('/images/reel/proj-hanging-ledge.jpg'), note: 'Lagos Beach, 2021' },
+          { src: asset('/images/reel/proj-coco-two.jpg'), note: 'Lagos Beach, 2021' },
           { src: asset('/images/reel/proj-bw-beanie.jpg'), note: 'Lagos Beach, 2021' },
         ],
         popups: ['fullAlbum'],

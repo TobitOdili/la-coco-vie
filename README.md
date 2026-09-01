@@ -53,13 +53,14 @@ is that no two pages share a language. Breaking it is what made With Love fail i
     Hovering — or tapping — a ringed date swaps the detail below the grid: times, venue, map,
     dress code. The grid is computed from the month, so the weekday alignment can't go stale.
     Photo-free, and it holds **completely still** while you read it.
-  - **IN FRAMES** — a **deck of mounted prints** in a dark room, with three lengths of the same film
-    crossing far behind them. Each card is a dark mount with the picture inset in its own frame and a
-    handwritten note underneath. The face of the deck lifts on hover; **clicking animates the card
-    all the way** from its place in the stack to the middle of the screen and back; you can **drag or
-    swipe to flip**, and the deck **autoflips** on its own. ⚠️ Nothing here is scroll-driven and
-    **nothing pins the page** — the spools autoplay on a seamless time loop, and scroll passes
-    straight through.
+  - **IN FRAMES** — **the procession**: the couple's photographs, mounted, spiralling out of the
+    dark toward you in real 3D. One is always **presented** at the front — lit, in colour, its
+    handwritten note legible — while the rest orbit away into the room as faint ghosts. **Drag or
+    swipe** to bring the next one forward, **click** the front one and it comes all the way up to
+    you, and it advances on its own if you leave it alone. Built from the **homepage's grammar** —
+    one physical object, one continuous gesture, depth-opacity falloff, the big faint wordmark
+    behind, lerped pointer parallax — but deliberately not its geometry: this **recedes** rather
+    than orbiting. ⚠️ Nothing is scroll-driven and **nothing pins the page**.
   - **WITH LOVE** — the **ink** writes the thank-you, then wanders past gift words scattered across
     the page and **lassoes** each in turn; hover shows the item on a torn paper scrap. Ends by
     splitting in two to sign both names → RSVP.

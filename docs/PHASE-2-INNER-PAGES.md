@@ -15,7 +15,7 @@ state, everything below it is history — newest first.)
 > |---|---|---|
 > | **US** | margin notes: the story in two handwritten voices, taped polaroids | `.scrub`/`.fade` |
 > | **THE BIG DAY** | **the calendar** — October 2026, the two wedding days ringed in marker; hover/tap one for its detail | a latch: it sets, then holds still |
-> | **IN FRAMES** | a **deck of mounted prints** you flip through; three spools cross far behind | **no scroll**: time loop + autoflip + click/drag |
+> | **IN FRAMES** | **the procession** — mounted prints spiralling out of the dark in CSS 3D, one presented | **no scroll**: spring to a slot + drag + autoflip |
 > | **WITH LOVE** | the ink wanders past scattered gift words and **lassoes** each; hover shows the item on torn paper | measured spline + `.scrub`/`.write` |
 >
 > **ALSO DONE & LIVE (prod-verified):** the homepage carousel (per-card hover/click via
@@ -128,7 +128,40 @@ produced **<1°** both times, because that accumulator isn't observable from out
 the ring's per-frame rotation — a value the `?debug` probes now report (`leanDeg`, `rotVel`) — made
 it both correct and checkable. **If a value can't be measured, don't tune it; find one that can.**
 
-**▶▶ STATE (2026-08-31, latest) — IN FRAMES v3: THE DECK. NOTHING IS SCROLL-DRIVEN.**
+**▶▶ STATE (2026-08-31, latest) — IN FRAMES v5: THE PROCESSION.**
+The brief changed shape: *"I'm no designer… step into the shoes of a world class UI/UX designer,
+take all the ideas I've had, discard any that aren't the best… the inspiration is the homepage."*
+So this one was designed **from the homepage's grammar** rather than from the previous iteration.
+- **What the homepage actually does**, and what is reproduced here: ONE physical object; ONE
+  continuous gesture; a **depth-opacity falloff to faint ghosts** (`GHOST_FLOOR` 0.16 against the
+  scene's `DEPTH_FADE_FLOOR` 0.2); a **big faint wordmark** behind the subject; **pointer parallax
+  on a lerp**; and a **front item that is the active one**, which opens on click.
+- **What is deliberately NOT reproduced: its geometry.** A ring of cards seen from outside would
+  read as the homepage repeated. The procession **recedes** instead of orbiting — prints spiral out
+  of the dark toward you, which is also what the page means.
+- **CSS 3D, not a second WebGL context:** `perspective` + `preserve-3d` + per-element
+  `translate3d(x,y,z)` from the rAF loop. Nine elements; images, text and focus stay in the DOM.
+- ⚠️ **Every spatial constant is a multiple of the print's MEASURED width** (`Z_PER_W`, `R_PER_W`),
+  so it holds its proportions at any viewport with no breakpoints.
+- **Motion model:** `progress` springs toward `target` frame-rate-independently
+  (`1 - exp(-dt·SPRING)`); drag moves the target and a release **snaps to a whole slot**, so a print
+  always settles dead centre. Autoflip advances the target every 5.6s.
+- **Open = FLIP against a fixed overlay** deliberately OUTSIDE the 3D stage, so the animation cannot
+  compose with the field's perspective. 736px centred to the pixel on desktop, 343 on a phone.
+- ⚠️⚠️ **RULE #2 BIT AGAIN, in new clothes:** `ref="lbEl"` on the lightbox `<figure>` — which sits
+  inside the sections `v-for` — was collected as an **ARRAY**, so `.getBoundingClientRect` did not
+  exist and the FLIP threw. The open still *appeared* to work (the card just showed up unanimated),
+  which is exactly why it survived a screenshot. **Query the DOM inside the handler.**
+- **Composition notes, all from looking at renders:** the mat's window now FILLS the remaining
+  height rather than declaring its own aspect (a fixed ratio left a band of dead board); the
+  wordmark is one line at 13vh so it clears the site nav; the arc is flattened (`Y_SQUASH` 0.34) so
+  it sweeps sideways instead of climbing into the wordmark; the room's film sits at **0.06**, since
+  at 0.12 it fought everything else.
+- Verified desktop + phone: 9 prints, ghost ladder 1 → 0.9 → 0.73 → … → 0.16, autoflip fires, drag
+  advances, open centres to the pixel and closes, scroll passes through (900 in, 900 moved), zero
+  console errors, zero failed requests.
+
+**▶▶ SUPERSEDED (2026-08-31) — v3: THE FLAT DECK.**
 The projector merge below was rejected in one look ("this doesn't seem right"). The user's v3:
 keep the spools but **lower their opacity further**, make them **autoplay rather than scroll-driven**,
 **never lock the section**, and put a **stack of picture cards** in front — each a card with a smaller
