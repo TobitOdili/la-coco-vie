@@ -202,6 +202,15 @@ the viewport bottom, and once a scene outgrows `100dvh` its sheet is pinned by p
 raising padding-bottom just grows the section and leaves the copy at the same viewport y (measured:
 identical with 11rem and with 0). Shorten the column instead, and keep popup `params` to one line.
 
+⚠️ **A preload observer and a "you can interact with this" observer are not the same observer.**
+In Frames preloads on `rootMargin: '80% 0px'` — deliberately a screen early — and the swipe nudge was
+hung off it, so the cue played and finished while the section was still off-screen. Nobody ever saw
+it. Onboarding cues need their own observer at a real threshold (`0.55`), and should repeat until the
+visitor actually touches something.
+⚠️ **A rect used for centring must be the rect you think it is.** `raisedY()` measured the stage,
+whose box includes its `padding-top`, so the raised print landed half that padding below the middle
+of the screen. Measure the element that is actually centred (the field), not its padded parent.
+
 ⚠️ **`will-change: opacity` (or any opacity < 1) forces `transform-style: flat`,** which silently
 disables `backface-visibility` on the children. A card flipped 180° then showed its own front,
 mirrored, instead of its back. Put the turn on a dedicated inner wrapper that carries `preserve-3d`

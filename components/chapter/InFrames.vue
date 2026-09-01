@@ -22,6 +22,7 @@
       v-for="(s, i) in sections"
       :key="i"
       class="chapter-section room-scene proc-scene"
+      :class="{ 'has-raised': open !== null }"
       :data-idx="i"
     >
       <!-- the room: the film this all came off, drifting far behind everything -->
@@ -145,11 +146,15 @@ let raiseTarget = 0
 let flip = 0
 let flipTarget = 0
 let dragDx = 0            // the small lead the front card takes under the finger
-let cueT = -1             // >=0 while the one-time "you can swipe this" nudge runs
-let cued = false
+let cueT = -1             // >=0 while the swipe nudge runs
+let cueRuns = 0           // it repeats a couple of times until you touch it
+let flipCueT = -1         // >=0 while the "this turns over" wobble runs
+let flipCued = false
+let touched = false       // any real interaction retires the cues for good
 
 let rafId = 0
 let io = null
+let cueIo = null
 let autoTimer = 0
 let layT = 0
 let last = 0
@@ -240,7 +245,10 @@ function place(el, u, k) {
   // silently disables backface-visibility on its children — the card flipped to
   // show its own front, mirrored, instead of its back.
   const faces = el.firstElementChild
-  if (faces) faces.style.transform = `rotateY(${(open.value === k ? flip : 0).toFixed(2)}deg)`
+  if (faces) {
+    const f = open.value === k ? flip + flipCueOffset() : 0
+    faces.style.transform = `rotateY(${f.toFixed(2)}deg)`
+  }
   el.style.zIndex = String(open.value === k ? 900 : Math.round(500 - a * 10))
   el.classList.toggle('is-front', a < 0.5 && open.value === null)
   el.classList.toggle('is-raised', open.value === k)
@@ -250,18 +258,36 @@ function place(el, u, k) {
 // The stage is not vertically centred in the section (the footer takes room), so a
 // raised print has to be offset to land in the middle of the SCREEN.
 function raisedY() {
-  const st = rootEl.value?.querySelector('.stage')
-  if (!st) return 0
-  const r = st.getBoundingClientRect()
+  // ⚠️ The FIELD, not the stage. The stage's rect includes its padding-top, so
+  // using it put the raised print half that padding below the middle of the screen.
+  const fl = rootEl.value?.querySelector('.field')
+  if (!fl) return 0
+  const r = fl.getBoundingClientRect()
   return window.innerHeight / 2 - (r.top + r.height / 2)
 }
 
-// A one-time nudge when the section arrives: the front print swings left, then
-// right, then settles. It replaces the written instructions.
+// The nudge that replaces the written instructions: the front print swings left,
+// back right, and settles. ⚠️ It used to fire off the preload observer, whose
+// rootMargin is 80% — so it played while the section was still a screen away and
+// was over before anyone saw it. It now runs off a SEPARATE observer that waits
+// until the section is properly on screen, and repeats until you touch something.
+const CUE_SECS = 1.7
 function cueOffset() {
   if (cueT < 0) return 0
-  const t = Math.min(1, cueT / 1.5)
-  return -26 * Math.sin(t * Math.PI * 2) * (1 - t)
+  const t = Math.min(1, cueT / CUE_SECS)
+  return -44 * Math.sin(t * Math.PI * 2) * (1 - t * t)
+}
+// And once a print is up: a small turn away and back, so it reads as having a back.
+const FLIP_CUE_SECS = 1.3
+function flipCueOffset() {
+  if (flipCueT < 0) return 0
+  const t = Math.min(1, flipCueT / FLIP_CUE_SECS)
+  return -18 * Math.sin(t * Math.PI * 2) * (1 - t * t)
+}
+function startCue() {
+  if (touched || open.value !== null || cueT >= 0) return
+  cueT = 0
+  cueRuns += 1
 }
 
 // ── moving through ──────────────────────────────────────────────────────────
@@ -300,6 +326,7 @@ function onDown(e) {
   downY = e.clientY
   dragDx = 0
   cueT = -1                // any touch cancels the cue; they already know
+  touched = true
 }
 function onMove(e) {
   // ⚠️ Parallax only where there is a real pointer. On touch a tap would set mx/my
@@ -351,10 +378,16 @@ function openPrint(k) {
   open.value = k
   raiseTarget = 1
   flipTarget = 0
+  cueT = -1
   stopAuto()
+  // once it is up and still, show that it turns over — once, ever
+  if (!flipCued) {
+    flipCued = true
+    setTimeout(() => { if (open.value !== null && flipTarget === 0) flipCueT = 0 }, 1150)
+  }
 }
 // tapping a raised print turns it over; tapping outside lays it back in the deck
-function turn() { flipTarget = flipTarget ? 0 : 180 }
+function turn() { flipCueT = -1; flipTarget = flipTarget ? 0 : 180 }
 function lay() {
   if (open.value === null) return
   raiseTarget = 0
@@ -439,7 +472,15 @@ function tick(now) {
 
     raise += (raiseTarget - raise) * (1 - Math.exp(-dt * RAISE_SPRING))
     flip += (flipTarget - flip) * (1 - Math.exp(-dt * RAISE_SPRING))
-    if (cueT >= 0) { cueT += dt; if (cueT > 1.5) cueT = -1 }
+    if (cueT >= 0) {
+      cueT += dt
+      if (cueT > CUE_SECS) {
+        cueT = -1
+        // one more, a beat later, in case they were still settling into the page
+        if (cueRuns < 2 && !touched) setTimeout(startCue, 2600)
+      }
+    }
+    if (flipCueT >= 0) { flipCueT += dt; if (flipCueT > FLIP_CUE_SECS) flipCueT = -1 }
 
     rootEl.value.querySelectorAll('.print').forEach((el) => {
       const k = Number(el.dataset.k)
@@ -480,10 +521,16 @@ onMounted(() => {
         preload()
         restartAuto()
         // the visual cue replaces the written directions — once, on arrival
-        if (!cued) { cued = true; setTimeout(() => { if (open.value === null) cueT = 0 }, 900) }
       } else stopAuto()
     }, { rootMargin: '80% 0px', threshold: 0 })
     io.observe(scene)
+    // ⚠️ a SECOND observer for the cue: the one above deliberately fires a screen
+    // early (rootMargin 80%) so the images preload, which is exactly why the nudge
+    // was never seen — it had already played and finished off-screen.
+    cueIo = new IntersectionObserver((e) => {
+      if (e[0].isIntersecting) setTimeout(startCue, 700)
+    }, { threshold: 0.55 })
+    cueIo.observe(scene)
   } else {
     inView.value = true
     preload()
@@ -496,6 +543,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', onResize)
   window.removeEventListener('keydown', onKey)
   io?.disconnect()
+  cueIo?.disconnect()
   stageEl?.removeEventListener('touchmove', onTouchMove)
   stopAuto()
   clearTimeout(resizeT)
@@ -584,6 +632,7 @@ onBeforeUnmount(() => {
   pointer-events: none;
   user-select: none;
   z-index: 1;
+  transition: opacity 0.45s ease;
 }
 
 .room-grain, .room-vignette { position: absolute; inset: 0; pointer-events: none; }
@@ -617,6 +666,9 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+  /* the deck sits low in the room, the way the homepage's cards sit in a lower
+     arc under its wordmark */
+  padding-top: 13vh;
   perspective: 1400px;
   perspective-origin: 50% 50%;
   touch-action: pan-y;     /* the page keeps vertical scroll; we take the x-drag */
@@ -758,7 +810,6 @@ onBeforeUnmount(() => {
 .print.is-raised .mat {
   box-shadow:
     inset 0 0 0 1px rgba(195, 166, 216, 0.34),
-    0 0 9rem 1.4rem rgba(159, 123, 184, 0.2),
     0 60px 90px -34px rgba(0, 0, 0, 0.95);
 }
 .print.is-raised .glass img { filter: none; }
@@ -768,13 +819,18 @@ onBeforeUnmount(() => {
   background: #1D1429;
   box-shadow:
     inset 0 0 0 1px rgba(195, 166, 216, 0.34),
-    0 0 7rem 1rem rgba(159, 123, 184, 0.22),
     0 34px 60px -26px rgba(0, 0, 0, 0.95);
 }
 
+/* While a print is up it should be the only lit thing — and the footer sits ABOVE
+   the stage in z, so without this the counter paints straight over the card. */
+.has-raised .proc-foot { opacity: 0.08; }
+.has-raised .wordmark { opacity: 0.03; }
+.has-raised .stage { z-index: 30; }
 .proc-foot {
   position: relative;
   z-index: 20;
+  transition: opacity 0.45s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -800,6 +856,7 @@ onBeforeUnmount(() => {
 
 @media (max-width: 768px) {
   .proc-scene { padding: 6vh 5vw 7rem; --print-w: min(74vw, 20rem); }
+  .stage { padding-top: 20vh; }
   .spool { width: 240vw; }
   .mini { width: clamp(4.2rem, 20vw, 7rem); }
   .film { gap: 0.28rem; padding: 0.8rem 0; }

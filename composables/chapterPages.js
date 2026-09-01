@@ -282,7 +282,7 @@ export const CHAPTER_PAGES = {
         title: 'Our Journey In Frames',
         present: 'COVENANT & UVIE PRESENT',
         sub: 'A LOVE STORY, ONE FRAME AT A TIME',
-        endSub: 'MORE EXPOSURES AFTER OCTOBER 29',
+        endSub: 'MORE PICTURES COMING SOON',
         frames: [
           asset('/images/reel/car-selfie-sm.jpg'),
           asset('/images/reel/bw-beanie-sm.jpg'),

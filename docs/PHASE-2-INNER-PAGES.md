@@ -128,7 +128,28 @@ produced **<1°** both times, because that accumulator isn't observable from out
 the ring's per-frame rotation — a value the `?debug` probes now report (`leanDeg`, `rotVel`) — made
 it both correct and checkable. **If a value can't be measured, don't tune it; find one that can.**
 
-**▶▶ STATE (2026-08-31, latest) — IN FRAMES v6: THE PRINT RISES, TURNS AND LAYS BACK DOWN.**
+**▶▶ STATE (2026-08-31, latest) — IN FRAMES v7: the cues you can actually see.**
+Four notes on v6: the footer line should read **"MORE PICTURES COMING SOON"**; the stack should sit
+**lower** in the section; the **halo glow** on a clicked print had to go; and **neither cue was
+visible** — not the swipe nudge, not any sign that a raised print turns over.
+- ⚠️⚠️ **Why the nudge was never seen, and it is a good trap:** it was hung off the PRELOAD observer,
+  whose `rootMargin` is `80% 0px` — deliberately a screen early so the photographs arrive in time. So
+  the cue played, finished, and reset while the section was still off-screen. It now runs off its own
+  observer at `threshold: 0.55`, repeats **twice** ~2.6s apart, and retires permanently the moment
+  you touch anything. Swing raised 26 → 44px. **Prod-build measured: 89px of travel on desktop, 63 on
+  a phone** (it was ~27 before, off-screen).
+- **A second cue for the turn:** once a print is up and still, it rotates ~17° away and back — one
+  time ever — so the back reads as existing. Cancelled if you turn it yourself.
+- **The glow is gone** from both the raised print and the face of the deck. It was a lavender bloom
+  in the box-shadow; only the drop shadow remains.
+- **The stack sits lower** (`padding-top` on `.stage`, 13vh / 20vh on phones): the front print's
+  centre moved from ~41% to **50% on desktop and 48% on a phone**.
+- ⚠️ **Two things that came out of pushing it down**, both caught by looking rather than reasoning:
+  the footer paints ABOVE the stage in z, so the counter sat over a raised card — the chrome now
+  fades to 0.08 while a print is up; and `raisedY()` measured the STAGE, whose box now includes that
+  new padding, so the raised print landed half of it below centre. It measures the FIELD now.
+
+**▶▶ SUPERSEDED (2026-08-31) — v6: THE PRINT RISES, TURNS AND LAYS BACK DOWN.**
 Four notes on the live v5, all addressed:
 1. **The print itself rises**, rather than a copy of it appearing in an overlay. The raised card is
    the same DOM element, transformed in the same rAF loop, so it **keeps its cursor parallax** and
