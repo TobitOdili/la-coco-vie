@@ -16,15 +16,22 @@
          outside would read as the homepage repeated. This recedes instead of
          orbiting — a journey coming toward you, which is what the page is about.
 
-         ⚠️ NOTHING IS SCROLL-DRIVEN AND NOTHING PINS. Scroll passes straight
-         through; four earlier iterations locked it and every one was rejected. -->
+         ⚠️ THE SECTION IS PINNED until all the prints have been through, at the
+         user's request (2026-08-31), reversing the earlier "never pin" rule.
+         ⚠️ BUT THE ANIMATION IS STILL NOT SCRUBBED, which is the distinction that
+         matters and the reason the earlier pinned versions were rejected: scroll
+         only picks an INTEGER target, and the same spring does the motion. So a
+         card always travels at its own pace and settles dead centre — scrolling
+         chooses WHICH print, never how far through its movement you are. -->
     <section
       v-for="(s, i) in sections"
       :key="i"
       class="chapter-section room-scene proc-scene"
       :class="{ 'has-raised': open !== null }"
       :data-idx="i"
+      :style="{ minHeight: sceneVh + 'dvh' }"
     >
+      <div class="proc-sticky">
       <!-- the room: the film this all came off, drifting far behind everything -->
       <div class="reel-room" aria-hidden="true">
         <div v-for="(sp, k) in SPOOLS" :key="k" class="spool"
@@ -92,6 +99,7 @@
         </div>
         <div class="more">{{ s.endSub }}</div>
       </footer>
+      </div>
     </section>
   </div>
 </template>
@@ -126,7 +134,10 @@ const GHOST_FLOOR = 0.16
 const FADE_FROM = 0.35      // slots before the fade starts
 const FADE_OVER = 5.2       // …and how many it takes to reach the floor
 
-const AUTO_MS = 5600
+// ⚠️ The section is PINNED for this many screens per print. Scroll through it
+// picks the integer target; the spring below still does the actual movement, so
+// nothing is scrubbed. Total height = 100dvh + (N-1)·STEP_VH.
+const STEP_VH = 58
 const SPRING = 6.2          // how hard progress chases its target
 const RAISE_SPRING = 7.5
 const RAISE_Z = 90          // a little toward the viewer, so it clears the deck
@@ -163,6 +174,7 @@ let last = 0
 let progress = 0
 let target = 0
 let printW = 240            // measured; everything spatial is a multiple of it
+let raiseScrollTop = 0      // the scene's offset when a print was raised
 let phase = 0               // the background film's own clock
 let period = 1
 let pitch = 200
@@ -173,6 +185,7 @@ let px = 0
 let py = 0
 
 const n = () => Math.max(1, prints.value.length)
+const sceneVh = computed(() => 100 + Math.max(0, n() - 1) * STEP_VH)
 
 // ── geometry ────────────────────────────────────────────────────────────────
 // The visible window is [-1, N-1): exactly one print is past the camera at a time
@@ -291,22 +304,32 @@ function startCue() {
 }
 
 // ── moving through ──────────────────────────────────────────────────────────
+// Clicking a print further back scrolls to it, rather than setting the target
+// directly — otherwise the scroll position would snap it straight back.
 function glideTo(k) {
+  const w = rootEl.value?.closest('.chapter-page') || document.querySelector('.chapter-page')
+  const scene = rootEl.value?.querySelector('.proc-scene')
+  if (!w || !scene) return
   const N = n()
-  let d = ((k - target) % N + N + N / 2) % N - N / 2   // shortest way round
-  target += d
-  restartAuto()
+  const travel = Math.max(1, scene.offsetHeight - window.innerHeight)
+  w.scrollTop = scene.offsetTop + (k / Math.max(1, N - 1)) * travel
 }
-function step(dir) { target += dir; restartAuto() }
+function step(dir) { nudgeScroll(dir) }
 
+// ⚠️ NO AUTOFLIP any more. Scroll position now decides which print is presented,
+// so a timer advancing the deck on its own would immediately be overridden by the
+// scroll-derived target — and would desync what you see from where you are.
 function stopAuto() { clearInterval(autoTimer); autoTimer = 0 }
-function restartAuto() {
-  stopAuto()
-  if (!inView.value || open.value !== null) return
-  autoTimer = setInterval(() => {
-    if (hovering.value || dragging || open.value !== null) return
-    target += 1
-  }, AUTO_MS)
+function restartAuto() { stopAuto() }
+
+// One print's worth of scroll, in px.
+function stepPx() { return window.innerHeight * (STEP_VH / 100) }
+// A swipe or an arrow key nudges the PAGE, so scroll stays the single source of
+// truth for which print is up.
+function nudgeScroll(dir) {
+  const w = rootEl.value?.closest('.chapter-page') || document.querySelector('.chapter-page')
+  if (!w) return
+  w.scrollTop += dir * stepPx()
 }
 
 // ── drag ────────────────────────────────────────────────────────────────────
@@ -359,8 +382,8 @@ function onUp() {
   dragging = false
   axis = null
   if (committed) {
-    target += dragDx < 0 ? 1 : -1     // one card off the top, no rubber band
-    restartAuto()
+    // scroll is the source of truth, so a swipe moves the page by one print
+    nudgeScroll(dragDx < 0 ? 1 : -1)
   }
   dragDx = 0
   setTimeout(() => { dragged = false }, 50)
@@ -375,6 +398,8 @@ function onPrintClick(k) {
 }
 
 function openPrint(k) {
+  const scene = rootEl.value?.querySelector('.proc-scene')
+  raiseScrollTop = scene ? scene.getBoundingClientRect().top : 0
   open.value = k
   raiseTarget = 1
   flipTarget = 0
@@ -462,6 +487,28 @@ function tick(now) {
   if (inView.value && rootEl.value) {
     // progress chases target — frame-rate independent, so a 120Hz screen and a
     // 60Hz one settle over the same amount of TIME
+    // ⚠️ SCROLL PICKS THE TARGET, THE SPRING DOES THE MOTION. This is the whole
+    // distinction from the pinned versions that were rejected: scrolling chooses
+    // WHICH print is up, never how far through its movement you are.
+    const scene = rootEl.value.querySelector('.proc-scene')
+    if (scene && open.value === null) {
+      const r = scene.getBoundingClientRect()
+      const travel = Math.max(1, r.height - window.innerHeight)
+      const p = Math.min(1, Math.max(0, -r.top / travel))
+      // ⚠️ floor(p·N), not round(p·(N−1)): rounding makes the FIRST and LAST
+      // prints occupy half-width buckets, so they get half the scroll room of
+      // every other one. Flooring gives all nine an equal share.
+      target = Math.min(n() - 1, Math.floor(p * n()))
+    }
+    // A raised print freezes the deck; the first real scroll lays it back down
+    // rather than letting the page slide out from under it.
+    // ⚠️ `raiseTarget !== 0` is the guard that makes this fire ONCE. Without it
+    // lay() ran every frame while the scroll delta held, and each call cleared and
+    // rescheduled its own release timeout — so the print never actually came down.
+    if (open.value !== null && raiseTarget !== 0 && scene) {
+      const now = scene.getBoundingClientRect().top
+      if (Math.abs(now - raiseScrollTop) > 40) lay()
+    }
     progress += (target - progress) * (1 - Math.exp(-dt * SPRING))
     const N = n()
     presented.value = ((Math.round(progress) % N) + N) % N
@@ -554,7 +601,19 @@ onBeforeUnmount(() => {
 <style scoped>
 .room-scene { position: relative; color: #EFE8F5; background: #241A33; }
 .proc-scene {
-  min-height: 100dvh;
+  position: relative;
+  /* the front print is the SUBJECT — it should be big enough to look at */
+  --print-w: clamp(15rem, 29vw, 25rem);
+}
+/* ⚠️ overflow:hidden lives HERE, never on the scene root — on the root it becomes
+   the sticky containment box and position:sticky silently stops working. */
+.proc-sticky {
+  position: sticky;
+  top: 0;
+  /* a swipe across the stage was selecting the counter and footer text */
+  user-select: none;
+  -webkit-user-select: none;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -562,8 +621,6 @@ onBeforeUnmount(() => {
   overflow: hidden;
   padding: 6vh 5vw 6vh;
   box-sizing: border-box;
-  /* the front print is the SUBJECT — it should be big enough to look at */
-  --print-w: clamp(15rem, 29vw, 25rem);
 }
 
 /* ── the room's film, far behind ── */
@@ -855,7 +912,8 @@ onBeforeUnmount(() => {
 
 
 @media (max-width: 768px) {
-  .proc-scene { padding: 6vh 5vw 7rem; --print-w: min(74vw, 20rem); }
+  .proc-scene { --print-w: min(74vw, 20rem); }
+  .proc-sticky { padding: 6vh 5vw 7rem; }
   .stage { padding-top: 20vh; }
   .spool { width: 240vw; }
   .mini { width: clamp(4.2rem, 20vw, 7rem); }

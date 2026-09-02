@@ -241,12 +241,18 @@ proportions from a 390px phone to a 1440px desktop with no breakpoints.
 per-element `translate3d(x, y, z)` written from the rAF loop. Nine elements; the DOM keeps images,
 text and focus handling for free, and the homepage's Three.js renderer stays the only one.
 
-⚠️ **Not every idea wants scroll** (In Frames, 2026-08-31). This chapter was pinned three times —
-spools driven by progress, then a projector driven by progress — and each version was rejected. The
-version that stuck **is not scroll-driven at all**: the section is a plain `100dvh`, the spools
-autoplay on a time loop, and the deck responds to clicking, dragging and a timer. Scroll passes
-straight through. When a section keeps being "too long", check whether scroll should be driving it
-at all before tuning its length again.
+⚠️ **The distinction is SCRUBBING, not pinning** (In Frames, and it took six iterations to state it
+properly). Three pinned versions were rejected and one unpinned one shipped, which made "never pin"
+look like the lesson — it wasn't. The chapter is **pinned again now, by request**, and it works,
+because scroll only picks an **integer target** and a spring does the actual movement. A card
+therefore always travels at its own pace and settles dead centre; scrolling chooses WHICH print is
+up, never how far through its motion you are. What was rejected every time was scroll being wired
+straight to a transform. **Pin freely; never scrub.**
+⚠️ Consequences of that pattern, all load-bearing: the scroll position is the **single source of
+truth**, so a swipe or an arrow key nudges the *page* rather than setting the target directly (set it
+directly and the next frame snaps it back); there is **no autoflip**, which would fight the scroll
+position; and `floor(p·N)` beats `round(p·(N−1))`, which gives the first and last items half-width
+buckets and so half the scroll room of every other one.
 ⚠️ **A seamless film loop needs no duplicated DOM.** The strip repeats every `frames.length` frames,
 so translating by exactly `pitch × frames.length` puts an identical frame in every position — the
 wrap is invisible. The film only has to overhang the room by one repeat at each end (`measure()`

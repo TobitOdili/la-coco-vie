@@ -58,11 +58,12 @@ is that no two pages share a language. Breaking it is what made With Love fail i
     handwritten note legible — while the rest orbit away into the room as faint ghosts. **Swipe or drag** to take the top print off and put it behind, **click** the front one and it
     **physically rises** out of the deck — keeping its cursor parallax and tipping toward the
     pointer — **click again to turn it over** (the note is written on the back), and click away to
-    lay it back down. It advances on its own if you leave it alone, and nudges itself left-then-right
-    once when you arrive, instead of printing instructions. Built from the **homepage's grammar** —
+    lay it back down. **The section holds you until you have been through all nine**, then releases and the page
+    carries on. It nudges itself left-then-right when you arrive, instead of printing instructions. Built from the **homepage's grammar** —
     one physical object, one continuous gesture, depth-opacity falloff, the big faint wordmark
     behind, lerped pointer parallax — but deliberately not its geometry: this **recedes** rather
-    than orbiting. ⚠️ Nothing is scroll-driven and **nothing pins the page**.
+    than orbiting. ⚠️ The section **is pinned** until all nine have been through — but the animation
+    is still never scrubbed: scroll picks *which* print is up, and a spring does the movement.
   - **WITH LOVE** — the **ink** writes the thank-you, then wanders past gift words scattered across
     the page and **lassoes** each in turn; hover shows the item on a torn paper scrap. Ends by
     splitting in two to sign both names → RSVP.

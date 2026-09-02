@@ -128,7 +128,35 @@ produced **<1°** both times, because that accumulator isn't observable from out
 the ring's per-frame rotation — a value the `?debug` probes now report (`leanDeg`, `rotVel`) — made
 it both correct and checkable. **If a value can't be measured, don't tune it; find one that can.**
 
-**▶▶ STATE (2026-08-31, latest) — IN FRAMES v7: the cues you can actually see.**
+**▶▶ STATE (2026-08-31, latest) — IN FRAMES v8: THE SECTION IS PINNED AGAIN, ON PURPOSE.**
+User: *"Actually I got it. Let's actually lock the scroll on that section and flip through all 9
+before proceeding."* — a deliberate reversal of the "never pin" rule I had written up emphatically.
+- ⚠️⚠️ **THE RULE WAS WRONG, AND THIS IS THE CORRECTED VERSION: the problem was never PINNING, it
+  was SCRUBBING.** Three rejected versions wired scroll straight to a transform. Here scroll picks
+  an **integer target** and the same spring does the motion, so a print always travels at its own
+  pace and settles dead centre — scrolling chooses WHICH print is up, never how far through its
+  movement you are. **Pin freely; never scrub.** ARCHITECTURE now says this instead of "not every
+  idea wants scroll".
+- **Shape:** the scene is `100 + (N−1)·58` dvh (**5.64 screens** for nine prints) with a
+  `.proc-sticky` child holding the viewport. ⚠️ `overflow: hidden` moved OFF the scene root onto the
+  sticky child — on the root it becomes the containment box and sticky silently stops working
+  (rule #5, third time this codebase has hit it).
+- **Scroll is the single source of truth.** A swipe or an arrow key nudges the PAGE by one print
+  rather than setting the target, because setting it directly gets snapped back on the next frame.
+- **Autoflip is gone** — a timer advancing the deck would immediately be overridden by the
+  scroll-derived target and desync what you see from where you are.
+- ⚠️ **`floor(p·N)`, not `round(p·(N−1))`:** rounding gives the first and last prints half-width
+  buckets, so they got half the scroll room of the middle seven. Caught by walking the section in
+  even steps and reading the counter at each one.
+- ⚠️ **A raised print freezes the deck**, and the first real scroll lays it back down. That check
+  called `lay()` EVERY FRAME while the delta held, and each call cleared and rescheduled its own
+  release timeout — so the print never actually came down. Needs a `raiseTarget !== 0` guard so it
+  fires once.
+- Prod-build verified both widths: sticky top stays at **0** through the whole section, all **9/9**
+  prints presented in an even distribution, the page scrolls on normally past it, swipe advances one,
+  a raised print centres and lays down on scroll, zero console errors.
+
+**▶▶ SUPERSEDED (2026-08-31) — v7: the cues you can actually see.**
 Four notes on v6: the footer line should read **"MORE PICTURES COMING SOON"**; the stack should sit
 **lower** in the section; the **halo glow** on a clicked print had to go; and **neither cue was
 visible** — not the swipe nudge, not any sign that a raised print turns over.
