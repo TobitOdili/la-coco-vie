@@ -4,7 +4,7 @@ Scope and build plan for the per-chapter inner pages. **This doc is the single l
 start here. (It grew from the original Milla Nova replica build; the ▼ HANDOFF box is the current
 state, everything below it is history — newest first.)
 
-> ## ▶▶▶ HANDOFF SNAPSHOT (2026-08-11) — read this first
+> ## ▶▶▶ HANDOFF SNAPSHOT (2026-09-02) — read this first
 > **What this is:** the **wedding site of Covenant (Odili) & Uvie (Dan-Egua)** — "A Love Story in
 > Chapters." A Three.js carousel of 4 poster cards; each opens a bespoke scroll page. Built on an
 > engine that began as a Milla Nova replica (`chapter.millanova.com`) and was re-skinned.
@@ -15,7 +15,7 @@ state, everything below it is history — newest first.)
 > |---|---|---|
 > | **US** | margin notes: the story in two handwritten voices, taped polaroids | `.scrub`/`.fade` |
 > | **THE BIG DAY** | **the calendar** — October 2026, the two wedding days ringed in marker; hover/tap one for its detail | a latch: it sets, then holds still |
-> | **IN FRAMES** | **the procession** — mounted prints spiralling out of the dark in CSS 3D, one presented | **no scroll**: spring to a slot + drag + autoflip |
+> | **IN FRAMES** | **the procession** — mounted prints spiralling out of the dark in CSS 3D, one presented | **pinned + scroll-scrubbed**: 5.64 screens of `sticky`, a spring chasing a continuous target, per-print inertia |
 > | **WITH LOVE** | the ink wanders past scattered gift words and **lassoes** each; hover shows the item on torn paper | measured spline + `.scrub`/`.write` |
 >
 > **ALSO DONE & LIVE (prod-verified):** the homepage carousel (per-card hover/click via
@@ -180,7 +180,9 @@ before proceeding."* — a deliberate reversal of the "never pin" rule I had wri
   an **integer target** and the same spring does the motion, so a print always travels at its own
   pace and settles dead centre — scrolling chooses WHICH print is up, never how far through its
   movement you are. **Pin freely; never scrub.** ARCHITECTURE now says this instead of "not every
-  idea wants scroll".
+  idea wants scroll". ⚠️ **The second half of that was itself wrong** — v9/v10 below reversed it:
+  the fluid version *does* scrub, continuously, with a spring trailing it. Only "pin freely" survives;
+  ARCHITECTURE carries the corrected rule (**damping, not stepping**).
 - **Shape:** the scene is `100 + (N−1)·58` dvh (**5.64 screens** for nine prints) with a
   `.proc-sticky` child holding the viewport. ⚠️ `overflow: hidden` moved OFF the scene root onto the
   sticky child — on the root it becomes the containment box and sticky silently stops working

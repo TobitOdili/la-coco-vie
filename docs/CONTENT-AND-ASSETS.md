@@ -95,7 +95,8 @@ public/
 │   ├── logo.png                 Legacy Milla Nova logo (unused by the scene)
 │   ├── noise.png                Film-grain overlay (animated via body::after) — 792 KB
 │   ├── us/                      US polaroids — the couple's own (900px verticals)
-│   ├── reel/                    In Frames spool photos — the couple's own (`-sm` = what's used)
+│   ├── reel/                    In Frames — the couple's own: `proj-*` = the 9 PRINTS (the page's
+│   │                            subject); `*-sm` = the 5 thumbs on the background spools
 │   ├── registry/                With Love item art — ONE watermarked clipart placeholder
 │   ├── gallery/                 ⚠️ DEAD (3.8 MB) — Milla Nova stills; nothing references them now
 │   ├── dresses/                 ⚠️ DEAD (848 KB) — the dress popups were retired in the pivot
@@ -188,18 +189,30 @@ free preview, not a licensed asset. Swap per item by setting `image:`.
 
 ### The reel photos (In Frames)
 
-`CHAPTER_PAGES['in-frames']` is a **single section** (`kind: 'reel'`) holding a `frames[]` array; the
-photos alternate along every spool and the component reads the array length. They are the couple's
-own, from `new frames/`:
+`CHAPTER_PAGES['in-frames']` is a **single section** (`kind: 'reel'`) holding **two** arrays, and the
+distinction matters — they are different sizes for different jobs. All are the couple's own, from
+`new frames/`:
+
+| array | count | files | what it feeds |
+|---|---|---|---|
+| **`prints[]`** | **9** | `proj-*.jpg`, 1200–1400px, **3:2** | the procession — the page's actual subject, one mounted print per slot, each `{ src, note }` |
+| `frames[]` | 5 | `*-sm.jpg`, 560px (~50–65 kB) | the background spools, which alternate along every strip; the component reads the array length |
 
 ```
 public/images/reel/
-  car-selfie.jpg  bw-beanie.jpg          1500px — full size, kept for future use
-  car-selfie-sm.jpg  bw-beanie-sm.jpg    560px (~50–65 kB) — WHAT THE PAGE USES
+  proj-car-selfie.jpg … proj-bw-beanie.jpg   9 × 1200–1400px 3:2 — THE PRINTS
+  car-selfie-sm.jpg  bw-beanie-sm.jpg  …     5 × 560px        — the background spools
+  car-selfie.jpg  bw-beanie.jpg              1500px originals, kept for future use
 ```
 
 The mini frames render ~110–160px wide, so they use the `-sm` files; shipping the 1500px versions for
-them was ~500kB of waste. They are requested only as the scene comes into range.
+them was ~500kB of waste. Everything is requested only as the scene comes into range (one preload
+observer at `rootMargin: '80% 0px'`, covering both arrays).
+
+⚠️ **The `note` on all nine prints is the same placeholder line** — `'Lagos Beach, 2021'`, at the
+user's request (2026-08-31). The photographs are real; the words under them are **not**, and the
+choice of which nine photos to use was mine, not the couple's. Both need the couple's input. The
+section also ends on `endSub: 'MORE PICTURES COMING SOON'`.
 
 ### Making a cut-out from a white/checkerboard-backed source
 

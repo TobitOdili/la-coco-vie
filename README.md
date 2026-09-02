@@ -55,16 +55,22 @@ is that no two pages share a language. Breaking it is what made With Love fail i
     Photo-free, and it holds **completely still** while you read it.
   - **IN FRAMES** — **the procession**: the couple's photographs, mounted, spiralling out of the
     dark toward you in real 3D. One is always **presented** at the front — lit, in colour, its
-    handwritten note legible — while the rest orbit away into the room as faint ghosts. **Swipe or drag** to take the top print off and put it behind, **click** the front one and it
-    **physically rises** out of the deck — keeping its cursor parallax and tipping toward the
-    pointer — **click again to turn it over** (the note is written on the back), and click away to
-    lay it back down. **The section holds you until you have been through all nine**, then releases and the page
-    carries on. It nudges itself left-then-right when you arrive, instead of printing instructions. Built from the **homepage's grammar** —
-    one physical object, one continuous gesture, depth-opacity falloff, the big faint wordmark
-    behind, lerped pointer parallax — but deliberately not its geometry: this **recedes** rather
-    than orbiting. The deck **unfurls** as you enter — a tight pile of prints spreading into the
-    spaced procession — then flows **continuously** with the scroll, leaning toward your cursor and
-    lifting the print you point at. ⚠️ The section is **pinned** until all nine have been through.
+    handwritten note legible — while the rest orbit away into the room as faint ghosts. Built from
+    the **homepage's grammar** — one physical object, one continuous gesture, depth-opacity falloff,
+    the big faint wordmark behind, lerped pointer parallax — but deliberately not its geometry: this
+    **recedes** rather than orbiting.
+    ⚠️ **The section is pinned** (`sticky`, `100 + (N−1)·58` dvh ≈ 5.6 screens) until all nine
+    prints have been through, then it releases and the page carries on. Scroll is the **single
+    source of truth**: it drives the deck's position *continuously* and a spring chases it, so the
+    procession glides rather than stepping. The deck **unfurls** on entry — a tight pile spreading
+    into the spaced procession — and leans toward your cursor **as one object**. There is no
+    per-print hover lift; instead each print carries **its own inertia**, the deeper ones trailing
+    more, so they read as objects with weight rather than a rigid array.
+    **Swipe or drag** advances a print (the gesture nudges the page scroll rather than the position),
+    **click** the front one and it **physically rises** out of the deck — keeping its cursor parallax
+    and tipping toward the pointer — **click again to turn it over** (the note is on the back), and
+    click away to lay it back down. It nudges itself left-then-right once you arrive **and stop**,
+    instead of printing instructions.
   - **WITH LOVE** — the **ink** writes the thank-you, then wanders past gift words scattered across
     the page and **lassoes** each in turn; hover shows the item on a torn paper scrap. Ends by
     splitting in two to sign both names → RSVP.
@@ -155,7 +161,7 @@ components/
   LoadingScreen.vue          Asset-gated loading counter (GSAP)
   chapter/UsStory.vue        ★ US — "the margin notes" (bespoke page)
   chapter/BigDay.vue         ★ THE BIG DAY — "the calendar", days ringed in marker (bespoke page)
-  chapter/InFrames.vue       ★ IN FRAMES — three spools of one film; sequential in, reverse out
+  chapter/InFrames.vue       ★ IN FRAMES — "the procession": prints in CSS 3D, pinned + scroll-scrubbed
   chapter/WithLove.vue       ★ WITH LOVE — the ink wanders and lassoes each gift
   chapter/ChapterSection.vue Generic section block — now the unused fallback
   chapter/PopupCard.vue      Floating white card (moment / utility / registry) pinned to the viewport

@@ -15,9 +15,22 @@
 > [`docs/ROADMAP.md`](docs/ROADMAP.md) · issue forensics → [`AUDIT.md`](AUDIT.md).
 > **This file is the living status log** (what works, resolved/open issues, dev workflow, sessions).
 
-> Last updated: **2026-08-11**. All four inner pages are bespoke and live; the couple's own card
+> ⚠️ **THIS FILE IS PARTLY HISTORICAL — read the tracker first.** Its **Session Log stops at
+> 2026-07-22 (session 18)**, and the "What's Working" / "Current Issues" sections below still
+> describe the pre-pivot Milla Nova model in places (wine chapters, dress popups, gallery stills).
+> Everything from the 2026-07-23 pivot onward — the four bespoke wedding pages and their many
+> rebuilds — is logged **newest-first** in
+> [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md), which is the source of truth.
+> Issue forensics (now #1–#27) are in [`AUDIT.md`](AUDIT.md).
+
+> Last updated: **2026-09-02**. All four inner pages are bespoke and live; the couple's own card
 > films and In Frames reel photos are in; asset URLs are base-path correct on both hosts.
-> **In Frames and With Love were both rebuilt from scratch this cycle** — see the tracker.
+> **In Frames and With Love were both rebuilt from scratch** — and In Frames has since been rebuilt
+> several more times, landing on **"the procession"** (pinned, scroll-scrubbed prints in CSS 3D,
+> v10 as of `56522682`). The Big Day is now **"the calendar"**, and the couple's **real dates** are
+> in: traditional **Sun 25 Oct 2026**, white wedding + reception **Thu 29 Oct 2026**, with a
+> countdown that rolls from the first to the second. ⚠️ **US's copy is deliberate lorem ipsum**
+> pending the couple's words. See the tracker.
 >
 > ✅ **User sign-off, 2026-08-31:** everything built in August "looks good on desktop and mobile",
 > and the **card films are working** — the one thing no headless tier could ever check (Browserless

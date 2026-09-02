@@ -153,7 +153,7 @@ what made With Love read as a repeat of US and get rebuilt.
 |---|---|---|
 | `UsStory.vue` | margin notes — two handwritten voices, taped polaroids | `.scrub` / `.fade` per scene |
 | `BigDay.vue` | "The Calendar" — October 2026 as a wall-calendar page, the two wedding days ringed in marker; hover/tap a ringed date to swap the detail panel | IntersectionObserver latch: it sets, then holds still |
-| `InFrames.vue` | **the procession** — mounted prints spiralling out of the dark in CSS 3D, one presented at the front | **no scroll at all**: a spring toward a slot target, drag + autoflip; a time loop for the room's film |
+| `InFrames.vue` | **the procession** — mounted prints spiralling out of the dark in CSS 3D, one presented at the front | **pinned + scroll-scrubbed**: `sticky` over `100 + (N−1)·58` dvh, a spring chasing a continuous target, per-print inertia; a time loop for the room's film behind it |
 | `WithLove.vue` | the ink wanders past scattered gift words and **lassoes** each | measured spline + `.scrub`/`.write` |
 
 **The shared engine** is an rAF loop per component: it reads each scene's `getBoundingClientRect()`
@@ -205,8 +205,10 @@ identical with 11rem and with 0). Shorten the column instead, and keep popup `pa
 ⚠️ **A preload observer and a "you can interact with this" observer are not the same observer.**
 In Frames preloads on `rootMargin: '80% 0px'` — deliberately a screen early — and the swipe nudge was
 hung off it, so the cue played and finished while the section was still off-screen. Nobody ever saw
-it. Onboarding cues need their own observer at a real threshold (`0.55`), and should repeat until the
-visitor actually touches something.
+it. Onboarding cues need their **own** trigger, and should repeat until the visitor actually touches
+something. ⚠️ But do not reach for a `threshold` here — see the tall-section trap below: `0.55` is
+unreachable on this very section, and the fix that replaced it then failed the same way for a
+different reason.
 ⚠️ **A rect used for centring must be the rect you think it is.** `raisedY()` measured the stage,
 whose box includes its `padding-top`, so the raised print landed half that padding below the middle
 of the screen. Measure the element that is actually centred (the field), not its padded parent.
@@ -240,6 +242,17 @@ proportions from a 390px phone to a 1440px desktop with no breakpoints.
 ⚠️ **CSS 3D, not a second WebGL context.** `perspective` on the stage + `preserve-3d` on the field +
 per-element `translate3d(x, y, z)` written from the rAF loop. Nine elements; the DOM keeps images,
 text and focus handling for free, and the homepage's Three.js renderer stays the only one.
+
+⚠️ **Pinning is fine; the old "never pin" rule was wrong.** In Frames holds the viewport until all
+nine prints have been through: the scene is `100 + (N−1)·STEP_VH` dvh (`STEP_VH = 58`, so **5.64
+screens** for nine) with a `.proc-sticky` child at `height: 100dvh`. What actually made the early
+scroll-driven versions feel bad was **stepping**, not the pin — see the damping rule directly below.
+⚠️ `overflow: hidden` belongs on the sticky CHILD, never on the pinned scene root (rule #5 above,
+third occurrence). And once a section is pinned, **scroll becomes the single source of truth**: a
+swipe or an arrow key has to nudge the *page* (`scrollTop += stepPx()`), because setting the position
+directly is snapped back on the next frame. Use `floor(p·N)`, not `round(p·(N−1))`, to name the
+presented item — rounding gives the first and last items half-width buckets and so half the scroll
+room of the middle ones.
 
 ⚠️ **What makes scroll-driven motion feel good is DAMPING, not stepping** (In Frames; it took seven
 passes and two wrong rules to land on this). I claimed "never scrub", then "scroll picks an integer

@@ -6,7 +6,7 @@
 > Tools: Browserless (Playwright/CDP) against the live prod URL, bundle greps, DOM/computed-style probes.
 
 > **Doc map:** this file is the **forensic issue history** — per-issue root causes, fixes,
-> and commit refs (numbered #1–#15). For orientation start at [`README.md`](README.md);
+> and commit refs (numbered #1–#27). For orientation start at [`README.md`](README.md);
 > how-it-works is [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); live status is
 > [`PROGRESS.md`](PROGRESS.md). The **Priority Order table near the bottom is the quickest
 > index** of every issue and its status.
@@ -940,6 +940,57 @@ and friends are all taken.
 
 ---
 
+## Issue #27 — In Frames: the deck bounced, and the swipe cue was never seen 🟠 HIGH (2026-09-02)
+
+Two user-reported defects on the procession, filed together because the second was uncovered while
+fixing the first, and both are instances of a class this codebase keeps hitting.
+
+### Symptom
+1. *"There is still a bouncing effect while scrolling through."* Every print visibly surged forward
+   and pulled back as it crossed the front of the deck — most obvious on desktop, where the wheel
+   gives a steady rate.
+2. *"I don't see the animation to nudge or visualize that a user can swipe."* The left-right nudge
+   was implemented and running, and no visitor could ever have seen it.
+3. Alongside these: the per-card hover expansion was to go, and the prints were to behave as
+   individual animatable 3D elements rather than a rigid array.
+
+### Root cause
+**(1) A special-cased exit path — not the spring, which is where I looked first.** The departing
+print had its own formula sending it up and back, so a card came forward to `z = 0` and then
+**retreated**. That was a leftover from the stepped version, where "take the top card and put it
+behind" was the intended read; under continuous flow it is simply a bounce. A *second*, smaller
+contributor: the nudge cue fired mid-scroll, swinging the front print sideways while the deck was
+already moving underneath it.
+
+**(2) The tall-section visibility-threshold trap — twice in a row, which makes THREE occurrences in
+this codebase** (see also the active-section observer in `[slug].vue`):
+- The cue's observer used `threshold: 0.55`. Once the section became **5.64 screens** tall, at most
+  `1/5.64 ≈ 18%` of it can ever be visible, so the threshold could **never** be met.
+- Its replacement gated on the **clamped** scroll progress `p`, which reads `0` for the entire page
+  *above* the element — so the cue burned both of its runs while the section was still off-screen.
+  Caught only by instrumenting and seeing `cueRuns: 2` before a visitor could possibly have arrived.
+
+### Fix
+- **One formula for the whole range**, `z = −u·pitch`, monotonic; only the fade is special-cased.
+- The cue gates on the **unclamped** ratio, and now fires only after the scroll has been **still for
+  0.8s** — any movement cancels it outright.
+- **Each print smooths its own slot** toward the deck's position (`rate = 9 − min(5,|u|)·0.85`), so
+  the deeper ones trail more and they read as objects with weight.
+- Per-card hover expansion removed; the deck still leans toward the pointer, but **as one object**.
+
+**Verified on the production build and then on prod** (`56522682`): **0 depth reversals** and a
+strictly monotonic z trace across a full pass; 25 distinct z values in 25 samples of a slow scroll;
+unfurl spanning 38px stacked → 541px open; lean swinging −4.5° → +3.6°; the cue silent while
+scrolling and running once stopped; zero console errors. Per-print inertia on prod after settling:
+`[43, 42, 63, 64, 60, 56, 51, 47, 43]` — 8 distinct values of 9.
+
+⚠️ **Verification caveat, recorded so it is not mistaken for a regression later:** the *first* prod
+run reported 1 reversal and suspiciously uniform per-card deltas. That was the probe sampling
+mid-animation before the page had settled, not a defect — two clean re-runs and a properly-settled
+inertia check confirmed it.
+
+---
+
 ## Updated Priority Order (as of 2026-05-27)
 
 | # | Issue | Priority | Status |
@@ -968,3 +1019,6 @@ and friends are all taken.
 | ~~22~~ | ~~Hover flickers at a card's bottom edge (lift moves the hitbox, then moved the release region too)~~ | ~~🔴 High~~ | ✅ Fixed — screen-space containment, 1.45× release hysteresis, territory measured from the card's RESTING position. Prod: 14/14 stable parked, 1 clean release moving through. See §Issue #22. |
 | ~~23~~ | ~~Faded background cards were hoverable and swapped the centre wordmark~~ | ~~🟡 Medium~~ | ✅ Fixed — near half + `uOpacity ≥ 0.75` + containment. Prod: hoverable = slots [2,3,4] only. See §Issue #23. |
 | ~~24~~ | ~~Deck rested leaning 15° (permanent on touch — no mousemove to correct it)~~ | ~~🟡 Medium~~ | ✅ Fixed — rest 0°, pointer deflects on desktop, ring angular velocity on touch. Prod: rest 0.24°, swipe peak 10.2°. See §Issue #24. |
+| ~~25~~ | ~~Deep-linking to a chapter left the EXPLORE cursor stuck expanded~~ | ~~🟠 High~~ | ✅ Fixed — `confirm()` and its release now live in one place (`releaseConfirmWhenSettled()` from `onChapterSelect`); the route watcher never fired on a deep link because the slug never changed. Prod: class is plain `cursor`. See §Issue #25. |
+| ~~26~~ | ~~A square outline around every ringed calendar date~~ | ~~🟡 Medium~~ | ✅ Fixed — the SVG's `class="ring"` collided with **Tailwind's `.ring` utility**; renamed `.marker-ring` / `.cal-grid`. Scoped CSS does not scope the class NAME. See §Issue #26. |
+| ~~27~~ | ~~In Frames: the deck bounced while scrolling, and the swipe cue was never visible~~ | ~~🟠 High~~ | ✅ Fixed (`56522682`) — a special-cased exit path made every print surge and retreat; the cue hit the tall-section threshold trap **twice** (3rd/4th occurrences). Prod: 0 depth reversals, per-print inertia 8 distinct of 9. See §Issue #27. |
