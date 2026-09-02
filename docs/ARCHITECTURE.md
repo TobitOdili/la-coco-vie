@@ -248,6 +248,20 @@ target" — both wrong, and the homepage disproves them: its wheel handler does
 and it is the fluid thing everyone is comparing against. **Snapping to whole items is what feels
 clicky.** So: drive the position continuously from scroll, then have a spring chase it
 (`1 - exp(-dt·k)`, k≈5) so the deck glides and lags slightly instead of tracking the wheel rigidly.
+⚠️ **Each element should carry its OWN inertia.** The deck read as a diagram rather than as objects
+with weight while every print was locked to one shared position value. Each now smooths its own slot
+toward the deck's, with the ones deeper in the stack trailing more (`rate = 9 − min(5,|u|)·0.85`), so
+they flow rather than move as a rigid array.
+⚠️ **A special-cased exit path is a bounce waiting to happen.** The departing print used to get its
+own formula sending it up and back, so a card came forward to z=0 and then RETREATED — every print
+surged and pulled back as it passed. One formula for the whole range (`z = −u·pitch`) is monotonic;
+only the fade is special-cased.
+⚠️ **A visibility threshold that is impossible for a TALL section** (third occurrence — see also the
+active-section observer in `[slug].vue`). A cue hung off `threshold: 0.55` could never fire once this
+section became 5.64 screens tall: at most `1/5.64 ≈ 18%` of it is ever visible. And its replacement,
+gated on the CLAMPED scroll progress, fired while the section was still off-screen — because a
+clamped `p` reads `0` for the entire page above the element. Gate on the **unclamped** ratio.
+
 ⚠️ **Scroll can also drive STRUCTURE, not just position.** In Frames unfurls: a `spread` factor
 (0→1 over the first 13% of the section) lerps every print between a tight-stack pose and the open
 spiral, so entering the section opens the deck before you start moving through it. Poses are cheaper

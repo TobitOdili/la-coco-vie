@@ -128,7 +128,31 @@ produced **<1°** both times, because that accumulator isn't observable from out
 the ring's per-frame rotation — a value the `?debug` probes now report (`leanDeg`, `rotVel`) — made
 it both correct and checkable. **If a value can't be measured, don't tune it; find one that can.**
 
-**▶▶ STATE (2026-08-31, latest) — IN FRAMES v9: FLUID, AND IT UNFURLS.**
+**▶▶ STATE (2026-08-31, latest) — IN FRAMES v10: the bounce, and prints with their own weight.**
+Three notes: no per-card hover expansion; **there is still a bouncing effect while scrolling**; and
+the cards should behave like individual animatable 3D elements, like the homepage's.
+- ⚠️ **The bounce had TWO sources, neither of them the spring.**
+  1. **A special-cased exit path.** The departing print got its own formula sending it up and back,
+     so as a card crossed the front it came forward to z=0 and then **retreated** — every print
+     surged and pulled back as it passed. One formula for the whole range (`z = −u·pitch`) is
+     monotonic. **Prod-measured: 0 direction reversals** in z across a full pass, where there were
+     reversals before.
+  2. **The nudge cue firing mid-scroll.** It ran on arrival, swinging the front print left-right
+     while the deck was already moving under the scroll. It now fires only once the scroll has been
+     **still for 0.8s**, and any movement cancels it.
+- ⚠️⚠️ **Fixing (2) hit the tall-section threshold trap TWICE MORE** (making it three occurrences in
+  this codebase): the cue's observer used `threshold: 0.55`, impossible once the section is 5.64
+  screens tall (max visible ≈ 18%); and its replacement, gated on the CLAMPED progress, fired both
+  its runs while the section was still off-screen, because a clamped `p` reads 0 for the whole page
+  above the element. Gate on the **unclamped** ratio. Found by instrumenting and seeing `cueRuns: 2`
+  before the visitor ever arrived.
+- **Each print carries its own inertia** now: it smooths its own slot toward the deck's position,
+  with deeper ones trailing more. Prod-measured: nine prints move by nine different amounts in the
+  same instant, where they used to be locked to one shared value.
+- **No hover expansion.** The per-card lift is gone; the deck still leans toward the pointer as one
+  object.
+
+**▶▶ SUPERSEDED (2026-08-31) — v9: fluid and unfurling, as first built.**
 User: *"It needs to feel fluid, like the homepage cards… make them a bit flexible and responsive to
 cursor, then make their scroll smooth like the homepage one, not step. Scrolling would be a sort of
 unfurling. They unstack a bit and space out so we can naturally run through them."*

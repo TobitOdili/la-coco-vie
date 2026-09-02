@@ -72,8 +72,6 @@
             class="print"
             :data-k="k"
             :aria-label="`${p.note} — ${k === presented ? 'open' : 'bring forward'}`"
-            @pointerenter="hoverK = k"
-            @pointerleave="hoverK = hoverK === k ? null : hoverK"
             @click="onPrintClick(k)"
           >
             <span class="faces">
@@ -155,7 +153,6 @@ const slots = ref(22)
 const presented = ref(0)
 const open = ref(null)
 const hovering = ref(false)
-const hoverK = ref(null)  // which print the cursor is over
 const inView = ref(false)
 // raise/flip are animated in the SAME rAF loop as everything else. A CSS
 // transition would fight the per-frame transform writes, and the raised card has
@@ -171,11 +168,10 @@ let flipCueT = -1         // >=0 while the "this turns over" wobble runs
 let flipCued = false
 let touched = false       // any real interaction retires the cues for good
 let spread = 0            // 0 = a tight stack, 1 = the deck fully unfurled
-let hoverAmt = 0          // springs toward 1 while a print is under the cursor
+const uSm = []            // each print's own smoothed slot — its inertia
 
 let rafId = 0
 let io = null
-let cueIo = null
 let autoTimer = 0
 let layT = 0
 let last = 0
@@ -185,6 +181,8 @@ let progress = 0
 let target = 0
 let printW = 240            // measured; everything spatial is a multiple of it
 let raiseScrollTop = 0      // the scene's offset when a print was raised
+let lastTop = 0             // the scene's last rect top, for stillness detection
+let stillFor = 0            // seconds the scroll has been stationary
 let phase = 0               // the background film's own clock
 let period = 1
 let pitch = 200
@@ -241,14 +239,13 @@ function place(el, u, k) {
   let o = Math.max(GHOST_FLOOR, Math.min(1, fade))
   o = 1 + (o - 1) * spread
 
-  // ⚠️ The card leaving the front goes UP AND BACK, not toward the camera. Sending
-  // it past the viewer read as a card being thrown at you; this reads as the top
-  // one being lifted off and put behind, which is what it is.
+  // ⚠️ ONE FORMULA FOR ALL u — this was a bounce. The departing print used to be a
+  // special case that sent it UP AND BACK, so as a card crossed the front it came
+  // forward to z=0 and then RETREATED. Every print therefore surged and pulled back
+  // as it passed. Now z = −u·pitch throughout, which is monotonic: the procession
+  // simply keeps coming toward you and sweeps past. Only the fade is special-cased.
   if (u < 0) {
-    const t = Math.min(1, -u) * spread
-    y -= 0.34 * printW * t
-    z = -t * printW * Z_PER_W * 1.7
-    rotZ = -t * 7
+    const t = Math.min(1, -u)
     o = Math.min(o, Math.max(0, 1 - t * 1.9))
   }
 
@@ -258,12 +255,6 @@ function place(el, u, k) {
   let sc = 1
   let rotY = 0
   let rotX = 0
-  // the one under the cursor lifts toward you — the homepage's hover, in depth
-  if (hoverK.value === k && open.value === null) {
-    z += 52 * hoverAmt
-    y -= 10 * hoverAmt
-    sc += 0.035 * hoverAmt
-  }
   if (open.value === k && raise > 0) {
     // ── the print rises out of the deck, and keeps its parallax while it is up ──
     const S = raisedScale()
@@ -327,8 +318,12 @@ function flipCueOffset() {
   const t = Math.min(1, flipCueT / FLIP_CUE_SECS)
   return -18 * Math.sin(t * Math.PI * 2) * (1 - t * t)
 }
+// ⚠️ Fired from the frame loop, only once the scroll has actually STOPPED. Firing
+// it on arrival meant it swung left-right while the deck was already moving under
+// the scroll — which is exactly the "bouncing" that got reported. Any scroll
+// movement cancels it outright.
 function startCue() {
-  if (touched || open.value !== null || cueT >= 0) return
+  if (touched || open.value !== null || cueT >= 0 || cueRuns >= 2) return
   cueT = 0
   cueRuns += 1
 }
@@ -530,6 +525,15 @@ function tick(now) {
       // position and the spring below trails it, which is exactly how the
       // homepage carousel behaves.
       target = p * (n() - 1)
+      // is the scroll actually at rest? the cue may only run when it is
+      if (Math.abs(r.top - lastTop) > 0.5) { stillFor = 0; cueT = -1 } else stillFor += dt
+      lastTop = r.top
+      // ⚠️ Gate on the UNCLAMPED position. `p` is clamped to [0,1], so it reads 0
+      // for the whole page ABOVE the section — which let the cue spend both its
+      // runs while the section was still off-screen, exactly the bug the observer
+      // was there to prevent. rawP > 0.01 means the sticky is genuinely pinned.
+      const rawP = -r.top / travel
+      if (!touched && stillFor > 0.8 && rawP > 0.01 && rawP < 0.32 && cueT < 0) startCue()
       // …and the stack UNFURLS as you come in: tight pile → spaced procession.
       const sp = Math.min(1, p / SPREAD_OVER)
       spread = sp * sp * (3 - 2 * sp)
@@ -550,7 +554,6 @@ function tick(now) {
     // the same lerped pointer parallax the homepage camera uses
     px += (mx * 14 - px) * (1 - Math.exp(-dt * 3))
     py += (my * 9 - py) * (1 - Math.exp(-dt * 3))
-    hoverAmt += ((hoverK.value !== null ? 1 : 0) - hoverAmt) * (1 - Math.exp(-dt * 8))
 
     // The whole sculpture leans toward the pointer — the homepage's deck lean,
     // in a 3D field rather than a shader. `.field` carries preserve-3d, so every
@@ -567,17 +570,24 @@ function tick(now) {
     flip += (flipTarget - flip) * (1 - Math.exp(-dt * RAISE_SPRING))
     if (cueT >= 0) {
       cueT += dt
-      if (cueT > CUE_SECS) {
-        cueT = -1
-        // one more, a beat later, in case they were still settling into the page
-        if (cueRuns < 2 && !touched) setTimeout(startCue, 2600)
-      }
+      if (cueT > CUE_SECS) cueT = -1
     }
     if (flipCueT >= 0) { flipCueT += dt; if (flipCueT > FLIP_CUE_SECS) flipCueT = -1 }
 
+    // ⚠️ Every print is its own animated 3D element: it smooths its OWN slot
+    // toward the deck's position, and the ones deeper in the stack trail more. The
+    // deck used to move as one rigid array — every card locked to the same value —
+    // which is what made it read as a diagram rather than as objects with weight.
     rootEl.value.querySelectorAll('.print').forEach((el) => {
       const k = Number(el.dataset.k)
-      place(el, slotOf(k), k)
+      const ut = slotOf(k)
+      if (uSm[k] === undefined || Math.abs(ut - uSm[k]) > 2.5) {
+        uSm[k] = ut               // the wrap: teleport, and it happens at opacity 0
+      } else {
+        const rate = 9 - Math.min(5, Math.abs(ut)) * 0.85
+        uSm[k] += (ut - uSm[k]) * (1 - Math.exp(-dt * rate))
+      }
+      place(el, uSm[k], k)
     })
 
     phase += dt
@@ -617,13 +627,12 @@ onMounted(() => {
       } else stopAuto()
     }, { rootMargin: '80% 0px', threshold: 0 })
     io.observe(scene)
-    // ⚠️ a SECOND observer for the cue: the one above deliberately fires a screen
-    // early (rootMargin 80%) so the images preload, which is exactly why the nudge
-    // was never seen — it had already played and finished off-screen.
-    cueIo = new IntersectionObserver((e) => {
-      if (e[0].isIntersecting) setTimeout(startCue, 700)
-    }, { threshold: 0.55 })
-    cueIo.observe(scene)
+    // ⚠️ NO second observer for the cue any more. It used `threshold: 0.55`, and
+    // once this section became 5.64 screens tall that threshold BECAME IMPOSSIBLE —
+    // at most 1/5.64 ≈ 18% of the element can ever be visible, so it could never
+    // fire. (Same trap as the active-section observer in [slug].vue, third time in
+    // this codebase.) The cue is now gated purely on conditions the frame loop can
+    // see: we are in the first third of the section and the scroll has stopped.
   } else {
     inView.value = true
     preload()
@@ -636,7 +645,6 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', onResize)
   window.removeEventListener('keydown', onKey)
   io?.disconnect()
-  cueIo?.disconnect()
   stageEl?.removeEventListener('touchmove', onTouchMove)
   stopAuto()
   clearTimeout(resizeT)
