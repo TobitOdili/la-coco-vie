@@ -241,18 +241,20 @@ proportions from a 390px phone to a 1440px desktop with no breakpoints.
 per-element `translate3d(x, y, z)` written from the rAF loop. Nine elements; the DOM keeps images,
 text and focus handling for free, and the homepage's Three.js renderer stays the only one.
 
-⚠️ **The distinction is SCRUBBING, not pinning** (In Frames, and it took six iterations to state it
-properly). Three pinned versions were rejected and one unpinned one shipped, which made "never pin"
-look like the lesson — it wasn't. The chapter is **pinned again now, by request**, and it works,
-because scroll only picks an **integer target** and a spring does the actual movement. A card
-therefore always travels at its own pace and settles dead centre; scrolling chooses WHICH print is
-up, never how far through its motion you are. What was rejected every time was scroll being wired
-straight to a transform. **Pin freely; never scrub.**
-⚠️ Consequences of that pattern, all load-bearing: the scroll position is the **single source of
-truth**, so a swipe or an arrow key nudges the *page* rather than setting the target directly (set it
-directly and the next frame snaps it back); there is **no autoflip**, which would fight the scroll
-position; and `floor(p·N)` beats `round(p·(N−1))`, which gives the first and last items half-width
-buckets and so half the scroll room of every other one.
+⚠️ **What makes scroll-driven motion feel good is DAMPING, not stepping** (In Frames; it took seven
+passes and two wrong rules to land on this). I claimed "never scrub", then "scroll picks an integer
+target" — both wrong, and the homepage disproves them: its wheel handler does
+`scrollRotationY -= delta * 0.0008` and a lerp trails it. That is *continuous scrubbing with damping*,
+and it is the fluid thing everyone is comparing against. **Snapping to whole items is what feels
+clicky.** So: drive the position continuously from scroll, then have a spring chase it
+(`1 - exp(-dt·k)`, k≈5) so the deck glides and lags slightly instead of tracking the wheel rigidly.
+⚠️ **Scroll can also drive STRUCTURE, not just position.** In Frames unfurls: a `spread` factor
+(0→1 over the first 13% of the section) lerps every print between a tight-stack pose and the open
+spiral, so entering the section opens the deck before you start moving through it. Poses are cheaper
+and more controllable than trying to animate the geometry constants.
+⚠️ Consequences of scroll being the single source of truth: a swipe or an arrow key nudges the
+*page* rather than the position (set it directly and the next frame snaps it back), and there is **no
+autoflip**, which would fight the scroll position and desync what you see from where you are.
 ⚠️ **A seamless film loop needs no duplicated DOM.** The strip repeats every `frames.length` frames,
 so translating by exactly `pitch × frames.length` puts an identical frame in every position — the
 wrap is invisible. The film only has to overhang the room by one repeat at each end (`measure()`

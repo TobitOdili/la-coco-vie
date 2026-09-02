@@ -128,7 +128,27 @@ produced **<1°** both times, because that accumulator isn't observable from out
 the ring's per-frame rotation — a value the `?debug` probes now report (`leanDeg`, `rotVel`) — made
 it both correct and checkable. **If a value can't be measured, don't tune it; find one that can.**
 
-**▶▶ STATE (2026-08-31, latest) — IN FRAMES v8: THE SECTION IS PINNED AGAIN, ON PURPOSE.**
+**▶▶ STATE (2026-08-31, latest) — IN FRAMES v9: FLUID, AND IT UNFURLS.**
+User: *"It needs to feel fluid, like the homepage cards… make them a bit flexible and responsive to
+cursor, then make their scroll smooth like the homepage one, not step. Scrolling would be a sort of
+unfurling. They unstack a bit and space out so we can naturally run through them."*
+- ⚠️⚠️ **I HAD THE RULE WRONG TWICE, and the homepage settles it.** First I wrote "never scrub",
+  then "scroll picks an INTEGER target". Both wrong. The homepage's own wheel handler is
+  `scrollRotationY -= delta * 0.0008` with a lerp trailing it — **continuous scrubbing with
+  damping**. That is the fluid thing being compared against. **Stepping is what feels clicky.** The
+  deck now takes a continuous position from scroll and a spring (k≈5) chases it.
+- **The unfurl:** a `spread` factor rises 0→1 over the first **13%** of the section and lerps every
+  print between a TIGHT-STACK pose (6px/8px offsets, 1.5° fan) and the open spiral. Prod-measured:
+  the prints span **38px stacked → 358px opened**. Ghost opacity is also scaled by `spread`, so a
+  closed pile reads solid rather than like translucent sheets.
+- **Responsive to the cursor, two ways:** the whole `.field` leans toward the pointer (±7° Y, ±4.5° X
+  — the homepage's deck lean, in a 3D field rather than a shader), and the print under the cursor
+  **lifts 52px toward you**. Both gated on `(pointer: fine)` and scaled by `spread`.
+- Prod-build verified: **24 distinct z values across 25 samples** of a slow scroll (genuinely
+  continuous, not stepped), lean swings −4.44° → +3.61° across the viewport, hover lifts z −202 →
+  −150, zero console errors.
+
+**▶▶ SUPERSEDED (2026-08-31) — v8: the stepped version.**
 User: *"Actually I got it. Let's actually lock the scroll on that section and flip through all 9
 before proceeding."* — a deliberate reversal of the "never pin" rule I had written up emphatically.
 - ⚠️⚠️ **THE RULE WAS WRONG, AND THIS IS THE CORRECTED VERSION: the problem was never PINNING, it

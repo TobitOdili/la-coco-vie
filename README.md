@@ -62,8 +62,9 @@ is that no two pages share a language. Breaking it is what made With Love fail i
     carries on. It nudges itself left-then-right when you arrive, instead of printing instructions. Built from the **homepage's grammar** —
     one physical object, one continuous gesture, depth-opacity falloff, the big faint wordmark
     behind, lerped pointer parallax — but deliberately not its geometry: this **recedes** rather
-    than orbiting. ⚠️ The section **is pinned** until all nine have been through — but the animation
-    is still never scrubbed: scroll picks *which* print is up, and a spring does the movement.
+    than orbiting. The deck **unfurls** as you enter — a tight pile of prints spreading into the
+    spaced procession — then flows **continuously** with the scroll, leaning toward your cursor and
+    lifting the print you point at. ⚠️ The section is **pinned** until all nine have been through.
   - **WITH LOVE** — the **ink** writes the thank-you, then wanders past gift words scattered across
     the page and **lassoes** each in turn; hover shows the item on a torn paper scrap. Ends by
     splitting in two to sign both names → RSVP.

@@ -16,13 +16,14 @@
          outside would read as the homepage repeated. This recedes instead of
          orbiting — a journey coming toward you, which is what the page is about.
 
-         ⚠️ THE SECTION IS PINNED until all the prints have been through, at the
-         user's request (2026-08-31), reversing the earlier "never pin" rule.
-         ⚠️ BUT THE ANIMATION IS STILL NOT SCRUBBED, which is the distinction that
-         matters and the reason the earlier pinned versions were rejected: scroll
-         only picks an INTEGER target, and the same spring does the motion. So a
-         card always travels at its own pace and settles dead centre — scrolling
-         chooses WHICH print, never how far through its movement you are. -->
+         ⚠️ THE SECTION IS PINNED until all the prints have been through, and the
+         deck moves CONTINUOUSLY with the scroll — not in steps.
+         ⚠️ This matches the homepage, which was always continuous: its wheel
+         handler does `scrollRotationY -= delta * 0.0008` and a lerp trails it.
+         Fluidity comes from DAMPING (a spring that lags the input), not from
+         snapping to whole cards, which is what made an earlier pass feel clicky.
+         The deck also UNFURLS as you enter: a tight pile of prints spreads into
+         the spaced procession over the first stretch of the section. -->
     <section
       v-for="(s, i) in sections"
       :key="i"
@@ -71,6 +72,8 @@
             class="print"
             :data-k="k"
             :aria-label="`${p.note} — ${k === presented ? 'open' : 'bring forward'}`"
+            @pointerenter="hoverK = k"
+            @pointerleave="hoverK = hoverK === k ? null : hoverK"
             @click="onPrintClick(k)"
           >
             <span class="faces">
@@ -134,11 +137,15 @@ const GHOST_FLOOR = 0.16
 const FADE_FROM = 0.35      // slots before the fade starts
 const FADE_OVER = 5.2       // …and how many it takes to reach the floor
 
-// ⚠️ The section is PINNED for this many screens per print. Scroll through it
-// picks the integer target; the spring below still does the actual movement, so
-// nothing is scrubbed. Total height = 100dvh + (N-1)·STEP_VH.
+// ⚠️ The section is PINNED for this many screens per print, and scroll now moves
+// the deck CONTINUOUSLY — no integer steps. It reads as the homepage's carousel:
+// the deck flows under a spring that lags the input slightly, so it glides rather
+// than clicking from one card to the next. Total height = 100dvh + (N-1)·STEP_VH.
 const STEP_VH = 58
-const SPRING = 6.2          // how hard progress chases its target
+const SPRING = 5.0          // how closely the deck follows the scroll (lower = more glide)
+const SPREAD_OVER = 0.13    // the deck unfurls over the first 13% of the section
+const LEAN_X = 7            // deg the whole deck leans with the pointer
+const LEAN_Y = 4.5
 const RAISE_SPRING = 7.5
 const RAISE_Z = 90          // a little toward the viewer, so it clears the deck
 
@@ -148,6 +155,7 @@ const slots = ref(22)
 const presented = ref(0)
 const open = ref(null)
 const hovering = ref(false)
+const hoverK = ref(null)  // which print the cursor is over
 const inView = ref(false)
 // raise/flip are animated in the SAME rAF loop as everything else. A CSS
 // transition would fight the per-frame transform writes, and the raised card has
@@ -162,6 +170,8 @@ let cueRuns = 0           // it repeats a couple of times until you touch it
 let flipCueT = -1         // >=0 while the "this turns over" wobble runs
 let flipCued = false
 let touched = false       // any real interaction retires the cues for good
+let spread = 0            // 0 = a tight stack, 1 = the deck fully unfurled
+let hoverAmt = 0          // springs toward 1 while a print is under the cursor
 
 let rafId = 0
 let io = null
@@ -207,25 +217,39 @@ function raisedScale() {
 
 function place(el, u, k) {
   const a = Math.abs(u)
+  // ── the OPEN pose: the full spiral ──
   const r = printW * R_PER_W * (a / (a + R_K))
   const phi = u * D_PHI
-  let x = r * Math.cos(phi - Math.PI / 2)
-  let y = r * Math.sin(phi - Math.PI / 2) * Y_SQUASH
-  let z = -u * printW * Z_PER_W
-  let rotZ = u * TILT
+  const openX = r * Math.cos(phi - Math.PI / 2)
+  const openY = r * Math.sin(phi - Math.PI / 2) * Y_SQUASH
+  const openZ = -u * printW * Z_PER_W
+  const openRot = u * TILT
+  // ── the STACKED pose: a neat pile, barely fanned ──
+  const stackX = u * 6
+  const stackY = u * 8
+  const stackZ = -u * printW * 0.05
+  const stackRot = u * 1.5
+  // …and `spread` unfurls one into the other as you enter the section
+  let x = stackX + (openX - stackX) * spread
+  let y = stackY + (openY - stackY) * spread
+  let z = stackZ + (openZ - stackZ) * spread
+  let rotZ = stackRot + (openRot - stackRot) * spread
 
-  let o = 1 - Math.max(0, a - FADE_FROM) / FADE_OVER * (1 - GHOST_FLOOR)
-  o = Math.max(GHOST_FLOOR, Math.min(1, o))
+  // faint ghosts, but only once the deck has opened — a tight stack should read
+  // as solid, not as a pile of translucent sheets
+  const fade = 1 - Math.max(0, a - FADE_FROM) / FADE_OVER * (1 - GHOST_FLOOR)
+  let o = Math.max(GHOST_FLOOR, Math.min(1, fade))
+  o = 1 + (o - 1) * spread
 
   // ⚠️ The card leaving the front goes UP AND BACK, not toward the camera. Sending
   // it past the viewer read as a card being thrown at you; this reads as the top
   // one being lifted off and put behind, which is what it is.
   if (u < 0) {
-    const t = Math.min(1, -u)
+    const t = Math.min(1, -u) * spread
     y -= 0.34 * printW * t
     z = -t * printW * Z_PER_W * 1.7
     rotZ = -t * 7
-    o = Math.max(0, 1 - t * 1.9)
+    o = Math.min(o, Math.max(0, 1 - t * 1.9))
   }
 
   // the front card carries the finger a little, and the one-time nudge cue
@@ -234,6 +258,12 @@ function place(el, u, k) {
   let sc = 1
   let rotY = 0
   let rotX = 0
+  // the one under the cursor lifts toward you — the homepage's hover, in depth
+  if (hoverK.value === k && open.value === null) {
+    z += 52 * hoverAmt
+    y -= 10 * hoverAmt
+    sc += 0.035 * hoverAmt
+  }
   if (open.value === k && raise > 0) {
     // ── the print rises out of the deck, and keeps its parallax while it is up ──
     const S = raisedScale()
@@ -495,10 +525,14 @@ function tick(now) {
       const r = scene.getBoundingClientRect()
       const travel = Math.max(1, r.height - window.innerHeight)
       const p = Math.min(1, Math.max(0, -r.top / travel))
-      // ⚠️ floor(p·N), not round(p·(N−1)): rounding makes the FIRST and LAST
-      // prints occupy half-width buckets, so they get half the scroll room of
-      // every other one. Flooring gives all nine an equal share.
-      target = Math.min(n() - 1, Math.floor(p * n()))
+      // ⚠️ CONTINUOUS. Snapping this to an integer is what made it feel stepped:
+      // the deck jumped card to card instead of flowing. Scroll now sets a real
+      // position and the spring below trails it, which is exactly how the
+      // homepage carousel behaves.
+      target = p * (n() - 1)
+      // …and the stack UNFURLS as you come in: tight pile → spaced procession.
+      const sp = Math.min(1, p / SPREAD_OVER)
+      spread = sp * sp * (3 - 2 * sp)
     }
     // A raised print freezes the deck; the first real scroll lays it back down
     // rather than letting the page slide out from under it.
@@ -516,6 +550,18 @@ function tick(now) {
     // the same lerped pointer parallax the homepage camera uses
     px += (mx * 14 - px) * (1 - Math.exp(-dt * 3))
     py += (my * 9 - py) * (1 - Math.exp(-dt * 3))
+    hoverAmt += ((hoverK.value !== null ? 1 : 0) - hoverAmt) * (1 - Math.exp(-dt * 8))
+
+    // The whole sculpture leans toward the pointer — the homepage's deck lean,
+    // in a 3D field rather than a shader. `.field` carries preserve-3d, so every
+    // print tilts with it instead of each one being tilted separately.
+    const field = rootEl.value.querySelector('.field')
+    if (field) {
+      const lean = hasPointer ? spread : 0
+      field.style.transform =
+        `rotateY(${(px / 14 * LEAN_X * lean).toFixed(2)}deg)` +
+        ` rotateX(${(-py / 9 * LEAN_Y * lean).toFixed(2)}deg)`
+    }
 
     raise += (raiseTarget - raise) * (1 - Math.exp(-dt * RAISE_SPRING))
     flip += (flipTarget - flip) * (1 - Math.exp(-dt * RAISE_SPRING))
