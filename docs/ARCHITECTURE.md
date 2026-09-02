@@ -243,6 +243,33 @@ proportions from a 390px phone to a 1440px desktop with no breakpoints.
 per-element `translate3d(x, y, z)` written from the rAF loop. Nine elements; the DOM keeps images,
 text and focus handling for free, and the homepage's Three.js renderer stays the only one.
 
+> ⚠️ **The next three rules were learned in the Big Day rework that shipped as `df65d160` and was
+> REVERTED as `c067839b`.** The code they describe is gone; the rules are not, because every one of
+> them is about this codebase rather than about that feature, and two are repeat offenders. Read
+> them as "what will bite you here", not as "how the calendar works today".
+
+⚠️ **`threshold: 0` + a `rootMargin` band is the only trigger shape that cannot go
+unreachable** (fourth and fifth encounters with this family of bug). The Big Day's month-flip
+first hung off the section's own `threshold: 0.12` latch — which fires correctly, but the section
+is 1008px tall and starts a full screen below the hero, so at 12% the calendar itself is still
+~400px BELOW the fold: the entire riffle would have played where nobody could see it, exactly as
+In Frames' nudge did. Fixed by giving the flip its own observer on the **deck**, with
+`rootMargin: '-18% 0px -28% 0px'` and `threshold: 0`. Prefer this over any threshold above 0:
+"any overlap with the middle band" is reachable no matter how tall the element or how short the
+screen, whereas a fractional threshold silently becomes impossible the moment the element outgrows
+the viewport.
+⚠️ **A reserved `min-height` cannot stop a swap from shifting the page** when the panes differ in
+content: whatever number you pick is right for one pane and wrong for the others (the Big Day's
+white wedding has two events, the traditional has one). **Stack them in one grid cell** — every
+pane at `grid-area: 1/1`, only the active one visible — and the container is automatically as tall
+as its tallest child. Measured: 0px of movement across a full hover cycle, where the reserved
+version moved the page every time.
+⚠️ **A template ref inside `v-for` is an ARRAY — and the failure mode is an EMPTY PAGE, not an
+error** (rule #2, third occurrence, AUDIT #18). `ref="deckEl"` on an element inside the sections
+loop made `deckEl.value` an array; passing it to `observe()` threw inside `onMounted`, which aborts
+the mount and renders **nothing at all**, with no console error to point at. Query the DOM off a
+ref on the component ROOT (outside every `v-for`) instead.
+
 ⚠️ **Scroll progress measured against the SECTION is a breakpoint bug waiting to happen** — a
 fourth cousin of the tall-section threshold trap. US writes each string word by word, and the
 windows were originally fractions of the section: `p = (vh − top) / (height + vh)`. That is correct

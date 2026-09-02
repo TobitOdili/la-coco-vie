@@ -204,8 +204,8 @@ export const CHAPTER_PAGES = {
         monthISO: '2026-10',
         marks: [
           {
-            day: 25,
-            label: 'The Traditional Marriage',
+            day: 23,
+            label: 'Traditional Marriage',
             scrawl: 'traditional',
             rot: -7,
             dress: 'Colours of the day: [tbc]',
@@ -221,8 +221,8 @@ export const CHAPTER_PAGES = {
           },
           {
             day: 29,
-            label: 'The White Wedding',
-            scrawl: 'the big one',
+            label: 'White Wedding / Reception',
+            scrawl: 'white wedding',
             rot: 5,
             dress: 'Dress code: [tbc]',
             events: [
@@ -252,7 +252,7 @@ export const CHAPTER_PAGES = {
         title: 'Good to know',
         lines: [
           { label: 'Where', value: '[city — placeholder]. Both days are in the same city.' },
-          { label: 'The days between', value: 'The 26th, 27th and 28th are yours — [placeholder: anything for guests staying through].' },
+          { label: 'The days between', value: 'The 24th through the 28th are yours — [placeholder: anything for guests staying through].' },
           { label: 'Getting there', value: '[placeholder — airport, transfers, anything guests travelling in should know.]' },
           { label: 'Staying', value: '[placeholder — hotel block or recommendations.]' },
           { label: 'Children', value: '[placeholder — whether the day is one for the little ones.]' },
@@ -396,7 +396,7 @@ export const CHAPTER_PAGES = {
         kind: 'sign',
         closer: 'with love,',
         names: ['Covenant', 'Uvie'],
-        tail: 'see you on october 25 & 29.',
+        tail: 'see you on october 23 & 29.',
         popups: [],
       },
     ],

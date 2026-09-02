@@ -15,6 +15,7 @@ state, everything below it is history — newest first.)
 > |---|---|---|
 > | **US** | margin notes: the whole page in one hand, **nothing set in type**; taped polaroids | **written word by word** off each block's own rect |
 > | **THE BIG DAY** | **the calendar** — October 2026, the two wedding days ringed in marker; hover/tap one for its detail | a latch: it sets, then holds still |
+> | ⚠️ | **A rework of this page was REVERTED on 2026-09-02** — see the entry below before rebuilding any of it | |
 > | **IN FRAMES** | **the procession** — mounted prints spiralling out of the dark in CSS 3D, one presented | **pinned + scroll-scrubbed**: 5.64 screens of `sticky`, a spring chasing a continuous target, per-print inertia |
 > | **WITH LOVE** | the ink wanders past scattered gift words and **lassoes** each; hover shows the item on torn paper | measured spline + `.scrub`/`.write` |
 >
@@ -37,8 +38,8 @@ state, everything below it is history — newest first.)
 >    `document.fonts.ready` — web fonts change text metrics.
 > 5. **`overflow:hidden` on a scene root kills `position:sticky`.** Put it on the sticky child.
 >
-> **DATES ARE REAL (user, 2026-08-31):** the **traditional on Sun 25 Oct 2026** and the **white
-> wedding + reception on Thu 29 Oct 2026** — they replaced the single placeholder Oct 27, and the
+> **DATES ARE REAL (user, 2026-08-31; the traditional CORRECTED to the 23rd on 2026-09-02):** the
+> **traditional on FRI 23 Oct 2026** and the **white wedding + reception on Thu 29 Oct 2026** — they replaced the single placeholder Oct 27, and the
 > homepage countdown now rolls over from the first to the second. ⚠️ Those weekdays (Sunday and
 > Thursday) are what October 2026 actually gives; if that looks wrong, the MONTH is wrong.
 > **PLACEHOLDER (waiting on the couple):** all copy; the times;
@@ -55,7 +56,7 @@ state, everything below it is history — newest first.)
 >    AND at the end of all four chapters. Nothing else on this list matters as much.
 > 2. **The cash card** (With Love) — `'#'`.
 > 3. **"Add Your Photos"** (In Frames) — the shared Drive folder, `'#'`.
-> 4. **open in maps** — the traditional (25 Oct), `marks[0].events[0].map`.
+> 4. **open in maps** — the traditional (23 Oct), `marks[0].events[0].map`.
 > 5. **open in maps** — the ceremony (29 Oct).
 > 6. **open in maps** — the reception (29 Oct). *(All three are now inline links inside the
 >    calendar's day card, not popup cards.)*
@@ -127,6 +128,29 @@ Five reports, fixed and prod-verified. Full root causes in AUDIT #22–#24.
 produced **<1°** both times, because that accumulator isn't observable from outside. Driving it from
 the ring's per-frame rotation — a value the `?debug` probes now report (`leanDeg`, `rotVel`) — made
 it both correct and checkable. **If a value can't be measured, don't tune it; find one that can.**
+
+**▶▶ REVERTED (2026-09-02) — THE BIG DAY REWORK. Read this before rebuilding any of it.**
+Shipped as `df65d160` and reverted in full as `c067839b` at the user's request: *"please revert
+that last push. It's worse now imo."* The rejection was of the RESULT, not of the individual
+notes — the user's own brief in the same session had asked for most of it. **What is not yet known
+is WHICH part made it worse**, so nothing here should be rebuilt without asking first.
+- **What went in, and is now gone again:** the month-flip entrance (deck of month pages turning
+  from the visitor's own month to October, then ringing the dates); the removal of the "hover a
+  ringed date" hint; the detail cards stacked in one grid cell to kill the layout shift; add to
+  calendar as a real in-browser `.ics` (per day and both days), which also retired the dead
+  `calBoth` popup; and the hover-sound easter-egg wiring.
+- ⚠️ **KEPT, deliberately, and NOT part of the revert:** the traditional is **Friday 23 October
+  2026** and the two days are named **Traditional Marriage** and **White Wedding / Reception**.
+  Those are facts the user supplied, not design decisions — reverting them would have put a date
+  the user had explicitly corrected back onto a live wedding site. The "days between" line depends
+  on the date and stayed corrected with it ("the 24th through the 28th").
+- **The engineering lessons stand even though the code is gone** — they are about this codebase,
+  not about that feature. See AUDIT #28–#30 and ARCHITECTURE: a reserved `min-height` cannot stop a
+  swap shifting the page when the panes differ in content; `threshold: 0` + a `rootMargin` band is
+  the only trigger shape that cannot go unreachable; and a template ref inside `v-for` throws in
+  `onMounted` and renders a **blank page with no console error** (third occurrence).
+- **Still open from that brief, therefore:** the layout shift when moving between the two dates,
+  the written hover hint, the entrance, add to calendar, and the sounds. All of it is unbuilt again.
 
 **▶▶ STATE (2026-09-02, latest) — US IS WRITTEN, NOT SET.**
 User: *"I want all the text content to be handwritten… let the section headers and text underneath
