@@ -53,6 +53,11 @@ export const POPUPS = {
   // each day carries its own map(s); ONE calendar card on the cover covers both days
   // (a single .ics with two events), which also keeps the dock to two cards wide —
   // three would overflow a 390px phone, since .popup-stack is one flex row.
+  // ⚠️ ORPHANED 2026-09-02 — "Add to Calendar" is now a real, working action inside
+  // the calendar's own day card (BigDay.vue builds the .ics in the browser and hands
+  // it over as a Blob — no service to hook up). A docked card pointing at '#' next to
+  // a button that actually works was just a dead link, so it was removed from the
+  // section's `popups`. Kept only in case a docked version is ever wanted again.
   calBoth: {
     title: '🗓 Add to Calendar',
     params: ['both days · one file'],
@@ -204,10 +209,20 @@ export const CHAPTER_PAGES = {
         monthISO: '2026-10',
         marks: [
           {
-            day: 25,
-            label: 'The Traditional Marriage',
+            day: 23,
+            label: 'Traditional Marriage',
             scrawl: 'traditional',
             rot: -7,
+            // ── THE HOVER EASTER EGG ──
+            // Set this to a path under `public/` and hovering (or, on touch,
+            // tapping) this date plays it. e.g. sound: '/audio/trad.wav'
+            // ⚠️ Entirely optional and OFF by default: a mark with no `sound`, or
+            // one whose file fails to load, is simply silent. The page must never
+            // depend on audio existing. The site's own sound toggle already governs
+            // these — Howler's mute is global, so there is no second switch.
+            // ⚠️ AWAITING FILES (2026-09-02): the user is sourcing the traditional
+            // cue; the white wedding wants a royalty-free "Here Comes the Bride".
+            sound: null,
             dress: 'Colours of the day: [tbc]',
             events: [
               {
@@ -221,9 +236,10 @@ export const CHAPTER_PAGES = {
           },
           {
             day: 29,
-            label: 'The White Wedding',
-            scrawl: 'the big one',
+            label: 'White Wedding / Reception',
+            scrawl: 'white wedding',
             rot: 5,
+            sound: null,   // ← royalty-free "Here Comes the Bride" goes here
             dress: 'Dress code: [tbc]',
             events: [
               {
@@ -252,12 +268,12 @@ export const CHAPTER_PAGES = {
         title: 'Good to know',
         lines: [
           { label: 'Where', value: '[city — placeholder]. Both days are in the same city.' },
-          { label: 'The days between', value: 'The 26th, 27th and 28th are yours — [placeholder: anything for guests staying through].' },
+          { label: 'The days between', value: 'The 24th through the 28th are yours — [placeholder: anything for guests staying through].' },
           { label: 'Getting there', value: '[placeholder — airport, transfers, anything guests travelling in should know.]' },
           { label: 'Staying', value: '[placeholder — hotel block or recommendations.]' },
           { label: 'Children', value: '[placeholder — whether the day is one for the little ones.]' },
         ],
-        popups: ['calBoth'],
+        popups: [],
         align: 'left',
       },
     ],
@@ -396,7 +412,7 @@ export const CHAPTER_PAGES = {
         kind: 'sign',
         closer: 'with love,',
         names: ['Covenant', 'Uvie'],
-        tail: 'see you on october 25 & 29.',
+        tail: 'see you on october 23 & 29.',
         popups: [],
       },
     ],

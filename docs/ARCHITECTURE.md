@@ -152,7 +152,7 @@ what made With Love read as a repeat of US and get rebuilt.
 | file | what it is | how it moves |
 |---|---|---|
 | `UsStory.vue` | margin notes — the whole page in one hand, nothing set in type; taped polaroids | **written word by word**: per-word `.write` clip off each block's OWN rect; the polaroid keeps a latch |
-| `BigDay.vue` | "The Calendar" — October 2026 as a wall-calendar page, the two wedding days ringed in marker; hover/tap a ringed date to swap the detail panel | IntersectionObserver latch: it sets, then holds still |
+| `BigDay.vue` | "The Calendar" — a DECK of month pages that flips from the visitor's own month to October 2026, then rings the two wedding days in marker; hover/tap one to swap the detail | two latches: one for the page, one on the DECK for the flip; then it holds still |
 | `InFrames.vue` | **the procession** — mounted prints spiralling out of the dark in CSS 3D, one presented at the front | **pinned + scroll-scrubbed**: `sticky` over `100 + (N−1)·58` dvh, a spring chasing a continuous target, per-print inertia; a time loop for the room's film behind it |
 | `WithLove.vue` | the ink wanders past scattered gift words and **lassoes** each | measured spline + `.scrub`/`.write` |
 
@@ -242,6 +242,28 @@ proportions from a 390px phone to a 1440px desktop with no breakpoints.
 ⚠️ **CSS 3D, not a second WebGL context.** `perspective` on the stage + `preserve-3d` on the field +
 per-element `translate3d(x, y, z)` written from the rAF loop. Nine elements; the DOM keeps images,
 text and focus handling for free, and the homepage's Three.js renderer stays the only one.
+
+⚠️ **`threshold: 0` + a `rootMargin` band is the only trigger shape that cannot go
+unreachable** (fourth and fifth encounters with this family of bug). The Big Day's month-flip
+first hung off the section's own `threshold: 0.12` latch — which fires correctly, but the section
+is 1008px tall and starts a full screen below the hero, so at 12% the calendar itself is still
+~400px BELOW the fold: the entire riffle would have played where nobody could see it, exactly as
+In Frames' nudge did. Fixed by giving the flip its own observer on the **deck**, with
+`rootMargin: '-18% 0px -28% 0px'` and `threshold: 0`. Prefer this over any threshold above 0:
+"any overlap with the middle band" is reachable no matter how tall the element or how short the
+screen, whereas a fractional threshold silently becomes impossible the moment the element outgrows
+the viewport.
+⚠️ **A reserved `min-height` cannot stop a swap from shifting the page** when the panes differ in
+content: whatever number you pick is right for one pane and wrong for the others (the Big Day's
+white wedding has two events, the traditional has one). **Stack them in one grid cell** — every
+pane at `grid-area: 1/1`, only the active one visible — and the container is automatically as tall
+as its tallest child. Measured: 0px of movement across a full hover cycle, where the reserved
+version moved the page every time.
+⚠️ **A template ref inside `v-for` is an ARRAY — and the failure mode is an EMPTY PAGE, not an
+error** (rule #2, third occurrence, AUDIT #18). `ref="deckEl"` on an element inside the sections
+loop made `deckEl.value` an array; passing it to `observe()` threw inside `onMounted`, which aborts
+the mount and renders **nothing at all**, with no console error to point at. Query the DOM off a
+ref on the component ROOT (outside every `v-for`) instead.
 
 ⚠️ **Scroll progress measured against the SECTION is a breakpoint bug waiting to happen** — a
 fourth cousin of the tall-section threshold trap. US writes each string word by word, and the

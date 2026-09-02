@@ -6,7 +6,7 @@
 > Tools: Browserless (Playwright/CDP) against the live prod URL, bundle greps, DOM/computed-style probes.
 
 > **Doc map:** this file is the **forensic issue history** — per-issue root causes, fixes,
-> and commit refs (numbered #1–#27). For orientation start at [`README.md`](README.md);
+> and commit refs (numbered #1–#30). For orientation start at [`README.md`](README.md);
 > how-it-works is [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); live status is
 > [`PROGRESS.md`](PROGRESS.md). The **Priority Order table near the bottom is the quickest
 > index** of every issue and its status.
@@ -991,6 +991,75 @@ inertia check confirmed it.
 
 ---
 
+## Issue #28 — Moving between the two wedding dates shifted the whole page 🟡 MEDIUM (2026-09-02)
+
+### Symptom
+User: *"I don't love the layout shift at the bottom when I hover between the two dates."* Everything
+below the calendar's detail panel jumped as the panel swapped from one day to the other.
+
+### Root cause
+**A reserved `min-height`, which no number could have fixed.** The panel rendered one card at a time
+under `min-height: 9.5rem` (14rem on mobile). But the white wedding has **two** events and the
+traditional has **one**, so the two cards are genuinely different heights — whatever value was
+reserved was correct for one day and wrong for the other, and the taller card overflowed it every
+time. Reserving space only works when the panes are the same size, which is exactly when you don't
+need to reserve it.
+
+### Fix
+**Stack them.** Every card is rendered into the *same* CSS grid cell (`grid-area: 1 / 1`) with only
+the active one visible, so the container is automatically as tall as its tallest child and the swap
+is a pure cross-fade. **Measured: 0px of movement** across a full hover cycle on both 1440×900 and
+390×844, where the reserved version moved on every change. Generalised in ARCHITECTURE.
+
+---
+
+## Issue #29 — The Big Day rendered a completely blank section, with no error 🟠 HIGH (2026-09-02)
+
+### Symptom
+After adding the month-flip, the entire calendar disappeared: `.cal-wrap`, `.cal-deck` and every
+`.cal-page` were absent from the DOM. **No console error, no page error** — the section was simply
+empty. An earlier build of the same component had rendered fine.
+
+### Root cause
+**A template ref used inside `v-for` — third occurrence (see #18).** The flip needed to observe the
+deck, so it got `ref="deckEl"`. But `.cal-deck` sits inside the `v-for` over `sections`, and Vue
+collects a ref used inside `v-for` as an **ARRAY**. `deckObs.observe(deckEl.value)` therefore threw
+an `IntersectionObserver.observe` type error *inside `onMounted`* — and a throw in `onMounted`
+**aborts the component mount**, so nothing rendered at all. The throw is swallowed by Vue's error
+handling, which is why there was nothing in the console to point at.
+
+### Fix
+Query the DOM off a ref on the component **root** (outside every `v-for`):
+`rootEl.value?.querySelector('.cal-deck')`. Same resolution as #18 and the In Frames rAF loop.
+⚠️ **Recognise the symptom**: a bespoke component that renders NOTHING, silently, is almost always a
+throw in `onMounted` — and in this codebase that is almost always a `v-for` ref.
+
+---
+
+## Issue #30 — The month-flip would have played entirely below the fold 🟠 HIGH (2026-09-02, caught pre-ship)
+
+### Symptom
+Caught by instrumentation before release, not by a user. The new entrance — flipping from the
+visitor's current month to October — was triggered by the section's existing `threshold: 0.12`
+IntersectionObserver latch. That fires correctly, but measured from the live build the calendar
+section is **1008px tall and starts a full screen below the hero**, so at 12% visibility the deck
+itself is still roughly **400px below the fold**. The whole riffle would have run and finished
+before it was ever on screen.
+
+### Root cause
+The same family as AUDIT #27 and the `[slug].vue` active-section observer — **a trigger tuned to the
+section rather than to the thing being animated**. Fourth and fifth encounters with it in this
+codebase.
+
+### Fix
+The flip gets **its own observer, on the deck**, at `rootMargin: '-18% 0px -28% 0px'` with
+`threshold: 0`. ⚠️ **Prefer that shape to any threshold above 0**: "any overlap with the middle band"
+is reachable no matter how tall the element or how short the screen, whereas a fractional threshold
+silently becomes impossible the moment the element outgrows the viewport. **Verified: the deck is
+100% visible for every sampled frame of the flip**, on both 1440×900 and 390×844.
+
+---
+
 ## Updated Priority Order (as of 2026-05-27)
 
 | # | Issue | Priority | Status |
@@ -1022,3 +1091,6 @@ inertia check confirmed it.
 | ~~25~~ | ~~Deep-linking to a chapter left the EXPLORE cursor stuck expanded~~ | ~~🟠 High~~ | ✅ Fixed — `confirm()` and its release now live in one place (`releaseConfirmWhenSettled()` from `onChapterSelect`); the route watcher never fired on a deep link because the slug never changed. Prod: class is plain `cursor`. See §Issue #25. |
 | ~~26~~ | ~~A square outline around every ringed calendar date~~ | ~~🟡 Medium~~ | ✅ Fixed — the SVG's `class="ring"` collided with **Tailwind's `.ring` utility**; renamed `.marker-ring` / `.cal-grid`. Scoped CSS does not scope the class NAME. See §Issue #26. |
 | ~~27~~ | ~~In Frames: the deck bounced while scrolling, and the swipe cue was never visible~~ | ~~🟠 High~~ | ✅ Fixed (`56522682`) — a special-cased exit path made every print surge and retreat; the cue hit the tall-section threshold trap **twice** (3rd/4th occurrences). Prod: 0 depth reversals, per-print inertia 8 distinct of 9. See §Issue #27. |
+| ~~28~~ | ~~Moving between the two wedding dates shifted the whole page~~ | ~~🟡 Medium~~ | ✅ Fixed — a reserved `min-height` cannot work when the panes differ in content; the cards are stacked in one grid cell now. Measured 0px shift. See §Issue #28. |
+| ~~29~~ | ~~The Big Day rendered a completely blank section, with no error~~ | ~~🟠 High~~ | ✅ Fixed — a `v-for` template ref is an ARRAY; `observe()` threw in `onMounted`, which aborts the mount and renders nothing (3rd occurrence, cf. #18). Query off a root ref. See §Issue #29. |
+| ~~30~~ | ~~The month-flip would have played entirely below the fold~~ | ~~🟠 High~~ | ✅ Fixed pre-ship — the section latch fires while the deck is ~400px under the fold; the flip has its own deck observer at `threshold: 0` + rootMargin band. See §Issue #30. |
