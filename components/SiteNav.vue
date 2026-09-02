@@ -115,7 +115,7 @@ import { SITE } from '~/site.config'
 // Whole days until the next wedding (static per page load — day resolution needs no
 // timer). There are TWO days, so the count ROLLS OVER: it targets the traditional
 // until that has passed, then the white wedding. While both are ahead it shows the
-// pair label ("October 23 & 29"); after the rollover it names the day it is counting
+// pair label ("October 25 & 29"); after the rollover it names the day it is counting
 // to, so the number and the date on screen can never disagree.
 const nextEvent = computed(() => {
   const now = Date.now()

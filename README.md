@@ -23,7 +23,7 @@ opens into its own bespoke scroll page.
 >
 > ⚠️ **ALL copy, dates, venues, and the registry are PLACEHOLDERS** pending the couple's real
 > details. The dates are the couple's real ones, confirmed 2026-08-31: the **traditional
-> marriage on FRIDAY 23 October 2026** and the **white wedding + reception on Thursday 29
+> marriage on Sunday 25 October 2026** and the **white wedding + reception on Thursday 29
 > October 2026**. (They replaced a single placeholder date of October 27.)
 
 ---
@@ -53,15 +53,10 @@ is that no two pages share a language. Breaking it is what made With Love fail i
     a pen lays it down, so scrolling back un-writes it. The heading finishes before the body starts,
     then he writes in the margin and she answers.
   - **THE BIG DAY** — "the calendar": October 2026 as a page off a wall calendar, with the two
-    wedding days **ringed in marker** and annotated by hand (*traditional* · *white wedding*).
-    It opens on the visitor's **own current month** and the pages **flip up and over**, bound at
-    the top edge like a real wall calendar, until October is showing — and only then are the two
-    dates ringed. Hovering — or tapping — a ringed date swaps the detail below the grid: times,
-    venue, map, dress code, and a working **add to calendar** (the `.ics` is built in the browser,
-    one day or both). ⚠️ Every card is stacked in one grid cell so the panel is always as tall as
-    its tallest card — moving between the dates **cannot shift the page**. The grid is computed
-    from the month, so the weekday alignment can't go stale. Photo-free, and once it has landed it
-    holds **completely still** while you read it.
+    wedding days **ringed in marker** and annotated by hand (*traditional* · *the big one*).
+    Hovering — or tapping — a ringed date swaps the detail below the grid: times, venue, map,
+    dress code. The grid is computed from the month, so the weekday alignment can't go stale.
+    Photo-free, and it holds **completely still** while you read it.
   - **IN FRAMES** — **the procession**: the couple's photographs, mounted, spiralling out of the
     dark toward you in real 3D. One is always **presented** at the front — lit, in colour, its
     handwritten note legible — while the rest orbit away into the room as faint ghosts. Built from

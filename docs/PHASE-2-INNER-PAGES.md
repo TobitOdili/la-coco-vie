@@ -14,7 +14,7 @@ state, everything below it is history — newest first.)
 > | chapter | what it is now | driven by |
 > |---|---|---|
 > | **US** | margin notes: the whole page in one hand, **nothing set in type**; taped polaroids | **written word by word** off each block's own rect |
-> | **THE BIG DAY** | **the calendar** — flips from the visitor's OWN month to October 2026, then rings the two days in marker; hover/tap one for its detail + a working .ics | a latch for the page, a second on the deck for the flip |
+> | **THE BIG DAY** | **the calendar** — October 2026, the two wedding days ringed in marker; hover/tap one for its detail | a latch: it sets, then holds still |
 > | **IN FRAMES** | **the procession** — mounted prints spiralling out of the dark in CSS 3D, one presented | **pinned + scroll-scrubbed**: 5.64 screens of `sticky`, a spring chasing a continuous target, per-print inertia |
 > | **WITH LOVE** | the ink wanders past scattered gift words and **lassoes** each; hover shows the item on torn paper | measured spline + `.scrub`/`.write` |
 >
@@ -37,8 +37,8 @@ state, everything below it is history — newest first.)
 >    `document.fonts.ready` — web fonts change text metrics.
 > 5. **`overflow:hidden` on a scene root kills `position:sticky`.** Put it on the sticky child.
 >
-> **DATES ARE REAL (user, 2026-08-31; the traditional CORRECTED to the 23rd on 2026-09-02):** the
-> **traditional on FRI 23 Oct 2026** and the **white wedding + reception on Thu 29 Oct 2026** — they replaced the single placeholder Oct 27, and the
+> **DATES ARE REAL (user, 2026-08-31):** the **traditional on Sun 25 Oct 2026** and the **white
+> wedding + reception on Thu 29 Oct 2026** — they replaced the single placeholder Oct 27, and the
 > homepage countdown now rolls over from the first to the second. ⚠️ Those weekdays (Sunday and
 > Thursday) are what October 2026 actually gives; if that looks wrong, the MONTH is wrong.
 > **PLACEHOLDER (waiting on the couple):** all copy; the times;
@@ -55,7 +55,7 @@ state, everything below it is history — newest first.)
 >    AND at the end of all four chapters. Nothing else on this list matters as much.
 > 2. **The cash card** (With Love) — `'#'`.
 > 3. **"Add Your Photos"** (In Frames) — the shared Drive folder, `'#'`.
-> 4. **open in maps** — the traditional (23 Oct), `marks[0].events[0].map`.
+> 4. **open in maps** — the traditional (25 Oct), `marks[0].events[0].map`.
 > 5. **open in maps** — the ceremony (29 Oct).
 > 6. **open in maps** — the reception (29 Oct). *(All three are now inline links inside the
 >    calendar's day card, not popup cards.)*
@@ -127,49 +127,6 @@ Five reports, fixed and prod-verified. Full root causes in AUDIT #22–#24.
 produced **<1°** both times, because that accumulator isn't observable from outside. Driving it from
 the ring's per-frame rotation — a value the `?debug` probes now report (`leanDeg`, `rotVel`) — made
 it both correct and checkable. **If a value can't be measured, don't tune it; find one that can.**
-
-**▶▶ STATE (2026-09-02, latest) — THE BIG DAY: A CALENDAR YOU FLIP TO.**
-User liked the calendar and its styling; the notes were the layout shift when moving between the
-dates, the written "hover" instruction, an entrance that flips from the visitor's current month to
-October, the real names for the two days, **the traditional is the 23rd, not the 25th**, add to
-calendar, and a hover easter egg that plays a sound per date.
-- ⚠️ **THE DATE MOVED SITE-WIDE.** Traditional 25 → **23 Oct 2026 (a Friday)**: the countdown
-  target, `dateLabel`, the welcome note, With Love's closing line, the calendar mark, and the
-  "days between" line (now "the 24th through the 28th"). The white wedding is unchanged.
-- **The two days are named** "Traditional Marriage" and "White Wedding / Reception"; the marker
-  scrawls are `traditional` and `white wedding` ("the big one" is retired).
-- ⚠️ **The layout shift was a reserved `min-height`, and no number could have fixed it** — the
-  white wedding has two events and the traditional one, so whichever height was reserved, the
-  other day moved the page. Every card is now **stacked in one grid cell**, so the panel is always
-  as tall as its tallest card. Measured: **0px** of movement across a full hover cycle.
-- **The hint text is gone.** The rings drawing themselves on arrival is the affordance.
-- **THE FLIP.** The deck opens on the visitor's OWN current month and the pages turn up and over,
-  bound at the top edge, until October is showing; only then are the dates ringed and the detail
-  faded in. The pages are grid-stacked, so revealing a 5-row month behind a 6-row one cannot
-  shorten the page. ⚠️ The RIFFLE is budgeted as a whole (1250ms) rather than per flip: one flip
-  should be a deliberate turn and nine should be a riffle, which only works if the count divides a
-  fixed total. Capped at 9 pages.
-- ⚠️⚠️ **THE FLIP'S TRIGGER WAS THE OLD TRAP AGAIN.** Hung off the section's `threshold: 0.12`
-  latch it fired while the calendar was still ~400px BELOW the fold — the whole riffle would have
-  played unseen, exactly like In Frames' nudge. It has its own observer on the DECK now, at
-  `threshold: 0` with a `rootMargin` band. **Prefer that shape over any threshold above 0.**
-  Verified: the deck is **100% visible for every frame of the flip**, desktop and mobile.
-- ⚠️⚠️ **AND RULE #2 COST A BLANK PAGE.** `ref="deckEl"` sat inside the sections `v-for`, so it was
-  an ARRAY; `observe()` threw inside `onMounted`, which aborts the mount and renders **nothing** —
-  with no console error. Third occurrence. Query the DOM off a root ref.
-- **ADD TO CALENDAR WORKS** — the `.ics` is built in the browser and handed over as a Blob, so
-  there was nothing to hook up after all. One day or both. ⚠️ **All-day VEVENTs on purpose**: the
-  times are placeholders, and an event at a made-up hour is worse than one with no hour. Lines are
-  RFC-5545 folded at 75 octets — nothing exceeds it while the venues are `[placeholder]`, which is
-  precisely why it would have shipped broken the day a real address landed. The dead `calBoth`
-  popup is retired (dead links: 8 → 7).
-- **The sound easter egg is wired and silent.** `marks[].sound` takes a path under `public/`;
-  a mark without one, or whose file fails to load, plays nothing. Howler's mute is global, so the
-  site's own sound toggle already governs it. ⏳ **BLOCKED ON FILES** — the user is sourcing the
-  traditional cue and a royalty-free "Here Comes the Bride" is still needed.
-- **Prod-build verified at 1440×900 and 390×844**, identical: flip runs fully on screen, both rings
-  draw, both scrawls land, detail fades in, **0px layout shift**, the `.ics` downloads and parses
-  with the right dates, 0 console errors.
 
 **▶▶ STATE (2026-09-02, latest) — US IS WRITTEN, NOT SET.**
 User: *"I want all the text content to be handwritten… let the section headers and text underneath

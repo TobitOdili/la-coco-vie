@@ -28,8 +28,7 @@
 > **In Frames and With Love were both rebuilt from scratch** — and In Frames has since been rebuilt
 > several more times, landing on **"the procession"** (pinned, scroll-scrubbed prints in CSS 3D,
 > v10 as of `56522682`). The Big Day is now **"the calendar"**, and the couple's **real dates** are
-> in: traditional **Fri 23 Oct 2026** (corrected from the 25th on 2026-09-02), white wedding +
-> reception **Thu 29 Oct 2026**, with a
+> in: traditional **Sun 25 Oct 2026**, white wedding + reception **Thu 29 Oct 2026**, with a
 > countdown that rolls from the first to the second. ⚠️ **US's copy is deliberate lorem ipsum**
 > pending the couple's words. See the tracker.
 >
