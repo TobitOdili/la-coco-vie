@@ -115,16 +115,24 @@ export const CHAPTER_PAGES = {
   // resized to 900px into `/images/us/`), and every string except the section HEADINGS
   // is deliberate LOREM IPSUM at the user’s request — the page is being reviewed for
   // layout/typography, not for copy. Real words land when the couple write them.
+  //
+  // ⚠️ 2026-09-02 — the page is now WRITTEN, not set: every string here is rendered in
+  // the hand (Over the Rainbow) and revealed WORD BY WORD off the scroll position. Two
+  // consequences for whoever writes the real copy:
+  //   • `body` is capped at ~3 SHORT sentences per scene on purpose. Handwriting is
+  //     roughly 1.4× the height of the old sans at the same measure, and every word
+  //     costs scroll travel — a long paragraph turns the section into a marathon.
+  //   • `date` is lower-case now. It used to be an upper-case, letter-spaced label;
+  //     neither survives a script hand, which has no capitals worth spacing out.
   us: {
     sections: [
       {
         num: 'I',
         title: 'The Meeting',
-        date: 'LOREM IPSUM',
+        date: 'lorem ipsum',
         body:
-          'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor ' +
-          'incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis ' +
-          'nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
+          'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor ' +
+          'incididunt ut labore et dolore magna. Ut enim ad minim veniam, quis nostrud.',
         notes: [
           { voice: 'c', text: 'lorem ipsum dolor sit amet' },
           { voice: 'u', text: 'consectetur adipiscing elit' },
@@ -137,11 +145,10 @@ export const CHAPTER_PAGES = {
       {
         num: 'II',
         title: 'The Question',
-        date: 'DOLOR SIT AMET',
+        date: 'dolor sit amet',
         body:
-          'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu ' +
-          'fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in ' +
-          'culpa qui officia deserunt mollit anim id est laborum.',
+          'Duis aute irure dolor in reprehenderit in voluptate velit. Esse cillum dolore ' +
+          'eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident.',
         notes: [
           { voice: 'c', text: 'sed do eiusmod tempor incididunt' },
           { voice: 'u', text: 'ut labore et dolore magna' },
@@ -154,11 +161,10 @@ export const CHAPTER_PAGES = {
       {
         num: 'III',
         title: 'The Yes',
-        date: 'CONSECTETUR ELIT',
+        date: 'consectetur elit',
         body:
-          'Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium ' +
-          'doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore ' +
-          'veritatis et quasi architecto beatae vitae dicta sunt explicabo.',
+          'Sed ut perspiciatis unde omnis iste natus error sit. Voluptatem accusantium ' +
+          'doloremque laudantium, totam rem aperiam. Eaque ipsa quae ab illo inventore.',
         notes: [
           { voice: 'c', text: 'quis nostrud exercitation' },
           { voice: 'u', text: 'ullamco laboris nisi ut aliquip' },

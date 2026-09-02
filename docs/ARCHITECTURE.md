@@ -151,7 +151,7 @@ what made With Love read as a repeat of US and get rebuilt.
 
 | file | what it is | how it moves |
 |---|---|---|
-| `UsStory.vue` | margin notes — two handwritten voices, taped polaroids | `.scrub` / `.fade` per scene |
+| `UsStory.vue` | margin notes — the whole page in one hand, nothing set in type; taped polaroids | **written word by word**: per-word `.write` clip off each block's OWN rect; the polaroid keeps a latch |
 | `BigDay.vue` | "The Calendar" — October 2026 as a wall-calendar page, the two wedding days ringed in marker; hover/tap a ringed date to swap the detail panel | IntersectionObserver latch: it sets, then holds still |
 | `InFrames.vue` | **the procession** — mounted prints spiralling out of the dark in CSS 3D, one presented at the front | **pinned + scroll-scrubbed**: `sticky` over `100 + (N−1)·58` dvh, a spring chasing a continuous target, per-print inertia; a time loop for the room's film behind it |
 | `WithLove.vue` | the ink wanders past scattered gift words and **lassoes** each | measured spline + `.scrub`/`.write` |
@@ -242,6 +242,22 @@ proportions from a 390px phone to a 1440px desktop with no breakpoints.
 ⚠️ **CSS 3D, not a second WebGL context.** `perspective` on the stage + `preserve-3d` on the field +
 per-element `translate3d(x, y, z)` written from the rAF loop. Nine elements; the DOM keeps images,
 text and focus handling for free, and the homepage's Three.js renderer stays the only one.
+
+⚠️ **Scroll progress measured against the SECTION is a breakpoint bug waiting to happen** — a
+fourth cousin of the tall-section threshold trap. US writes each string word by word, and the
+windows were originally fractions of the section: `p = (vh − top) / (height + vh)`. That is correct
+only while the section's internal layout is fixed. Desktop sets the polaroid *beside* the prose, so
+the prose sits mid-section; mobile stacks them, so the same prose sits near the bottom of a much
+taller section. The identical fraction therefore pointed at two completely different screen
+positions, and on a phone the body wrote itself below the fold. **Measure the block you are actually
+animating**: each writing unit derives its own progress from its own `getBoundingClientRect()` —
+start as its top clears `0.92·vh`, finish with the whole unit in the reading band — which is right at
+every breakpoint with no media query. ⚠️ Pull the end position **up** for a tall unit
+(`vh − height − margin`), or a long block "finishes" with its last lines still under the fold.
+⚠️ Section height does NOT buy writing room, which is counter-intuitive enough to be worth stating:
+an element is on screen for about one viewport of scrolling plus its own height regardless, so a
+taller section just makes progress move faster through the same window. Measured on this page —
+100dvh gives ~900px of writable travel, 128dvh gives ~903px. The taller version was pure blank page.
 
 ⚠️ **Pinning is fine; the old "never pin" rule was wrong.** In Frames holds the viewport until all
 nine prints have been through: the scene is `100 + (N−1)·STEP_VH` dvh (`STEP_VH = 58`, so **5.64

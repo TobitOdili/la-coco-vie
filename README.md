@@ -47,7 +47,11 @@ is that no two pages share a language. Breaking it is what made With Love fail i
   The deck rests **upright** and leans only with live input — the pointer on desktop, the swipe on
   touch.
 - ✅ **The four bespoke inner pages** (the *thread* narrative — one line runs the whole site):
-  - **US** — "the margin notes": the story in two handwritten voices, taped polaroids.
+  - **US** — "the margin notes": the story in two handwritten voices, taped polaroids. ⚠️ The page
+    is **written, not set** — nothing on it is type. Every string is in the hand (Over the Rainbow)
+    and appears **word by word off the scroll position**, each word un-clipped left to right the way
+    a pen lays it down, so scrolling back un-writes it. The heading finishes before the body starts,
+    then he writes in the margin and she answers.
   - **THE BIG DAY** — "the calendar": October 2026 as a page off a wall calendar, with the two
     wedding days **ringed in marker** and annotated by hand (*traditional* · *the big one*).
     Hovering — or tapping — a ringed date swaps the detail below the grid: times, venue, map,
@@ -159,7 +163,7 @@ components/
   SiteNav.vue                Top nav (About · logo · Collection) + bottom bar (credit · sound)
   AboutPanel.vue             Full-screen About overlay
   LoadingScreen.vue          Asset-gated loading counter (GSAP)
-  chapter/UsStory.vue        ★ US — "the margin notes" (bespoke page)
+  chapter/UsStory.vue        ★ US — "the margin notes": every string written word-by-word on scroll
   chapter/BigDay.vue         ★ THE BIG DAY — "the calendar", days ringed in marker (bespoke page)
   chapter/InFrames.vue       ★ IN FRAMES — "the procession": prints in CSS 3D, pinned + scroll-scrubbed
   chapter/WithLove.vue       ★ WITH LOVE — the ink wanders and lassoes each gift

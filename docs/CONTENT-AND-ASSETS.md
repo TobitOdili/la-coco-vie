@@ -15,6 +15,11 @@
 > **✅ The whole US page is the couple's own** (2026-08-31) — `public/images/us/`: three 900px
 > verticals for the polaroids + two 400px thumbs for its popup cards, all from `new frames/`.
 > ⚠️ That leaves **`images/gallery/` referenced by nothing at all** — see below.
+> ⚠️ **US copy is now length-constrained (2026-09-02).** The page is written in a script hand, word
+> by word off the scroll, so `body` is capped at **~3 short sentences per scene**: handwriting runs
+> ~1.4× the height of the old sans at the same measure, and every word costs scroll travel. `date`
+> is lower-case for the same reason — an upper-case, letter-spaced label has nothing to offer a
+> script hand. Whoever writes the couple's real words should stay inside that shape.
 > **Still Milla Nova PLACEHOLDERS, to swap for the couple's own:** the gallery **stills**, the
 > **favicon**, and the 4 ambient **audio** tracks (`public/audio/*.mp3` — Howler.js loops, one per
 > chapter, matching the reference; keep the wiring, replace the files + rename off the old slugs,

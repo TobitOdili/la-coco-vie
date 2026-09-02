@@ -13,7 +13,7 @@ state, everything below it is history — newest first.)
 > visual vocabulary, and breaking it is what made With Love fail once already):
 > | chapter | what it is now | driven by |
 > |---|---|---|
-> | **US** | margin notes: the story in two handwritten voices, taped polaroids | `.scrub`/`.fade` |
+> | **US** | margin notes: the whole page in one hand, **nothing set in type**; taped polaroids | **written word by word** off each block's own rect |
 > | **THE BIG DAY** | **the calendar** — October 2026, the two wedding days ringed in marker; hover/tap one for its detail | a latch: it sets, then holds still |
 > | **IN FRAMES** | **the procession** — mounted prints spiralling out of the dark in CSS 3D, one presented | **pinned + scroll-scrubbed**: 5.64 screens of `sticky`, a spring chasing a continuous target, per-print inertia |
 > | **WITH LOVE** | the ink wanders past scattered gift words and **lassoes** each; hover shows the item on torn paper | measured spline + `.scrub`/`.write` |
@@ -127,6 +127,36 @@ Five reports, fixed and prod-verified. Full root causes in AUDIT #22–#24.
 produced **<1°** both times, because that accumulator isn't observable from outside. Driving it from
 the ring's per-frame rotation — a value the `?debug` probes now report (`leanDeg`, `rotVel`) — made
 it both correct and checkable. **If a value can't be measured, don't tune it; find one that can.**
+
+**▶▶ STATE (2026-09-02, latest) — US IS WRITTEN, NOT SET.**
+User: *"I want all the text content to be handwritten… let the section headers and text underneath
+be literally written word for word, locked to scroll… delete this highlighted portion and keep each
+section 3 sentences or so… keep the section headers as text and write in just the words in the nice
+handwritten font we currently have."*
+- **Every string is now Over the Rainbow** — heading, body, date line, caption, margin notes and the
+  watermark numeral. Nothing on the page is set in type. (The floating popup card and the site nav
+  are deliberately untouched: both are SHARED chrome, and each page owns a different hand, so a
+  shared component cannot adopt one of them. Flagged to the user rather than decided quietly.)
+- **Each word is its own `.write` unit**, clipped from the right and un-clipped left-to-right off the
+  scroll position — the same primitive WithLove uses, except the windows are DERIVED from the word
+  count rather than authored, so any copy length writes itself correctly (rule #4).
+- ⚠️ **`OVER = 2.4` is what stops it reading as a stutter.** A word takes 2.4 slots to complete but
+  starts one slot after the last, so ~3 are always mid-stroke — a hand moving, rather than a row of
+  words switching on one at a time. At 1 it is a telegraph.
+- ⚠️⚠️ **THE BUG ONLY A PHONE SHOWED: scroll progress measured against the SECTION.** Desktop puts
+  the polaroid beside the prose (prose mid-section); mobile stacks them (prose near the bottom of a
+  taller section). The same section fraction pointed at two different screen positions and the body
+  wrote itself below the fold on mobile. Each writing unit now measures its OWN rect. Right at every
+  breakpoint, no media query. See ARCHITECTURE.
+- ⚠️ **Section height does not buy writing room** — 100dvh gives ~900px of writable travel and
+  128dvh gives ~903px, because an element is on screen for ~one viewport plus its own height either
+  way. The 128dvh experiment was 252px of blank page for nothing; reverted.
+- **Copy is capped at ~3 short sentences per scene** and the date line is lower-case now (an
+  upper-case letter-spaced label has nothing to offer a script hand). Still lorem.
+- **Prod-build verified at 1440×900 AND 390×844**, identical on both: 12 writing blocks per pass,
+  **12/12 finish**, **0 finish off-screen**, ~3 words mid-stroke at any instant, the body never
+  starts before its heading is done, no horizontal overflow, 0 console errors. Reversible — scrolling
+  away and back un-writes, since the clip is a pure function of position.
 
 **▶▶ STATE (2026-08-31, latest) — IN FRAMES v10: the bounce, and prints with their own weight.**
 Three notes: no per-card hover expansion; **there is still a bouncing effect while scrolling**; and
