@@ -41,83 +41,81 @@
         <div class="room-grain" aria-hidden="true" />
         <div class="room-vignette" aria-hidden="true" />
 
-        <!-- ── the folders ──
-             A vertical run, each one stepped further right — a cascade, the way
-             folders sit when you drop them somewhere. Drawn in the room's own
-             materials (the print mat's fill and its lavender hairline) rather
-             than as an OS icon, so it reads as part of this page and not as
-             borrowed chrome. -->
-        <div class="shelf">
-          <button
-            v-for="(f, k) in folders"
-            type="button"
-            :key="k"
-            class="folder"
-            :class="{ lit: openIdx === k }"
-            :style="{ '--k': k }"
-            :data-k="k"
-            :aria-label="`${f.name} — empty, pictures coming soon`"
-            @click="openFolder(k, $event)"
-          >
-            <span class="ic" aria-hidden="true">
-              <span class="ic-tab" />
-              <span class="ic-back" />
-              <span class="ic-front" />
-            </span>
-            <span class="label">
-              <span class="fname">{{ f.name }}</span>
-              <span class="fmeta">EMPTY</span>
-            </span>
-          </button>
+        <!-- ── the window ──
+             It is not a popup any more. One window sits in the room with the
+             folders inside it, and clicking a folder NAVIGATES the window — the
+             way a file browser does — rather than throwing a second window over
+             the page. That also means no overlay, no scrim, and none of the
+             stacking-context fight a fixed layer inside `.chapter-page` loses. -->
+        <div class="win">
+          <header class="win-bar">
+            <span class="win-dots" aria-hidden="true"><i /><i /><i /></span>
+            <!-- ⚠️ Always rendered, only hidden. With `v-if` the bar had no back
+                 button at the root and gained a 1.35rem one inside a folder,
+                 which made the whole WINDOW 7px taller the moment you navigated
+                 — the exact shift the stacked views exist to prevent. Reserve
+                 the slot with `visibility`, never `display: none`. -->
+            <button
+              type="button"
+              class="win-back"
+              :class="{ off: path === null }"
+              :tabindex="path === null ? -1 : 0"
+              :aria-hidden="path === null || null"
+              aria-label="Back to all folders"
+              @click="back()"
+            >
+              <svg viewBox="0 0 12 12" aria-hidden="true">
+                <path d="M7.5 1.5 L3 6 L7.5 10.5" stroke="currentColor" stroke-width="1.3" fill="none" />
+              </svg>
+            </button>
+            <span class="win-title">{{ path === null ? s.title : folders[path]?.title }}</span>
+          </header>
+
+          <!-- ⚠️ Both views live in ONE grid cell, so the window is always as tall
+               as its tallest view and navigating cannot resize it under the
+               reader. Same reason the Big Day's day cards are stacked. -->
+          <div class="win-views">
+            <div class="view view-root" :class="{ on: path === null }" :aria-hidden="path !== null || null">
+              <ul class="grid-list">
+                <li v-for="(f, k) in folders" :key="k">
+                  <button
+                    type="button"
+                    class="folder"
+                    :class="{ opening: opening === k }"
+                    :data-k="k"
+                    :tabindex="path === null ? 0 : -1"
+                    :aria-label="`${f.name} — empty, ${emptyText.toLowerCase()}`"
+                    @click="enter(k)"
+                  >
+                    <span class="ic" aria-hidden="true">
+                      <span class="ic-tab" />
+                      <span class="ic-back" />
+                      <span class="ic-front" />
+                    </span>
+                    <span class="fname">{{ f.name }}</span>
+                    <span class="fmeta">EMPTY</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            <div class="view view-empty" :class="{ on: path !== null }" :aria-hidden="path === null || null">
+              <span class="empty-ic" aria-hidden="true">
+                <span class="ic-tab" />
+                <span class="ic-back" />
+                <span class="ic-front" />
+              </span>
+              <p class="empty-msg">{{ emptyText }}</p>
+            </div>
+          </div>
+
+          <footer class="win-status">
+            {{ path === null ? `${folders.length} FOLDERS` : '0 ITEMS' }}
+          </footer>
         </div>
 
-        <footer class="arc-foot">
-          <div class="more">{{ s.endSub }}</div>
-        </footer>
       </div>
     </section>
-
-    <!-- ── the window ──
-         ⚠️ TELEPORTED TO <body>, and it has to be. `.room-inner` clips its own
-         overflow for the film, so a window growing out of a folder could not
-         leave that box — but the real reason is one level up: `.chapter-page` is
-         `position: fixed; z-index: 10`, which makes it a STACKING CONTEXT, and
-         nothing inside it can paint above a sibling of it no matter how high its
-         own z-index. Measured before the fix: at (20,20) the topmost element was
-         the site nav (`z-20`), sitting on top of a modal set to `z-index: 60`.
-         Same trap as the raised print that a scrim painted over. Teleporting puts
-         the layer beside the nav rather than under it; z-70 clears the nav (20)
-         and the About panel (50) while staying under the custom cursor (100). -->
-    <Teleport to="body">
-    <div v-if="openIdx !== null" class="win-layer" :class="{ closing }">
-      <div class="scrim" @click="close()" />
-      <div
-        class="win"
-        role="dialog"
-        aria-modal="true"
-        :aria-label="openFolderData?.title"
-      >
-        <header class="win-bar">
-          <span class="win-dots" aria-hidden="true"><i /><i /><i /></span>
-          <span class="win-title">{{ openFolderData?.title }}</span>
-          <button type="button" class="win-x" aria-label="Close" @click="close()">
-            <svg viewBox="0 0 12 12" aria-hidden="true">
-              <path d="M2 2 L10 10 M10 2 L2 10" stroke="currentColor" stroke-width="1.3" />
-            </svg>
-          </button>
-        </header>
-        <div class="win-body">
-          <span class="empty-ic" aria-hidden="true">
-            <span class="ic-tab" />
-            <span class="ic-back" />
-            <span class="ic-front" />
-          </span>
-          <p class="empty-msg">{{ emptyText }}</p>
-          <p class="empty-sub">0 ITEMS</p>
-        </div>
-      </div>
-    </div>
-    </Teleport>
   </div>
 </template>
 
@@ -138,77 +136,36 @@ const ready = ref(false)
 const slots = ref(14)
 const inView = ref(false)
 
-// ── the window ──────────────────────────────────────────────────────────────
-const openIdx = ref(null)
-const closing = ref(false)
-const openFolderData = computed(() =>
-  openIdx.value === null ? null : folders.value[openIdx.value]
-)
-let fromRect = null
-let closeT = 0
-let lastTrigger = null
+// ── navigating the window ──────────────────────────────────────────────────
+// `path` is null at the root (the folders) or a folder index (its contents).
+// ⚠️ Clicking is the ONLY trigger — hovering does nothing but brighten the
+// hairline. A folder that fell open under the pointer read as a preview of
+// something that was about to happen on its own.
+const path = ref(null)
+const opening = ref(null)
+let navT = 0
 
-// ⚠️ A real FLIP, not a fade. The window is laid out where it will END UP, then
-// transformed back onto the folder icon that was clicked and released — so it
-// genuinely grows out of that folder instead of appearing over it. Doing it the
-// other way (animating width/height toward a target) lays out every frame and
-// cannot be composited.
-function mapTo(el, rect) {
-  const to = el.getBoundingClientRect()
-  if (!to.width || !to.height) return ''
-  const sx = Math.max(0.04, rect.width / to.width)
-  const sy = Math.max(0.04, rect.height / to.height)
-  const dx = rect.left + rect.width / 2 - (to.left + to.width / 2)
-  const dy = rect.top + rect.height / 2 - (to.top + to.height / 2)
-  return `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) scale(${sx.toFixed(4)}, ${sy.toFixed(4)})`
+// The folder is given time to actually OPEN before the window moves on, so the
+// two read as one action — you open the folder, then you are inside it — rather
+// than as a click that happens to be followed by a transition.
+const OPEN_MS = 300
+
+function enter(k) {
+  if (path.value !== null) return
+  clearTimeout(navT)
+  opening.value = k
+  navT = setTimeout(() => { path.value = k }, OPEN_MS)
 }
 
-async function openFolder(k, ev) {
-  clearTimeout(closeT)
-  closing.value = false
-  lastTrigger = ev?.currentTarget || null
-  const icon = lastTrigger?.querySelector('.ic')
-  fromRect = (icon || lastTrigger)?.getBoundingClientRect() || null
-  openIdx.value = k
-  await nextTick()
-  // ⚠️ document, not rootEl — the layer is teleported out of this component.
-  const win = document.querySelector('.win-layer .win')
-  if (!win || !fromRect) return
-  const t = mapTo(win, fromRect)
-  if (!t) return
-  win.style.transition = 'none'
-  win.style.transform = t
-  win.style.opacity = '0'
-  // ⚠️ Read a layout property to force the browser to commit that start state.
-  // Without it both writes coalesce into one style recalc and the element simply
-  // appears at its final position — the animation silently does not happen.
-  void win.offsetWidth
-  win.style.transition = ''
-  win.style.transform = ''
-  win.style.opacity = ''
-  document.querySelector('.win-layer .win-x')?.focus?.({ preventScroll: true })
-}
-
-function close() {
-  if (openIdx.value === null || closing.value) return
-  const win = document.querySelector('.win-layer .win')
-  closing.value = true
-  if (win && fromRect) {
-    win.style.transform = mapTo(win, fromRect)
-    win.style.opacity = '0'
-  }
-  // Matches the CSS transition; the element is only unmounted once it has
-  // finished travelling back into the folder it came out of.
-  closeT = setTimeout(() => {
-    openIdx.value = null
-    closing.value = false
-    lastTrigger?.focus?.({ preventScroll: true })
-    lastTrigger = null
-  }, 380)
+function back() {
+  clearTimeout(navT)
+  path.value = null
+  // the folder closes again on the way out
+  navT = setTimeout(() => { opening.value = null }, 220)
 }
 
 function onKey(e) {
-  if (e.key === 'Escape' && openIdx.value !== null) { e.preventDefault(); close() }
+  if (e.key === 'Escape' && path.value !== null) { e.preventDefault(); back() }
 }
 
 // ── the room's film ─────────────────────────────────────────────────────────
@@ -304,7 +261,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKey)
   cancelAnimationFrame(rafId)
   clearTimeout(resizeT)
-  clearTimeout(closeT)
+  clearTimeout(navT)
 })
 </script>
 
@@ -410,47 +367,37 @@ onBeforeUnmount(() => {
   100% { background-position: 0 0 }
 }
 
-/* ── the folders ── */
-.shelf {
-  position: relative;
-  z-index: 20;
+/* ── the folders, inside the window ── */
+.folder {
+  width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: clamp(1rem, 2.6vh, 1.9rem);
-  /* ⚠️ No auto margin. `margin-bottom: auto` pinned the cascade to the top of the
-     room, where its first folder landed directly on top of the IN FRAMES
-     wordmark. Centred in the room instead, it clears the wordmark by ~120px at
-     900px tall — and the footer is taken out of the flow below so it cannot drag
-     the group upward again. */
-  margin: 0;
-}
-.folder {
-  /* Each one steps further right than the last — a cascade, not a list. */
-  margin-inline-start: calc(var(--k, 0) * clamp(1.6rem, 4.5vw, 3.4rem));
-  display: flex;
   align-items: center;
-  gap: clamp(0.9rem, 2vw, 1.5rem);
+  gap: 0.55rem;
   appearance: none;
   -webkit-appearance: none;
   border: 0;
   background: none;
-  padding: 0.4rem;
-  margin-block: 0;
+  padding: clamp(0.7rem, 2vw, 1.1rem) 0.3rem;
   color: inherit;
   font: inherit;
-  text-align: start;
   cursor: none;
-  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: background 0.3s ease;
 }
-.folder:hover, .folder:focus-visible { outline: none; transform: translateX(6px); }
+/* ⚠️ Hover does NOT open the folder — only a click does. A flap that fell open
+   under the pointer read as a preview of something about to happen by itself.
+   Hover is a faint wash and a brighter hairline, nothing more. */
+.folder:hover, .folder:focus-visible {
+  outline: none;
+  background: rgba(195, 166, 216, 0.05);
+}
 
 /* The icon: the print mat's own fill and lavender hairline, folded into a
    folder — three panels, so the front one can tip forward on its own. */
 .ic {
   position: relative;
   flex: none;
-  width: clamp(3.4rem, 7vw, 5.2rem);
+  width: clamp(2.6rem, 7vw, 3.9rem);
   aspect-ratio: 5 / 4;
   --edge: rgba(195, 166, 216, 0.22);
 }
@@ -459,7 +406,7 @@ onBeforeUnmount(() => {
   box-sizing: border-box;
   background: #17101F;
   box-shadow: inset 0 0 0 1px var(--edge);
-  transition: box-shadow 0.4s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: box-shadow 0.35s ease, transform 0.34s cubic-bezier(0.3, 1.05, 0.4, 1);
 }
 /* the little tab, top-left, like every folder ever drawn */
 .ic-tab {
@@ -470,7 +417,7 @@ onBeforeUnmount(() => {
   border-radius: 3px 6px 0 0;
 }
 .ic-back { inset: 16% 0 0 0; border-radius: 0 4px 3px 3px; }
-/* the front flap — it tips forward as the folder opens */
+/* the front flap — it tips forward only once the folder is opened */
 .ic-front {
   inset: 42% 0 0 0;
   border-radius: 2px 2px 3px 3px;
@@ -478,94 +425,42 @@ onBeforeUnmount(() => {
   transform-origin: 50% 100%;
   transform: perspective(280px) rotateX(0deg);
 }
-.folder:hover .ic-front,
-.folder:focus-visible .ic-front { transform: perspective(280px) rotateX(-26deg); }
 .folder:hover .ic-tab,
 .folder:hover .ic-back,
 .folder:hover .ic-front,
 .folder:focus-visible .ic-tab,
 .folder:focus-visible .ic-back,
 .folder:focus-visible .ic-front { box-shadow: inset 0 0 0 1px rgba(195, 166, 216, 0.5); }
-/* held open while its window is up */
-.folder.lit .ic-front { transform: perspective(280px) rotateX(-42deg); }
-.folder.lit .ic-tab,
-.folder.lit .ic-back,
-.folder.lit .ic-front { box-shadow: inset 0 0 0 1px rgba(195, 166, 216, 0.62); }
 
-.label { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
+/* THE opening — the one thing a click animates before the window moves on. */
+.folder.opening .ic-front { transform: perspective(280px) rotateX(-58deg); }
+.folder.opening .ic-tab,
+.folder.opening .ic-back,
+.folder.opening .ic-front { box-shadow: inset 0 0 0 1px rgba(195, 166, 216, 0.62); }
+
 .fname {
   font-family: 'Shadows Into Light', 'Bradley Hand', cursive;
-  font-size: clamp(1.05rem, 2.1vw, 1.55rem);
-  line-height: 1;
+  font-size: clamp(0.85rem, 2vw, 1.15rem);
+  line-height: 1.15;
   color: #C3A6D8;
-  white-space: nowrap;
+  text-align: center;
 }
 .fmeta {
   font-family: 'Bague', sans-serif;
-  font-size: 0.54rem;
-  letter-spacing: 0.28em;
-  opacity: 0.32;
-}
-
-.arc-foot {
-  /* Out of the flow, so the folders centre on the ROOM rather than on
-     "folders + footer" as a block. */
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 20;
-  text-align: center;
-  /* ⚠️ Clears the floating popup dock, which is FIXED to the viewport bottom at
-     1.75rem and stands ~62px tall. 4.5rem was enough while this footer was in
-     flow (the room's own 6vh bottom padding sat under it too); taking it out of
-     the flow removed that, and the line landed behind the dock. */
-  padding-bottom: 7.5rem;
-}
-.more {
-  font-family: 'Bague', sans-serif;
-  font-size: 0.6rem;
-  letter-spacing: 0.28em;
-  opacity: 0.34;
+  font-size: 0.5rem;
+  letter-spacing: 0.24em;
+  opacity: 0.3;
 }
 
 /* ── the window ── */
-.win-layer {
-  position: fixed;
-  inset: 0;
-  /* Above the site nav (20) and the About panel (50); below the custom cursor
-     (100) and the grain overlay (1000), both of which must stay on top. */
-  z-index: 70;
-  cursor: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6vh 5vw;
-  box-sizing: border-box;
-}
-.scrim {
-  position: absolute;
-  inset: 0;
-  background: rgba(9, 5, 14, 0.62);
-  backdrop-filter: blur(2px);
-  opacity: 1;
-  transition: opacity 0.34s ease;
-  cursor: none;
-}
-.closing .scrim { opacity: 0; }
-
 .win {
   position: relative;
-  width: min(34rem, 100%);
+  z-index: 20;
+  width: min(36rem, 100%);
   background: #1B1428;
   box-shadow:
     inset 0 0 0 1px rgba(195, 166, 216, 0.22),
     0 40px 90px -30px rgba(0, 0, 0, 0.95);
-  /* The FLIP animates this; the JS only writes transform and opacity. */
-  transition:
-    transform 0.46s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.3s ease;
-  transform-origin: 50% 50%;
 }
 .win-bar {
   display: flex;
@@ -592,30 +487,70 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.win-x {
+.win-back {
   flex: none;
   appearance: none;
   -webkit-appearance: none;
   border: 0;
   background: none;
-  padding: 0.3rem;
-  width: 1.5rem;
-  height: 1.5rem;
+  padding: 0.25rem;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin-inline-start: -0.1rem;
   color: #C3A6D8;
-  opacity: 0.6;
+  opacity: 0.7;
   cursor: none;
   transition: opacity 0.25s ease;
 }
-.win-x:hover, .win-x:focus-visible { outline: none; opacity: 1; }
-.win-x svg { width: 100%; height: 100%; fill: none; }
+.win-back.off { visibility: hidden; pointer-events: none; }
+.win-back:hover, .win-back:focus-visible { outline: none; opacity: 1; }
+.win-back svg { width: 100%; height: 100%; display: block; }
 
-.win-body {
+/* ⚠️ ONE grid cell for both views: the window is then always as tall as its
+   tallest view, so navigating into a folder cannot resize it under the reader.
+   The same fix as the Big Day's stacked day cards, and for the same reason — a
+   reserved height can only ever be right for one of the two. */
+.win-views { display: grid; }
+.view {
+  grid-area: 1 / 1;
+  opacity: 0;
+  pointer-events: none;
+  /* ⚠️ NO lateral travel. The user asked for the opening and nothing sliding
+     side to side, so a view goes forward and back in DEPTH (a small scale) and
+     fades — you move into the folder rather than the window moving across. */
+  transform: scale(0.97);
+  transition: opacity 0.28s ease, transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.view.on { opacity: 1; pointer-events: auto; transform: none; }
+/* the outgoing root recedes rather than rising, so the pair reads as depth */
+.view-root:not(.on) { transform: scale(1.04); }
+
+.grid-list {
+  list-style: none;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(0.4rem, 1.5vw, 1rem);
+  padding: clamp(1.8rem, 4.5vh, 2.8rem) clamp(0.9rem, 3vw, 1.8rem);
+}
+
+.view-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.9rem;
-  padding: clamp(2.2rem, 5.5vh, 3.4rem) 1.5rem clamp(2rem, 5vh, 3rem);
+  gap: 1rem;
+  padding: clamp(1.8rem, 4.5vh, 2.8rem) 1.5rem;
+  text-align: center;
+}
+
+.win-status {
+  font-family: 'Bague', sans-serif;
+  font-size: 0.54rem;
+  letter-spacing: 0.28em;
+  opacity: 0.42;
+  padding: 0.55rem 0.85rem;
+  border-top: 1px solid rgba(195, 166, 216, 0.14);
 }
 /* the same folder, drawn large and faint — an empty directory */
 .empty-ic {
@@ -645,13 +580,14 @@ onBeforeUnmount(() => {
 @media (max-width: 768px) {
   .room-inner { padding: 5vh 7vw 5vh; }
   .film { gap: 0.28rem; padding: 0.8rem 0; }
-  .shelf { gap: 1.15rem; margin-top: 4vh; }
-  .folder { gap: 0.85rem; }
   .win { width: 100%; }
+  .grid-list { gap: 0.25rem; padding: 1.6rem 0.6rem; }
+  .folder { padding: 0.6rem 0.15rem; gap: 0.45rem; }
+  .fname { font-size: 0.82rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .win, .ic-front, .folder, .scrim { transition: none; }
+  .ic-front, .folder, .view { transition: none; }
   .room-grain { animation: none; }
 }
 </style>

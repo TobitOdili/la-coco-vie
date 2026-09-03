@@ -153,7 +153,7 @@ what made With Love read as a repeat of US and get rebuilt.
 |---|---|---|
 | `UsStory.vue` | margin notes — the whole page in one hand, nothing set in type; taped polaroids | **written word by word**: per-word `.write` clip off each block's OWN rect; the polaroid keeps a latch |
 | `BigDay.vue` | "The Calendar" — October 2026 as a wall-calendar page, the two wedding days ringed in marker; hover/tap a ringed date to swap the detail panel | IntersectionObserver latch: it sets, then holds still |
-| `InFrames.vue` | **the archive** — three labelled folders cascading down-right, each opening a window that says the pictures are still to come | **no scroll at all**: a FLIP that grows the window out of the folder; a time loop for the room's film behind it |
+| `InFrames.vue` | **the archive** — one window in the room, the three events as folders inside it; click one and it opens, then the window navigates into it | **no scroll at all**: a folder-open then a stacked-view swap; a time loop for the room's film behind it |
 | `WithLove.vue` | the ink wanders past scattered gift words and **lassoes** each | measured spline + `.scrub`/`.write` |
 
 **The shared engine** is an rAF loop per component: it reads each scene's `getBoundingClientRect()`
@@ -248,7 +248,9 @@ text and focus handling for free, and the homepage's Three.js renderer stays the
 > them is about this codebase rather than about that feature, and two are repeat offenders. Read
 > them as "what will bite you here", not as "how the calendar works today".
 
-⚠️ **A `position: fixed` overlay INSIDE `.chapter-page` cannot rise above the site nav.**
+⚠️ **A `position: fixed` overlay INSIDE `.chapter-page` cannot rise above the site nav.** (In
+Frames no longer HAS an overlay — the window is an object in the room now — but the rule cost real
+time and applies to any modal anyone adds to a chapter page.)
 `.chapter-page` is `position: fixed; z-index: 10`, which makes it a stacking context, so every
 descendant resolves *within* it no matter how large its own `z-index` — the nav (`z-20`) is a
 sibling of that context and therefore always wins. In Frames' folder window was set to `z-index: 60`

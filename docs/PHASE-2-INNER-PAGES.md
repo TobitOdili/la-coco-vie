@@ -16,7 +16,7 @@ state, everything below it is history — newest first.)
 > | **US** | margin notes: the whole page in one hand, **nothing set in type**; taped polaroids | **written word by word** off each block's own rect |
 > | **THE BIG DAY** | **the calendar** — October 2026, the two wedding days ringed in marker; hover/tap one for its detail | a latch: it sets, then holds still |
 > | ⚠️ | **A rework of this page was REVERTED on 2026-09-02** — see the entry below before rebuilding any of it | |
-> | **IN FRAMES** | **the archive** — three labelled folders cascading down-right, each opening a window that says the pictures are still to come | **no scroll**: a FLIP out of the clicked folder; the room's film on a time loop |
+> | **IN FRAMES** | **the archive** — one window in the room, the three events as folders inside it; click one and it opens, then the window navigates into it | **no scroll**: folder-open, then a stacked-view swap; the room's film on a time loop |
 > | **WITH LOVE** | the ink wanders past scattered gift words and **lassoes** each; hover shows the item on torn paper | measured spline + `.scrub`/`.write` |
 >
 > **ALSO DONE & LIVE (prod-verified):** the homepage carousel (per-card hover/click via
@@ -128,6 +128,37 @@ Five reports, fixed and prod-verified. Full root causes in AUDIT #22–#24.
 produced **<1°** both times, because that accumulator isn't observable from outside. Driving it from
 the ring's per-frame rotation — a value the `?debug` probes now report (`leanDeg`, `rotVel`) — made
 it both correct and checkable. **If a value can't be measured, don't tune it; find one that can.**
+
+**▶▶ STATE (2026-09-02, latest) — IN FRAMES: THE WINDOW IS THE PAGE.**
+User, on the first folder pass: *"i don't love the way the folders are shown. I think the design of
+the window is great though. How about instead of a popup, there is already a window in that section
+with the folders inside. Clicking a folder (not hovering) would animate it open (no need for side to
+side motion, just the opening) and navigate to a new window showing the empty message; Photos and
+videos coming soon."* Also confirmed: **keep the spools/background.**
+- **The window stopped being a popup and became the page.** One window sits in the room with the
+  three events as folders inside it; clicking one NAVIGATES it, the way a file browser does. Title
+  bar carries the path (`Our Journey In Frames` → the folder's name) with a back chevron; a status
+  bar reads `3 FOLDERS` / `0 ITEMS`. That also deleted the whole overlay problem — no fixed layer, no
+  scrim, no Teleport, and none of the stacking-context fight documented below.
+- **Click opens, hover does not.** A flap that fell open under the pointer read as a preview of
+  something about to happen by itself. Hover is a faint wash and a brighter hairline, nothing else.
+  Verified: the flap's transform is unchanged under hover, and at 160ms after a click it is open
+  while the window is *still on the root view* — the folder opens, then you go into it.
+- ⚠️ **NO LATERAL TRAVEL, per the user's note.** The two views cross-fade with a small scale — the
+  outgoing root recedes at 1.04, the incoming view arrives from 0.97 — so you move *into* the folder
+  in depth rather than the window sliding across.
+- ⚠️ **The views are stacked in ONE grid cell** so navigating cannot resize the window. Same fix as
+  the Big Day's day cards, and it caught a second instance immediately: the back button was rendered
+  with `v-if`, so the title bar gained a 1.35rem control on navigation and the whole window grew
+  **7px**. Reserve the slot with `visibility: hidden`, never `display: none`. Measured 290px → 290px
+  desktop and 229px → 229px mobile after the fix.
+- **The chapter-end line was removed**: the window's own empty state says "Photos and videos coming
+  soon", and a footer under it saying MORE PICTURES COMING SOON was both a duplicate and a
+  contradiction. `endSub` is still in the data, unrendered, because other chapters read the field.
+- **Prod-build verified at 1440×900 and 390×844**: three folders in a row inside the window, zero
+  overlays in the DOM, hover leaves the flap shut, the flap is open 160ms after a click while still
+  on the root, the empty copy is exact, back and Escape both return, the window height does not
+  move, 0 console errors.
 
 **▶▶ STATE (2026-09-02, latest) — IN FRAMES IS AN ARCHIVE, NOT A PROCESSION.**
 User: *"let's actually take out the current pictures. The pictures that matter are from the wedding

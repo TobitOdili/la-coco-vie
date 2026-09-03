@@ -288,6 +288,10 @@ export const CHAPTER_PAGES = {
         title: 'Our Journey In Frames',
         present: 'COVENANT & UVIE PRESENT',
         sub: 'A LOVE STORY, ONE FRAME AT A TIME',
+        // ⚠️ NOT RENDERED any more (2026-09-02). The window's own empty state says
+        // "Photos and videos coming soon", and a footer saying MORE PICTURES COMING
+        // SOON under it was both a duplicate and a contradiction of it. Kept only
+        // because other chapters read the field.
         endSub: 'MORE PICTURES COMING SOON',
         frames: [
           asset('/images/reel/car-selfie-sm.jpg'),
@@ -302,16 +306,17 @@ export const CHAPTER_PAGES = {
         // this chapter is actually about are the wedding's — which do not exist yet.
         // So the page is honest about that now: three labelled folders, one per
         // event, each of which opens to an empty window.
-        // `name` is written on the folder in the hand; `title` is the window's own
-        // chrome, set in caps like an OS title bar. When the real photographs land,
-        // give a folder an `items[]` and the window renders them instead of the
-        // empty state.
+        // `name` is written on the folder in the hand; `title` is what the window's
+        // own chrome shows once you are inside it, set in caps like a title bar.
+        // The section's `title` is the window's ROOT label — the path you come back
+        // to. When the real photographs land, give a folder an `items[]` and the
+        // window renders them where the empty state is.
         folders: [
           { name: 'traditional', title: 'Traditional' },
           { name: 'white wedding', title: 'White Wedding' },
           { name: 'wedding reception', title: 'Wedding Reception' },
         ],
-        empty: 'pictures coming soon',
+        empty: 'Photos and videos coming soon',
         popups: ['fullAlbum'],
         align: 'center',
       },
