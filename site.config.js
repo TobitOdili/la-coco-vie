@@ -82,11 +82,15 @@ export const SITE = {
   // ⚠️ 'Caveat' is THE BIG DAY's marker hand (annotations on the calendar). It is
   // deliberately NOT 'Over the Rainbow' — that is US's voice, a thin looping pen, and
   // the two pages must not share a hand. Caveat is a chunkier felt-tip scrawl.
-  // ⚠️ Three different hands, one per page that needs one, and they must stay
-  // distinct: 'Over the Rainbow' is US's looping pen, 'Caveat' is THE BIG DAY's
-  // felt-tip marker, 'Shadows Into Light' is IN FRAMES' note written on a slide
-  // mount. Never reuse one page's hand on another — that is what made With Love
-  // fail its first review.
+  // ⚠️ A hand per page that needs one, and they must stay distinct: 'Over the
+  // Rainbow' is US's looping pen and 'Caveat' is THE BIG DAY's felt-tip marker.
+  // Never reuse one page's hand on another — that is what made With Love fail its
+  // first review.
+  // ⚠️ 'Shadows Into Light' was IN FRAMES' hand (the note under a mounted print)
+  // and is UNUSED as of 2026-09-02: that page became a file browser, and the user's
+  // note was that file names and the empty state must not be handwritten. It stays
+  // in this list only so the slot is still reserved for In Frames if a hand ever
+  // returns there — if it does not, drop it and save the request.
   googleFonts: ['Italiana', 'Monoton', 'Over the Rainbow', 'Caveat:wght@600;700', 'Shadows Into Light'],
 }
 

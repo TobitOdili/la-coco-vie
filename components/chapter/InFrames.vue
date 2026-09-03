@@ -68,7 +68,7 @@
                 <path d="M7.5 1.5 L3 6 L7.5 10.5" stroke="currentColor" stroke-width="1.3" fill="none" />
               </svg>
             </button>
-            <span class="win-title">{{ path === null ? s.title : folders[path]?.title }}</span>
+            <span class="win-title">{{ crumb }}</span>
           </header>
 
           <!-- ⚠️ Both views live in ONE grid cell, so the window is always as tall
@@ -84,7 +84,7 @@
                     :class="{ opening: opening === k }"
                     :data-k="k"
                     :tabindex="path === null ? 0 : -1"
-                    :aria-label="`${f.name} — empty, ${emptyText.toLowerCase()}`"
+                    :aria-label="`${f.name} — empty folder`"
                     @click="enter(k)"
                   >
                     <span class="ic" aria-hidden="true">
@@ -105,7 +105,16 @@
                 <span class="ic-back" />
                 <span class="ic-front" />
               </span>
-              <p class="empty-msg">{{ emptyText }}</p>
+              <p class="empty-title">{{ emptyTitle }}</p>
+              <p class="empty-note">{{ emptyNote }}</p>
+              <button
+                type="button"
+                class="go-back"
+                :tabindex="path === null ? -1 : 0"
+                @click="back()"
+              >
+                Go Back
+              </button>
             </div>
           </div>
 
@@ -129,7 +138,16 @@ const props = defineProps({
 const reel = computed(() => props.sections.find((s) => s.kind === 'reel'))
 const frames = computed(() => reel.value?.frames || [])
 const folders = computed(() => reel.value?.folders || [])
-const emptyText = computed(() => reel.value?.empty || 'pictures coming soon')
+const emptyTitle = computed(() => reel.value?.emptyTitle || 'Empty Folder')
+const emptyNote = computed(() => reel.value?.emptyNote || '')
+// The window's title bar is a PATH, appended the way a file system would:
+// `...\Media\` at the root, `...\Media\traditional` once you are inside one.
+const crumb = computed(() => {
+  const root = reel.value?.root || ''
+  return path.value === null
+    ? `${root}\\`
+    : `${root}\\${folders.value[path.value]?.name || ''}`
+})
 
 const rootEl = ref(null)
 const ready = ref(false)
@@ -438,11 +456,15 @@ onBeforeUnmount(() => {
 .folder.opening .ic-back,
 .folder.opening .ic-front { box-shadow: inset 0 0 0 1px rgba(195, 166, 216, 0.62); }
 
+/* ⚠️ NOT the page's hand. These are file names — the user's note was that neither
+   they nor the empty state should be handwritten, and a script face on a folder
+   tile fought the window it sits in. Shadows Into Light is now unused here. */
 .fname {
-  font-family: 'Shadows Into Light', 'Bradley Hand', cursive;
-  font-size: clamp(0.85rem, 2vw, 1.15rem);
-  line-height: 1.15;
-  color: #C3A6D8;
+  font-family: 'Bague', sans-serif;
+  font-size: clamp(0.72rem, 1.6vw, 0.86rem);
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+  color: #D6C6E4;
   text-align: center;
 }
 .fmeta {
@@ -476,17 +498,24 @@ onBeforeUnmount(() => {
   border-radius: 50%;
   background: rgba(195, 166, 216, 0.3);
 }
+/* ⚠️ A path, so no `text-transform: uppercase` and only a little tracking — a
+   file path shouted in caps stops reading as a path. It ellipsises from the
+   START, because the end of a path is the part that matters. */
 .win-title {
   flex: 1 1 auto;
   font-family: 'Bague', sans-serif;
-  font-size: 0.6rem;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
   opacity: 0.82;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
 }
+/* `direction: rtl` puts the ellipsis at the front; this keeps the glyphs
+   themselves in their normal order. */
+.win-title { unicode-bidi: plaintext; }
 .win-back {
   flex: none;
   appearance: none;
@@ -561,12 +590,42 @@ onBeforeUnmount(() => {
   opacity: 0.75;
 }
 .empty-ic .ic-front { transform: perspective(280px) rotateX(-34deg); }
-.empty-msg {
+.empty-title {
   margin: 0;
-  font-family: 'Shadows Into Light', 'Bradley Hand', cursive;
-  font-size: clamp(1.1rem, 2.4vw, 1.5rem);
-  line-height: 1;
-  color: #C3A6D8;
+  font-family: 'Bague', sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: #D6C6E4;
+}
+.empty-note {
+  margin: -0.35rem 0 0;
+  font-family: 'Bague', sans-serif;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  opacity: 0.55;
+}
+.go-back {
+  margin-top: 0.5rem;
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  border: 0;
+  box-shadow: inset 0 0 0 1px rgba(195, 166, 216, 0.28);
+  padding: 0.5rem 1.15rem;
+  font-family: 'Bague', sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #D6C6E4;
+  cursor: none;
+  transition: box-shadow 0.25s ease, background 0.25s ease;
+}
+.go-back:hover,
+.go-back:focus-visible {
+  outline: none;
+  background: rgba(195, 166, 216, 0.07);
+  box-shadow: inset 0 0 0 1px rgba(195, 166, 216, 0.55);
 }
 .empty-sub {
   margin: 0;

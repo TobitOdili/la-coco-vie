@@ -306,17 +306,22 @@ export const CHAPTER_PAGES = {
         // this chapter is actually about are the wedding's — which do not exist yet.
         // So the page is honest about that now: three labelled folders, one per
         // event, each of which opens to an empty window.
-        // `name` is written on the folder in the hand; `title` is what the window's
-        // own chrome shows once you are inside it, set in caps like a title bar.
-        // The section's `title` is the window's ROOT label — the path you come back
-        // to. When the real photographs land, give a folder an `items[]` and the
-        // window renders them where the empty state is.
+        // `name` is BOTH the tile's label and the path segment the title bar
+        // appends, so `root` + `\\` + `name` is what a visitor reads at the top of
+        // the window. ⚠️ Lower case on purpose — the user's own example was
+        // `...\\Media\\traditional`. When the real photographs land, give a folder an
+        // `items[]` and the window renders them where the empty state is.
+        // ⚠️ NOT handwritten any more (user, 2026-09-02): file names and the empty
+        // state are UI text, so they are set in Bague like the rest of the window's
+        // chrome. Shadows Into Light is no longer used on this page.
+        root: '...\\Media',
         folders: [
-          { name: 'traditional', title: 'Traditional' },
-          { name: 'white wedding', title: 'White Wedding' },
-          { name: 'wedding reception', title: 'Wedding Reception' },
+          { name: 'traditional' },
+          { name: 'white wedding' },
+          { name: 'reception' },
         ],
-        empty: 'Photos and videos coming soon',
+        emptyTitle: 'Empty Folder',
+        emptyNote: 'Photos & videos will be available soon.',
         popups: ['fullAlbum'],
         align: 'center',
       },

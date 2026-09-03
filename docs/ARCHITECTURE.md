@@ -153,7 +153,7 @@ what made With Love read as a repeat of US and get rebuilt.
 |---|---|---|
 | `UsStory.vue` | margin notes — the whole page in one hand, nothing set in type; taped polaroids | **written word by word**: per-word `.write` clip off each block's OWN rect; the polaroid keeps a latch |
 | `BigDay.vue` | "The Calendar" — October 2026 as a wall-calendar page, the two wedding days ringed in marker; hover/tap a ringed date to swap the detail panel | IntersectionObserver latch: it sets, then holds still |
-| `InFrames.vue` | **the archive** — one window in the room, the three events as folders inside it; click one and it opens, then the window navigates into it | **no scroll at all**: a folder-open then a stacked-view swap; a time loop for the room's film behind it |
+| `InFrames.vue` | **the archive** — one window in the room showing a path (`...\Media\`), the three events as folders inside; click one and it opens, then the window navigates into it | **no scroll at all**: a folder-open then a stacked-view swap; a time loop for the room's film behind it |
 | `WithLove.vue` | the ink wanders past scattered gift words and **lassoes** each | measured spline + `.scrub`/`.write` |
 
 **The shared engine** is an rAF loop per component: it reads each scene's `getBoundingClientRect()`

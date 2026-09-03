@@ -16,7 +16,7 @@ state, everything below it is history — newest first.)
 > | **US** | margin notes: the whole page in one hand, **nothing set in type**; taped polaroids | **written word by word** off each block's own rect |
 > | **THE BIG DAY** | **the calendar** — October 2026, the two wedding days ringed in marker; hover/tap one for its detail | a latch: it sets, then holds still |
 > | ⚠️ | **A rework of this page was REVERTED on 2026-09-02** — see the entry below before rebuilding any of it | |
-> | **IN FRAMES** | **the archive** — one window in the room, the three events as folders inside it; click one and it opens, then the window navigates into it | **no scroll**: folder-open, then a stacked-view swap; the room's film on a time loop |
+> | **IN FRAMES** | **the archive** — one window in the room showing a path (`...\Media\`), the three events as folders inside; click one and it opens, then the window navigates into it | **no scroll**: folder-open, then a stacked-view swap; the room's film on a time loop |
 > | **WITH LOVE** | the ink wanders past scattered gift words and **lassoes** each; hover shows the item on torn paper | measured spline + `.scrub`/`.write` |
 >
 > **ALSO DONE & LIVE (prod-verified):** the homepage carousel (per-card hover/click via
@@ -129,6 +129,34 @@ produced **<1°** both times, because that accumulator isn't observable from out
 the ring's per-frame rotation — a value the `?debug` probes now report (`leanDeg`, `rotVel`) — made
 it both correct and checkable. **If a value can't be measured, don't tune it; find one that can.**
 
+**▶▶ STATE (2026-09-02, latest) — IN FRAMES: IT IS A FILE SYSTEM, SO IT READS LIKE ONE.**
+User: *"the names of the files as well as the empty message should not be in handwritten font…
+replace 'Our Journey in Frames' with '…\Media\'. Clicking into any folder should be appended like a
+real file system (…\Media\traditional)… keep the back button, but add an actual Go Back button under
+the empty message… Empty message should actually say Empty Folder inside the folder. Then 'Photos &
+Videos would be available soon'… the third folder should be just 'Reception'."*
+- ⚠️ **NOTHING IN THE WINDOW IS HANDWRITTEN NOW.** File names and the empty state are UI text, and a
+  script face on a folder tile fought the window it sits in. All Bague. **Verified: zero elements
+  inside the window resolve to Shadows Into Light.**
+- ⚠️ **That leaves 'Shadows Into Light' UNUSED site-wide** — it was In Frames' hand (the note under a
+  mounted print) and this page no longer has one. It is still requested in `site.config.js` so the
+  slot stays reserved; drop it from `googleFonts` if a hand never returns here.
+- **The title bar is a PATH**: `...\Media\` at the root, appending the folder on the way in
+  (`...\Media\traditional`). Built from `root` + `name` in the data, so it cannot drift from the
+  tiles. ⚠️ No `text-transform: uppercase` on it — a path shouted in caps stops reading as a path —
+  and it ellipsises from the START (`direction: rtl` + `unicode-bidi: plaintext`), because the end of
+  a path is the part that matters.
+- **Two ways back**, both kept deliberately: the chevron in the title bar (where a file browser puts
+  it) and a **Go Back** button under the empty state (where someone who has just read "Empty Folder"
+  is actually looking). Escape still works too.
+- **The empty state is now two lines** — `Empty Folder` as the state, `Photos & videos will be
+  available soon.` as the explanation. Split in the data as `emptyTitle` / `emptyNote`.
+- **The third folder is `reception`.** ⚠️ Lower case like the other two, because the user's own path
+  example was `...\Media\traditional`.
+- **Prod-build verified at 1440×900 and 390×844**: path correct at root and inside, all three names
+  right, every font Bague, both back paths return to the root, the window height does not move
+  (335→335 desktop, 312→312 mobile), 0 console errors.
+
 **▶▶ STATE (2026-09-02, latest) — IN FRAMES: THE WINDOW IS THE PAGE.**
 User, on the first folder pass: *"i don't love the way the folders are shown. I think the design of
 the window is great though. How about instead of a popup, there is already a window in that section
@@ -175,7 +203,8 @@ folder - pictures coming soon."*
 - **Three folders** — `traditional`, `white wedding`, `wedding reception` — in a vertical cascade,
   each stepped right of the last. Drawn from the print mat's own fill (`#17101F`) and its lavender
   hairline rather than as an OS icon, in three panels so the front flap can tip forward on hover and
-  stay open while its window is up. Labels in the hand (Shadows Into Light), meta in Bague caps.
+  stay open while its window is up. Labels were in the hand at this point; see the entry above
+  for why they are not any more.
   ⚠️ The user wrote "two" and then listed three; three is obviously what was meant.
 - **The window is a real FLIP**, not a fade: it is laid out where it will end up, transformed back
   onto the clicked folder's icon rect, and released — so it grows out of *that* folder and shrinks

@@ -57,14 +57,17 @@ is that no two pages share a language. Breaking it is what made With Love fail i
     Hovering — or tapping — a ringed date swaps the detail below the grid: times, venue, map,
     dress code. The grid is computed from the month, so the weekday alignment can't go stale.
     Photo-free, and it holds **completely still** while you read it.
-  - **IN FRAMES** — **the archive**: a window sits in the room — title bar, status bar, the couple's
-    three events as folders inside it. **Click** one (hovering only brightens it) and the folder
-    physically **opens**, then the window **navigates into it** the way a file browser does, to a
-    back button and *Photos and videos coming soon*. Behind it all, the same three film spools drift
-    across on their own clock under the grain, the vignette and the big faint wordmark. ⚠️ The nine
-    photographs that used to be the subject here are **gone by request** — they were the couple's
-    history, and the pictures this chapter is about are the wedding's, which don't exist yet. The
-    page says so rather than standing in for them.
+  - **IN FRAMES** — **the archive**: a window sits in the room, its title bar showing a path —
+    `...\Media\` — with the couple's three events as folders inside it: *traditional*, *white
+    wedding*, *reception*. **Click** one (hovering only brightens it) and the folder physically
+    **opens**, then the window **navigates into it** the way a file browser does: the path appends
+    (`...\Media\traditional`), the status bar goes from `3 FOLDERS` to `0 ITEMS`, and you get
+    **Empty Folder** with a back chevron and a **Go Back** button. Behind it all, the same three
+    film spools drift across on their own clock under the grain, the vignette and the big faint
+    wordmark. ⚠️ Nothing in the window is handwritten — these are file names and UI, so they are set
+    in Bague. ⚠️ The nine photographs that used to be the subject here are **gone by request**: they
+    were the couple's history, and the pictures this chapter is about are the wedding's, which don't
+    exist yet. The page says so rather than standing in for them.
   - **WITH LOVE** — the **ink** writes the thank-you, then wanders past gift words scattered across
     the page and **lassoes** each in turn; hover shows the item on a torn paper scrap. Ends by
     splitting in two to sign both names → RSVP.
