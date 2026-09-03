@@ -53,15 +53,15 @@ is that no two pages share a language. Breaking it is what made With Love fail i
     a pen lays it down, so scrolling back un-writes it. The heading finishes before the body starts,
     then he writes in the margin and she answers.
   - **THE BIG DAY** — "the calendar": October 2026 as a page off a wall calendar, with the two
-    wedding days **ringed in marker** and annotated by hand (*traditional* · *white wedding*).
-    Hover — or tap — a ringed date and a line is **drawn from it out to the side of the calendar**,
-    with the times and what each one is written in the margin at the end of it. ⚠️ No highlight
-    behind the date: the ring inking in is the whole feedback. Below the grid, that day is set out as a centred programme —
-    the full date, the day's name, and its events side by side with venue, address and map. ⚠️ Every
-    card is stacked in one grid cell, so moving between the dates **cannot shift the page**. The
-    grid is computed from the month, so the weekday alignment can't go stale. Photo-free, and it
-    holds **completely still** while you read it. Each date can also carry **its own sound** on
-    hover (wired; the files are still to come).
+    wedding days **ringed in marker** and annotated by hand (*traditional* · *white wedding*), and
+    **both days set out side by side** beneath it — full date, name, events, dress code, and a
+    working **Add to calendar** (the `.ics` is built in the browser, one day or both). Nothing swaps
+    on hover, so nothing can shift; hovering a ringed date only **draws a line from it out to the
+    margin**, where the times are written in marker. The grid is computed from the month, so the
+    weekday alignment can't go stale. Each date can also carry **its own sound** on hover (wired;
+    the files are still to come). A second scene, **Getting there**, puts the two venues on their
+    own maps — Oguta, Imo and Ikeja, Lagos, about 500km apart — tinted into the chapter's palette,
+    each with **Get directions** using the visitor's own location.
   - **IN FRAMES** — **the archive**: a window sits in the room, its title bar showing a path —
     `...\Media\` — with the couple's three events as folders inside it: *traditional*, *white
     wedding*, *reception*. **Click** one (hovering only brightens it) and the folder physically

@@ -152,7 +152,7 @@ what made With Love read as a repeat of US and get rebuilt.
 | file | what it is | how it moves |
 |---|---|---|
 | `UsStory.vue` | margin notes — the whole page in one hand, nothing set in type; taped polaroids | **written word by word**: per-word `.write` clip off each block's OWN rect; the polaroid keeps a latch |
-| `BigDay.vue` | "The Calendar" — October 2026 as a wall-calendar page, the two wedding days ringed in marker; hover/tap a ringed date to swap the detail panel | IntersectionObserver latch: it sets, then holds still |
+| `BigDay.vue` | "The Calendar" — October 2026 ringed in marker with **both** days set out side by side beneath it, plus a second scene of tinted maps and directions | IntersectionObserver latch: it sets, then holds still; hover only draws a leader line |
 | `InFrames.vue` | **the archive** — one window in the room showing a path (`...\Media\`), the three events as folders inside; click one and it opens, then the window navigates into it | **no scroll at all**: a folder-open then a stacked-view swap; a time loop for the room's film behind it |
 | `WithLove.vue` | the ink wanders past scattered gift words and **lassoes** each | measured spline + `.scrub`/`.write` |
 
@@ -260,6 +260,22 @@ than under it. Mind the ceiling as well as the floor when picking its level — 
 `z-100` and the grain overlay `z-1000`, and both must stay above any modal, so `z-70` (clear of the
 nav at 20 and the About panel at 50) is the window this site actually has. Same family as the scrim
 that painted over the raised print: a wrapper's `z-index` is a ceiling for everything inside it.
+⚠️ **Never combine `pathLength` + `stroke-dasharray` with `non-scaling-stroke` on a
+non-uniformly stretched SVG.** `pathLength` normalises the dash arithmetic in USER space;
+`non-scaling-stroke` applies the pattern in SCREEN space. With `preserveAspectRatio="none"` the
+ratio between those two varies along the path, so a dash meant to cover the whole line runs out
+early and the following gap shows as a **break in the middle of the stroke** — and it gets worse the
+longer the run, so one instance can look perfect while another, from identical code, does not. Use a
+**`clip-path` wipe** to reveal a stretched path: it works on rendered pixels and knows nothing about
+path length. (AUDIT #31. The dash idiom is still correct everywhere else here — `.scrub` paths and
+the marker ring all have uniform aspect ratios.)
+⚠️ **Google Maps needs no API key for either an embed or directions.** `maps.google.com/maps?q=…&output=embed`
+is a keyless iframe, and `google.com/maps/dir/?api=1&destination=…` is the documented Maps URLs
+scheme, which resolves the visitor's own origin for them. What a keyless embed cannot do is accept a
+style, so the Big Day **tints its iframes with a CSS `filter`** into the chapter's palette instead —
+the only way to make a third-party map belong to a page like this without a key. Derive every URL
+from ONE place string on the data, so a pin, a route and a link cannot disagree.
+
 ⚠️ **A `vh`-only top padding cannot guarantee clearance of the fixed site nav.** The nav is ~88px
 tall regardless of viewport height, so `padding-top: 9vh` is 81px at 900px and less on anything
 shorter. It went unnoticed for as long as the Big Day's content was *shorter* than its section:

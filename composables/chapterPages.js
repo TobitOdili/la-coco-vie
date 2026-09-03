@@ -219,14 +219,14 @@ export const CHAPTER_PAGES = {
             // cue; the white wedding wants a royalty-free "Here Comes the Bride".
             sound: null,
             dress: 'Colours of the day: [tbc]',
+            // ⚠️ A real place (user, 2026-09-03), city-level until the venue is
+            // confirmed. Both the day card and the map section below build their
+            // Google Maps and directions URLs from this one string, so they can
+            // never disagree — and it replaced `map: '#'` on each event, which was
+            // a dead link a guest could actually reach.
+            place: 'Oguta, Imo, Nigeria',
             events: [
-              {
-                time: '[time]',
-                name: 'The Ceremony',
-                venue: '[venue name]',
-                address: '[address]',
-                map: '#',
-              },
+              { time: '[time]', name: 'The Ceremony', venue: '[venue name]', address: '[address]' },
             ],
           },
           {
@@ -236,40 +236,46 @@ export const CHAPTER_PAGES = {
             rot: 5,
             sound: null,   // ← royalty-free "Here Comes the Bride" goes here
             dress: 'Dress code: [tbc]',
+            place: 'Ikeja, Lagos, Nigeria',
             events: [
-              {
-                time: '[time]',
-                name: 'The Ceremony',
-                venue: '[venue name]',
-                address: '[address]',
-                map: '#',
-              },
-              {
-                time: '[time]',
-                name: 'The Reception',
-                venue: '[venue name]',
-                address: '[address]',
-                map: '#',
-              },
+              { time: '[time]', name: 'The Ceremony', venue: '[venue name]', address: '[address]' },
+              { time: '[time]', name: 'The Reception', venue: '[venue name]', address: '[address]' },
             ],
           },
         ],
         popups: [],
         align: 'center',
       },
+      // ⚠️ REPLACED the "Good to know" list (user, 2026-09-03). That section was
+      // five lines of `[placeholder]` answering questions nobody had asked yet;
+      // where the two days actually ARE is the question every guest has, and the
+      // two are 500km apart, which a list of labels hid completely.
+      //
+      // `place` is the only input — the component derives the map embed and the
+      // directions URL from it, so there is nothing here to keep in sync. When a
+      // venue is confirmed, put the full address in `place` and both the pin and
+      // the directions sharpen from the city to the door.
       {
-        kind: 'notes',
+        kind: 'map',
         num: 'II',
-        title: 'Good to know',
-        lines: [
-          { label: 'Where', value: '[city — placeholder]. Both days are in the same city.' },
-          { label: 'The days between', value: 'The 24th through the 28th are yours — [placeholder: anything for guests staying through].' },
-          { label: 'Getting there', value: '[placeholder — airport, transfers, anything guests travelling in should know.]' },
-          { label: 'Staying', value: '[placeholder — hotel block or recommendations.]' },
-          { label: 'Children', value: '[placeholder — whether the day is one for the little ones.]' },
+        title: 'Getting there',
+        sub: 'Two days, two states — about 500km apart. Plan for the journey between them.',
+        places: [
+          {
+            label: 'Traditional Marriage',
+            when: 'Friday 23 October',
+            place: 'Oguta, Imo, Nigeria',
+            venue: '[venue — tbc]',
+          },
+          {
+            label: 'White Wedding / Reception',
+            when: 'Thursday 29 October',
+            place: 'Ikeja, Lagos, Nigeria',
+            venue: '[venue — tbc]',
+          },
         ],
-        popups: ['calBoth'],
-        align: 'left',
+        popups: [],
+        align: 'center',
       },
     ],
   },

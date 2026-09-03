@@ -6,7 +6,7 @@
 > Tools: Browserless (Playwright/CDP) against the live prod URL, bundle greps, DOM/computed-style probes.
 
 > **Doc map:** this file is the **forensic issue history** — per-issue root causes, fixes,
-> and commit refs (numbered #1–#30). For orientation start at [`README.md`](README.md);
+> and commit refs (numbered #1–#31). For orientation start at [`README.md`](README.md);
 > how-it-works is [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); live status is
 > [`PROGRESS.md`](PROGRESS.md). The **Priority Order table near the bottom is the quickest
 > index** of every issue and its status.
@@ -1072,6 +1072,38 @@ silently becomes impossible the moment the element outgrows the viewport. **Veri
 
 ---
 
+## Issue #31 — The calendar's leader line rendered in two pieces 🟡 MEDIUM (2026-09-03)
+
+### Symptom
+User, with a screenshot: *"the 29th one looks broken."* It was. The line drawn from the 29th out to
+the margin rendered as **two disjoint segments with a visible gap** in the middle. The 23rd's line —
+identical code, identical markup — looked perfect.
+
+### Root cause
+**Four features that each work fine and do not work together:** `pathLength="1"` +
+`stroke-dasharray: 1` (the dash-reveal idiom used everywhere else in this codebase) +
+`vector-effect: non-scaling-stroke` + `preserveAspectRatio="none"`.
+
+`pathLength` normalises the dash arithmetic against the path's length in **user** space, while
+`non-scaling-stroke` applies the dash pattern in **screen** space. Under a *non-uniform* stretch —
+`preserveAspectRatio="none"` mapping a 100×32 viewBox onto 278×30px — the ratio between those two
+lengths is not constant along the path, so the single "full length" dash ran out before the end of
+the visible stroke and the gap that follows it in the pattern became visible.
+
+⚠️ **This is why one line looked right and the other did not.** The distortion scales with the run:
+the 23rd's line spans one column (145px) and stayed within its dash; the 29th's spans two (278px)
+and did not. Measured — `getTotalLength()` reported `103.59` user units for a 278px rendered path,
+and `stroke-dasharray` computed to `1px`.
+
+### Fix
+Stop revealing with a dash. The line uses a **`clip-path` wipe** (`inset(-3px 100% -3px 0)` →
+`inset(-3px 0 -3px 0)`), which reveals rendered pixels and knows nothing about path length, so none
+of the four interact at all. **Verified: the path's ink is now 278px across a 278px box.**
+⚠️ The marker RING still uses a dash reveal and is fine — it has a uniform `preserveAspectRatio`,
+no `pathLength`, and an authored `stroke-dasharray: 430`. The trap needs the non-uniform stretch.
+
+---
+
 ## Updated Priority Order (as of 2026-05-27)
 
 | # | Issue | Priority | Status |
@@ -1103,6 +1135,7 @@ silently becomes impossible the moment the element outgrows the viewport. **Veri
 | ~~25~~ | ~~Deep-linking to a chapter left the EXPLORE cursor stuck expanded~~ | ~~🟠 High~~ | ✅ Fixed — `confirm()` and its release now live in one place (`releaseConfirmWhenSettled()` from `onChapterSelect`); the route watcher never fired on a deep link because the slug never changed. Prod: class is plain `cursor`. See §Issue #25. |
 | ~~26~~ | ~~A square outline around every ringed calendar date~~ | ~~🟡 Medium~~ | ✅ Fixed — the SVG's `class="ring"` collided with **Tailwind's `.ring` utility**; renamed `.marker-ring` / `.cal-grid`. Scoped CSS does not scope the class NAME. See §Issue #26. |
 | ~~27~~ | ~~In Frames: the deck bounced while scrolling, and the swipe cue was never visible~~ | ~~🟠 High~~ | ✅ Fixed (`56522682`) — a special-cased exit path made every print surge and retreat; the cue hit the tall-section threshold trap **twice** (3rd/4th occurrences). Prod: 0 depth reversals, per-print inertia 8 distinct of 9. See §Issue #27. |
-| ~~28~~ | ~~Moving between the two wedding dates shifted the whole page~~ | ~~🟡 Medium~~ | ✅ Fixed → reverted with `df65d160` → **re-landed 2026-09-03** at the user's request. Cards stacked in one grid cell; a reserved `min-height` cannot work when the panes differ in content. Prod-build: 0px shift on both viewports. See §Issue #28. |
+| ~~28~~ | ~~Moving between the two wedding dates shifted the whole page~~ | ~~🟡 Medium~~ | ✅ **Structurally impossible now (2026-09-03)** — both days are shown side by side, so nothing appears or disappears on hover. Fixed → reverted → re-landed as a stacked swap → then superseded entirely. Prod-build: 0px. See §Issue #28. |
+| ~~31~~ | ~~The calendar's leader line rendered in two pieces~~ | ~~🟡 Medium~~ | ✅ Fixed — `pathLength` + `stroke-dasharray` + `non-scaling-stroke` + `preserveAspectRatio="none"` disagree about path length under a non-uniform stretch. Replaced the dash reveal with a `clip-path` wipe. See §Issue #31. |
 | ~~29~~ | ~~The Big Day rendered a completely blank section, with no error~~ | ~~🟠 High~~ | ✅ Fixed then reverted with the feature — but the TRAP is permanent: a `v-for` template ref is an ARRAY, `observe()` throws in `onMounted`, and the mount aborts silently (3rd occurrence, cf. #18). See §Issue #29. |
 | 30 | The month-flip would have played entirely below the fold | 🟠 High | ↩️ Moot — the flip was reverted. The RULE stands: `threshold: 0` + a `rootMargin` band is the only trigger shape that cannot go unreachable. See §Issue #30. |

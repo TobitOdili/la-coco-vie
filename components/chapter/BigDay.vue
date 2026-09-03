@@ -68,7 +68,7 @@
                 aria-hidden="true"
               >
                 <svg class="lead-line" viewBox="0 0 100 32" preserveAspectRatio="none">
-                  <path d="M 0 30 C 22 29, 44 12, 100 4" pathLength="1" />
+                  <path d="M 0 30 C 22 29, 44 12, 100 4" />
                 </svg>
               </span>
               <span
@@ -104,58 +104,95 @@
           </template>
         </div>
 
-        <!-- ── the day, written out ──
-             ⚠️ EVERY card is rendered, stacked in ONE grid cell, and only the
-             active one is shown. The panel is therefore always as tall as its
-             tallest card and moving between the two dates cannot shift the page
-             underneath. A reserved `min-height` could not do this: the white
-             wedding has two events and the traditional has one, so whichever
-             number was picked, the other day moved everything below it.
-             ⚠️ Centred, and the big day-numeral is gone. It repeated the date
-             that is already ringed a few centimetres above it, and a second set
-             of large numerals competed with the calendar's own. -->
+        <!-- ── both days, side by side ──
+             ⚠️ Neither card swaps any more. They used to alternate on hover,
+             which is what produced the layout shift in the first place and meant
+             a guest could only ever read one day at a time — for two weddings
+             500km apart, seeing them together is the whole point. Hovering a
+             ringed date now only EMPHASISES its card (and draws the line up on
+             the calendar); nothing appears or disappears, so there is nothing
+             left that could shift. -->
         <div class="detail">
-          <div class="card-stack">
+          <div class="cards">
             <div
               v-for="(m, j) in s.marks || []"
               :key="m.day"
               class="card"
-              :class="{ on: m.day === activeDay(s) }"
-              :aria-hidden="m.day === activeDay(s) ? null : 'true'"
+              :class="{ lit: hoverDay === m.day || pinned === m.day }"
             >
               <div class="card-kicker">{{ longDate(s, m.day) }}</div>
               <h3 class="card-title">{{ m.label }}</h3>
               <span class="card-rule" aria-hidden="true" />
-              <div class="evs" :class="{ pair: (m.events || []).length > 1 }">
+              <div class="evs">
                 <div v-for="(e, k2) in m.events" :key="k2" class="ev">
                   <span class="ev-time">{{ e.time }}</span>
                   <span class="ev-name">{{ e.name }}</span>
                   <span class="ev-place">{{ e.venue }}<i>·</i>{{ e.address }}</span>
-                  <a class="ev-map" :href="e.map || '#'" target="_blank" rel="noopener noreferrer">
-                    open in maps ↗
-                  </a>
                 </div>
               </div>
               <div class="card-dress">{{ m.dress }}</div>
+              <div class="card-acts">
+                <button type="button" class="act" @click="download(s, [m])">
+                  Add to calendar
+                </button>
+                <a
+                  class="act"
+                  :href="mapsUrl(m.place)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >Open in maps ↗</a>
+              </div>
             </div>
+          </div>
+          <div v-if="(s.marks || []).length > 1" class="detail-foot">
+            <button type="button" class="act both" @click="download(s, s.marks)">
+              Add both days to calendar
+            </button>
           </div>
         </div>
       </div>
 
-      <!-- ── good to know ── -->
-      <div v-else class="notes-wrap">
-        <h2 class="notes-title set" :style="{ '--i': 0 }">{{ s.title }}</h2>
-        <ul class="notes">
-          <li
-            v-for="(n, j) in s.lines"
+      <!-- ── getting there ──
+           Two venues 500km apart, each on its own map, with a directions link
+           that uses the visitor's own location. ⚠️ The embed needs no API key,
+           and the iframe is TINTED to the chapter's palette rather than left as
+           stock Google blue-and-white — see `.map-frame`. -->
+      <div v-else class="map-wrap">
+        <h2 class="map-title set" :style="{ '--i': 0 }">{{ s.title }}</h2>
+        <p v-if="s.sub" class="map-sub set" :style="{ '--i': 1 }">{{ s.sub }}</p>
+
+        <div class="maps">
+          <div
+            v-for="(pl, j) in s.places || []"
             :key="j"
-            class="note-line set"
-            :style="{ '--i': 1 + j }"
+            class="place set"
+            :style="{ '--i': 2 + j }"
           >
-            <span class="note-label">{{ n.label }}</span>
-            <span class="note-value">{{ n.value }}</span>
-          </li>
-        </ul>
+            <div class="map-frame">
+              <iframe
+                :src="embedUrl(pl.place)"
+                :title="`Map of ${pl.place}`"
+                loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade"
+                allowfullscreen
+              />
+            </div>
+            <div class="place-meta">
+              <div class="place-when">{{ pl.when }}</div>
+              <h3 class="place-label">{{ pl.label }}</h3>
+              <div class="place-where">{{ pl.place }}</div>
+              <div class="place-venue">{{ pl.venue }}</div>
+              <div class="place-acts">
+                <a class="act" :href="dirUrl(pl.place)" target="_blank" rel="noopener noreferrer">
+                  Get directions ↗
+                </a>
+                <a class="act subtle" :href="mapsUrl(pl.place)" target="_blank" rel="noopener noreferrer">
+                  Open in maps ↗
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   </div>
@@ -218,6 +255,92 @@ function longDate(s, day) {
   const m = monthOf(s)
   const dow = DOW_LONG[new Date(Date.UTC(y, m - 1, day)).getUTCDay()]
   return `${dow} ${day} ${MONTHS[m - 1]} ${y}`
+}
+
+// ── maps ────────────────────────────────────────────────────────────────────
+// All three URLs are derived from the ONE `place` string on the data, so a pin, a
+// directions route and a link can never point at three different things.
+// ⚠️ No API key anywhere. The embed uses the keyless `output=embed` form, and
+// directions use the documented Maps URLs scheme, which resolves the visitor's
+// own origin for them. If a keyed Embed API is ever wanted (for a styled map
+// rather than a CSS-tinted one), only `embedUrl` has to change.
+const q = (place) => encodeURIComponent(place || '')
+const embedUrl = (place) => `https://maps.google.com/maps?q=${q(place)}&z=11&hl=en&output=embed`
+const mapsUrl = (place) => `https://www.google.com/maps/search/?api=1&query=${q(place)}`
+const dirUrl = (place) => `https://www.google.com/maps/dir/?api=1&destination=${q(place)}`
+
+// ── add to calendar ────────────────────────────────────────────────────────
+// Built in the browser and handed over as a Blob — no service to hook up, no
+// third party, and it works offline. ⚠️ ALL-DAY events on purpose: the times are
+// still placeholders, and an event at a made-up hour is worse than one with no
+// hour at all. When real times land, give each `events[]` entry an ISO
+// `start`/`end` and emit timed VEVENTs instead.
+const pad2 = (n) => String(n).padStart(2, '0')
+const icsDate = (y, m, d) => `${y}${pad2(m)}${pad2(d)}`
+
+function buildIcs(s, marks) {
+  const y = yearOf(s)
+  const m = monthOf(s)
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+  const out = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//la coco vie//wedding//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+  ]
+  for (const mk of marks) {
+    const next = new Date(Date.UTC(y, m - 1, mk.day + 1))
+    const desc = (mk.events || [])
+      .map((e) => [e.time, e.name, e.venue].filter(Boolean).join(' · '))
+      .join('\\n')
+    out.push(
+      'BEGIN:VEVENT',
+      `UID:${icsDate(y, m, mk.day)}-${mk.day}@lacocovie`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART;VALUE=DATE:${icsDate(y, m, mk.day)}`,
+      `DTEND;VALUE=DATE:${icsDate(next.getUTCFullYear(), next.getUTCMonth() + 1, next.getUTCDate())}`,
+      `SUMMARY:Covenant & Uvie — ${mk.label}`,
+      mk.place ? `LOCATION:${mk.place}` : null,
+      desc ? `DESCRIPTION:${desc}` : null,
+      'END:VEVENT'
+    )
+  }
+  out.push('END:VCALENDAR')
+  return out.filter(Boolean).map(fold).join('\r\n')
+}
+
+// ⚠️ RFC 5545 caps a line at 75 OCTETS and folds longer ones onto continuation
+// lines starting with a space. Nothing here exceeds that while the venues are
+// `[placeholder]`, which is precisely why it would ship broken: the first real
+// address is what pushes LOCATION over and makes the file reject in strict
+// clients. Folded now, while it is cheap.
+function fold(line) {
+  if (new TextEncoder().encode(line).length <= 75) return line
+  const parts = []
+  let cur = ''
+  let len = 0
+  for (const ch of line) {
+    const n = new TextEncoder().encode(ch).length
+    // 74 on continuation lines: the leading space counts toward the 75.
+    if (len + n > (parts.length ? 74 : 75)) { parts.push(cur); cur = ''; len = 0 }
+    cur += ch
+    len += n
+  }
+  if (cur) parts.push(cur)
+  return parts.map((pp, i) => (i ? ` ${pp}` : pp)).join('\r\n')
+}
+
+function download(s, marks) {
+  const blob = new Blob([buildIcs(s, marks)], { type: 'text/calendar;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = marks.length > 1 ? 'covenant-and-uvie.ics' : `covenant-and-uvie-${marks[0].day}.ics`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 // ── the easter egg: each date has its own sound ─────────────────────────────
@@ -351,7 +474,7 @@ onBeforeUnmount(() => {
   align-items: baseline;
   justify-content: center;
   gap: 1rem;
-  margin-bottom: clamp(1.2rem, 3vh, 2rem);
+  margin-bottom: clamp(0.9rem, 2.2vh, 1.5rem);
 }
 .month {
   font-family: 'Italiana', serif;
@@ -391,7 +514,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  aspect-ratio: 1 / 0.55;
+  aspect-ratio: 1 / 0.5;
   /* ⚠️ `appearance: none` is load-bearing: a ringed day is a real <button> (so it is
      keyboard-reachable), and border:0 alone does NOT stop the UA painting the native
      widget frame — a square box appeared around each ringed date. */
@@ -508,10 +631,25 @@ onBeforeUnmount(() => {
   vector-effect: non-scaling-stroke;
   stroke-width: 1.5;
   stroke-linecap: round;
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  transition: stroke-dashoffset 0.5s ease;
 }
+/* ⚠️ A CLIP WIPE, not a dash reveal — and this is the bug the user spotted as
+   "the 29th one looks broken". It WAS broken: `pathLength="1"` +
+   `stroke-dasharray: 1` + `vector-effect: non-scaling-stroke` +
+   `preserveAspectRatio="none"` do not agree with one another. `pathLength`
+   normalises the dash maths in USER space while non-scaling-stroke applies the
+   pattern in SCREEN space, and under a non-uniform stretch the ratio between the
+   two varies along the path — so the single "full length" dash ran out early and
+   the following gap became visible mid-line. It got worse the longer the run,
+   which is exactly why the 23rd (145px, one column) looked right and the 29th
+   (278px, two columns) came out in two pieces. A clip-path wipe is immune to all
+   of it: it reveals rendered pixels and knows nothing about path length. */
+.lead {
+  clip-path: inset(-3px 100% -3px 0);
+  transition: opacity 0.28s ease, clip-path 0.5s ease;
+}
+.marked:hover .lead,
+.marked:focus-visible .lead,
+.marked.engaged .lead { clip-path: inset(-3px 0 -3px 0); }
 
 .side-note {
   /* sits on the END of the line, which is above the row, not on it */
@@ -542,9 +680,6 @@ onBeforeUnmount(() => {
 .marked:hover .side-note,
 .marked:focus-visible .side-note,
 .marked.engaged .side-note { opacity: 0.92; }
-.marked:hover .lead-line path,
-.marked:focus-visible .lead-line path,
-.marked.engaged .lead-line path { stroke-dashoffset: 0; }
 }   /* end @media (min-width: 1280px) */
 
 /* ⚠️ Keyed off `.engaged`, NOT `.open`. `openDay` falls back to the first wedding
@@ -570,21 +705,34 @@ onBeforeUnmount(() => {
   padding-top: clamp(1rem, 2vh, 1.5rem);
   border-top: 1px solid color-mix(in srgb, currentColor 22%, transparent);
 }
-/* ⚠️ One grid cell for every card, so the panel is always as tall as its tallest
-   and swapping days cannot shift the page. See AUDIT #28. */
-.card-stack { display: grid; }
+/* ⚠️ Both days at once, in two columns with a hairline between them. Nothing is
+   hidden and nothing swaps, which is the structural end of AUDIT #28: there is no
+   longer anything that could shift, because nothing appears or disappears. The
+   stacked-single-card version fixed the shift but still only let a guest read one
+   of two weddings 500km apart at a time. */
+.cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(1.5rem, 4vw, 3rem);
+}
 .card {
-  grid-area: 1 / 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 0.26s ease, transform 0.26s ease;
-  pointer-events: none;
+  opacity: 0.72;
+  transition: opacity 0.3s ease;
 }
-.card.on { opacity: 1; transform: none; pointer-events: auto; }
+.cards .card + .card {
+  border-inline-start: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+  padding-inline-start: clamp(1.5rem, 4vw, 3rem);
+  margin-inline-start: calc(clamp(1.5rem, 4vw, 3rem) * -1);
+}
+/* Hovering a ringed date brings its card forward; it never hides the other. */
+.card.lit { opacity: 1; }
+.cards:not(:hover) .card { opacity: 0.88; }
+
+.detail-foot { margin-top: clamp(0.9rem, 1.8vh, 1.2rem); text-align: center; }
 
 .card-kicker {
   font-family: 'Bague', sans-serif;
@@ -605,7 +753,7 @@ onBeforeUnmount(() => {
   display: block;
   width: 2.4rem;
   height: 2px;
-  margin: 0.75rem 0 1.05rem;
+  margin: 0.6rem 0 0.85rem;
   border-radius: 2px;
   background: var(--marker);
   opacity: 0.75;
@@ -655,35 +803,122 @@ onBeforeUnmount(() => {
   letter-spacing: 0.24em;
   text-transform: uppercase;
   opacity: 0.5;
-  margin-top: 1.15rem;
+  margin-top: 0.9rem;
 }
 
-/* ── good to know ── */
-.notes-wrap { width: 100%; max-width: 46rem; }
-.notes-title {
+.card-acts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem 1.1rem;
+  margin-top: 0.8rem;
+}
+.act {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  font-family: 'Bague', sans-serif;
+  font-size: 0.64rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--marker);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--marker) 42%, transparent);
+  cursor: none;
+  transition: border-color 0.25s ease, opacity 0.25s ease;
+}
+.act:hover, .act:focus-visible { outline: none; border-bottom-color: var(--marker); }
+.act.subtle { opacity: 0.6; }
+.act.subtle:hover { opacity: 1; }
+.act.both { letter-spacing: 0.2em; }
+
+/* ── getting there ── */
+.map-wrap { width: 100%; max-width: 64rem; }
+.map-title {
   font-family: 'Italiana', serif;
   font-weight: 400;
   font-size: clamp(2rem, 5.5vw, 3.4rem);
   line-height: 1;
-  margin: 0 0 clamp(1.6rem, 3.5vh, 2.4rem);
+  margin: 0 0 0.7rem;
+  text-align: center;
 }
-.notes { list-style: none; margin: 0; padding: 0; }
-.note-line {
-  display: grid;
-  grid-template-columns: minmax(7rem, 11rem) 1fr;
-  gap: clamp(1rem, 3vw, 2rem);
-  padding: 1.05rem 0;
-  border-top: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+.map-sub {
   font-family: 'Bague', sans-serif;
-}
-.note-label {
-  font-size: 0.7rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
+  font-size: 0.86rem;
+  line-height: 1.6;
   opacity: 0.6;
-  padding-top: 0.2rem;
+  text-align: center;
+  max-width: 34rem;
+  margin: 0 auto clamp(2rem, 4.5vh, 3rem);
 }
-.note-value { font-size: 0.98rem; line-height: 1.7; }
+
+.maps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(1.5rem, 4vw, 3rem);
+}
+.place { display: flex; flex-direction: column; }
+
+/* ⚠️ The map is TINTED rather than styled. A keyless embed cannot be restyled —
+   that needs the JS Maps API and an API key — so the iframe is filtered into the
+   chapter's own sage/olive family instead: desaturate, warm it, rotate the
+   remaining hue off Google's blue, and lift it slightly so it sits on the page's
+   near-white rather than punching a bright hole in it. It is the only way to make
+   a third-party map belong to a page like this without a key. */
+.map-frame {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: #E3E7DA;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 20%, transparent);
+}
+.map-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  filter: grayscale(0.82) sepia(0.32) hue-rotate(26deg) saturate(0.8) contrast(0.94) brightness(1.05);
+  transition: filter 0.5s ease;
+}
+.place:hover .map-frame iframe { filter: grayscale(0.34) sepia(0.16) hue-rotate(20deg) saturate(1) contrast(1) brightness(1.02); }
+
+.place-meta { padding-top: 1.15rem; text-align: center; }
+.place-when {
+  font-family: 'Bague', sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+.place-label {
+  font-family: 'Italiana', serif;
+  font-weight: 400;
+  font-size: clamp(1.15rem, 2.4vw, 1.6rem);
+  line-height: 1.15;
+  margin: 0.4rem 0 0.55rem;
+}
+.place-where {
+  font-family: 'Bague', sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.place-venue {
+  font-family: 'Bague', sans-serif;
+  font-size: 0.78rem;
+  opacity: 0.5;
+  margin-top: 0.2rem;
+}
+.place-acts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem 1.1rem;
+  margin-top: 0.9rem;
+}
 
 @media (max-width: 768px) {
   /* ⚠️ 9rem of bottom room: the floating popup dock is FIXED to the viewport
@@ -699,15 +934,25 @@ onBeforeUnmount(() => {
   .n { font-size: 1.22rem; }
   .scrawl { font-size: 0.7rem; top: 80%; }
   .detail { margin-top: 1.6rem; }
-  /* Two events stack on a phone — side by side they were ~7rem each. */
-  .evs.pair { flex-direction: column; gap: 1.2rem; }
-  .evs.pair .ev + .ev {
+  /* One column on a phone — two cards side by side were ~150px each. */
+  .cards { grid-template-columns: 1fr; gap: 1.6rem; }
+  .cards .card + .card {
+    border-inline-start: 0;
+    padding-inline-start: 0;
+    margin-inline-start: 0;
+    border-top: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+    padding-top: 1.6rem;
+  }
+  .card { opacity: 1; }
+  .evs { flex-direction: column; gap: 1rem; }
+  .evs .ev + .ev {
     border-inline-start: 0;
     border-top: 1px solid color-mix(in srgb, currentColor 18%, transparent);
-    padding-top: 1.2rem;
+    padding-top: 1rem;
   }
   .ev { padding: 0 0.5rem; }
-  .note-line { grid-template-columns: 1fr; gap: 0.25rem; }
+  .maps { grid-template-columns: 1fr; gap: 2rem; }
+  .map-frame { aspect-ratio: 3 / 2; }
 }
 
 @media (prefers-reduced-motion: reduce) {

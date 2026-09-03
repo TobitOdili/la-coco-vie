@@ -47,7 +47,7 @@
         <div class="cash-card fade" data-window="0.12,0.34">
           <h3 class="cash-heading">{{ s.heading }}</h3>
           <p class="cash-body">{{ s.body }}</p>
-          <a class="cash-cta" :href="s.url">{{ s.cta }}</a>
+          <a class="cash-cta" :href="s.url" target="_blank" rel="noopener noreferrer">{{ s.cta }}</a>
           <p class="cash-note">{{ s.note }}</p>
         </div>
       </section>

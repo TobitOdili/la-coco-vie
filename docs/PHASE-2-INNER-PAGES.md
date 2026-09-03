@@ -49,19 +49,21 @@ state, everything below it is history — newest first.)
 > ⚠️ **US's copy is deliberate LOREM IPSUM** (2026-08-31, user's request — the page is being reviewed
 > for layout, not words). Only the three section HEADINGS are real; the popup card titles are lorem too.
 >
-> **The eight dead destinations** (every one is reachable by a guest today). It was seven until
-> 2026-08-31 — the two-wedding rebuild added a THIRD map, since the traditional has its own venue:
-> 1. **RSVP** — `SITE.nav.collectionUrl` = `'#rsvp'`. The site's primary call to action, in the nav
->    AND at the end of all four chapters. Nothing else on this list matters as much.
-> 2. **The cash card** (With Love) — `'#'`.
-> 3. **"Add Your Photos"** (In Frames) — the shared Drive folder, `'#'`.
-> 4. **open in maps** — the traditional (23 Oct), `marks[0].events[0].map`.
-> 5. **open in maps** — the ceremony (29 Oct).
-> 6. **open in maps** — the reception (29 Oct). *(All three are now inline links inside the
->    calendar's day card, not popup cards.)*
-> 7. **🗓 Add to Calendar** — `'#'`. ONE card on the Big Day cover, so the `.ics` it needs must
->    carry **both** days as two events.
-> 8. **The bottom-left credit** — `SITE.credit.url` = `'#'`.
+> **The THREE dead destinations left** (down from eight on 2026-09-03). Every one is still
+> reachable by a guest, so they are the shortlist:
+> 1. **The cash card** (With Love) — `'#'`. Now the most important one on the list.
+> 2. **"Add Your Photos"** (In Frames) — the shared Drive folder, `'#'`.
+> 3. **The bottom-left credit** — `SITE.credit.url` = `'#'`. On every page, in the footer bar.
+>
+> **CLOSED on 2026-09-03, and how:**
+> - **RSVP** is live — `https://lal.so/e/9j09CHqj2sn` (user-supplied). It was the one that mattered
+>   most: the nav plus the end of all four chapters.
+> - **All three "open in maps"** are live. `marks[].events[].map = '#'` is gone entirely; each mark
+>   carries a real `place` string instead, and the component derives the Google Maps search URL, the
+>   directions URL and the embed URL from that one value — so a pin, a route and a link can never
+>   point at three different things.
+> - **Add to Calendar** is live and needs no service: the `.ics` is built in the browser and handed
+>   over as a Blob, per day or both days at once.
 >
 > **VERIFIED (user, 2026-08-31):** everything built in August looks right **on desktop and mobile**,
 > and the **card films work**. The only thing still unchecked by a human is the **mobile swipe lean**
@@ -228,6 +230,52 @@ folder - pictures coming soon."*
   left, section back to one screen, spools still moving, the window grows and shrinks, title/empty
   copy correct, the scrim covers the nav corner, close by X / outside tap / Escape all work, focus
   moves to the close button and back, no horizontal overflow, 0 console errors.
+
+**▶▶ STATE (2026-09-03, latest) — THE BIG DAY: BOTH DAYS AT ONCE, AND A REAL MAP.**
+User: *"Maybe put the details side by side rather than switch on hover… the 29th one looks broken…
+replace the entire good to know section with a map showing two addresses… Better if we can also use
+a proper maps integration so people can calculate directions… reenable add to calendar… make sure
+all the links open in new tab. RSVP link is https://lal.so/e/9j09CHqj2sn"*
+- **Both days are shown side by side now**, in two columns with a hairline between. ⚠️ This is the
+  *structural* end of AUDIT #28 rather than another fix for it: nothing appears or disappears on
+  hover, so there is nothing left that could shift. It also fixes a real content problem the stacked
+  version had — a guest could only ever read one of two weddings **500km apart** at a time. Hovering
+  a ringed date now only EMPHASISES its card and draws the line on the calendar.
+- ⚠️⚠️ **THE BROKEN LINE WAS FOUR CORRECT THINGS THAT DO NOT WORK TOGETHER** (AUDIT #31):
+  `pathLength="1"` + `stroke-dasharray: 1` + `vector-effect: non-scaling-stroke` +
+  `preserveAspectRatio="none"`. `pathLength` normalises the dash maths in USER space while
+  non-scaling-stroke applies the pattern in SCREEN space, and under a non-uniform stretch the ratio
+  between them varies along the path — so the dash ran out early and the gap after it showed as a
+  break mid-stroke. **That is why the 23rd (145px, one column) looked perfect and the 29th (278px,
+  two columns) came out in two pieces from identical code.** Measured: `getTotalLength()` = 103.59
+  user units for a 278px rendered path. Replaced with a **`clip-path` wipe**, which reveals pixels
+  and knows nothing about path length. The marker RING still uses a dash and is fine — uniform
+  aspect ratio, no `pathLength`.
+- **"Good to know" is gone**, replaced by **Getting there**: two tinted maps, one per venue.
+  - ⚠️ **No API key anywhere.** `maps.google.com/maps?q=…&output=embed` is keyless, and
+    `google.com/maps/dir/?api=1&destination=…` is the documented Maps URLs scheme, which resolves
+    the visitor's own origin for them — real turn-by-turn without asking anyone for a location.
+  - ⚠️ A keyless embed **cannot** accept a style (that needs the JS API and a key), so the iframes
+    are **tinted with a CSS `filter`** into the chapter's sage/olive family instead. It is the only
+    way to make a third-party map belong to a page like this without a key.
+  - Every URL — embed, search, directions — is derived from ONE `place` string on the data, so a
+    pin, a route and a link cannot point at three different things. Put a full address in `place`
+    when the venues are confirmed and all three sharpen from the city to the door.
+  - Why it replaced the list: five lines of `[placeholder]` answering questions nobody had asked,
+    while *where the two days actually are* is the question every guest has — and the list hid the
+    500km between them completely.
+- **Add to calendar is back**, per day and both days, as a browser-built Blob. All-day VEVENTs while
+  the times are placeholders; RFC-5545 folded at 75 octets, which matters the day a real address
+  lands in `LOCATION`.
+- **RSVP is live** and **every external link on the site opens in a new tab.** Prod-measured: `0`
+  links with an `http(s)` href and no `target="_blank"`. The one that was missing it was With Love's
+  cash CTA. **Dead destinations: 8 → 3** (see the ledger above).
+- **Prod-build verified**: 2 cards both visible on one row, **0px layout shift** across a full hover
+  cycle, the leader line's ink 278px across a 278px box (one continuous run), 2 keyless map embeds
+  with the right places, all 4 map links `target="_blank"`, the `.ics` downloading and parsing with
+  `LOCATION:Oguta, Imo, Nigeria`, header clearing the nav on both breakpoints, no horizontal
+  overflow, 0 console errors. ⚠️ On a phone the calendar scene is ~1.3 screens tall (the two cards
+  stack) and scrolls; on desktop it all lands on one.
 
 **▶▶ STATE (2026-09-03, latest) — THE BIG DAY, PICKED BACK UP ONE NOTE AT A TIME.**
 After the wholesale revert, the user asked for a subset by name: *"Let's still tackle the layout

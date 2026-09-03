@@ -11,7 +11,6 @@
 //     on FRI 23 Oct 2026 and the white wedding + reception on Thu 29 Oct 2026.
 //     (Oct 27 was the original single placeholder; the traditional was briefly
 //     recorded as the 25th and corrected to the 23rd by the user on 2026-09-02.)
-//   • rsvpUrl — dead link until an RSVP destination exists
 //   • the welcome-note copy below — tone draft for correction
 //
 // NOT here (by design):
@@ -50,7 +49,9 @@ export const SITE = {
     aboutLabel: 'Welcome',
     collectionLabel: 'RSVP',
     // PLACEHOLDER — point at the real RSVP form / WhatsApp / mailto when it exists.
-    collectionUrl: '#rsvp',
+    // The real RSVP destination (user, 2026-09-03). This is the site's primary
+    // call to action — it appears in the nav AND at the end of all four chapters.
+    collectionUrl: 'https://lal.so/e/9j09CHqj2sn',
   },
 
   // Bottom-left credit.
