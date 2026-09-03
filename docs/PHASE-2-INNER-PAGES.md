@@ -245,13 +245,26 @@ were NOT asked for again and are deliberately still absent** — see the revert 
   (`Friday 23 October 2026`), the day's name in Italiana, a short stroke in the marker's colour, then
   the events **side by side** with a hairline between them — which is what makes the white wedding
   read as one day with two parts rather than as a longer list — and the dress code beneath.
-- **The calendar carries more on its own.** Hovering a ringed date writes the times and what they
-  are beside it in the same marker. ⚠️ It extends toward the MIDDLE of the month (left from a
-  late-week column, right from an early one) so it cannot run off the grid, and `.marked` needs a
-  `z-index` or the note is only painted over cells that come earlier in the DOM. ⚠️ It keys off a
-  new `.engaged` class, NOT `.open`: `openDay` falls back to the first wedding so the panel is never
-  empty, which had the 23rd's note written across the calendar permanently from page load. Hidden
-  below 768px, where it would cover half the month.
+- **The calendar carries more on its own.** Hovering a ringed date **draws a line from it out to
+  the side of the calendar**, with the times written in the margin at the end. The first pass wrote
+  the note next to the date instead, over its neighbours; the line was the user's suggestion and is
+  better — it keeps the grid clean.
+  - ⚠️ The line's length is `--span` cell-widths plus the gaps it crosses, and the percentages
+    resolve against the CELL (its containing block), so it stays right at every viewport without
+    measuring anything. It runs toward the NEARER edge so it never crosses the whole month.
+  - ⚠️ **It RISES on the way out.** Drawn flat at the row's mid-height it ran straight through the
+    numerals it passed, and a line through "24" reads as *cancelled* on a calendar.
+  - ⚠️ **OFF below 1280px, and that number is measured, not chosen.** The grid is 928px and the note
+    is 8.5rem plus a 1.1rem lead-in, so a margin on both sides needs ~1236px of viewport before the
+    note can sit outside the calendar at all — it ran 29px off the right edge at 1200 and 103px at
+    1024. Narrowing it enough for 1024 meant three wrapped lines; widening the margin meant shrinking
+    the calendar, which is the part that works.
+  - ⚠️ Keys off a new `.engaged` class, NOT `.open`: `openDay` falls back to the first wedding so the
+    panel is never empty, which had the 23rd's note drawn across the calendar permanently from page
+    load.
+- **The green wash behind a ringed date is gone**, at the user's request. It was the one piece of
+  UI-looking chrome on a page that is otherwise a printed month with marker on it — a filled circle
+  reads as a *selected state in an app*. The ring inking in is the whole feedback.
 - **The sound easter egg is wired.** `marks[].sound` takes a path under `public/`; a mark without
   one, or whose file fails to load, plays nothing, and Howler's global mute means the site's own
   sound toggle already governs it. ⏳ **Still silent — both files outstanding.**
@@ -261,10 +274,15 @@ were NOT asked for again and are deliberately still absent** — see the revert 
   landed under the nav — on BOTH breakpoints, because the mobile media query re-declared the same
   `8vh`. `max(8vh, 7rem)` on desktop and `max(8vh, 5.5rem)` on mobile, plus a slightly shorter cell
   (`1 / 0.55`), and the whole month and its programme fit one screen again.
-- **Prod-build verified at 1440×900 and 390×844**: no hint in the DOM, no big numeral, 2 stacked
-  cards, **0px layout shift** across a full hover cycle, the annotation is invisible at rest and
-  0.9 on hover only for the date being pointed at, the header clears the nav (112px vs 88 desktop,
-  88 vs 72 mobile), everything fits one screen, 0 console errors.
+- ⚠️ **A near-miss worth recording:** the edit that added the leader line replaced a template range
+  that ran past the annotation and **silently deleted the `.marker-ring` SVG** — the rings vanished
+  from both dates and no probe assertion covered them, because none of them had ever needed to. Only
+  the screenshot caught it. Assert on what you did NOT mean to touch, not just on what you changed.
+- **Prod-build verified at 1440×900 and 390×844**: no hint in the DOM, no big numeral, no `::after`
+  wash, both rings drawn and both scrawls at 0.92, 2 stacked cards, **0px layout shift** across a
+  full hover cycle, the margin note invisible at rest and 0.92 on hover for the pointed-at date only,
+  the header clears the nav (112 vs 88 desktop, 88 vs 72 mobile), everything fits one screen, and the
+  note/line are `display: none` with no horizontal overflow below 1280. 0 console errors.
 
 **▶▶ REVERTED (2026-09-02) — THE BIG DAY REWORK. Read this before rebuilding any of it.**
 Shipped as `df65d160` and reverted in full as `c067839b` at the user's request: *"please revert

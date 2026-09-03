@@ -51,23 +51,36 @@
               @click="tap(cell)"
             >
               <span class="n">{{ cell }}</span>
-              <!-- ── written beside the date on hover ──
-                   The calendar carries more than the ring on its own now: the
-                   times and what they are, added in the same marker.
-                   ⚠️ It extends toward the MIDDLE of the month (left from a
-                   late-week column, right from an early one) so it can never run
-                   off the edge of the grid, and `.marked` carries a z-index so the
-                   annotation always paints over its neighbours rather than under
-                   whichever cells happen to come later in the DOM. -->
+              <!-- ── the leader line, and the note out in the margin ──
+                   A line is drawn from the date out to the side of the calendar
+                   and the note is written at the end of it, clear of the grid,
+                   rather than over the neighbouring dates.
+                   ⚠️ `--span` is how many columns lie between this date and the
+                   edge it runs toward, so the line's length is expressed in the
+                   cell's own width and stays correct at every viewport — the
+                   percentages resolve against the cell, which is the containing
+                   block. It runs toward the NEARER edge, so it never crosses the
+                   whole month. -->
               <span
-                class="ann"
-                :class="k % 7 >= 4 ? 'ann-left' : 'ann-right'"
+                class="lead"
+                :class="k % 7 >= 3 ? 'to-right' : 'to-left'"
+                :style="{ '--span': k % 7 >= 3 ? 6 - (k % 7) : k % 7 }"
+                aria-hidden="true"
+              >
+                <svg class="lead-line" viewBox="0 0 100 32" preserveAspectRatio="none">
+                  <path d="M 0 30 C 22 29, 44 12, 100 4" pathLength="1" />
+                </svg>
+              </span>
+              <span
+                class="side-note"
+                :class="k % 7 >= 3 ? 'to-right' : 'to-left'"
+                :style="{ '--span': k % 7 >= 3 ? 6 - (k % 7) : k % 7 }"
                 aria-hidden="true"
               >
                 <span
                   v-for="(e, m) in markOf(s, cell).events"
                   :key="m"
-                  class="ann-line"
+                  class="side-line"
                 >{{ e.time }} · {{ e.name }}</span>
               </span>
               <!-- the marker ring: one rough loop that overshoots and doesn't close -->
@@ -447,36 +460,97 @@ onBeforeUnmount(() => {
 }
 .in-view .scrawl { opacity: 0.92; }
 
-/* ── written beside the date on hover ── */
-.ann {
+/* ── the leader line, and the note in the margin ── */
+/* The line's length is `--span` cell-widths plus the column gaps it crosses.
+   Percentages here resolve against the CELL, which is the containing block, so
+   this stays right at every viewport without measuring anything. */
+/* ⚠️ OFF below 1280px, and the number is measured rather than chosen: the note is
+   8.5rem wide with a 1.1rem lead-in, so a symmetric margin on both sides needs
+   `928px (the grid) + 2 × 154px = 1236px` of viewport before the note can sit
+   outside the calendar at all. Below that it ran off the right edge — 29px over at
+   1200, 103px at 1024. Narrowing the note enough to fit 1024 would have meant
+   three wrapped lines, and widening the margin would have meant shrinking the
+   calendar itself, which is the part that works. So it is a large-screen
+   enhancement: the rings, the scrawls and the programme below carry everything on
+   their own. */
+.lead,
+.side-note { display: none; }
+
+@media (min-width: 1280px) {
+.lead,
+.side-note {
+  display: block;
   position: absolute;
   top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  white-space: nowrap;
-  font-family: 'Caveat', 'Bradley Hand', cursive;
-  font-weight: 600;
-  font-size: clamp(0.8rem, 1.5vw, 1.05rem);
-  line-height: 1.25;
-  color: var(--marker);
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 0.28s ease;
 }
-/* toward the middle of the month, so it can never run off the grid */
-.ann-left { right: 100%; margin-inline-end: 0.7rem; text-align: end; align-items: flex-end; }
-.ann-right { left: 100%; margin-inline-start: 0.7rem; text-align: start; align-items: flex-start; }
-.ann-left { transform: translate(0.5rem, -50%); }
-.ann-right { transform: translate(-0.5rem, -50%); }
-/* ⚠️ `.engaged`, NOT `.open`. `openDay` falls back to the first wedding so the
-   panel below is never empty — which meant the 23rd's annotation was written
-   across the calendar permanently, from the moment the page loaded. The note
-   should only appear when someone actually points at (or taps) the date. */
-.marked:hover .ann,
-.marked:focus-visible .ann,
-.marked.engaged .ann { opacity: 0.9; transform: translate(0, -50%); }
+/* ⚠️ The line RISES on its way out, ending `--rise` above the row's centre line.
+   Drawn flat at the cell's mid-height it ran straight through the numerals it
+   passed — the 24 looked struck through, which on a calendar reads as cancelled.
+   Someone annotating a real month draws around the numbers, not across them. */
+.lead {
+  --rise: 26px;
+  height: calc(var(--rise) + 4px);
+  top: calc(50% - var(--rise) - 4px);
+  width: calc(var(--span, 1) * 100% + var(--span, 1) * 0.4rem + 0.7rem);
+  transform: none;
+}
+.lead.to-right { left: 100%; }
+.lead.to-left { right: 100%; }
+.lead-line { display: block; width: 100%; height: 100%; overflow: visible; }
+.lead-line path {
+  fill: none;
+  stroke: var(--marker);
+  /* ⚠️ The viewBox is squashed by `preserveAspectRatio: none`, which would scale
+     the stroke with it; this keeps it an even hairline however long the run is. */
+  vector-effect: non-scaling-stroke;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 0.5s ease;
+}
+
+.side-note {
+  /* sits on the END of the line, which is above the row, not on it */
+  --rise: 26px;
+  top: calc(50% - var(--rise));
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  width: 8.5rem;
+  transform: translateY(-50%);
+  font-family: 'Caveat', 'Bradley Hand', cursive;
+  font-weight: 600;
+  font-size: clamp(0.82rem, 1.4vw, 1.02rem);
+  line-height: 1.2;
+  color: var(--marker);
+}
+.side-note.to-right {
+  left: calc(100% + var(--span, 1) * 100% + var(--span, 1) * 0.4rem + 1.1rem);
+}
+.side-note.to-left {
+  right: calc(100% + var(--span, 1) * 100% + var(--span, 1) * 0.4rem + 1.1rem);
+  text-align: end;
+}
+
+.marked:hover .lead,
+.marked:focus-visible .lead,
+.marked.engaged .lead,
+.marked:hover .side-note,
+.marked:focus-visible .side-note,
+.marked.engaged .side-note { opacity: 0.92; }
+.marked:hover .lead-line path,
+.marked:focus-visible .lead-line path,
+.marked.engaged .lead-line path { stroke-dashoffset: 0; }
+}   /* end @media (min-width: 1280px) */
+
+/* ⚠️ Keyed off `.engaged`, NOT `.open`. `openDay` falls back to the first wedding
+   so the panel below is never empty, which had the 23rd's note drawn across the
+   calendar permanently from page load. The note belongs to pointing, not to
+   selection. */
 
 /* hover / focus / open — the ring inks in and the day gets a faint wash */
 .marked:hover,
@@ -484,19 +558,10 @@ onBeforeUnmount(() => {
 .marked:hover .ring,
 .marked:focus-visible .ring,
 .marked.open .marker-ring { opacity: 1; }
-.marked::after {
-  content: '';
-  position: absolute;
-  inset: -18% -12%;
-  border-radius: 50%;
-  background: currentColor;
-  opacity: 0;
-  transition: opacity 0.35s ease;
-  z-index: -1;
-}
-.marked:hover::after,
-.marked:focus-visible::after,
-.marked.open::after { opacity: 0.1; }
+/* ⚠️ NO background wash. A filled circle behind the date was the one piece of
+   UI-looking chrome on a page that is otherwise a printed month with marker on
+   it — it read as a selected state in an app. The ring inking in is the whole
+   feedback, and it is the page's own language. */
 
 /* ── the day, written out ── */
 .detail {
@@ -642,8 +707,6 @@ onBeforeUnmount(() => {
     padding-top: 1.2rem;
   }
   .ev { padding: 0 0.5rem; }
-  /* The annotation would cover half the month at phone widths. */
-  .ann { display: none; }
   .note-line { grid-template-columns: 1fr; gap: 0.25rem; }
 }
 
@@ -651,7 +714,9 @@ onBeforeUnmount(() => {
   .set,
   .marker-ring path,
   .scrawl,
-  .ann,
+  .lead,
+  .lead-line path,
+  .side-note,
   .card { transition: none; }
 }
 </style>

@@ -54,8 +54,9 @@ is that no two pages share a language. Breaking it is what made With Love fail i
     then he writes in the margin and she answers.
   - **THE BIG DAY** — "the calendar": October 2026 as a page off a wall calendar, with the two
     wedding days **ringed in marker** and annotated by hand (*traditional* · *white wedding*).
-    Hover — or tap — a ringed date and the marker **writes more beside it**, right on the calendar:
-    the times and what each one is. Below the grid, that day is set out as a centred programme —
+    Hover — or tap — a ringed date and a line is **drawn from it out to the side of the calendar**,
+    with the times and what each one is written in the margin at the end of it. ⚠️ No highlight
+    behind the date: the ring inking in is the whole feedback. Below the grid, that day is set out as a centred programme —
     the full date, the day's name, and its events side by side with venue, address and map. ⚠️ Every
     card is stacked in one grid cell, so moving between the dates **cannot shift the page**. The
     grid is computed from the month, so the weekday alignment can't go stale. Photo-free, and it
