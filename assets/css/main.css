@@ -18,10 +18,16 @@
 }
 
 /* ===== CSS Variables ===== */
+/* ⚠️ These are the SITE's own palette, used whenever no chapter is selected — i.e.
+   the whole homepage. They used to be `gray`, all three of them, which meant the
+   welcome panel rendered gray ink on a gray ground and showed NOTHING (measured:
+   background and colour both `rgb(128,128,128)`). That was AUDIT #16, open since
+   2026-05-29, and it is what the user reported as "the welcome slide in doesn't
+   show anything". A chapter class on `.app-root` still overrides all three. */
 html {
-  --accent: gray;
-  --accentLight: gray;
-  --accentLighter: gray;
+  --accent: #33312C;
+  --accentLight: #F3F1EC;
+  --accentLighter: #C9C4B8;
 }
 
 .--us {

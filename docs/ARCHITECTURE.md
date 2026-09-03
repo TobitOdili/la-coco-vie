@@ -276,6 +276,21 @@ style, so the Big Day **tints its iframes with a CSS `filter`** into the chapter
 the only way to make a third-party map belong to a page like this without a key. Derive every URL
 from ONE place string on the data, so a pin, a route and a link cannot disagree.
 
+⚠️ **`pointer-events: auto` belongs on the thing you can click, never on a wrapper.** A wrapper
+is as wide as its WIDEST child, and that child is rarely the button. The homepage's centre block
+put the hit area on a `div` wrapping the wordmark *and* the countdown line — and once the date
+became two weddings, `OCTOBER 23 & 29, 2026 · LAGOS · 50 DAYS TO GO` grew to ~330px of a 390px
+phone, painting an invisible click target straight over the WELCOME label in the nav. Every tap
+fired `go-home` instead, and there was no way into the welcome panel on a phone at all. Desktop
+could never show it. **A copy change broke a hit target three components away** — which is why the
+check is `elementFromPoint` over each control, not a look at the screenshot. (AUDIT #32.)
+⚠️ **Two CSS variables resolving to the same value is an INVISIBLE element, not a low-contrast
+one.** `--accent` and `--accentLight` both defaulted to the keyword `gray`, so the welcome panel
+rendered `rgb(128,128,128)` on `rgb(128,128,128)` on the whole homepage. It sat open for three
+months graded 🟢 Low as "gray-on-gray", which sounds like a contrast nit; what a visitor actually
+saw was an empty screen. The `html` defaults are the site's real palette now — treat a placeholder
+keyword in a shipped variable as a bug, not a default. (AUDIT #16.)
+
 ⚠️ **A `vh`-only top padding cannot guarantee clearance of the fixed site nav.** The nav is ~88px
 tall regardless of viewport height, so `padding-top: 9vh` is 81px at 900px and less on anything
 shorter. It went unnoticed for as long as the Big Day's content was *shorter* than its section:

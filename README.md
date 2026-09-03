@@ -86,6 +86,10 @@ is that no two pages share a language. Breaking it is what made With Love fail i
   **cluster-unfurl outro** (user-approved). Both reversible.
 - ✅ **Mobile / touch** — swipe + momentum, tap-vs-swipe guard, parked EXPLORE button, portrait
   geometry fixes; the homepage refinements are device-verified.
+- ✅ **Homepage card copy** — each card face carries what its chapter is (*Our Journey So Far*,
+  *Wedding Details: Times and Dates*, *Wedding Photos & Videos*, *Support Our Wedding in Cash or
+  Kind*). ⚠️ That text is **baked into generated PNGs** (`scripts/gen-textures.mjs`), so grepping
+  the source will never find it — re-run the script after any copy or date change.
 - ✅ **Wedding colour palette** — one hue family per chapter (US beige/chocolate · Big Day sage/olive ·
   In Frames lavender/purple · With Love dusty-blue/teal). Card art is **generated**:
   `npm run gen:textures` (see [`scripts/README.md`](scripts/README.md)).

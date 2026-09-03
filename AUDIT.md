@@ -6,7 +6,7 @@
 > Tools: Browserless (Playwright/CDP) against the live prod URL, bundle greps, DOM/computed-style probes.
 
 > **Doc map:** this file is the **forensic issue history** — per-issue root causes, fixes,
-> and commit refs (numbered #1–#31). For orientation start at [`README.md`](README.md);
+> and commit refs (numbered #1–#32). For orientation start at [`README.md`](README.md);
 > how-it-works is [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); live status is
 > [`PROGRESS.md`](PROGRESS.md). The **Priority Order table near the bottom is the quickest
 > index** of every issue and its status.
@@ -693,7 +693,7 @@ live: clicking a card now selects it (fills screen), which in turn unblocked #7.
 
 ---
 
-## Issue #16 — About panel gray-on-gray from homepage 🟢 LOW (found 2026-05-29)
+## Issue #16 — About panel gray-on-gray from homepage 🟠 HIGH (found 2026-05-29, FIXED 2026-09-03)
 
 ### Symptom
 Opening the About panel **from the homepage** (no chapter selected) renders the copy as
@@ -703,17 +703,24 @@ chapter looks correct (the chapter's accent colors apply).
 ### Root Cause
 `AboutPanel` styles use `var(--accent)` (text) and `var(--accentLight)` (background). Those
 vars are only set by the per-chapter body class `--{slug}` (`assets/css/main.css`), which is
-only applied while a chapter is selected. With no chapter active, the `html` defaults apply:
-`--accent: gray; --accentLight: gray;` → gray on gray.
+only applied while a chapter is selected. With no chapter active, the `html` defaults applied —
+and all three defaults were the literal keyword **`gray`**, so the text colour and the panel
+background resolved to the *same* value. Measured on the built site before the fix:
+`background: rgb(128,128,128)`, `color: rgb(128,128,128)`.
 
-Pre-existing (not introduced by the `site.config` work — that only changed the text source).
+### Fix
+The `html` defaults are a real palette now — the site's own ink and ground
+(`--accent: #33312C`, `--accentLight: #F3F1EC`, `--accentLighter: #C9C4B8`) — so the welcome
+panel is legible with no chapter selected, and any other homepage element that reads `--accent`
+gets the site's ink instead of a placeholder grey. A chapter class still overrides all three.
+**Verified on the production build, both viewports:** `rgb(243,241,236)` ground,
+`rgb(51,49,44)` ink.
 
-### Open questions / fix options
-- **First confirm against the original** — does it also mute the About text on the homepage,
-  or does it set a default accent? Match whatever it does.
-- If it's a bug: set sensible non-gray defaults for `--accent` / `--accentLight` on `html`
-  (e.g. a neutral dark text on light bg), or give the About overlay its own default colors
-  independent of the chapter accent.
+⚠️ **This sat open for three months as 🟢 LOW because the summary said "gray-on-gray", which
+sounds like a contrast nit.** It was not: the welcome panel — the site's introduction, one of
+three things in the nav — showed *nothing at all*. The user reported it as "the welcome slide
+in doesn't show anything". Two identical values is an invisible element, not a low-contrast one;
+grade it by what a visitor sees, not by how the cause reads.
 
 ---
 
@@ -1104,6 +1111,33 @@ no `pathLength`, and an authored `stroke-dasharray: 430`. The trap needs the non
 
 ---
 
+## Issue #32 — No way into the welcome panel on a phone 🟠 HIGH (2026-09-03)
+
+### Symptom
+Found while verifying the fix for #16 on mobile: the welcome panel opened on desktop but tapping
+**WELCOME** on a 390px phone did nothing at all. No error, no flicker — the tap simply went
+somewhere else.
+
+### Root cause
+**An invisible wrapper, as wide as its widest child.** The centre wordmark block carries
+`pointer-events-auto` and the `go-home` click on a `div` that wraps *both* the wordmark **and the
+countdown line** — and that line reads `OCTOBER 23 & 29, 2026 · LAGOS · 50 DAYS TO GO`, roughly
+330px of a 390px screen. The block is `!fixed top-3` with the same `z-20` as the nav bar but comes
+**later in the DOM**, so its box was painted straight over the WELCOME label at the top left.
+Measured: `elementFromPoint` over WELCOME returned `DIV.text-center.pointer-events-auto`, not the
+nav item. Every tap on WELCOME was firing `go-home` instead.
+
+⚠️ It could not happen on desktop, where the same line is a small fraction of a 1440px viewport and
+never reaches the left edge. The countdown only became long enough to cause it when the date changed
+to **two** weddings — a copy change breaking a hit target three components away.
+
+### Fix
+`pointer-events-auto` and the click handler moved onto the **wordmark itself**; the wrapper and the
+countdown are inert. **Verified on the production build at 390×844:** `elementFromPoint` over
+WELCOME now returns the label's own `SPAN`, and the panel opens on tap.
+
+---
+
 ## Updated Priority Order (as of 2026-05-27)
 
 | # | Issue | Priority | Status |
@@ -1123,7 +1157,8 @@ no `pathLength`, and an authored `stroke-dasharray: 430`. The trap needs the non
 | ~~6~~ | ~~Background card opacity falloff~~ | ~~🟢 Low~~ | ✅ Fixed (`26ee0406` + `52b8cf9b`) — `uOpacity` uniform driven by per-card distance to camera (smoothstep 95→125, floor 0.2); far cards now faint ghosts like the original. Verified live. |
 | ~~7~~ | ~~Scroll-driven chapter exit~~ | ~~🟢 Low~~ | ✅ Fixed (`bcc9b342`) — back-scroll past threshold runs the reverse animation via `onScroll`; `onDeselect` callback resets app state. Verified live. |
 | ~~15~~ | ~~Chapter selection broken — hit layer click-transparent~~ | 🔴 High | ✅ Fixed (`bbedb5ec`) — `#canvas-hit-layer` inherited `pointer-events:none`; clicks fell through to `.app-root` so `@click` never fired. Set `pointer-events:auto`. Found while verifying #7; verified live (clicking now selects). |
-| 16 | About panel gray-on-gray when opened from homepage | 🟢 Low | Open (found 2026-05-29) — pre-existing; accent CSS vars default to `gray` until a chapter is selected. See §Issue #16. |
+| ~~16~~ | ~~About panel gray-on-gray when opened from homepage~~ | ~~🟠 High~~ | ✅ **Fixed 2026-09-03** — both vars resolved to the literal `gray`, so the welcome panel showed NOTHING. The `html` defaults are the site's real palette now. Mis-graded 🟢 Low for three months. See §Issue #16. |
+| ~~32~~ | ~~No way into the welcome panel on a phone~~ | ~~🟠 High~~ | ✅ Fixed 2026-09-03 — the centre wordmark block's `pointer-events-auto` wrapper is as wide as the countdown line and was painted over the WELCOME label, swallowing every tap. Moved onto the wordmark itself. See §Issue #32. |
 | ~~17~~ | ~~Every image 404s on GitHub Pages — `import.meta.env.BASE_URL` is `'./'` in Nuxt production builds~~ | ~~🔴 High~~ | ✅ Fixed (`67693fd3`) — baked via `vite.define.__APP_BASE__`, one helper `utils/asset.js`. Verified on both hosts. See §Issue #17. |
 | ~~18~~ | ~~Template ref inside `v-for` is an array → threw on frame 1 → killed the whole rAF loop~~ | ~~🔴 High~~ | ✅ Fixed (`5d19b9e7`) — query the DOM inside `tick()`. See §Issue #18. |
 | ~~19~~ | ~~`loading="lazy"` cut-outs are 0px tall until decode, collapsing the page layout~~ | ~~🟡 Medium~~ | ✅ Fixed (`8f60e207`) — eager + reserved `aspect-ratio` + page `min-height`. See §Issue #19. |

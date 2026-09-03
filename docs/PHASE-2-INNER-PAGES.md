@@ -231,6 +231,38 @@ folder - pictures coming soon."*
   copy correct, the scrim covers the nav corner, close by X / outside tap / Escape all work, focus
   moves to the close button and back, no horizontal overflow, 0 console errors.
 
+**▶▶ STATE (2026-09-03, latest) — THE HOMEPAGE: CARD COPY, THE WELCOME PANEL, AND THE LAST OF THE
+REFERENCE SITE.**
+- **"A love story in chapters" is gone** from the nav. The string stays in `site.config.js` because
+  the docs still describe the site that way; nothing renders it.
+- **Every card face carries its own line now** — *Our Journey So Far* · *Wedding Details: Times and
+  Dates* · *Wedding Photos & Videos* · *Support Our Wedding in Cash or Kind* — and In Frames' centre
+  tagline is *MAGICAL MOMENTS: PICTURES & VIDEOS WORTH a THOUSAND WORDS*.
+  - ⚠️⚠️ **This is how a WRONG DATE survived on the homepage for weeks.** The `sub` line replaced
+    two generic lines printed on all four cards, the second of which read `OCTOBER TWENTY-SEVEN ·
+    TWENTY TWENTY-SIX` — a date superseded twice over, spelled out in a style the user had
+    explicitly rejected on the Big Day. It is **baked into a PNG**, so every date sweep of the
+    source missed it. Card copy lives in `scripts/gen-textures.mjs`; re-run it after any copy change.
+- ⚠️⚠️ **THE WELCOME PANEL SHOWED NOTHING, and it had been open as 🟢 LOW since May** (AUDIT #16).
+  `--accent` and `--accentLight` both defaulted to the literal keyword `gray`, so the panel rendered
+  `rgb(128,128,128)` on `rgb(128,128,128)` across the entire homepage. Two identical values is an
+  invisible element, not a low-contrast one — it was graded by how the cause read rather than by
+  what a visitor saw. The `html` defaults are the site's real palette now.
+- ⚠️⚠️ **AND ON A PHONE THERE WAS NO WAY IN AT ALL** (AUDIT #32), found only because the fix above
+  was checked on mobile. The centre wordmark block puts `pointer-events-auto` on a wrapper around
+  the wordmark **and the countdown**, and once the date became two weddings that line grew to ~330px
+  of a 390px screen — an invisible hit target painted straight over the WELCOME label, swallowing
+  every tap into `go-home`. A copy change broke a control three components away. Moved onto the
+  wordmark itself.
+- **The last of the reference site is out of the deploy:** `images/gallery/` (3.8 MB of its stills),
+  `images/dresses/` (848 KB), `logo.png` (its literal wordmark) and `favicon.ico` (its four-pointed
+  star, and what every visitor saw in their tab). The favicon is the couple's ampersand now,
+  generated alongside the card art. `package.json` no longer calls itself `millanova-replica`.
+  **Verified: zero occurrences of "millanova"/"milla nova" anywhere in `.output/public`.**
+- **Prod-build verified at 1440×900 and 390×844**: no subtitle, welcome panel opens and is legible
+  on both (ground `rgb(243,241,236)`, ink `rgb(51,49,44)`), `elementFromPoint` over WELCOME returns
+  its own span, zero failed requests, no horizontal overflow, 0 console errors.
+
 **▶▶ STATE (2026-09-03, latest) — THE BIG DAY: BOTH DAYS AT ONCE, AND A REAL MAP.**
 User: *"Maybe put the details side by side rather than switch on hover… the 29th one looks broken…
 replace the entire good to know section with a map showing two addresses… Better if we can also use

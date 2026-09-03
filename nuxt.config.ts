@@ -48,7 +48,8 @@ export default defineNuxtConfig({
         { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' }
       ],
       link: [
-        { rel: 'icon', href: `${baseURL}images/favicon.ico` },
+        { rel: 'icon', type: 'image/png', href: `${baseURL}images/cu-favicon.png` },
+        { rel: 'apple-touch-icon', href: `${baseURL}images/cu-favicon.png` },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         { rel: 'stylesheet', href: googleFontsHref() }

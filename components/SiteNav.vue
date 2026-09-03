@@ -39,19 +39,22 @@
     <!-- Center logo -->
     <div class="!fixed z-20 top-3 w-full pointer-events-none">
       <div class="container flex justify-center mt-2 md:mt-6">
-        <div class="text-center pointer-events-auto" @click="$emit('go-home')">
-          <!-- BRAND WORDMARK — the couple's names (was the Milla Nova vector art). -->
+        <!-- ⚠️ `pointer-events-auto` and the click belong to the WORDMARK ONLY, never
+             to this wrapper. The wrapper is as wide as its widest child, and its
+             widest child is the countdown line — "OCTOBER 23 & 29, 2026 · LAGOS ·
+             51 DAYS TO GO" spans ~330px of a 390px phone. Sitting on `top-3` with the
+             same `z-20` as the nav bar but LATER in the DOM, that invisible box was
+             painted over the WELCOME label and swallowed every tap on it: on a phone
+             there was no way into the welcome panel at all. Measured —
+             `elementFromPoint` over WELCOME returned this div, not the nav. -->
+        <div class="text-center">
+          <!-- BRAND WORDMARK — the couple's names. -->
           <div
-            class="wordmark whitespace-nowrap text-[17px] lg:text-[26px]"
+            class="wordmark whitespace-nowrap text-[17px] lg:text-[26px] pointer-events-auto"
             :style="{ color: accentColor }"
+            @click="$emit('go-home')"
           >
             COVENANT <span class="amp">&amp;</span> UVIE
-          </div>
-          <div
-            v-if="isHome"
-            class="text-accent uppercase text-[11px] lg:text-sm tracking-wider mt-1 lg:mt-2"
-          >
-            {{ SITE.subtitle }}
           </div>
           <!-- Countdown (homepage only). Two weddings: it counts to the traditional,
                then rolls over to the white wedding. Times in site.config are placeholders. -->

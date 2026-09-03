@@ -3,8 +3,7 @@
 <rect width="1000" height="1330" fill="#E9ECE2"/>
 <text x="500" y="200" text-anchor="middle" font-family="Italiana" font-size="190" fill="#41492D">THE BIG</text>
 <text x="500" y="390" text-anchor="middle" font-family="Italiana" font-size="190" fill="#41492D">DAY</text>
-<g opacity="0.65" fill="#41492D" font-family="Bague" font-size="24" letter-spacing="4">
-<text x="500" y="1248" text-anchor="middle">THE WEDDING OF COVENANT &amp; UVIE</text>
-<text x="500" y="1286" text-anchor="middle">OCTOBER TWENTY-SEVEN · TWENTY TWENTY-SIX</text>
+<g opacity="0.62" fill="#41492D" font-family="Bague" font-size="30" letter-spacing="2">
+<text x="500" y="1262" text-anchor="middle">Wedding Details: Times and Dates</text>
 </g>
 </svg>

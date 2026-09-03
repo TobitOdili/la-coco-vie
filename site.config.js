@@ -34,7 +34,9 @@ export const SITE = {
   // switches to that event's own label.
   dateLabel: 'October 23 & 29, 2026 · Lagos',
 
-  // Subtitle shown under the nav wordmark on the homepage.
+  // ⚠️ REMOVED from the nav on 2026-09-03 at the user's request — the homepage
+  // wordmark now runs straight into the date and countdown. The string is kept
+  // because `chapterPages`/docs still describe the site this way; nothing renders it.
   subtitle: 'A love story in chapters',
 
   // Document <title>s.

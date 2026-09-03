@@ -9,7 +9,9 @@
 //   • IMAGES — reused Milla Nova film stills (right aspect ratios, wrong people).
 //     Swap for the couple's shoots, keeping roughly the same counts per section.
 //     ✅ DONE for the whole US page (2026-08-31 — polaroids AND both popup cards)
-//     and the In Frames reel. ⚠️ NOTHING references `/images/gallery/` any more:
+//     and the In Frames reel. ⚠️ `/images/gallery/` and `/images/dresses/` were
+//     DELETED on 2026-09-03 — 4.6 MB of the reference site's own photographs,
+//     referenced by nothing but still being deployed at guessable URLs. Originally:
 //     all 3.8 MB of Milla Nova stills there are now unused (kept, not deleted).
 //   • POPUPS — dummy registry items / map links; urls are '#' dead links.
 //

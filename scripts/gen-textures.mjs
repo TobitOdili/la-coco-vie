@@ -11,6 +11,7 @@
 //   cu-txt1..4.png — the centre TAGLINE art (2048×2048, transparent), Italiana/Bague
 //   cu-logo.png    — the nav/card wordmark (480×480, TRANSPARENT — its alpha is the shader's
 //                    accent mask; an opaque bg would flood the whole card with the accent colour)
+//   cu-favicon.png — the browser-tab mark (180×180). Replaced the reference site's star.
 //
 // Requires: Google Chrome installed + `npm i -D playwright-core` (the repo has it as a dep).
 // The three Google-font subsets live beside this file in scripts/fonts/ (fetched with the
@@ -38,10 +39,17 @@ const FONTS = {
 const face = (f) => `@font-face{font-family:'${f.fam}';src:url(data:font/${f.fmt};base64,${f.data}) format('${f.fmt}');}`
 
 // One entry per chapter (index-aligned with CHAPTERS). bg = accentLight, ink = accent.
+// `sub` is the line UNDER the title on the card face — what this chapter is, in a
+// guest's words. ⚠️ It replaced two generic lines that were on all four cards, the
+// second of which read "OCTOBER TWENTY-SEVEN · TWENTY TWENTY-SIX": a date that has
+// been wrong since the couple confirmed the 23rd and the 29th, spelled out in a
+// style the user had already rejected elsewhere. It was baked into a PNG, so no
+// amount of grepping the data would have found it — only opening the card art.
 const CH = [
   {
     n: 1, bg: '#F2EEE8', ink: '#42221A', font: 'rainbow',
     title: [['Us', 230, 300]],   // [text, baseline-y, font-size]
+    sub: 'Our Journey So Far',
     tagline: [
       ['TWO STORIES,', 'xl'], ['ONE', 'sm'], ['BEGINNING —', 'xl'],
       ['the TALE of', 'sm'], ['COVENANT', 'xl'], ['&', 'sm'], ['UVIE', 'xl'],
@@ -50,6 +58,7 @@ const CH = [
   {
     n: 2, bg: '#E9ECE2', ink: '#41492D', font: 'italiana',
     title: [['THE BIG', 200, 190], ['DAY', 390, 190]],
+    sub: 'Wedding Details: Times and Dates',
     tagline: [
       ['SAVE the DATE —', 'xl'], ['CEREMONY,', 'xl'], ['RECEPTION,', 'xl'],
       ['and a NIGHT of', 'sm'], ['DANCING', 'xl'], ['under the STARS', 'sm'],
@@ -58,14 +67,16 @@ const CH = [
   {
     n: 3, bg: '#EFE8F5', ink: '#453350', font: 'monoton',
     title: [['IN', 200, 150], ['FRAMES', 380, 150]],
+    sub: 'Wedding Photos & Videos',
     tagline: [
-      ['EVERY LOOK,', 'xl'], ['EVERY LAUGH —', 'xl'], ['the MOMENTS', 'xl'],
-      ['we have CAPTURED', 'sm'], ['on the ROAD', 'xl'], ['to I DO', 'sm'],
+      ['MAGICAL MOMENTS:', 'xl'], ['PICTURES & VIDEOS', 'xl'],
+      ['WORTH a', 'sm'], ['THOUSAND WORDS', 'xl'],
     ],
   },
   {
     n: 4, bg: '#E8EDF2', ink: '#2E4A52', font: 'bague',
     title: [['WITH', 210, 200], ['LOVE', 400, 200]],
+    sub: 'Support Our Wedding in Cash or Kind',
     tagline: [
       ['YOUR PRESENCE', 'xl'], ['is the', 'sm'], ['GREATEST GIFT —', 'xl'],
       ['but if YOU INSIST,', 'sm'], ['HERE IS OUR', 'xl'], ['WISHLIST', 'xl'],
@@ -93,9 +104,8 @@ for (const c of CH) {
 <style>${face(f)}${face(FONTS.bague)}</style>
 <rect width="1000" height="1330" fill="${c.bg}"/>
 ${titleEls}
-<g opacity="0.65" fill="${c.ink}" font-family="Bague" font-size="24" letter-spacing="4">
-<text x="500" y="1248" text-anchor="middle">THE WEDDING OF COVENANT &amp; UVIE</text>
-<text x="500" y="1286" text-anchor="middle">OCTOBER TWENTY-SEVEN · TWENTY TWENTY-SIX</text>
+<g opacity="0.62" fill="${c.ink}" font-family="Bague" font-size="30" letter-spacing="2">
+<text x="500" y="1262" text-anchor="middle">${c.sub.replace(/&/g, '&amp;')}</text>
 </g>
 </svg>`
   writeFileSync(`${IMG}/cu-p${c.n}.svg`, svg)
@@ -117,6 +127,22 @@ ${titleEls}
   )
   console.log(`cu-p${c.n} + cu-txt${c.n} written`)
 }
+
+// ── favicon ──
+// ⚠️ The old `public/images/favicon.ico` was the REFERENCE SITE's four-pointed star,
+// inherited with the replica and never replaced — pale blue-grey, and on a light tab
+// bar close to invisible. This is the couple's own mark instead: the ampersand from
+// the wordmark, in the site's ink on its own ground, which still reads at 16px.
+// A PNG is fine for `rel="icon"` in every browser that matters; no .ico needed.
+await shoot(
+  `<!doctype html><style>${face(FONTS.italiana)}
+  html,body{margin:0;width:180px;height:180px;background:#F3F1EC;overflow:hidden}
+  .wrap{width:100%;height:100%;display:flex;justify-content:center;align-items:center}
+  .amp{font-family:'Italiana',serif;font-size:150px;line-height:1;color:#33312C}
+  </style><body><div class="wrap"><div class="amp">&amp;</div></div></body>`,
+  { width: 180, height: 180, out: `${IMG}/cu-favicon.png`, wait: 700 }
+)
+console.log('cu-favicon written')
 
 // ── logo (transparent — alpha is the shader's accent mask) ──
 await shoot(

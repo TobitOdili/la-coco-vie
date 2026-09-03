@@ -12,6 +12,7 @@ Regenerates every generated texture the WebGL scene uses, into `public/images/`:
 | `cu-p1..4.png` | The same faces **rendered to PNG** — this is what the scene loads. |
 | `cu-txt1..4.png` | The centre **tagline** art (2048×2048, transparent). |
 | `cu-logo.png` | The nav/card **wordmark** (480×480, transparent). |
+| `cu-favicon.png` | The **browser-tab mark** (180×180) — the ampersand, on the site's ground. Replaced the reference site's star `favicon.ico`, deleted 2026-09-03. |
 
 ```bash
 node scripts/gen-textures.mjs        # or:  npm run gen:textures
@@ -22,8 +23,13 @@ devDependency (already in `package.json`). The three Google-font subsets live in
 `scripts/fonts/`; Bague comes from `public/fonts/Bague.woff`.
 
 ### Editing the palette / copy
-The chapter **colours** (`bg`/`ink`) and **titles/taglines** are the `CH` array at the top of
-`gen-textures.mjs`. Colours MUST stay in sync with:
+The chapter **colours** (`bg`/`ink`), **titles**, **taglines** and the **`sub`** line are the `CH`
+array at the top of `gen-textures.mjs`. `title` is the big name on the card; `sub` is the line
+underneath it saying what the chapter is; `tagline` is the centre art that swaps in on hover.
+⚠️ **Card copy is baked into PNGs, so grepping the source will never find it.** The `sub` line
+replaced two generic lines that had been carrying `OCTOBER TWENTY-SEVEN · TWENTY TWENTY-SIX` on all
+four cards long after the couple confirmed the 23rd and the 29th — a wrong date on the homepage that
+only opening the card art would reveal. Re-run this script after ANY copy or date change. Colours MUST stay in sync with:
 - `CHAPTERS` in `composables/useChapterScene.js` (`accent` = `ink`, `accentLight` = `bg`)
 - the `.--{slug}` custom properties in `assets/css/main.css`
 
