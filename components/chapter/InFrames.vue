@@ -1,107 +1,123 @@
 <template>
   <div ref="rootEl" class="in-frames">
-    <!-- ── THE PROCESSION ───────────────────────────────────────────────────
-         The chapter's sculpture: the couple's photographs, mounted, spiralling
-         out of the dark toward you. One is always PRESENTED at the front, in
-         colour, with its note; the rest orbit away into the room as faint
-         ghosts. Drag (or swipe) to bring the next one forward; it advances on
-         its own if you leave it alone; click the front one and it comes all the
-         way up to you.
+    <!-- ── THE ARCHIVE ──────────────────────────────────────────────────────
+         The chapter's subject used to be nine of the couple's photographs,
+         mounted and spiralling out of the dark. Those were their HISTORY, and
+         the photographs this chapter is about are the WEDDING's — which do not
+         exist yet. So the page stopped pretending: three labelled folders, one
+         per event, each of which opens to an empty window that says so.
 
-         ⚠️ THIS IS THE HOMEPAGE'S GRAMMAR, NOT ITS SHAPE. The homepage is one
-         physical object turned by one continuous gesture, with a depth-opacity
-         falloff to faint ghosts, a big faint wordmark behind it, mouse parallax
-         on a lerp, and a front item that is the active one. All of that is here.
-         What is deliberately NOT here is its geometry: a ring of cards seen from
-         outside would read as the homepage repeated. This recedes instead of
-         orbiting — a journey coming toward you, which is what the page is about.
+         ⚠️ The room is unchanged and load-bearing: the same film spools drifting
+         far behind on their own clock, the same grain, vignette and big faint
+         wordmark. Take those away and this is a file browser on a dark
+         rectangle. They are what keep it the same chapter.
 
-         ⚠️ THE SECTION IS PINNED until all the prints have been through, and the
-         deck moves CONTINUOUSLY with the scroll — not in steps.
-         ⚠️ This matches the homepage, which was always continuous: its wheel
-         handler does `scrollRotationY -= delta * 0.0008` and a lerp trails it.
-         Fluidity comes from DAMPING (a spring that lags the input), not from
-         snapping to whole cards, which is what made an earlier pass feel clicky.
-         The deck also UNFURLS as you enter: a tight pile of prints spreads into
-         the spaced procession over the first stretch of the section. -->
+         ⚠️ THE SECTION IS NO LONGER PINNED. The pin existed to give the nine
+         prints somewhere to travel; with nothing to scroll through it would be
+         5.6 screens of dead height. Back to one screen. -->
     <section
       v-for="(s, i) in sections"
       :key="i"
-      class="chapter-section room-scene proc-scene"
-      :class="{ 'has-raised': open !== null }"
+      class="chapter-section room-scene arc-scene"
       :data-idx="i"
-      :style="{ minHeight: sceneVh + 'dvh' }"
     >
-      <div class="proc-sticky">
-      <!-- the room: the film this all came off, drifting far behind everything -->
-      <div class="reel-room" aria-hidden="true">
-        <div v-for="(sp, k) in SPOOLS" :key="k" class="spool"
-          :style="{ '--angle': sp.angle + 'deg', '--top': sp.top + '%' }">
-          <div class="film">
-            <figure v-for="q in slots" :key="q" class="mini">
-              <img :src="ready ? frameSrc(k, q) : undefined" alt="" decoding="async" draggable="false" />
-            </figure>
+      <div class="room-inner">
+        <!-- the room: the film this all came off, drifting far behind everything -->
+        <div class="reel-room" aria-hidden="true">
+          <div v-for="(sp, k) in SPOOLS" :key="k" class="spool"
+            :style="{ '--angle': sp.angle + 'deg', '--top': sp.top + '%' }">
+            <div class="film">
+              <figure v-for="q in slots" :key="q" class="mini">
+                <img :src="ready ? frameSrc(k, q) : undefined" alt="" decoding="async" draggable="false" />
+              </figure>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- the wordmark sits BEHIND the procession, the way the homepage's
-           tagline sits behind the ring -->
-      <h2 class="wordmark" aria-hidden="true">IN FRAMES</h2>
+        <!-- the wordmark sits BEHIND the subject, the way the homepage's
+             tagline sits behind the ring -->
+        <h2 class="wordmark" aria-hidden="true">IN FRAMES</h2>
 
-      <div class="room-grain" aria-hidden="true" />
-      <div class="room-vignette" aria-hidden="true" />
+        <div class="room-grain" aria-hidden="true" />
+        <div class="room-vignette" aria-hidden="true" />
 
-      <!-- ── the procession ── -->
-      <div
-        class="stage"
-        @pointerdown="onDown"
-        @pointermove="onMove"
-        @pointerup="onUp"
-        @pointercancel="onUp"
-        @pointerleave="onUp"
-        @dragstart.prevent
-        @mouseenter="hovering = true"
-        @mouseleave="hovering = false"
-      >
-        <div class="field">
+        <!-- ── the folders ──
+             A vertical run, each one stepped further right — a cascade, the way
+             folders sit when you drop them somewhere. Drawn in the room's own
+             materials (the print mat's fill and its lavender hairline) rather
+             than as an OS icon, so it reads as part of this page and not as
+             borrowed chrome. -->
+        <div class="shelf">
           <button
-            v-for="(p, k) in prints"
-            :key="k"
+            v-for="(f, k) in folders"
             type="button"
-            class="print"
+            :key="k"
+            class="folder"
+            :class="{ lit: openIdx === k }"
+            :style="{ '--k': k }"
             :data-k="k"
-            :aria-label="`${p.note} — ${k === presented ? 'open' : 'bring forward'}`"
-            @click="onPrintClick(k)"
+            :aria-label="`${f.name} — empty, pictures coming soon`"
+            @click="openFolder(k, $event)"
           >
-            <span class="faces">
-            <span class="mat face">
-              <span class="glass">
-                <img :src="ready ? p.src : undefined" :alt="p.note" decoding="async" draggable="false" />
-              </span>
-              <span class="note">{{ p.note }}</span>
+            <span class="ic" aria-hidden="true">
+              <span class="ic-tab" />
+              <span class="ic-back" />
+              <span class="ic-front" />
             </span>
-            <!-- the back of the print, the way you'd write on one in pencil -->
-            <span class="mat back" aria-hidden="true">
-              <span class="back-note">{{ p.back || p.note }}</span>
-              <span class="back-rule" />
-              <span class="back-no">N<sup>o</sup> {{ String(k + 1).padStart(2, '0') }}</span>
-            </span>
+            <span class="label">
+              <span class="fname">{{ f.name }}</span>
+              <span class="fmeta">EMPTY</span>
             </span>
           </button>
         </div>
-        <!-- lays a raised print back into the deck -->
-        <div class="catcher" :class="{ on: open !== null }" @click="lay()" aria-hidden="true" />
-      </div>
 
-      <footer class="proc-foot">
-        <div class="counter">
-          {{ String(presented + 1).padStart(2, '0') }}<i>/</i>{{ String(prints.length).padStart(2, '0') }}
-        </div>
-        <div class="more">{{ s.endSub }}</div>
-      </footer>
+        <footer class="arc-foot">
+          <div class="more">{{ s.endSub }}</div>
+        </footer>
       </div>
     </section>
+
+    <!-- ── the window ──
+         ⚠️ TELEPORTED TO <body>, and it has to be. `.room-inner` clips its own
+         overflow for the film, so a window growing out of a folder could not
+         leave that box — but the real reason is one level up: `.chapter-page` is
+         `position: fixed; z-index: 10`, which makes it a STACKING CONTEXT, and
+         nothing inside it can paint above a sibling of it no matter how high its
+         own z-index. Measured before the fix: at (20,20) the topmost element was
+         the site nav (`z-20`), sitting on top of a modal set to `z-index: 60`.
+         Same trap as the raised print that a scrim painted over. Teleporting puts
+         the layer beside the nav rather than under it; z-70 clears the nav (20)
+         and the About panel (50) while staying under the custom cursor (100). -->
+    <Teleport to="body">
+    <div v-if="openIdx !== null" class="win-layer" :class="{ closing }">
+      <div class="scrim" @click="close()" />
+      <div
+        class="win"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="openFolderData?.title"
+      >
+        <header class="win-bar">
+          <span class="win-dots" aria-hidden="true"><i /><i /><i /></span>
+          <span class="win-title">{{ openFolderData?.title }}</span>
+          <button type="button" class="win-x" aria-label="Close" @click="close()">
+            <svg viewBox="0 0 12 12" aria-hidden="true">
+              <path d="M2 2 L10 10 M10 2 L2 10" stroke="currentColor" stroke-width="1.3" />
+            </svg>
+          </button>
+        </header>
+        <div class="win-body">
+          <span class="empty-ic" aria-hidden="true">
+            <span class="ic-tab" />
+            <span class="ic-back" />
+            <span class="ic-front" />
+          </span>
+          <p class="empty-msg">{{ emptyText }}</p>
+          <p class="empty-sub">0 ITEMS</p>
+        </div>
+      </div>
+    </div>
+    </Teleport>
   </div>
 </template>
 
@@ -114,356 +130,85 @@ const props = defineProps({
 
 const reel = computed(() => props.sections.find((s) => s.kind === 'reel'))
 const frames = computed(() => reel.value?.frames || [])
-const prints = computed(() => reel.value?.prints || [])
-
-// ── the sculpture ───────────────────────────────────────────────────────────
-// Slot u (0 = presented) sits at depth −u·Z_STEP, on an orbit that opens out from
-// the centre as it recedes: r(u) = R0·u/(u+K). u=0 is dead centre and in your
-// face; everything behind spirals outward and away. Anything with u<0 has already
-// passed the camera and is dissolving.
-// ⚠️ MEASURED, not authored: the depth step and the orbit are multiples of the
-// print's own width, so the sculpture holds its proportions at every viewport.
-const Z_PER_W = 1.05        // depth between slots, in print-widths
-const R_PER_W = 1.5         // the orbit's outer limit, in print-widths
-const D_PHI = 0.46          // radians of spiral per slot
-const R_K = 0.8             // how fast the orbit opens out
-const Y_SQUASH = 0.34       // flatten the arc: it should sweep sideways into the
-                            // room, not climb into the wordmark's band
-const TILT = 3.2            // deg of roll per slot, so nothing sits perfectly square
-// Faint ghosts, like the homepage's far-side cards (DEPTH_FADE_FLOOR = 0.2 there).
-const GHOST_FLOOR = 0.16
-const FADE_FROM = 0.35      // slots before the fade starts
-const FADE_OVER = 5.2       // …and how many it takes to reach the floor
-
-// ⚠️ The section is PINNED for this many screens per print, and scroll now moves
-// the deck CONTINUOUSLY — no integer steps. It reads as the homepage's carousel:
-// the deck flows under a spring that lags the input slightly, so it glides rather
-// than clicking from one card to the next. Total height = 100dvh + (N-1)·STEP_VH.
-const STEP_VH = 58
-const SPRING = 5.0          // how closely the deck follows the scroll (lower = more glide)
-const SPREAD_OVER = 0.13    // the deck unfurls over the first 13% of the section
-const LEAN_X = 7            // deg the whole deck leans with the pointer
-const LEAN_Y = 4.5
-const RAISE_SPRING = 7.5
-const RAISE_Z = 90          // a little toward the viewer, so it clears the deck
+const folders = computed(() => reel.value?.folders || [])
+const emptyText = computed(() => reel.value?.empty || 'pictures coming soon')
 
 const rootEl = ref(null)
 const ready = ref(false)
-const slots = ref(22)
-const presented = ref(0)
-const open = ref(null)
-const hovering = ref(false)
+const slots = ref(14)
 const inView = ref(false)
-// raise/flip are animated in the SAME rAF loop as everything else. A CSS
-// transition would fight the per-frame transform writes, and the raised card has
-// to keep its cursor parallax alive while it is up.
-let raise = 0
-let raiseTarget = 0
-let flip = 0
-let flipTarget = 0
-let dragDx = 0            // the small lead the front card takes under the finger
-let cueT = -1             // >=0 while the swipe nudge runs
-let cueRuns = 0           // it repeats a couple of times until you touch it
-let flipCueT = -1         // >=0 while the "this turns over" wobble runs
-let flipCued = false
-let touched = false       // any real interaction retires the cues for good
-let spread = 0            // 0 = a tight stack, 1 = the deck fully unfurled
-const uSm = []            // each print's own smoothed slot — its inertia
 
-let rafId = 0
-let io = null
-let autoTimer = 0
-let layT = 0
-let last = 0
-// motion model: `progress` chases `target`; the drag moves the target directly and
-// a release snaps it to a whole slot, so a print always settles dead centre.
-let progress = 0
-let target = 0
-let printW = 240            // measured; everything spatial is a multiple of it
-let raiseScrollTop = 0      // the scene's offset when a print was raised
-let lastTop = 0             // the scene's last rect top, for stillness detection
-let stillFor = 0            // seconds the scroll has been stationary
-let phase = 0               // the background film's own clock
-let period = 1
-let pitch = 200
-// pointer parallax, lerped the way the homepage lerps its camera parallax
-let mx = 0
-let my = 0
-let px = 0
-let py = 0
+// ── the window ──────────────────────────────────────────────────────────────
+const openIdx = ref(null)
+const closing = ref(false)
+const openFolderData = computed(() =>
+  openIdx.value === null ? null : folders.value[openIdx.value]
+)
+let fromRect = null
+let closeT = 0
+let lastTrigger = null
 
-const n = () => Math.max(1, prints.value.length)
-const sceneVh = computed(() => 100 + Math.max(0, n() - 1) * STEP_VH)
-
-// ── geometry ────────────────────────────────────────────────────────────────
-// The visible window is [-1, N-1): exactly one print is past the camera at a time
-// and the rest recede, so the wrap happens where nothing is visible anyway.
-function slotOf(k) {
-  const N = n()
-  let u = (k - progress) % N
-  if (u < -1) u += N
-  if (u >= N - 1) u -= N
-  return u
+// ⚠️ A real FLIP, not a fade. The window is laid out where it will END UP, then
+// transformed back onto the folder icon that was clicked and released — so it
+// genuinely grows out of that folder instead of appearing over it. Doing it the
+// other way (animating width/height toward a target) lays out every frame and
+// cannot be composited.
+function mapTo(el, rect) {
+  const to = el.getBoundingClientRect()
+  if (!to.width || !to.height) return ''
+  const sx = Math.max(0.04, rect.width / to.width)
+  const sy = Math.max(0.04, rect.height / to.height)
+  const dx = rect.left + rect.width / 2 - (to.left + to.width / 2)
+  const dy = rect.top + rect.height / 2 - (to.top + to.height / 2)
+  return `translate(${dx.toFixed(1)}px, ${dy.toFixed(1)}px) scale(${sx.toFixed(4)}, ${sy.toFixed(4)})`
 }
 
-// How big a raised print gets: as large as the room allows, capped so the mat and
-// its note always fit the viewport.
-function raisedScale() {
-  const w = Math.min(window.innerWidth * 0.84, 44 * 16, (window.innerHeight * 0.74) / 0.8)
-  return Math.max(1, w / Math.max(1, printW)) / (1 + RAISE_Z / 1400)
+async function openFolder(k, ev) {
+  clearTimeout(closeT)
+  closing.value = false
+  lastTrigger = ev?.currentTarget || null
+  const icon = lastTrigger?.querySelector('.ic')
+  fromRect = (icon || lastTrigger)?.getBoundingClientRect() || null
+  openIdx.value = k
+  await nextTick()
+  // ⚠️ document, not rootEl — the layer is teleported out of this component.
+  const win = document.querySelector('.win-layer .win')
+  if (!win || !fromRect) return
+  const t = mapTo(win, fromRect)
+  if (!t) return
+  win.style.transition = 'none'
+  win.style.transform = t
+  win.style.opacity = '0'
+  // ⚠️ Read a layout property to force the browser to commit that start state.
+  // Without it both writes coalesce into one style recalc and the element simply
+  // appears at its final position — the animation silently does not happen.
+  void win.offsetWidth
+  win.style.transition = ''
+  win.style.transform = ''
+  win.style.opacity = ''
+  document.querySelector('.win-layer .win-x')?.focus?.({ preventScroll: true })
 }
 
-function place(el, u, k) {
-  const a = Math.abs(u)
-  // ── the OPEN pose: the full spiral ──
-  const r = printW * R_PER_W * (a / (a + R_K))
-  const phi = u * D_PHI
-  const openX = r * Math.cos(phi - Math.PI / 2)
-  const openY = r * Math.sin(phi - Math.PI / 2) * Y_SQUASH
-  const openZ = -u * printW * Z_PER_W
-  const openRot = u * TILT
-  // ── the STACKED pose: a neat pile, barely fanned ──
-  const stackX = u * 6
-  const stackY = u * 8
-  const stackZ = -u * printW * 0.05
-  const stackRot = u * 1.5
-  // …and `spread` unfurls one into the other as you enter the section
-  let x = stackX + (openX - stackX) * spread
-  let y = stackY + (openY - stackY) * spread
-  let z = stackZ + (openZ - stackZ) * spread
-  let rotZ = stackRot + (openRot - stackRot) * spread
-
-  // faint ghosts, but only once the deck has opened — a tight stack should read
-  // as solid, not as a pile of translucent sheets
-  const fade = 1 - Math.max(0, a - FADE_FROM) / FADE_OVER * (1 - GHOST_FLOOR)
-  let o = Math.max(GHOST_FLOOR, Math.min(1, fade))
-  o = 1 + (o - 1) * spread
-
-  // ⚠️ ONE FORMULA FOR ALL u — this was a bounce. The departing print used to be a
-  // special case that sent it UP AND BACK, so as a card crossed the front it came
-  // forward to z=0 and then RETREATED. Every print therefore surged and pulled back
-  // as it passed. Now z = −u·pitch throughout, which is monotonic: the procession
-  // simply keeps coming toward you and sweeps past. Only the fade is special-cased.
-  if (u < 0) {
-    const t = Math.min(1, -u)
-    o = Math.min(o, Math.max(0, 1 - t * 1.9))
+function close() {
+  if (openIdx.value === null || closing.value) return
+  const win = document.querySelector('.win-layer .win')
+  closing.value = true
+  if (win && fromRect) {
+    win.style.transform = mapTo(win, fromRect)
+    win.style.opacity = '0'
   }
-
-  // the front card carries the finger a little, and the one-time nudge cue
-  if (a < 0.5) x += dragDx + cueOffset()
-
-  let sc = 1
-  let rotY = 0
-  let rotX = 0
-  if (open.value === k && raise > 0) {
-    // ── the print rises out of the deck, and keeps its parallax while it is up ──
-    const S = raisedScale()
-    x = x * (1 - raise) + px * 2.4 * raise
-    y = y * (1 - raise) + (raisedY() + py * 2.4) * raise
-    z = z * (1 - raise) + RAISE_Z * raise
-    rotZ *= 1 - raise
-    sc = 1 + (S - 1) * raise
-    rotY = mx * 7 * raise             // a physical thing tips toward the cursor
-    rotX = -my * 5 * raise
-    o = 1
-  }
-
-  el.style.transform =
-    `translate3d(${(x + (open.value === k ? 0 : px)).toFixed(1)}px,` +
-    ` ${(y + (open.value === k ? 0 : py)).toFixed(1)}px, ${z.toFixed(1)}px)` +
-    ` rotateY(${rotY.toFixed(2)}deg) rotateX(${rotX.toFixed(2)}deg)` +
-    ` rotateZ(${rotZ.toFixed(2)}deg) scale(${sc.toFixed(3)})`
-  el.style.opacity = o.toFixed(3)
-  // ⚠️ The TURN goes on the inner wrapper, not on .print. An element with
-  // `opacity`/`will-change: opacity` is forced to `transform-style: flat`, which
-  // silently disables backface-visibility on its children — the card flipped to
-  // show its own front, mirrored, instead of its back.
-  const faces = el.firstElementChild
-  if (faces) {
-    const f = open.value === k ? flip + flipCueOffset() : 0
-    faces.style.transform = `rotateY(${f.toFixed(2)}deg)`
-  }
-  el.style.zIndex = String(open.value === k ? 900 : Math.round(500 - a * 10))
-  el.classList.toggle('is-front', a < 0.5 && open.value === null)
-  el.classList.toggle('is-raised', open.value === k)
-  el.style.pointerEvents = (open.value !== null ? open.value === k : o > 0.35) ? 'auto' : 'none'
-}
-
-// The stage is not vertically centred in the section (the footer takes room), so a
-// raised print has to be offset to land in the middle of the SCREEN.
-function raisedY() {
-  // ⚠️ The FIELD, not the stage. The stage's rect includes its padding-top, so
-  // using it put the raised print half that padding below the middle of the screen.
-  const fl = rootEl.value?.querySelector('.field')
-  if (!fl) return 0
-  const r = fl.getBoundingClientRect()
-  return window.innerHeight / 2 - (r.top + r.height / 2)
-}
-
-// The nudge that replaces the written instructions: the front print swings left,
-// back right, and settles. ⚠️ It used to fire off the preload observer, whose
-// rootMargin is 80% — so it played while the section was still a screen away and
-// was over before anyone saw it. It now runs off a SEPARATE observer that waits
-// until the section is properly on screen, and repeats until you touch something.
-const CUE_SECS = 1.7
-function cueOffset() {
-  if (cueT < 0) return 0
-  const t = Math.min(1, cueT / CUE_SECS)
-  return -44 * Math.sin(t * Math.PI * 2) * (1 - t * t)
-}
-// And once a print is up: a small turn away and back, so it reads as having a back.
-const FLIP_CUE_SECS = 1.3
-function flipCueOffset() {
-  if (flipCueT < 0) return 0
-  const t = Math.min(1, flipCueT / FLIP_CUE_SECS)
-  return -18 * Math.sin(t * Math.PI * 2) * (1 - t * t)
-}
-// ⚠️ Fired from the frame loop, only once the scroll has actually STOPPED. Firing
-// it on arrival meant it swung left-right while the deck was already moving under
-// the scroll — which is exactly the "bouncing" that got reported. Any scroll
-// movement cancels it outright.
-function startCue() {
-  if (touched || open.value !== null || cueT >= 0 || cueRuns >= 2) return
-  cueT = 0
-  cueRuns += 1
-}
-
-// ── moving through ──────────────────────────────────────────────────────────
-// Clicking a print further back scrolls to it, rather than setting the target
-// directly — otherwise the scroll position would snap it straight back.
-function glideTo(k) {
-  const w = rootEl.value?.closest('.chapter-page') || document.querySelector('.chapter-page')
-  const scene = rootEl.value?.querySelector('.proc-scene')
-  if (!w || !scene) return
-  const N = n()
-  const travel = Math.max(1, scene.offsetHeight - window.innerHeight)
-  w.scrollTop = scene.offsetTop + (k / Math.max(1, N - 1)) * travel
-}
-function step(dir) { nudgeScroll(dir) }
-
-// ⚠️ NO AUTOFLIP any more. Scroll position now decides which print is presented,
-// so a timer advancing the deck on its own would immediately be overridden by the
-// scroll-derived target — and would desync what you see from where you are.
-function stopAuto() { clearInterval(autoTimer); autoTimer = 0 }
-function restartAuto() { stopAuto() }
-
-// One print's worth of scroll, in px.
-function stepPx() { return window.innerHeight * (STEP_VH / 100) }
-// A swipe or an arrow key nudges the PAGE, so scroll stays the single source of
-// truth for which print is up.
-function nudgeScroll(dir) {
-  const w = rootEl.value?.closest('.chapter-page') || document.querySelector('.chapter-page')
-  if (!w) return
-  w.scrollTop += dir * stepPx()
-}
-
-// ── drag ────────────────────────────────────────────────────────────────────
-let dragging = false
-let dragged = false
-let downX = 0
-let downY = 0
-let axis = null            // null until the gesture declares itself 'x' or 'y'
-const SWIPE_MIN = 46       // px before a swipe counts
-
-function onDown(e) {
-  if (open.value !== null) return
-  dragging = true
-  dragged = false
-  axis = null
-  downX = e.clientX
-  downY = e.clientY
-  dragDx = 0
-  cueT = -1                // any touch cancels the cue; they already know
-  touched = true
-}
-function onMove(e) {
-  // ⚠️ Parallax only where there is a real pointer. On touch a tap would set mx/my
-  // once and leave the raised print permanently offset from the middle of the
-  // screen — the homepage gates its deck lean on the same test.
-  const el = hasPointer ? rootEl.value?.querySelector('.proc-scene') : null
-  if (el) {
-    const r = el.getBoundingClientRect()
-    mx = ((e.clientX - r.left) / Math.max(1, r.width)) * 2 - 1
-    my = ((e.clientY - r.top) / Math.max(1, r.height)) * 2 - 1
-  }
-  if (!dragging) return
-  const dx = e.clientX - downX
-  const dy = e.clientY - downY
-  // decide once, then stay decided — a gesture that keeps changing its mind is
-  // what makes a swipe scroll the page half way through
-  if (!axis && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
-    axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'
-  }
-  if (axis !== 'x') return
-  dragged = true
-  // ⚠️ The finger only LEADS the front card by a few px. It used to scrub the
-  // target continuously and then Math.round() it on release, so any swipe short of
-  // a whole slot visibly moved forward and sprang back — that was the bounce.
-  dragDx = Math.max(-34, Math.min(34, dx * 0.3))
-}
-function onUp() {
-  if (!dragging) return
-  const committed = axis === 'x' && Math.abs(dragDx) >= SWIPE_MIN * 0.3
-  dragging = false
-  axis = null
-  if (committed) {
-    // scroll is the source of truth, so a swipe moves the page by one print
-    nudgeScroll(dragDx < 0 ? 1 : -1)
-  }
-  dragDx = 0
-  setTimeout(() => { dragged = false }, 50)
-}
-
-function onPrintClick(k) {
-  if (dragged) return
-  if (open.value === k) { turn(); return }        // tap a raised print → turn it over
-  if (open.value !== null) { lay(); return }
-  if (k === presented.value) openPrint(k)
-  else glideTo(k)
-}
-
-function openPrint(k) {
-  const scene = rootEl.value?.querySelector('.proc-scene')
-  raiseScrollTop = scene ? scene.getBoundingClientRect().top : 0
-  open.value = k
-  raiseTarget = 1
-  flipTarget = 0
-  cueT = -1
-  stopAuto()
-  // once it is up and still, show that it turns over — once, ever
-  if (!flipCued) {
-    flipCued = true
-    setTimeout(() => { if (open.value !== null && flipTarget === 0) flipCueT = 0 }, 1150)
-  }
-}
-// tapping a raised print turns it over; tapping outside lays it back in the deck
-function turn() { flipCueT = -1; flipTarget = flipTarget ? 0 : 180 }
-function lay() {
-  if (open.value === null) return
-  raiseTarget = 0
-  flipTarget = 0
-  restartAuto()
-  // hold the identity until it has actually settled back, or it snaps home
-  clearTimeout(layT)
-  layT = setTimeout(() => { if (raiseTarget === 0) open.value = null }, 620)
-}
-
-let stageEl = null
-let hasPointer = true
-function onTouchMove(e) {
-  if (axis === 'x' || open.value !== null) e.preventDefault()
+  // Matches the CSS transition; the element is only unmounted once it has
+  // finished travelling back into the folder it came out of.
+  closeT = setTimeout(() => {
+    openIdx.value = null
+    closing.value = false
+    lastTrigger?.focus?.({ preventScroll: true })
+    lastTrigger = null
+  }, 380)
 }
 
 function onKey(e) {
-  if (!inView.value) return
-  if (e.key === 'Escape') close()
-  else if (e.key === 'ArrowRight') step(1)
-  else if (e.key === 'ArrowLeft') step(-1)
-  else if ((e.key === 'Enter' || e.key === ' ') && open.value === null &&
-    document.activeElement?.classList?.contains('print')) {
-    e.preventDefault()
-    onPrintClick(Number(document.activeElement.dataset.k))
-  }
+  if (e.key === 'Escape' && openIdx.value !== null) { e.preventDefault(); close() }
 }
 
 // ── the room's film ─────────────────────────────────────────────────────────
@@ -477,10 +222,12 @@ function frameSrc(spoolIdx, slot) {
   if (!list.length) return undefined
   return list[(SPOOLS[spoolIdx].lead + slot) % list.length]
 }
+
 // The strip repeats every frames.length frames, so travelling exactly that far
 // puts an identical frame in every position — a seamless loop, no cloned DOM.
+let pitch = 200
+let period = 1000
 function measure() {
-  printW = rootEl.value?.querySelector('.field')?.offsetWidth || printW
   const film = rootEl.value?.querySelector('.film')
   const spool = rootEl.value?.querySelector('.spool')
   if (!film || !spool) return
@@ -493,7 +240,7 @@ function measure() {
 }
 
 function preload() {
-  const srcs = [...new Set([...frames.value, ...prints.value.map((p) => p.src)])]
+  const srcs = [...new Set(frames.value)]
   if (!srcs.length) { ready.value = true; return }
   let done = 0
   const bump = () => { if (++done >= srcs.length) ready.value = true }
@@ -505,91 +252,21 @@ function preload() {
   }
 }
 
+// ── the loop ────────────────────────────────────────────────────────────────
+// Time-based, not scroll-based: the film runs at its own pace whether or not the
+// visitor is moving. Nothing else on this page animates per frame.
+// ⚠️ Queries the DOM inside tick() — a template ref used inside v-for is an
+// ARRAY, and reading `.style` off it throws on frame 1, killing the loop
+// silently (rule #2, AUDIT #18).
+let rafId = 0
+let last = 0
+let phase = 0
+
 function tick(now) {
   if (!last) last = now
   const dt = Math.min(0.05, (now - last) / 1000)
   last = now
   if (inView.value && rootEl.value) {
-    // progress chases target — frame-rate independent, so a 120Hz screen and a
-    // 60Hz one settle over the same amount of TIME
-    // ⚠️ SCROLL PICKS THE TARGET, THE SPRING DOES THE MOTION. This is the whole
-    // distinction from the pinned versions that were rejected: scrolling chooses
-    // WHICH print is up, never how far through its movement you are.
-    const scene = rootEl.value.querySelector('.proc-scene')
-    if (scene && open.value === null) {
-      const r = scene.getBoundingClientRect()
-      const travel = Math.max(1, r.height - window.innerHeight)
-      const p = Math.min(1, Math.max(0, -r.top / travel))
-      // ⚠️ CONTINUOUS. Snapping this to an integer is what made it feel stepped:
-      // the deck jumped card to card instead of flowing. Scroll now sets a real
-      // position and the spring below trails it, which is exactly how the
-      // homepage carousel behaves.
-      target = p * (n() - 1)
-      // is the scroll actually at rest? the cue may only run when it is
-      if (Math.abs(r.top - lastTop) > 0.5) { stillFor = 0; cueT = -1 } else stillFor += dt
-      lastTop = r.top
-      // ⚠️ Gate on the UNCLAMPED position. `p` is clamped to [0,1], so it reads 0
-      // for the whole page ABOVE the section — which let the cue spend both its
-      // runs while the section was still off-screen, exactly the bug the observer
-      // was there to prevent. rawP > 0.01 means the sticky is genuinely pinned.
-      const rawP = -r.top / travel
-      if (!touched && stillFor > 0.8 && rawP > 0.01 && rawP < 0.32 && cueT < 0) startCue()
-      // …and the stack UNFURLS as you come in: tight pile → spaced procession.
-      const sp = Math.min(1, p / SPREAD_OVER)
-      spread = sp * sp * (3 - 2 * sp)
-    }
-    // A raised print freezes the deck; the first real scroll lays it back down
-    // rather than letting the page slide out from under it.
-    // ⚠️ `raiseTarget !== 0` is the guard that makes this fire ONCE. Without it
-    // lay() ran every frame while the scroll delta held, and each call cleared and
-    // rescheduled its own release timeout — so the print never actually came down.
-    if (open.value !== null && raiseTarget !== 0 && scene) {
-      const now = scene.getBoundingClientRect().top
-      if (Math.abs(now - raiseScrollTop) > 40) lay()
-    }
-    progress += (target - progress) * (1 - Math.exp(-dt * SPRING))
-    const N = n()
-    presented.value = ((Math.round(progress) % N) + N) % N
-
-    // the same lerped pointer parallax the homepage camera uses
-    px += (mx * 14 - px) * (1 - Math.exp(-dt * 3))
-    py += (my * 9 - py) * (1 - Math.exp(-dt * 3))
-
-    // The whole sculpture leans toward the pointer — the homepage's deck lean,
-    // in a 3D field rather than a shader. `.field` carries preserve-3d, so every
-    // print tilts with it instead of each one being tilted separately.
-    const field = rootEl.value.querySelector('.field')
-    if (field) {
-      const lean = hasPointer ? spread : 0
-      field.style.transform =
-        `rotateY(${(px / 14 * LEAN_X * lean).toFixed(2)}deg)` +
-        ` rotateX(${(-py / 9 * LEAN_Y * lean).toFixed(2)}deg)`
-    }
-
-    raise += (raiseTarget - raise) * (1 - Math.exp(-dt * RAISE_SPRING))
-    flip += (flipTarget - flip) * (1 - Math.exp(-dt * RAISE_SPRING))
-    if (cueT >= 0) {
-      cueT += dt
-      if (cueT > CUE_SECS) cueT = -1
-    }
-    if (flipCueT >= 0) { flipCueT += dt; if (flipCueT > FLIP_CUE_SECS) flipCueT = -1 }
-
-    // ⚠️ Every print is its own animated 3D element: it smooths its OWN slot
-    // toward the deck's position, and the ones deeper in the stack trail more. The
-    // deck used to move as one rigid array — every card locked to the same value —
-    // which is what made it read as a diagram rather than as objects with weight.
-    rootEl.value.querySelectorAll('.print').forEach((el) => {
-      const k = Number(el.dataset.k)
-      const ut = slotOf(k)
-      if (uSm[k] === undefined || Math.abs(ut - uSm[k]) > 2.5) {
-        uSm[k] = ut               // the wrap: teleport, and it happens at opacity 0
-      } else {
-        const rate = 9 - Math.min(5, Math.abs(ut)) * 0.85
-        uSm[k] += (ut - uSm[k]) * (1 - Math.exp(-dt * rate))
-      }
-      place(el, uSm[k], k)
-    })
-
     phase += dt
     rootEl.value.querySelectorAll('.film').forEach((f, i) => {
       const sp = SPOOLS[i]
@@ -601,73 +278,46 @@ function tick(now) {
   rafId = requestAnimationFrame(tick)
 }
 
+let io = null
 let resizeT = 0
 const onResize = () => { clearTimeout(resizeT); resizeT = setTimeout(measure, 150) }
 
 onMounted(() => {
-  hasPointer = !!window.matchMedia?.('(pointer: fine)').matches
-  measure()
-  rafId = requestAnimationFrame(tick)
+  preload()
+  nextTick(measure)
+  const scene = rootEl.value?.querySelector('.arc-scene')
+  if (scene) {
+    io = new IntersectionObserver(
+      (entries) => { for (const e of entries) inView.value = e.isIntersecting },
+      // A screen early, so the film is already running by the time it is seen.
+      { rootMargin: '80% 0px', threshold: 0 }
+    )
+    io.observe(scene)
+  }
   window.addEventListener('resize', onResize)
   window.addEventListener('keydown', onKey)
-  // ⚠️ `touch-action: pan-y` alone is not enough: the browser keeps the option of
-  // scrolling, so a swipe that drifts a few px vertically gets taken as a scroll
-  // mid-gesture. Once the gesture has declared itself horizontal we preventDefault
-  // it — which needs a NON-PASSIVE listener, hence this rather than @touchmove.
-  stageEl = rootEl.value?.querySelector('.stage')
-  stageEl?.addEventListener('touchmove', onTouchMove, { passive: false })
-  const scene = rootEl.value?.querySelector('.proc-scene')
-  if (scene && 'IntersectionObserver' in window) {
-    io = new IntersectionObserver((e) => {
-      inView.value = e[0].isIntersecting
-      if (inView.value) {
-        preload()
-        restartAuto()
-        // the visual cue replaces the written directions — once, on arrival
-      } else stopAuto()
-    }, { rootMargin: '80% 0px', threshold: 0 })
-    io.observe(scene)
-    // ⚠️ NO second observer for the cue any more. It used `threshold: 0.55`, and
-    // once this section became 5.64 screens tall that threshold BECAME IMPOSSIBLE —
-    // at most 1/5.64 ≈ 18% of the element can ever be visible, so it could never
-    // fire. (Same trap as the active-section observer in [slug].vue, third time in
-    // this codebase.) The cue is now gated purely on conditions the frame loop can
-    // see: we are in the first third of the section and the scroll has stopped.
-  } else {
-    inView.value = true
-    preload()
-    restartAuto()
-  }
-  document.fonts?.ready.then(() => setTimeout(measure, 60))
+  rafId = requestAnimationFrame(tick)
 })
 onBeforeUnmount(() => {
-  cancelAnimationFrame(rafId)
+  io?.disconnect()
   window.removeEventListener('resize', onResize)
   window.removeEventListener('keydown', onKey)
-  io?.disconnect()
-  stageEl?.removeEventListener('touchmove', onTouchMove)
-  stopAuto()
+  cancelAnimationFrame(rafId)
   clearTimeout(resizeT)
-  clearTimeout(layT)
+  clearTimeout(closeT)
 })
 </script>
 
 <style scoped>
 .room-scene { position: relative; color: #EFE8F5; background: #241A33; }
-.proc-scene {
+.arc-scene { position: relative; min-height: 100dvh; }
+
+/* ⚠️ overflow:hidden lives on the INNER wrapper, never on the scene root. The
+   room's film has to be clipped, but a scene root that clips becomes the
+   containment box for anything sticky inside it (rule #5, three occurrences). */
+.room-inner {
   position: relative;
-  /* the front print is the SUBJECT — it should be big enough to look at */
-  --print-w: clamp(15rem, 29vw, 25rem);
-}
-/* ⚠️ overflow:hidden lives HERE, never on the scene root — on the root it becomes
-   the sticky containment box and position:sticky silently stops working. */
-.proc-sticky {
-  position: sticky;
-  top: 0;
-  /* a swipe across the stage was selecting the counter and footer text */
-  user-select: none;
-  -webkit-user-select: none;
-  height: 100dvh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -702,8 +352,6 @@ onBeforeUnmount(() => {
   background-size: 100% 0.5rem;
   background-position: 0 0.34rem, 0 calc(100% - 0.34rem);
   background-repeat: repeat-x;
-  /* barely there. At 0.12 the strips fought the wordmark and made the room busy;
-     the composition needs a quiet ground for the procession to read against. */
   opacity: 0.06;
   will-change: transform;
 }
@@ -717,7 +365,7 @@ onBeforeUnmount(() => {
 }
 .mini img { width: 100%; height: 100%; object-fit: cover; display: block; filter: grayscale(1); }
 
-/* The wordmark behind the sculpture — the homepage puts its tagline here too. */
+/* The wordmark behind the subject — the homepage puts its tagline here too. */
 .wordmark {
   position: absolute;
   inset: 0;
@@ -725,14 +373,9 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   font-family: 'Monoton', cursive;
   font-weight: 400;
-  /* Upper third, like the homepage's tagline — which sits ABOVE its lower arc of
-     cards rather than behind them. Overlapping the subject just made noise. */
-  justify-content: flex-start;
-  /* clear the site nav — the chapter wordmark sitting under COVENANT & UVIE read
-     as one collided lockup */
   padding-top: 13vh;
   font-size: clamp(1.5rem, 5vw, 4.2rem);
   line-height: 1;
@@ -743,7 +386,6 @@ onBeforeUnmount(() => {
   pointer-events: none;
   user-select: none;
   z-index: 1;
-  transition: opacity 0.45s ease;
 }
 
 .room-grain, .room-vignette { position: absolute; inset: 0; pointer-events: none; }
@@ -768,195 +410,118 @@ onBeforeUnmount(() => {
   100% { background-position: 0 0 }
 }
 
-/* ── the procession ── */
-.stage {
-  position: relative;
-  z-index: 10;
-  flex: 1 1 auto;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* the deck sits low in the room, the way the homepage's cards sit in a lower
-     arc under its wordmark */
-  padding-top: 13vh;
-  perspective: 1400px;
-  perspective-origin: 50% 50%;
-  touch-action: pan-y;     /* the page keeps vertical scroll; we take the x-drag */
-}
-/* the raised card has to clear the catcher, and the catcher has to clear the deck */
-.field {
-  position: relative;
-  z-index: 3;
-  width: var(--print-w);
-  /* the mat's real height: 6% top + a 3:2 window at 88% width + the note + 6%.
-     It was 1.3× the width, which left two thirds of the board empty. */
-  height: calc(var(--print-w) * 0.8);
-  transform-style: preserve-3d;
-}
-
-/* A mounted print: mat board, the picture behind glass, the note on the mat. */
-/* ⚠️ `user-drag` is load-bearing, not cosmetic: without it Chrome starts a native
-   image drag the moment a swipe begins on a photograph, fires pointercancel, and
-   the swipe dies on its first move. */
-.print {
-  position: absolute;
-  inset: 0;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-user-drag: none;
-  perspective: 1400px;
-  padding: 0;
-  margin: 0;
-  border: 0;
-  appearance: none;
-  -webkit-appearance: none;
-  background: none;
-  color: inherit;
-  font: inherit;
-  cursor: none;
-  transform-style: preserve-3d;
-  will-change: transform;
-}
-/* The turn happens here, in its own clean 3D context. */
-.faces {
-  position: absolute;
-  inset: 0;
-  transform-style: preserve-3d;
-  will-change: transform;
-}
-/* Two faces on one card. `backface-visibility: hidden` on both is what makes the
-   turn work — without it the front shows through, mirrored, from behind. */
-.mat {
-  position: absolute;
-  inset: 0;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  box-sizing: border-box;
-  padding: 6% 6% 0;
-  background: #17101F;
-  box-shadow:
-    inset 0 0 0 1px rgba(195, 166, 216, 0.18),
-    0 26px 50px -26px rgba(0, 0, 0, 0.95);
-  transition: box-shadow 0.5s ease, background 0.5s ease;
-}
-/* ⚠️ The window FILLS the mat's remaining height rather than declaring its own
-   aspect-ratio. With a fixed ratio the mat kept a band of dead board under the
-   note whenever the two did not happen to add up. */
-.back {
-  transform: rotateY(180deg);
-  align-items: center;
-  justify-content: center;
-  gap: 1.1rem;
-  padding: 12%;
-  text-align: center;
-}
-.back-note {
-  font-family: 'Shadows Into Light', 'Bradley Hand', cursive;
-  font-size: clamp(1rem, 2.4vw, 1.6rem);
-  line-height: 1.35;
-  color: #C3A6D8;
-}
-.back-rule { display: block; width: 38%; height: 1px; background: currentColor; opacity: 0.22; }
-.back-no {
-  font-family: 'Bague', sans-serif;
-  font-size: 0.62rem;
-  letter-spacing: 0.3em;
-  opacity: 0.45;
-}
-.back-no sup { font-size: 0.7em; }
-
-/* lays a raised print back down; sits under the raised card, over the rest */
-.catcher {
-  position: absolute;
-  inset: -50vmax;
-  z-index: 2;
-  background: rgba(10, 6, 16, 0.72);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.5s ease;
-}
-.catcher.on { opacity: 1; pointer-events: auto; }
-
-.glass {
-  display: block;
-  width: 100%;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: hidden;
-  background: #0E0916;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6);
-}
-.glass img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  /* the room is monochrome; the print at the front remembers its colour */
-  filter: grayscale(1) brightness(0.92) contrast(0.95);
-  transition: filter 0.7s ease;
-}
-.note {
-  font-family: 'Shadows Into Light', 'Bradley Hand', cursive;
-  font-size: clamp(0.78rem, 1.1vw, 0.98rem);
-  line-height: 1;
-  color: #C3A6D8;
-  text-align: center;
-  padding: 0.7rem 0.2rem;
-  opacity: 0;
-  transition: opacity 0.6s ease;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* the one at the front: lit, in colour, its note legible */
-.print.is-front .glass img { filter: none; }
-.print.is-front .note { opacity: 0.92; }
-.print.is-raised { z-index: 900; }
-.print.is-raised .mat {
-  box-shadow:
-    inset 0 0 0 1px rgba(195, 166, 216, 0.34),
-    0 60px 90px -34px rgba(0, 0, 0, 0.95);
-}
-.print.is-raised .glass img { filter: none; }
-.print.is-raised .note { opacity: 0.92; }
-
-.print.is-front .mat {
-  background: #1D1429;
-  box-shadow:
-    inset 0 0 0 1px rgba(195, 166, 216, 0.34),
-    0 34px 60px -26px rgba(0, 0, 0, 0.95);
-}
-
-/* While a print is up it should be the only lit thing — and the footer sits ABOVE
-   the stage in z, so without this the counter paints straight over the card. */
-.has-raised .proc-foot { opacity: 0.08; }
-.has-raised .wordmark { opacity: 0.03; }
-.has-raised .stage { z-index: 30; }
-.proc-foot {
+/* ── the folders ── */
+.shelf {
   position: relative;
   z-index: 20;
-  transition: opacity 0.45s ease;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
+  gap: clamp(1rem, 2.6vh, 1.9rem);
+  /* ⚠️ No auto margin. `margin-bottom: auto` pinned the cascade to the top of the
+     room, where its first folder landed directly on top of the IN FRAMES
+     wordmark. Centred in the room instead, it clears the wordmark by ~120px at
+     900px tall — and the footer is taken out of the flow below so it cannot drag
+     the group upward again. */
+  margin: 0;
+}
+.folder {
+  /* Each one steps further right than the last — a cascade, not a list. */
+  margin-inline-start: calc(var(--k, 0) * clamp(1.6rem, 4.5vw, 3.4rem));
+  display: flex;
   align-items: center;
-  gap: 0.55rem;
-  text-align: center;
+  gap: clamp(0.9rem, 2vw, 1.5rem);
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: none;
+  padding: 0.4rem;
+  margin-block: 0;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: none;
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.folder:hover, .folder:focus-visible { outline: none; transform: translateX(6px); }
+
+/* The icon: the print mat's own fill and lavender hairline, folded into a
+   folder — three panels, so the front one can tip forward on its own. */
+.ic {
+  position: relative;
   flex: none;
-  /* clear the floating popup dock, which is fixed to the viewport bottom */
-  padding-bottom: 4.5rem;
+  width: clamp(3.4rem, 7vw, 5.2rem);
+  aspect-ratio: 5 / 4;
+  --edge: rgba(195, 166, 216, 0.22);
 }
-.counter {
+.ic-tab, .ic-back, .ic-front {
+  position: absolute;
+  box-sizing: border-box;
+  background: #17101F;
+  box-shadow: inset 0 0 0 1px var(--edge);
+  transition: box-shadow 0.4s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* the little tab, top-left, like every folder ever drawn */
+.ic-tab {
+  left: 0;
+  top: 0;
+  width: 44%;
+  height: 22%;
+  border-radius: 3px 6px 0 0;
+}
+.ic-back { inset: 16% 0 0 0; border-radius: 0 4px 3px 3px; }
+/* the front flap — it tips forward as the folder opens */
+.ic-front {
+  inset: 42% 0 0 0;
+  border-radius: 2px 2px 3px 3px;
+  background: #1D1529;
+  transform-origin: 50% 100%;
+  transform: perspective(280px) rotateX(0deg);
+}
+.folder:hover .ic-front,
+.folder:focus-visible .ic-front { transform: perspective(280px) rotateX(-26deg); }
+.folder:hover .ic-tab,
+.folder:hover .ic-back,
+.folder:hover .ic-front,
+.folder:focus-visible .ic-tab,
+.folder:focus-visible .ic-back,
+.folder:focus-visible .ic-front { box-shadow: inset 0 0 0 1px rgba(195, 166, 216, 0.5); }
+/* held open while its window is up */
+.folder.lit .ic-front { transform: perspective(280px) rotateX(-42deg); }
+.folder.lit .ic-tab,
+.folder.lit .ic-back,
+.folder.lit .ic-front { box-shadow: inset 0 0 0 1px rgba(195, 166, 216, 0.62); }
+
+.label { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
+.fname {
+  font-family: 'Shadows Into Light', 'Bradley Hand', cursive;
+  font-size: clamp(1.05rem, 2.1vw, 1.55rem);
+  line-height: 1;
+  color: #C3A6D8;
+  white-space: nowrap;
+}
+.fmeta {
   font-family: 'Bague', sans-serif;
-  font-size: 0.74rem;
-  letter-spacing: 0.3em;
+  font-size: 0.54rem;
+  letter-spacing: 0.28em;
+  opacity: 0.32;
 }
-.counter i { font-style: normal; opacity: 0.35; margin: 0 0.45em; }
+
+.arc-foot {
+  /* Out of the flow, so the folders centre on the ROOM rather than on
+     "folders + footer" as a block. */
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  text-align: center;
+  /* ⚠️ Clears the floating popup dock, which is FIXED to the viewport bottom at
+     1.75rem and stands ~62px tall. 4.5rem was enough while this footer was in
+     flow (the room's own 6vh bottom padding sat under it too); taking it out of
+     the flow removed that, and the line landed behind the dock. */
+  padding-bottom: 7.5rem;
+}
 .more {
   font-family: 'Bague', sans-serif;
   font-size: 0.6rem;
@@ -964,20 +529,129 @@ onBeforeUnmount(() => {
   opacity: 0.34;
 }
 
+/* ── the window ── */
+.win-layer {
+  position: fixed;
+  inset: 0;
+  /* Above the site nav (20) and the About panel (50); below the custom cursor
+     (100) and the grain overlay (1000), both of which must stay on top. */
+  z-index: 70;
+  cursor: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6vh 5vw;
+  box-sizing: border-box;
+}
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(9, 5, 14, 0.62);
+  backdrop-filter: blur(2px);
+  opacity: 1;
+  transition: opacity 0.34s ease;
+  cursor: none;
+}
+.closing .scrim { opacity: 0; }
+
+.win {
+  position: relative;
+  width: min(34rem, 100%);
+  background: #1B1428;
+  box-shadow:
+    inset 0 0 0 1px rgba(195, 166, 216, 0.22),
+    0 40px 90px -30px rgba(0, 0, 0, 0.95);
+  /* The FLIP animates this; the JS only writes transform and opacity. */
+  transition:
+    transform 0.46s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s ease;
+  transform-origin: 50% 50%;
+}
+.win-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.7rem 0.6rem 0.85rem;
+  border-bottom: 1px solid rgba(195, 166, 216, 0.16);
+}
+.win-dots { display: flex; gap: 0.34rem; flex: none; }
+.win-dots i {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 50%;
+  background: rgba(195, 166, 216, 0.3);
+}
+.win-title {
+  flex: 1 1 auto;
+  font-family: 'Bague', sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  opacity: 0.82;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.win-x {
+  flex: none;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: none;
+  padding: 0.3rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  color: #C3A6D8;
+  opacity: 0.6;
+  cursor: none;
+  transition: opacity 0.25s ease;
+}
+.win-x:hover, .win-x:focus-visible { outline: none; opacity: 1; }
+.win-x svg { width: 100%; height: 100%; fill: none; }
+
+.win-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  padding: clamp(2.2rem, 5.5vh, 3.4rem) 1.5rem clamp(2rem, 5vh, 3rem);
+}
+/* the same folder, drawn large and faint — an empty directory */
+.empty-ic {
+  position: relative;
+  width: clamp(3.6rem, 9vw, 5rem);
+  aspect-ratio: 5 / 4;
+  --edge: rgba(195, 166, 216, 0.3);
+  opacity: 0.75;
+}
+.empty-ic .ic-front { transform: perspective(280px) rotateX(-34deg); }
+.empty-msg {
+  margin: 0;
+  font-family: 'Shadows Into Light', 'Bradley Hand', cursive;
+  font-size: clamp(1.1rem, 2.4vw, 1.5rem);
+  line-height: 1;
+  color: #C3A6D8;
+}
+.empty-sub {
+  margin: 0;
+  font-family: 'Bague', sans-serif;
+  font-size: 0.56rem;
+  letter-spacing: 0.28em;
+  /* 0.3 on this ground was effectively invisible — it read as an empty gap. */
+  opacity: 0.55;
+}
 
 @media (max-width: 768px) {
-  .proc-scene { --print-w: min(74vw, 20rem); }
-  .proc-sticky { padding: 6vh 5vw 7rem; }
-  .stage { padding-top: 20vh; }
-  .spool { width: 240vw; }
-  .mini { width: clamp(4.2rem, 20vw, 7rem); }
+  .room-inner { padding: 5vh 7vw 5vh; }
   .film { gap: 0.28rem; padding: 0.8rem 0; }
-  .wordmark { font-size: clamp(1.6rem, 10vw, 3rem); padding-top: 12vh; }
-  .proc-foot { padding-bottom: 3rem; }
-  .back { padding: 10%; gap: 0.8rem; }
+  .shelf { gap: 1.15rem; margin-top: 4vh; }
+  .folder { gap: 0.85rem; }
+  .win { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .win, .ic-front, .folder, .scrim { transition: none; }
   .room-grain { animation: none; }
 }
 </style>

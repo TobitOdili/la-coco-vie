@@ -296,19 +296,22 @@ export const CHAPTER_PAGES = {
           asset('/images/reel/dinner-date-sm.jpg'),
           asset('/images/reel/hanging-ledge-sm.jpg'),
         ],
-        // ⚠️ PLACEHOLDER NOTES — every one is the same line at the user's request.
-        // The photographs are the couple's own; the words under them are not.
-        prints: [
-          { src: asset('/images/reel/proj-car-selfie.jpg'), note: 'Lagos Beach, 2021' },
-          { src: asset('/images/reel/proj-summer-fit.jpg'), note: 'Lagos Beach, 2021' },
-          { src: asset('/images/reel/proj-coco-still.jpg'), note: 'Lagos Beach, 2021' },
-          { src: asset('/images/reel/proj-dinner-date.jpg'), note: 'Lagos Beach, 2021' },
-          { src: asset('/images/reel/proj-mirrors.jpg'), note: 'Lagos Beach, 2021' },
-          { src: asset('/images/reel/proj-uvie-still.jpg'), note: 'Lagos Beach, 2021' },
-          { src: asset('/images/reel/proj-hanging-ledge.jpg'), note: 'Lagos Beach, 2021' },
-          { src: asset('/images/reel/proj-coco-two.jpg'), note: 'Lagos Beach, 2021' },
-          { src: asset('/images/reel/proj-bw-beanie.jpg'), note: 'Lagos Beach, 2021' },
+        // ── THE FOLDERS (2026-09-02) ──
+        // ⚠️ The nine "prints" that used to be the subject of this page are GONE, at
+        // the user's request: they were the couple's HISTORY, and the photographs
+        // this chapter is actually about are the wedding's — which do not exist yet.
+        // So the page is honest about that now: three labelled folders, one per
+        // event, each of which opens to an empty window.
+        // `name` is written on the folder in the hand; `title` is the window's own
+        // chrome, set in caps like an OS title bar. When the real photographs land,
+        // give a folder an `items[]` and the window renders them instead of the
+        // empty state.
+        folders: [
+          { name: 'traditional', title: 'Traditional' },
+          { name: 'white wedding', title: 'White Wedding' },
+          { name: 'wedding reception', title: 'Wedding Reception' },
         ],
+        empty: 'pictures coming soon',
         popups: ['fullAlbum'],
         align: 'center',
       },

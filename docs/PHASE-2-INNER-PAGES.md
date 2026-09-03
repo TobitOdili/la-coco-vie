@@ -16,7 +16,7 @@ state, everything below it is history — newest first.)
 > | **US** | margin notes: the whole page in one hand, **nothing set in type**; taped polaroids | **written word by word** off each block's own rect |
 > | **THE BIG DAY** | **the calendar** — October 2026, the two wedding days ringed in marker; hover/tap one for its detail | a latch: it sets, then holds still |
 > | ⚠️ | **A rework of this page was REVERTED on 2026-09-02** — see the entry below before rebuilding any of it | |
-> | **IN FRAMES** | **the procession** — mounted prints spiralling out of the dark in CSS 3D, one presented | **pinned + scroll-scrubbed**: 5.64 screens of `sticky`, a spring chasing a continuous target, per-print inertia |
+> | **IN FRAMES** | **the archive** — three labelled folders cascading down-right, each opening a window that says the pictures are still to come | **no scroll**: a FLIP out of the clicked folder; the room's film on a time loop |
 > | **WITH LOVE** | the ink wanders past scattered gift words and **lassoes** each; hover shows the item on torn paper | measured spline + `.scrub`/`.write` |
 >
 > **ALSO DONE & LIVE (prod-verified):** the homepage carousel (per-card hover/click via
@@ -128,6 +128,47 @@ Five reports, fixed and prod-verified. Full root causes in AUDIT #22–#24.
 produced **<1°** both times, because that accumulator isn't observable from outside. Driving it from
 the ring's per-frame rotation — a value the `?debug` probes now report (`leanDeg`, `rotVel`) — made
 it both correct and checkable. **If a value can't be measured, don't tune it; find one that can.**
+
+**▶▶ STATE (2026-09-02, latest) — IN FRAMES IS AN ARCHIVE, NOT A PROCESSION.**
+User: *"let's actually take out the current pictures. The pictures that matter are from the wedding
+not their history… in place of the image stack, let's have [folder] icons arranged vertical a bit
+offset to the right… when clicked, it should animate open, and popup a 'window' that shows empty
+folder - pictures coming soon."*
+- **The nine prints are gone**, and with them the whole procession: the pin, the scroll spring, the
+  per-print inertia, the unfurl, the drag/swipe, the raise-and-flip, the nudge cue. ~600 lines. They
+  were the couple's HISTORY; the photographs this chapter is about are the wedding's, which do not
+  exist yet, so the page now says that instead of standing in for them.
+- ⚠️ **THE SECTION IS NO LONGER PINNED** — 5.64 screens back to 1. The pin existed to give the
+  prints somewhere to travel; with nothing to scroll through it was dead height. The page is 4950px
+  now, down from ~10000.
+- **Three folders** — `traditional`, `white wedding`, `wedding reception` — in a vertical cascade,
+  each stepped right of the last. Drawn from the print mat's own fill (`#17101F`) and its lavender
+  hairline rather than as an OS icon, in three panels so the front flap can tip forward on hover and
+  stay open while its window is up. Labels in the hand (Shadows Into Light), meta in Bague caps.
+  ⚠️ The user wrote "two" and then listed three; three is obviously what was meant.
+- **The window is a real FLIP**, not a fade: it is laid out where it will end up, transformed back
+  onto the clicked folder's icon rect, and released — so it grows out of *that* folder and shrinks
+  back into it on close. Measured 83px → 544px across 7 distinct sizes on desktop, 54 → 351 on
+  mobile. Needs the forced reflow between the two style writes or both coalesce and it just appears.
+- ⚠️⚠️ **A `position: fixed` overlay inside `.chapter-page` CANNOT clear the site nav.**
+  `.chapter-page` is `fixed; z-index: 10` — a stacking context — so a modal at `z-index: 60` still
+  painted under the nav at `z-20`. Measured: `elementFromPoint(20,20)` returned the nav's bar.
+  `<Teleport to="body">` fixes it; `z-70` clears the nav (20) and About (50) while staying under the
+  custom cursor (100) and the grain (1000), both of which must remain on top.
+- ⚠️ Two layout bugs the screenshots caught that the numbers would not have: the cascade's
+  `margin-bottom: auto` pinned it to the top of the room, landing the first folder **on top of the
+  IN FRAMES wordmark**; and moving the end line to `position: absolute` to fix that dropped the
+  room's `6vh` bottom padding out from under it, putting the line **behind the popup dock**. Both
+  now measured — the shelf clears the wordmark by 124px (desktop) / 202px (mobile), and the line
+  clears the dock by 30px on both.
+- **The room is deliberately UNCHANGED** — same three film spools on their time loop, same grain,
+  vignette and faint wordmark. Without them this is a file browser on a dark rectangle. ⏳ Note the
+  spools still run the couple's *historical* thumbnails; at `opacity: 0.06` and greyscale they read
+  as film texture rather than as photographs, but if those should go too it is a one-line change.
+- **Prod-build verified at 1440×900 and 390×844**: 3 folders in a right-stepping cascade, 0 prints
+  left, section back to one screen, spools still moving, the window grows and shrinks, title/empty
+  copy correct, the scrim covers the nav corner, close by X / outside tap / Escape all work, focus
+  moves to the close button and back, no horizontal overflow, 0 console errors.
 
 **▶▶ REVERTED (2026-09-02) — THE BIG DAY REWORK. Read this before rebuilding any of it.**
 Shipped as `df65d160` and reverted in full as `c067839b` at the user's request: *"please revert

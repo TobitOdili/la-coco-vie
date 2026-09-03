@@ -57,24 +57,14 @@ is that no two pages share a language. Breaking it is what made With Love fail i
     Hovering — or tapping — a ringed date swaps the detail below the grid: times, venue, map,
     dress code. The grid is computed from the month, so the weekday alignment can't go stale.
     Photo-free, and it holds **completely still** while you read it.
-  - **IN FRAMES** — **the procession**: the couple's photographs, mounted, spiralling out of the
-    dark toward you in real 3D. One is always **presented** at the front — lit, in colour, its
-    handwritten note legible — while the rest orbit away into the room as faint ghosts. Built from
-    the **homepage's grammar** — one physical object, one continuous gesture, depth-opacity falloff,
-    the big faint wordmark behind, lerped pointer parallax — but deliberately not its geometry: this
-    **recedes** rather than orbiting.
-    ⚠️ **The section is pinned** (`sticky`, `100 + (N−1)·58` dvh ≈ 5.6 screens) until all nine
-    prints have been through, then it releases and the page carries on. Scroll is the **single
-    source of truth**: it drives the deck's position *continuously* and a spring chases it, so the
-    procession glides rather than stepping. The deck **unfurls** on entry — a tight pile spreading
-    into the spaced procession — and leans toward your cursor **as one object**. There is no
-    per-print hover lift; instead each print carries **its own inertia**, the deeper ones trailing
-    more, so they read as objects with weight rather than a rigid array.
-    **Swipe or drag** advances a print (the gesture nudges the page scroll rather than the position),
-    **click** the front one and it **physically rises** out of the deck — keeping its cursor parallax
-    and tipping toward the pointer — **click again to turn it over** (the note is on the back), and
-    click away to lay it back down. It nudges itself left-then-right once you arrive **and stop**,
-    instead of printing instructions.
+  - **IN FRAMES** — **the archive**: three labelled folders — *traditional*, *white wedding*,
+    *wedding reception* — cascading down and to the right in the room's own materials, each
+    opening into a window that says **pictures coming soon**. The window doesn't appear, it
+    **grows out of the folder you clicked** and shrinks back into it on close. Behind it all, the
+    same three film spools drift across on their own clock, under the grain, the vignette and the
+    big faint wordmark. ⚠️ The nine photographs that used to be the subject here are **gone by
+    request** — they were the couple's history, and the pictures this chapter is about are the
+    wedding's, which don't exist yet. The page says so rather than standing in for them.
   - **WITH LOVE** — the **ink** writes the thank-you, then wanders past gift words scattered across
     the page and **lassoes** each in turn; hover shows the item on a torn paper scrap. Ends by
     splitting in two to sign both names → RSVP.
@@ -165,7 +155,7 @@ components/
   LoadingScreen.vue          Asset-gated loading counter (GSAP)
   chapter/UsStory.vue        ★ US — "the margin notes": every string written word-by-word on scroll
   chapter/BigDay.vue         ★ THE BIG DAY — "the calendar", days ringed in marker (bespoke page)
-  chapter/InFrames.vue       ★ IN FRAMES — "the procession": prints in CSS 3D, pinned + scroll-scrubbed
+  chapter/InFrames.vue       ★ IN FRAMES — "the archive": three folders, each opening a window
   chapter/WithLove.vue       ★ WITH LOVE — the ink wanders and lassoes each gift
   chapter/ChapterSection.vue Generic section block — now the unused fallback
   chapter/PopupCard.vue      Floating white card (moment / utility / registry) pinned to the viewport

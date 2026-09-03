@@ -153,7 +153,7 @@ what made With Love read as a repeat of US and get rebuilt.
 |---|---|---|
 | `UsStory.vue` | margin notes — the whole page in one hand, nothing set in type; taped polaroids | **written word by word**: per-word `.write` clip off each block's OWN rect; the polaroid keeps a latch |
 | `BigDay.vue` | "The Calendar" — October 2026 as a wall-calendar page, the two wedding days ringed in marker; hover/tap a ringed date to swap the detail panel | IntersectionObserver latch: it sets, then holds still |
-| `InFrames.vue` | **the procession** — mounted prints spiralling out of the dark in CSS 3D, one presented at the front | **pinned + scroll-scrubbed**: `sticky` over `100 + (N−1)·58` dvh, a spring chasing a continuous target, per-print inertia; a time loop for the room's film behind it |
+| `InFrames.vue` | **the archive** — three labelled folders cascading down-right, each opening a window that says the pictures are still to come | **no scroll at all**: a FLIP that grows the window out of the folder; a time loop for the room's film behind it |
 | `WithLove.vue` | the ink wanders past scattered gift words and **lassoes** each | measured spline + `.scrub`/`.write` |
 
 **The shared engine** is an rAF loop per component: it reads each scene's `getBoundingClientRect()`
@@ -247,6 +247,22 @@ text and focus handling for free, and the homepage's Three.js renderer stays the
 > REVERTED as `c067839b`.** The code they describe is gone; the rules are not, because every one of
 > them is about this codebase rather than about that feature, and two are repeat offenders. Read
 > them as "what will bite you here", not as "how the calendar works today".
+
+⚠️ **A `position: fixed` overlay INSIDE `.chapter-page` cannot rise above the site nav.**
+`.chapter-page` is `position: fixed; z-index: 10`, which makes it a stacking context, so every
+descendant resolves *within* it no matter how large its own `z-index` — the nav (`z-20`) is a
+sibling of that context and therefore always wins. In Frames' folder window was set to `z-index: 60`
+and measured with the nav sitting on top of it: `elementFromPoint(20, 20)` returned the nav's bar,
+not the scrim. **`<Teleport to="body">` is the fix**, which moves the layer beside the nav rather
+than under it. Mind the ceiling as well as the floor when picking its level — the custom cursor is
+`z-100` and the grain overlay `z-1000`, and both must stay above any modal, so `z-70` (clear of the
+nav at 20 and the About panel at 50) is the window this site actually has. Same family as the scrim
+that painted over the raised print: a wrapper's `z-index` is a ceiling for everything inside it.
+⚠️ **A footer taken out of the flow loses the padding that was keeping it clear.** Moving In Frames'
+end line to `position: absolute; bottom: 0` so the folders could centre on the room dropped the
+room's own `6vh` bottom padding out from under it, and the line landed behind the floating popup
+dock (fixed at `1.75rem`, ~62px tall). Absolute positioning inherits none of the layout that was
+protecting an element — re-measure the clearance rather than carrying the old number over.
 
 ⚠️ **`threshold: 0` + a `rootMargin` band is the only trigger shape that cannot go
 unreachable** (fourth and fifth encounters with this family of bug). The Big Day's month-flip

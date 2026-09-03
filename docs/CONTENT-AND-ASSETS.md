@@ -200,8 +200,8 @@ distinction matters — they are different sizes for different jobs. All are the
 
 | array | count | files | what it feeds |
 |---|---|---|---|
-| **`prints[]`** | **9** | `proj-*.jpg`, 1200–1400px, **3:2** | the procession — the page's actual subject, one mounted print per slot, each `{ src, note }` |
-| `frames[]` | 5 | `*-sm.jpg`, 560px (~50–65 kB) | the background spools, which alternate along every strip; the component reads the array length |
+| ~~`prints[]`~~ | ~~9~~ | `proj-*.jpg`, 1200–1400px, **3:2** | ⚠️ **NO LONGER RENDERED (2026-09-02).** The procession was replaced by three empty folders at the user's request — these were the couple's *history*, and this chapter is about the wedding's photographs. The files are still on disk and referenced by nothing; delete them or keep them for a future gallery, but nothing loads them today. |
+| `frames[]` | 5 | `*-sm.jpg`, 560px (~50–65 kB) | the background spools, which alternate along every strip; the component reads the array length. **The only reel images still loaded.** |
 
 ```
 public/images/reel/
