@@ -998,7 +998,7 @@ inertia check confirmed it.
 > trap that produces a blank page with no error — and because whoever rebuilds this page will walk
 > straight into all three again otherwise.
 
-## Issue #28 — Moving between the two wedding dates shifted the whole page 🟡 MEDIUM (2026-09-02, fix reverted)
+## Issue #28 — Moving between the two wedding dates shifted the whole page 🟡 MEDIUM (2026-09-02; fix reverted, re-landed 2026-09-03)
 
 ### Symptom
 User: *"I don't love the layout shift at the bottom when I hover between the two dates."* Everything
@@ -1017,6 +1017,11 @@ need to reserve it.
 the active one visible, so the container is automatically as tall as its tallest child and the swap
 is a pure cross-fade. **Measured: 0px of movement** across a full hover cycle on both 1440×900 and
 390×844, where the reserved version moved on every change. Generalised in ARCHITECTURE.
+
+⚠️ **This fix shipped, was reverted with the rest of `df65d160`, and was asked for again by name on
+2026-09-03** — the layout shift was the user's *first* note both times. It is back in the code, and
+the same technique now also holds In Frames' window steady between its two views. Do not reach for a
+reserved height here a third time.
 
 ---
 
@@ -1098,6 +1103,6 @@ silently becomes impossible the moment the element outgrows the viewport. **Veri
 | ~~25~~ | ~~Deep-linking to a chapter left the EXPLORE cursor stuck expanded~~ | ~~🟠 High~~ | ✅ Fixed — `confirm()` and its release now live in one place (`releaseConfirmWhenSettled()` from `onChapterSelect`); the route watcher never fired on a deep link because the slug never changed. Prod: class is plain `cursor`. See §Issue #25. |
 | ~~26~~ | ~~A square outline around every ringed calendar date~~ | ~~🟡 Medium~~ | ✅ Fixed — the SVG's `class="ring"` collided with **Tailwind's `.ring` utility**; renamed `.marker-ring` / `.cal-grid`. Scoped CSS does not scope the class NAME. See §Issue #26. |
 | ~~27~~ | ~~In Frames: the deck bounced while scrolling, and the swipe cue was never visible~~ | ~~🟠 High~~ | ✅ Fixed (`56522682`) — a special-cased exit path made every print surge and retreat; the cue hit the tall-section threshold trap **twice** (3rd/4th occurrences). Prod: 0 depth reversals, per-print inertia 8 distinct of 9. See §Issue #27. |
-| 28 | Moving between the two wedding dates shifted the whole page | 🟡 Medium | ↩️ **OPEN AGAIN** — fixed in `df65d160`, reverted in `c067839b`. The fix was to stack the cards in one grid cell; a reserved `min-height` cannot work when the panes differ in content. See §Issue #28. |
+| ~~28~~ | ~~Moving between the two wedding dates shifted the whole page~~ | ~~🟡 Medium~~ | ✅ Fixed → reverted with `df65d160` → **re-landed 2026-09-03** at the user's request. Cards stacked in one grid cell; a reserved `min-height` cannot work when the panes differ in content. Prod-build: 0px shift on both viewports. See §Issue #28. |
 | ~~29~~ | ~~The Big Day rendered a completely blank section, with no error~~ | ~~🟠 High~~ | ✅ Fixed then reverted with the feature — but the TRAP is permanent: a `v-for` template ref is an ARRAY, `observe()` throws in `onMounted`, and the mount aborts silently (3rd occurrence, cf. #18). See §Issue #29. |
 | 30 | The month-flip would have played entirely below the fold | 🟠 High | ↩️ Moot — the flip was reverted. The RULE stands: `threshold: 0` + a `rootMargin` band is the only trigger shape that cannot go unreachable. See §Issue #30. |

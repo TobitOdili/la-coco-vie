@@ -14,8 +14,7 @@ state, everything below it is history — newest first.)
 > | chapter | what it is now | driven by |
 > |---|---|---|
 > | **US** | margin notes: the whole page in one hand, **nothing set in type**; taped polaroids | **written word by word** off each block's own rect |
-> | **THE BIG DAY** | **the calendar** — October 2026, the two wedding days ringed in marker; hover/tap one for its detail | a latch: it sets, then holds still |
-> | ⚠️ | **A rework of this page was REVERTED on 2026-09-02** — see the entry below before rebuilding any of it | |
+> | **THE BIG DAY** | **the calendar** — October 2026, the two days ringed in marker; hover one and the marker writes the times beside it, with the day set out as a programme below | a latch: it sets, then holds still |
 > | **IN FRAMES** | **the archive** — one window in the room showing a path (`...\Media\`), the three events as folders inside; click one and it opens, then the window navigates into it | **no scroll**: folder-open, then a stacked-view swap; the room's film on a time loop |
 > | **WITH LOVE** | the ink wanders past scattered gift words and **lassoes** each; hover shows the item on torn paper | measured spline + `.scrub`/`.write` |
 >
@@ -229,6 +228,43 @@ folder - pictures coming soon."*
   left, section back to one screen, spools still moving, the window grows and shrinks, title/empty
   copy correct, the scrim covers the nav corner, close by X / outside tap / Escape all work, focus
   moves to the close button and back, no horizontal overflow, 0 console errors.
+
+**▶▶ STATE (2026-09-03, latest) — THE BIG DAY, PICKED BACK UP ONE NOTE AT A TIME.**
+After the wholesale revert, the user asked for a subset by name: *"Let's still tackle the layout
+shift and let's wire up the audio for those dates. Let's also remove the note to hover over dates. I
+love the calendar design, but don't love the design of the details underneath. Also we can provide
+more detail on just the calendar when the date is hovered."* ⚠️ **The month flip and add-to-calendar
+were NOT asked for again and are deliberately still absent** — see the revert entry below.
+- **The layout shift is fixed again** (AUDIT #28, third appearance): every day card is stacked in one
+  grid cell so the panel is always as tall as its tallest card. Prod-measured **0px** on both
+  viewports. It was the user's first note both times; do not reach for a reserved height again.
+- **The hint text is gone.** The rings drawing themselves on arrival is the affordance.
+- **The detail panel is redesigned** — it was a left-aligned block led by a huge day numeral that
+  repeated the date already ringed a few centimetres above it, with a second set of large numerals
+  competing with the calendar's own. It is now a centred programme: the full date as a kicker
+  (`Friday 23 October 2026`), the day's name in Italiana, a short stroke in the marker's colour, then
+  the events **side by side** with a hairline between them — which is what makes the white wedding
+  read as one day with two parts rather than as a longer list — and the dress code beneath.
+- **The calendar carries more on its own.** Hovering a ringed date writes the times and what they
+  are beside it in the same marker. ⚠️ It extends toward the MIDDLE of the month (left from a
+  late-week column, right from an early one) so it cannot run off the grid, and `.marked` needs a
+  `z-index` or the note is only painted over cells that come earlier in the DOM. ⚠️ It keys off a
+  new `.engaged` class, NOT `.open`: `openDay` falls back to the first wedding so the panel is never
+  empty, which had the 23rd's note written across the calendar permanently from page load. Hidden
+  below 768px, where it would cover half the month.
+- **The sound easter egg is wired.** `marks[].sound` takes a path under `public/`; a mark without
+  one, or whose file fails to load, plays nothing, and Howler's global mute means the site's own
+  sound toggle already governs it. ⏳ **Still silent — both files outstanding.**
+- ⚠️⚠️ **A `vh`-only top padding cannot clear the fixed nav**, and the taller panel exposed it. While
+  the content was shorter than the section, `align-items: center` was quietly pushing the month
+  title clear; once the content outgrew the container, centring stopped applying and "October"
+  landed under the nav — on BOTH breakpoints, because the mobile media query re-declared the same
+  `8vh`. `max(8vh, 7rem)` on desktop and `max(8vh, 5.5rem)` on mobile, plus a slightly shorter cell
+  (`1 / 0.55`), and the whole month and its programme fit one screen again.
+- **Prod-build verified at 1440×900 and 390×844**: no hint in the DOM, no big numeral, 2 stacked
+  cards, **0px layout shift** across a full hover cycle, the annotation is invisible at rest and
+  0.9 on hover only for the date being pointed at, the header clears the nav (112px vs 88 desktop,
+  88 vs 72 mobile), everything fits one screen, 0 console errors.
 
 **▶▶ REVERTED (2026-09-02) — THE BIG DAY REWORK. Read this before rebuilding any of it.**
 Shipped as `df65d160` and reverted in full as `c067839b` at the user's request: *"please revert

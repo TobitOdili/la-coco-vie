@@ -208,6 +208,16 @@ export const CHAPTER_PAGES = {
             label: 'Traditional Marriage',
             scrawl: 'traditional',
             rot: -7,
+            // ── THE HOVER EASTER EGG ──
+            // A path under `public/` turns it on; hovering (or, on touch, tapping)
+            // this date then plays it. e.g. sound: '/audio/trad.wav'
+            // ⚠️ Optional and OFF by default: a mark with no `sound`, or one whose
+            // file fails to load, is simply silent. The page must never depend on
+            // audio existing. The site's own sound toggle already governs these —
+            // Howler's mute is global, so there is no second switch.
+            // ⏳ AWAITING FILES (2026-09-03): the user is sourcing the traditional
+            // cue; the white wedding wants a royalty-free "Here Comes the Bride".
+            sound: null,
             dress: 'Colours of the day: [tbc]',
             events: [
               {
@@ -224,6 +234,7 @@ export const CHAPTER_PAGES = {
             label: 'White Wedding / Reception',
             scrawl: 'white wedding',
             rot: 5,
+            sound: null,   // ← royalty-free "Here Comes the Bride" goes here
             dress: 'Dress code: [tbc]',
             events: [
               {

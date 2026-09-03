@@ -86,12 +86,12 @@ export const SITE = {
   // Rainbow' is US's looping pen and 'Caveat' is THE BIG DAY's felt-tip marker.
   // Never reuse one page's hand on another — that is what made With Love fail its
   // first review.
-  // ⚠️ 'Shadows Into Light' was IN FRAMES' hand (the note under a mounted print)
-  // and is UNUSED as of 2026-09-02: that page became a file browser, and the user's
-  // note was that file names and the empty state must not be handwritten. It stays
-  // in this list only so the slot is still reserved for In Frames if a hand ever
-  // returns there — if it does not, drop it and save the request.
-  googleFonts: ['Italiana', 'Monoton', 'Over the Rainbow', 'Caveat:wght@600;700', 'Shadows Into Light'],
+  // ⚠️ 'Shadows Into Light' was IN FRAMES' hand (the note under a mounted print) and
+  // was DROPPED on 2026-09-03, one request lighter: that page became a file browser
+  // and its names and empty state are UI text, not handwriting. If a hand ever comes
+  // back to In Frames it goes here — and it must be a THIRD one, never US's or THE
+  // BIG DAY's.
+  googleFonts: ['Italiana', 'Monoton', 'Over the Rainbow', 'Caveat:wght@600;700'],
 }
 
 // Build the Google Fonts CSS2 URL from the family list above.

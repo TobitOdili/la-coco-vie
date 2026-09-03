@@ -244,9 +244,9 @@ per-element `translate3d(x, y, z)` written from the rAF loop. Nine elements; the
 text and focus handling for free, and the homepage's Three.js renderer stays the only one.
 
 > ⚠️ **The next three rules were learned in the Big Day rework that shipped as `df65d160` and was
-> REVERTED as `c067839b`.** The code they describe is gone; the rules are not, because every one of
-> them is about this codebase rather than about that feature, and two are repeat offenders. Read
-> them as "what will bite you here", not as "how the calendar works today".
+> REVERTED as `c067839b`.** The stacked-panes one is back in the code (Big Day's day cards and In
+> Frames' window both use it); the other two describe machinery that no longer exists. All three are
+> properties of this codebase rather than of that feature, and two are repeat offenders.
 
 ⚠️ **A `position: fixed` overlay INSIDE `.chapter-page` cannot rise above the site nav.** (In
 Frames no longer HAS an overlay — the window is an object in the room now — but the rule cost real
@@ -260,6 +260,15 @@ than under it. Mind the ceiling as well as the floor when picking its level — 
 `z-100` and the grain overlay `z-1000`, and both must stay above any modal, so `z-70` (clear of the
 nav at 20 and the About panel at 50) is the window this site actually has. Same family as the scrim
 that painted over the raised print: a wrapper's `z-index` is a ceiling for everything inside it.
+⚠️ **A `vh`-only top padding cannot guarantee clearance of the fixed site nav.** The nav is ~88px
+tall regardless of viewport height, so `padding-top: 9vh` is 81px at 900px and less on anything
+shorter. It went unnoticed for as long as the Big Day's content was *shorter* than its section:
+`align-items: center` was quietly pushing the month title well clear. The moment the redesigned
+detail panel made the content taller than the container, centring stopped applying, the content
+started at the padding edge, and "October" appeared underneath the nav — on both breakpoints, since
+the mobile media query was overriding the fix with its own `8vh`. Use `max(8vh, 7rem)`, and check
+every media query that re-declares the padding.
+
 ⚠️ **A footer taken out of the flow loses the padding that was keeping it clear.** Moving In Frames'
 end line to `position: absolute; bottom: 0` so the folders could centre on the room dropped the
 room's own `6vh` bottom padding out from under it, and the line landed behind the floating popup

@@ -40,17 +40,36 @@
               v-else-if="markOf(s, cell)"
               type="button"
               class="cell day marked"
-              :class="{ open: openDay === cell }"
+              :class="{ open: openDay === cell, engaged: hoverDay === cell || pinned === cell }"
               :style="{ '--i': 3 + Math.floor(k / 7) }"
               :aria-expanded="openDay === cell"
               :aria-label="`${cell} ${monthName(s)} — ${markOf(s, cell).label}`"
-              @mouseenter="hoverDay = cell"
-              @mouseleave="hoverDay = null"
-              @focus="hoverDay = cell"
-              @blur="hoverDay = null"
-              @click="pinned = pinned === cell ? null : cell"
+              @mouseenter="enter(cell)"
+              @mouseleave="leave()"
+              @focus="enter(cell)"
+              @blur="leave()"
+              @click="tap(cell)"
             >
               <span class="n">{{ cell }}</span>
+              <!-- ── written beside the date on hover ──
+                   The calendar carries more than the ring on its own now: the
+                   times and what they are, added in the same marker.
+                   ⚠️ It extends toward the MIDDLE of the month (left from a
+                   late-week column, right from an early one) so it can never run
+                   off the edge of the grid, and `.marked` carries a z-index so the
+                   annotation always paints over its neighbours rather than under
+                   whichever cells happen to come later in the DOM. -->
+              <span
+                class="ann"
+                :class="k % 7 >= 4 ? 'ann-left' : 'ann-right'"
+                aria-hidden="true"
+              >
+                <span
+                  v-for="(e, m) in markOf(s, cell).events"
+                  :key="m"
+                  class="ann-line"
+                >{{ e.time }} · {{ e.name }}</span>
+              </span>
               <!-- the marker ring: one rough loop that overshoots and doesn't close -->
               <svg class="marker-ring" viewBox="0 0 120 96" aria-hidden="true">
                 <path
@@ -72,29 +91,41 @@
           </template>
         </div>
 
-        <!-- the detail for whichever ringed day is active -->
-        <div class="detail" :class="{ 'is-pinned': pinned !== null }">
-          <transition name="swap" mode="out-in">
-            <div v-if="activeMark(s)" :key="activeDay(s)" class="card">
-              <div class="card-date">
-                <span class="card-day">{{ activeDay(s) }}</span>
-                <span class="card-md">{{ shortDate(s, activeDay(s)) }}</span>
-              </div>
-              <div class="card-body">
-                <div class="card-title">{{ activeMark(s).label }}</div>
-                <div v-for="(e, j) in activeMark(s).events" :key="j" class="ev">
+        <!-- ── the day, written out ──
+             ⚠️ EVERY card is rendered, stacked in ONE grid cell, and only the
+             active one is shown. The panel is therefore always as tall as its
+             tallest card and moving between the two dates cannot shift the page
+             underneath. A reserved `min-height` could not do this: the white
+             wedding has two events and the traditional has one, so whichever
+             number was picked, the other day moved everything below it.
+             ⚠️ Centred, and the big day-numeral is gone. It repeated the date
+             that is already ringed a few centimetres above it, and a second set
+             of large numerals competed with the calendar's own. -->
+        <div class="detail">
+          <div class="card-stack">
+            <div
+              v-for="(m, j) in s.marks || []"
+              :key="m.day"
+              class="card"
+              :class="{ on: m.day === activeDay(s) }"
+              :aria-hidden="m.day === activeDay(s) ? null : 'true'"
+            >
+              <div class="card-kicker">{{ longDate(s, m.day) }}</div>
+              <h3 class="card-title">{{ m.label }}</h3>
+              <span class="card-rule" aria-hidden="true" />
+              <div class="evs" :class="{ pair: (m.events || []).length > 1 }">
+                <div v-for="(e, k2) in m.events" :key="k2" class="ev">
                   <span class="ev-time">{{ e.time }}</span>
                   <span class="ev-name">{{ e.name }}</span>
-                  <span class="ev-place">{{ e.venue }} · {{ e.address }}</span>
+                  <span class="ev-place">{{ e.venue }}<i>·</i>{{ e.address }}</span>
                   <a class="ev-map" :href="e.map || '#'" target="_blank" rel="noopener noreferrer">
                     open in maps ↗
                   </a>
                 </div>
-                <div class="card-dress">{{ activeMark(s).dress }}</div>
               </div>
+              <div class="card-dress">{{ m.dress }}</div>
             </div>
-          </transition>
-          <div class="hint" aria-hidden="true">{{ hintText }}</div>
+          </div>
         </div>
       </div>
 
@@ -119,6 +150,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { asset } from '~/utils/asset'
 
 const props = defineProps({
   sections: { type: Array, required: true },
@@ -165,16 +197,77 @@ function gridOf(s) {
 }
 const markOf = (s, day) => (s.marks || []).find((m) => m.day === day) || null
 const activeDay = (s) => (markOf(s, openDay.value) ? openDay.value : firstMarkDay.value)
-const activeMark = (s) => markOf(s, activeDay(s))
-function shortDate(s, day) {
+// The full date, spelled out, as the card's kicker. ⚠️ Derived from the month
+// like everything else here, so it can never disagree with the grid above it.
+const DOW_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+function longDate(s, day) {
   const y = yearOf(s)
   const m = monthOf(s)
-  const dow = DOW[new Date(Date.UTC(y, m - 1, day)).getUTCDay()]
-  return `${dow} · ${String(day).padStart(2, '0')}.${String(m).padStart(2, '0')}.${String(y).slice(2)}`
+  const dow = DOW_LONG[new Date(Date.UTC(y, m - 1, day)).getUTCDay()]
+  return `${dow} ${day} ${MONTHS[m - 1]} ${y}`
 }
 
-// Touch devices never hover, so the hint has to name the gesture they actually have.
-const hintText = ref('hover a ringed date')
+// ── the easter egg: each date has its own sound ─────────────────────────────
+// ⚠️ Entirely OPTIONAL and silent by default. A mark with no `sound`, or one whose
+// file fails to load, plays nothing — the page must never depend on audio being
+// present. Howler's mute is global, so the site's own sound toggle already
+// governs these; there is no second switch.
+const howls = {}
+let audioReady = false
+
+async function initAudio() {
+  if (audioReady) return
+  audioReady = true
+  const marks = (cal.value?.marks || []).filter((m) => m.sound)
+  if (!marks.length) return
+  try {
+    const { Howl } = await import('howler')
+    for (const m of marks) {
+      howls[m.day] = new Howl({
+        src: [asset(m.sound)],
+        volume: 0.5,
+        html5: true,
+        onloaderror: () => { howls[m.day] = null },
+        onplayerror: () => { howls[m.day] = null },
+      })
+    }
+  } catch { /* audio is a bonus; never let it break the page */ }
+}
+
+function hush(except) {
+  for (const [d, h] of Object.entries(howls)) {
+    if (!h || Number(d) === except) continue
+    if (h.playing()) h.fade(h.volume(), 0, 220)
+  }
+}
+function playFor(day) {
+  const h = howls[day]
+  hush(day)
+  if (!h || h.playing()) return
+  h.volume(0.5)
+  h.play()
+}
+function stopFor(day) {
+  const h = howls[day]
+  if (h?.playing()) h.fade(h.volume(), 0, 320)
+}
+
+function enter(day) {
+  hoverDay.value = day
+  playFor(day)
+}
+function leave() {
+  const d = hoverDay.value
+  hoverDay.value = null
+  if (d != null) stopFor(d)
+}
+// Touch has no hover: the tap both pins the card and triggers the sound.
+function tap(day) {
+  const was = pinned.value
+  pinned.value = was === day ? null : day
+  if (pinned.value === day) playFor(day)
+  else stopFor(day)
+}
 
 // Latch on first enter, then never touch the DOM again — this page's job is to be
 // read, so it holds still. (No rAF loop anywhere in this component.)
@@ -184,7 +277,7 @@ const inView = ref({})
 let observer = null
 
 onMounted(() => {
-  if (window.matchMedia?.('(hover: none)').matches) hintText.value = 'tap a ringed date'
+  initAudio()
   observer = new IntersectionObserver(
     (entries) => {
       for (const e of entries) {
@@ -198,7 +291,10 @@ onMounted(() => {
   )
   sceneEls.forEach((el) => observer.observe(el))
 })
-onBeforeUnmount(() => observer?.disconnect())
+onBeforeUnmount(() => {
+  observer?.disconnect()
+  for (const h of Object.values(howls)) h?.unload?.()
+})
 </script>
 
 <style scoped>
@@ -209,7 +305,12 @@ onBeforeUnmount(() => observer?.disconnect())
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  padding: 9vh 6vw 7vh;
+  /* ⚠️ `max(…, 7rem)` because the site nav is ~88px tall and 9vh is only 81px at
+     900px — with the taller detail panel the content stops being centred (it no
+     longer fits with room to spare) and starts at the padding edge instead, which
+     put "October" underneath the nav. A vh-only top padding cannot guarantee that
+     clearance at any viewport height. */
+  padding: max(8vh, 7rem) 6vw 6vh;
   color: var(--accent, #41492D);
   background: #F1F3EC;
 
@@ -277,7 +378,7 @@ onBeforeUnmount(() => observer?.disconnect())
   display: flex;
   align-items: center;
   justify-content: center;
-  aspect-ratio: 1 / 0.6;
+  aspect-ratio: 1 / 0.55;
   /* ⚠️ `appearance: none` is load-bearing: a ringed day is a real <button> (so it is
      keyboard-reachable), and border:0 alone does NOT stop the UA painting the native
      widget frame — a square box appeared around each ringed date. */
@@ -300,7 +401,10 @@ onBeforeUnmount(() => observer?.disconnect())
 }
 
 /* ── a ringed day ── */
-.marked { cursor: none; color: var(--marker); }
+/* ⚠️ `z-index` so the hover annotation paints OVER its neighbours. Without it the
+   note is only above cells that come EARLIER in the DOM, so it reads correctly
+   extending left and is buried extending right. */
+.marked { cursor: none; color: var(--marker); z-index: 5; }
 .marked .n { opacity: 1; color: var(--accent, #41492D); }
 .marker-ring {
   position: absolute;
@@ -343,6 +447,37 @@ onBeforeUnmount(() => observer?.disconnect())
 }
 .in-view .scrawl { opacity: 0.92; }
 
+/* ── written beside the date on hover ── */
+.ann {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  white-space: nowrap;
+  font-family: 'Caveat', 'Bradley Hand', cursive;
+  font-weight: 600;
+  font-size: clamp(0.8rem, 1.5vw, 1.05rem);
+  line-height: 1.25;
+  color: var(--marker);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* toward the middle of the month, so it can never run off the grid */
+.ann-left { right: 100%; margin-inline-end: 0.7rem; text-align: end; align-items: flex-end; }
+.ann-right { left: 100%; margin-inline-start: 0.7rem; text-align: start; align-items: flex-start; }
+.ann-left { transform: translate(0.5rem, -50%); }
+.ann-right { transform: translate(-0.5rem, -50%); }
+/* ⚠️ `.engaged`, NOT `.open`. `openDay` falls back to the first wedding so the
+   panel below is never empty — which meant the 23rd's annotation was written
+   across the calendar permanently, from the moment the page loaded. The note
+   should only appear when someone actually points at (or taps) the date. */
+.marked:hover .ann,
+.marked:focus-visible .ann,
+.marked.engaged .ann { opacity: 0.9; transform: translate(0, -50%); }
+
 /* hover / focus / open — the ring inks in and the day gets a faint wash */
 .marked:hover,
 .marked:focus-visible { outline: none; }
@@ -363,62 +498,86 @@ onBeforeUnmount(() => observer?.disconnect())
 .marked:focus-visible::after,
 .marked.open::after { opacity: 0.1; }
 
-/* ── the detail panel ── */
+/* ── the day, written out ── */
 .detail {
   position: relative;
-  margin-top: clamp(1.4rem, 3.2vh, 2.2rem);
-  padding-top: clamp(1.1rem, 2.2vh, 1.6rem);
+  margin-top: clamp(1.2rem, 2.6vh, 1.8rem);
+  padding-top: clamp(1rem, 2vh, 1.5rem);
   border-top: 1px solid color-mix(in srgb, currentColor 22%, transparent);
-  /* reserved, so swapping days never shifts the page under the reader */
-  min-height: 9.5rem;
 }
-.card { display: flex; gap: clamp(1.2rem, 4vw, 2.6rem); align-items: flex-start; }
-.card-date { flex: none; text-align: center; }
-.card-day {
-  display: block;
-  font-family: 'Italiana', serif;
-  font-size: clamp(2.6rem, 7vw, 4.4rem);
-  line-height: 0.9;
+/* ⚠️ One grid cell for every card, so the panel is always as tall as its tallest
+   and swapping days cannot shift the page. See AUDIT #28. */
+.card-stack { display: grid; }
+.card {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.26s ease, transform 0.26s ease;
+  pointer-events: none;
 }
-.card-md {
-  display: block;
+.card.on { opacity: 1; transform: none; pointer-events: auto; }
+
+.card-kicker {
   font-family: 'Bague', sans-serif;
-  font-size: 0.64rem;
-  letter-spacing: 0.2em;
+  font-size: 0.62rem;
+  letter-spacing: 0.3em;
   text-transform: uppercase;
-  opacity: 0.6;
-  margin-top: 0.55rem;
-  white-space: nowrap;
+  opacity: 0.55;
 }
-.card-body { min-width: 0; }
 .card-title {
   font-family: 'Italiana', serif;
-  font-size: clamp(1.3rem, 3vw, 2rem);
+  font-weight: 400;
+  font-size: clamp(1.4rem, 3.2vw, 2.2rem);
   line-height: 1.1;
-  margin-bottom: 0.85rem;
+  margin: 0.45rem 0 0;
 }
-.ev { margin-bottom: 0.75rem; font-family: 'Bague', sans-serif; }
-.ev-time {
-  display: inline-block;
-  min-width: 5.5rem;
-  font-size: 0.7rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  opacity: 0.7;
-}
-.ev-name { font-size: 0.95rem; font-weight: 700; }
-.ev-place {
+/* a short stroke in the marker's own colour, tying the panel to the ring above */
+.card-rule {
   display: block;
-  font-size: 0.86rem;
-  line-height: 1.65;
-  opacity: 0.7;
-  margin-top: 0.15rem;
+  width: 2.4rem;
+  height: 2px;
+  margin: 0.75rem 0 1.05rem;
+  border-radius: 2px;
+  background: var(--marker);
+  opacity: 0.75;
 }
+
+/* Two events sit SIDE BY SIDE with a hairline between them, which is what makes
+   the white wedding read as one day with two parts rather than as a longer list. */
+.evs { display: flex; flex-wrap: wrap; justify-content: center; }
+.ev {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.22rem;
+  padding: 0 clamp(1.1rem, 3.5vw, 2.4rem);
+  font-family: 'Bague', sans-serif;
+}
+.evs.pair .ev + .ev {
+  border-inline-start: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+}
+.ev-time {
+  font-size: 0.62rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+.ev-name { font-family: 'Italiana', serif; font-size: clamp(1rem, 2.1vw, 1.3rem); }
+.ev-place {
+  font-size: 0.8rem;
+  line-height: 1.6;
+  opacity: 0.66;
+  max-width: 15rem;
+}
+.ev-place i { font-style: normal; opacity: 0.5; margin: 0 0.45em; }
 .ev-map {
-  display: inline-block;
-  margin-top: 0.2rem;
-  font-size: 0.72rem;
-  letter-spacing: 0.14em;
+  margin-top: 0.15rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--marker);
   text-decoration: none;
@@ -427,31 +586,12 @@ onBeforeUnmount(() => observer?.disconnect())
 }
 .card-dress {
   font-family: 'Bague', sans-serif;
-  font-size: 0.76rem;
-  letter-spacing: 0.16em;
+  font-size: 0.66rem;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
-  opacity: 0.75;
-  margin-top: 1rem;
+  opacity: 0.5;
+  margin-top: 1.15rem;
 }
-.hint {
-  position: absolute;
-  top: calc(100% + 0.2rem);
-  inset-inline-end: 0;
-  font-family: 'Caveat', cursive;
-  font-weight: 600;
-  font-size: 1.05rem;
-  color: var(--marker);
-  opacity: 0.6;
-  transform: rotate(-4deg);
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-.is-pinned .hint { opacity: 0; }
-
-.swap-enter-active,
-.swap-leave-active { transition: opacity 0.22s ease, transform 0.22s ease; }
-.swap-enter-from { opacity: 0; transform: translateY(6px); }
-.swap-leave-to { opacity: 0; transform: translateY(-6px); }
 
 /* ── good to know ── */
 .notes-wrap { width: 100%; max-width: 46rem; }
@@ -483,18 +623,27 @@ onBeforeUnmount(() => observer?.disconnect())
 @media (max-width: 768px) {
   /* ⚠️ 9rem of bottom room: the floating popup dock is FIXED to the viewport
      bottom, and bottom padding only helps while the scene still fits 100dvh. */
-  .day-scene { padding: 8vh 4vw 8.5rem; }
+  /* ⚠️ Same nav-clearance problem as the desktop rule above, and this media query
+     was quietly overriding the fix: 8vh is 67px on a 844px phone and the nav
+     bottom is 72. */
+  .day-scene { padding: max(8vh, 5.5rem) 4vw 8.5rem; }
   .cal-head { gap: 0.6rem; margin-bottom: 1.2rem; }
   .cal-grid { column-gap: 0.1rem; }
   .cell { aspect-ratio: 1 / 0.96; }
   .dow { font-size: 0.5rem; letter-spacing: 0.1em; padding-bottom: 0.45rem; }
   .n { font-size: 1.22rem; }
   .scrawl { font-size: 0.7rem; top: 80%; }
-  .detail { min-height: 14rem; margin-top: 1.6rem; }
-  .card { gap: 1rem; }
-  .card-day { font-size: 2.4rem; }
-  .ev-time { display: block; min-width: 0; margin-bottom: 0.1rem; }
-  .hint { top: auto; bottom: -1.5rem; inset-inline-end: auto; inset-inline-start: 0; }
+  .detail { margin-top: 1.6rem; }
+  /* Two events stack on a phone — side by side they were ~7rem each. */
+  .evs.pair { flex-direction: column; gap: 1.2rem; }
+  .evs.pair .ev + .ev {
+    border-inline-start: 0;
+    border-top: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+    padding-top: 1.2rem;
+  }
+  .ev { padding: 0 0.5rem; }
+  /* The annotation would cover half the month at phone widths. */
+  .ann { display: none; }
   .note-line { grid-template-columns: 1fr; gap: 0.25rem; }
 }
 
@@ -502,7 +651,7 @@ onBeforeUnmount(() => observer?.disconnect())
   .set,
   .marker-ring path,
   .scrawl,
-  .swap-enter-active,
-  .swap-leave-active { transition: none; }
+  .ann,
+  .card { transition: none; }
 }
 </style>
