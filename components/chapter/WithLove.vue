@@ -189,17 +189,19 @@ function rng(seed) {
 // closed and never round.
 function lasso(cx, cy, w, h, seed = 1) {
   const r = rng(seed * 7 + 3)
-  const rx = w / 2 + 18 + r() * 22
-  const ry = h / 2 + 9 + r() * 14
-  const from = Math.PI * (0.75 + r() * 0.9)
-  // 1.05–1.55 turns: some barely close, some come round again
-  const turns = 1.05 + r() * 0.5
+  const rx = w / 2 + 22 + r() * 10
+  const ry = h / 2 + 11 + r() * 7
+  const from = Math.PI * (1.0 + r() * 0.35)
+  // ⚠️ 1.02–1.18 turns. At 1.05–1.55 some loops came all the way round twice and
+  // the page read as chaotic — a hand circling a word overshoots a little, it does
+  // not orbit. Enough variation that no two match, not enough to become a feature.
+  const turns = 1.02 + r() * 0.16
   const to = from + Math.PI * 2 * turns
-  const drift = 0.06 + r() * 0.1        // the loop spirals slightly as it goes
-  const freq = 2.2 + r() * 2.4          // how many bumps around the ring
-  const amp = 0.03 + r() * 0.05
+  const drift = 0.03 + r() * 0.05       // the loop spirals slightly as it goes
+  const freq = 2.6 + r() * 1.4          // how many bumps around the ring
+  const amp = 0.025 + r() * 0.03
   const phase = r() * Math.PI * 2
-  const tilt = (r() - 0.5) * 0.28       // the whole loop leans a little
+  const tilt = (r() - 0.5) * 0.13       // the whole loop leans a little
   const N = 26
   const pts = []
   for (let i = 0; i <= N; i++) {
@@ -294,55 +296,14 @@ function measure() {
   // were long straight diagonals. So each run gets a control point pushed
   // PERPENDICULAR to it, alternating side, which puts the bow back where the ink
   // actually survives.
-  // ⚠️ A WANDER, not a bulge. One perpendicular midpoint per run gave every stretch
-  // the same symmetrical bow — predictable, and read as a repeated graphic. Each
-  // run now gets THREE offsets at uneven positions along it, each with its own
-  // seeded size and side, so no two behave alike. And roughly every other run
-  // takes a CURL: a tight three-point detour that carries the line past itself and
-  // back, the way a pen doodles rather than draws.
-  const pts = []
-  const stops = []
-  for (let i = 0; i < base.length; i++) {
-    pts.push(base[i]); stops.push(baseStops[i])
-    if (i === base.length - 1) break
-    const p = base[i], q = base[i + 1]
-    const dx = q.x - p.x, dy = q.y - p.y
-    const len = Math.hypot(dx, dy) || 1
-    const nx = -dy / len, ny = dx / len        // unit perpendicular
-    const r = rng(i * 13 + 5)
-    const push = (t, off) => {
-      pts.push({ x: p.x + dx * t + nx * off, y: p.y + dy * t + ny * off })
-      stops.push(baseStops[i] + (baseStops[i + 1] - baseStops[i]) * t)
-    }
-    let side = r() < 0.5 ? 1 : -1
-    // three uneven waypoints — the amplitude falls off toward the ends so the
-    // line still meets each gift roughly head-on
-    const ts = [0.2 + r() * 0.1, 0.46 + r() * 0.1, 0.74 + r() * 0.1]
-    for (const t of ts) {
-      const taper = Math.sin(Math.PI * t)
-      push(t, side * len * (0.14 + r() * 0.24) * taper)
-      side *= -1                                // alternate, so it snakes
-    }
-    // …and sometimes it loops back on itself
-    if (r() < 0.55) {
-      const lt = 0.55 + r() * 0.2
-      const rad = len * (0.07 + r() * 0.06)
-      const dir = r() < 0.5 ? 1 : -1
-      const cx = p.x + dx * lt, cy = p.y + dy * lt
-      for (let k = 1; k <= 5; k++) {
-        const a = (k / 5) * Math.PI * 2 * dir + Math.atan2(dy, dx)
-        pts.push({ x: cx + Math.cos(a) * rad, y: cy + Math.sin(a) * rad * 0.8 })
-        stops.push(baseStops[i] + (baseStops[i + 1] - baseStops[i]) * (lt + k * 0.006))
-      }
-    }
-  }
-  // the waypoints were pushed in `ts` order but the loop appends after them —
-  // sort so the path (and its scrub windows) still run top to bottom
-  const order = pts.map((pt, k) => k).sort((a2, b2) => stops[a2] - stops[b2])
-  const sortedPts = order.map((k) => pts[k])
-  const sortedStops = order.map((k) => stops[k])
-  pts.length = 0; stops.length = 0
-  pts.push(...sortedPts); stops.push(...sortedStops)
+  // ⚠️ NO ADDED WANDER. The curve is the plain Catmull-Rom through each gift's
+  // centre and nothing else — the gentle line this page started with. Two passes
+  // tried to improve on it and both were wrong in opposite directions: re-routing
+  // around the words flattened it into straight diagonals, and then three seeded
+  // waypoints plus loop-backs per run made it chaotic. The original line was
+  // right; the ONLY thing it needed was the gap, which is the trimming below.
+  const pts = base
+  const stops = baseStops
 
   // Every box the ink must stay out of, in scene coordinates.
   const blocks = []

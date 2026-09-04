@@ -388,35 +388,44 @@ export const CHAPTER_PAGES = {
       },
       {
         kind: 'gifts',
+        // ⚠️ LOREM IPSUM (user, 2026-09-03) — the page is being reviewed for the
+        // line and the layout, not for words. ⚠️ Keep `name` to SHORT words: it is
+        // circled by a lasso sized from its own box, and a name that wraps to two
+        // lines makes the loop sprawl across both. Three or four short words, like
+        // the real gifts had. `memory` lengths are kept roughly as
+        // they were on purpose: the trace is MEASURED from where these actually
+        // land, so shortening them all to the same length would flatter the curve
+        // in a way the real copy would not. Real gifts land when the couple pick
+        // them; `x` (0–100) is the horizontal position each one sits at.
         items: [
           {
-            memory: 'slow sunday mornings — two cups, no hurry.',
-            name: 'the espresso machine',
+            memory: 'lorem ipsum dolor sit amet, consectetur adipiscing.',
+            name: 'lorem ipsum dolor',
             image: PLACEHOLDER_ITEM, x: 34, claimed: false,
           },
           {
-            memory: 'every table we will set for the people we love.',
-            name: 'dinnerware for twelve',
+            memory: 'sed do eiusmod tempor incididunt ut labore et dolore.',
+            name: 'dolor sit amet',
             image: PLACEHOLDER_ITEM, x: 68, claimed: false,
           },
           {
-            memory: 'the jollof will be judged. we intend to be ready.',
-            name: 'a good, heavy pot',
+            memory: 'ut enim ad minim veniam, quis nostrud exercitation.',
+            name: 'sed do eiusmod',
             image: PLACEHOLDER_ITEM, x: 36, claimed: false,
           },
           {
-            memory: 'for the first morning we wake up somewhere that is ours.',
-            name: 'linens, the soft kind',
+            memory: 'duis aute irure dolor in reprehenderit in voluptate velit.',
+            name: 'ut labore et dolore',
             image: PLACEHOLDER_ITEM, x: 70, claimed: false,
           },
           {
-            memory: 'the one we will read under, badly, until far too late.',
-            name: 'a lamp for the corner',
+            memory: 'excepteur sint occaecat cupidatat non proident, sunt.',
+            name: 'minim veniam quis',
             image: PLACEHOLDER_ITEM, x: 32, claimed: false,
           },
           {
-            memory: 'for everywhere we have not been yet.',
-            name: 'a weekender for two',
+            memory: 'qui officia deserunt mollit anim.',
+            name: 'ex ea commodo',
             image: PLACEHOLDER_ITEM, x: 66, claimed: false,
           },
         ],

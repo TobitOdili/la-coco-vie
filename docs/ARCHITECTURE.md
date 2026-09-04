@@ -291,16 +291,21 @@ months graded 🟢 Low as "gray-on-gray", which sounds like a contrast nit; what
 saw was an empty screen. The `html` defaults are the site's real palette now — treat a placeholder
 keyword in a shipped variable as a bug, not a default. (AUDIT #16.)
 
-⚠️ **A "hand-drawn" line has to be RANDOM, and the random has to be SEEDED.** With Love's trace
-was one perpendicular bulge per run and one ellipse per word, repeated — symmetrical, identical, and
-it read as a graphic rather than as something drawn. It is now three uneven waypoints per run with
-alternating sides and tapered amplitude, plus a tight loop-back on roughly half of them; and every
-lasso rolls its own radii, start angle, number of turns (1.05–1.55, so some come round twice), radial
-drift, wobble frequency and tilt. Measured spread across the six loops: path lengths 852–1485px, no
-two alike. ⚠️ **Seeded, never `Math.random()`** — `measure()` re-runs on resize and on
-`document.fonts.ready`, so a live random would re-roll the whole drawing under the reader and the
-line would twitch at every breakpoint. A seed per item is different everywhere and identical every
-time.
+⚠️ **With Love's trace took four passes to get back to where it started, and that is the lesson.**
+The original was a plain Catmull-Rom through each gift's centre. It was then (1) re-routed around the
+words with entry/exit points, which gave every run vertical tangents and flattened it into straight
+diagonals; (2) given a perpendicular midpoint per run, still symmetrical and repetitive; (3) given
+three seeded waypoints plus loop-backs, which the user called chaotic. **The curve was right the
+whole time.** The only thing it ever needed was the GAP — the trimming that keeps ink off the words.
+Restored to the original point list, and the gap kept.
+⚠️ **If a "hand-drawn" element does vary, seed it — never `Math.random()`.** The lassos still roll
+their own radii, start angle, turns (1.02–1.18), drift, wobble and tilt, because six identical
+ellipses read as a graphic. But `measure()` re-runs on resize and on `document.fonts.ready`, so a
+live random would re-roll the drawing under the reader and the line would twitch at every
+breakpoint. Measured spread now: 320–406px wide, 99–110 tall — varied, not chaotic. The earlier
+852–1485px spread was the chaos.
+⚠️ **A lassoed word must not WRAP.** The loop is sized from the name's own box, so a two-line name
+makes it sprawl across both. Keep `items[].name` to three or four short words.
 
 ⚠️ **A `vh`-only top padding cannot guarantee clearance of the fixed site nav.** The nav is ~88px
 tall regardless of viewport height, so `padding-top: 9vh` is 81px at 900px and less on anything
