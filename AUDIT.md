@@ -6,7 +6,7 @@
 > Tools: Browserless (Playwright/CDP) against the live prod URL, bundle greps, DOM/computed-style probes.
 
 > **Doc map:** this file is the **forensic issue history** — per-issue root causes, fixes,
-> and commit refs (numbered #1–#34). For orientation start at [`README.md`](README.md);
+> and commit refs (numbered #1–#35). For orientation start at [`README.md`](README.md);
 > how-it-works is [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); live status is
 > [`PROGRESS.md`](PROGRESS.md). The **Priority Order table near the bottom is the quickest
 > index** of every issue and its status.
@@ -1182,6 +1182,36 @@ vertical inset; the line box is not the ink box.
 
 ---
 
+## Issue #35 — Fixing the line's crossings straightened it out 🟡 MEDIUM (2026-09-03)
+
+### Symptom
+User, after #33's fix landed: *"Now it's just straight lines between the items which sucks… it still
+cuts into the text above."*
+
+### Root cause — two, and the first was self-inflicted
+1. **Re-routing straightened it.** The previous fix replaced each gift's centre point with an entry
+   above and an exit below, both at the word's own x. A Catmull-Rom's tangent at a point is the
+   direction between its NEIGHBOURS — two points stacked vertically give a vertical tangent at both
+   ends of every run, so the line left one gift straight down and arrived at the next straight down.
+   Measured bows from the chord: **2–16px**.
+2. **It still crossed the memory line.** The padding cleared the gift's NAME only; the memory
+   sentence sits above it, in its own box, and the line went through that instead.
+
+### Fix
+**Do not re-route the curve — trim what is drawn.** The point list is the original one (through each
+centre, which is what made it wander). Each segment is then sampled and split around the padded box
+of every `.gift-name` AND `.memory`, and only the stretches outside them are emitted, each inheriting
+a slice of its segment's window in proportion to where it sits along it.
+
+⚠️ **Trimming removes the curviest part of a spline**, which is why that alone was not enough: a
+Catmull-Rom bends most near its endpoints, where it turns to meet its neighbours — and those ends are
+exactly what sits against the words. So each run also gets a control point pushed PERPENDICULAR to
+it, alternating side and scaled by the run's own length, which puts the bow back where the ink
+survives. Measured after: **0 segments crossing a name, 0 crossing a memory**, bows up to 21px across
+14 stretches.
+
+---
+
 ## Updated Priority Order (as of 2026-05-27)
 
 | # | Issue | Priority | Status |
@@ -1203,6 +1233,7 @@ vertical inset; the line box is not the ink box.
 | ~~15~~ | ~~Chapter selection broken — hit layer click-transparent~~ | 🔴 High | ✅ Fixed (`bbedb5ec`) — `#canvas-hit-layer` inherited `pointer-events:none`; clicks fell through to `.app-root` so `@click` never fired. Set `pointer-events:auto`. Found while verifying #7; verified live (clicking now selects). |
 | ~~16~~ | ~~About panel gray-on-gray when opened from homepage~~ | ~~🟠 High~~ | ✅ **Fixed 2026-09-03** — both vars resolved to the literal `gray`, so the welcome panel showed NOTHING. The `html` defaults are the site's real palette now. Mis-graded 🟢 Low for three months. See §Issue #16. |
 | ~~33~~ | ~~The nav vanished into the page on every chapter~~ | ~~🟠 High~~ | ✅ Fixed 2026-09-03 — nav ink is the chapter accent and so are the exit background and In Frames' room. Contrast 1.08→5.68 (With Love), 1.46→4.51 (US). Measured ground, not inferred. See §Issue #33. |
+| ~~35~~ | ~~Fixing the line's crossings straightened it out~~ | ~~🟡 Medium~~ | ✅ Fixed — don't re-route the curve, TRIM what is drawn; and add a perpendicular wander point, because trimming removes a spline's curviest part. 0 crossings, bows 2–16px → up to 21px. See §Issue #35. |
 | ~~34~~ | ~~"thank you" clipped at the descender~~ | ~~🟡 Medium~~ | ✅ Fixed — a `.write` clip with zero vertical inset shaves a script face's descenders. See §Issue #34. |
 | ~~32~~ | ~~No way into the welcome panel on a phone~~ | ~~🟠 High~~ | ✅ Fixed 2026-09-03 — the centre wordmark block's `pointer-events-auto` wrapper is as wide as the countdown line and was painted over the WELCOME label, swallowing every tap. Moved onto the wordmark itself. See §Issue #32. |
 | ~~17~~ | ~~Every image 404s on GitHub Pages — `import.meta.env.BASE_URL` is `'./'` in Nuxt production builds~~ | ~~🔴 High~~ | ✅ Fixed (`67693fd3`) — baked via `vite.define.__APP_BASE__`, one helper `utils/asset.js`. Verified on both hosts. See §Issue #17. |

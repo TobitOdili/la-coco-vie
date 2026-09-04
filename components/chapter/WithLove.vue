@@ -42,6 +42,26 @@
         </div>
       </section>
 
+      <!-- ── Or, simply · not a section. The dock card raises a flag and this
+           opens ON the page — sending money is a conversation, not a jump to
+           another tab. Ink on paper, like the rest of the chapter: no box. ── -->
+      <Teleport v-else-if="s.kind === 'cashPanel'" to="body">
+        <transition name="panel">
+          <div v-if="panel === 'cash'" class="cash-layer" @click.self="panel = null">
+            <div class="cash-panel" role="dialog" aria-modal="true" :aria-label="s.heading">
+              <button type="button" class="cash-x" aria-label="Close" @click="panel = null">
+                <svg viewBox="0 0 12 12" aria-hidden="true">
+                  <path d="M2 2 L10 10 M10 2 L2 10" stroke="currentColor" stroke-width="1.3" fill="none" />
+                </svg>
+              </button>
+              <h3 class="cash-heading">{{ s.heading }}</h3>
+              <p class="cash-body">{{ s.body }}</p>
+              <a class="cash-cta" :href="s.url" target="_blank" rel="noopener noreferrer">{{ s.cta }}</a>
+            </div>
+          </div>
+        </transition>
+      </Teleport>
+
       <!-- ── Signing · the ink splits in two and signs both names. ── -->
       <section v-else-if="s.kind === 'sign'" class="chapter-section love-scene sign-scene" :data-idx="i">
         <div class="closer fade" data-window="0.08,0.22">{{ s.closer }}</div>
@@ -85,6 +105,12 @@ defineProps({
 })
 
 const ink = '#2E4A52'
+
+// Raised by the docked "Or, simply —" card, which lives in `[slug].vue`.
+// ⚠️ Teleported to <body>: `.chapter-page` is `fixed; z-index: 10`, a stacking
+// context nothing inside can escape — the same trap In Frames' window hit.
+const panel = useState('chapterPanel', () => null)
+function onPanelKey(e) { if (e.key === 'Escape' && panel.value) panel.value = null }
 const rootEl = ref(null)
 const box = ref({ w: 1000, h: 1000 })
 const segments = ref([])
@@ -174,11 +200,15 @@ function measure() {
 
   const anchors = names.map((el) => {
     const r = el.getBoundingClientRect()
+    // ⚠️ `blockTop` is the top of the WHOLE gift — the memory line sits above the
+    // name, and clearing only the name still ran the line through the sentence.
+    const block = el.closest('.gift').getBoundingClientRect()
     return {
       x: r.left - sr.left + r.width / 2,
       y: r.top - sr.top + r.height / 2,
       w: r.width,
       h: r.height,
+      blockTop: block.top - sr.top,
       el,
     }
   })
@@ -188,34 +218,97 @@ function measure() {
   // you are looking at the word.
   const at = anchors.map((a) => (a.y + vh / 2) / (H + vh))
 
-  // ⚠️ THE LINE MUST NOT CROSS THE WORDS. It used to run through each gift's
-  // CENTRE, so the spline struck straight through the name it was meant to be
-  // circling. Each anchor now contributes TWO points — an entry just above the
-  // word and an exit just below — and the segment BETWEEN them is not drawn at
-  // all: the lasso is what joins them. The line comes down, the loop goes round,
-  // the line carries on.
-  const PAD = 16
-  const pts = [{ x: anchors[0].x, y: 0 }]
-  const stops = [Math.max(0.01, at[0] - 0.14)]
-  const skip = new Set()          // indices of segments the lasso replaces
-  anchors.forEach((a, j) => {
-    pts.push({ x: a.x, y: a.y - (a.h / 2 + PAD) })   // entry, above the word
-    stops.push(Math.max(0.01, at[j] - 0.01))
-    skip.add(pts.length - 1)                          // entry → exit is the lasso
-    pts.push({ x: a.x, y: a.y + (a.h / 2 + PAD) })   // exit, below the word
-    stops.push(at[j] + 0.045)
-  })
-  pts.push({ x: anchors[anchors.length - 1].x, y: H })
-  stops.push(1)
+  // ⚠️ THE CURVE IS THE ORIGINAL ONE — through each gift's CENTRE, which is what
+  // made it wander. An earlier pass re-routed it around the words with entry and
+  // exit points instead, and that straightened it out: leaning the control points
+  // toward the neighbours flattened the tangents, and the middle runs came out
+  // almost dead straight (measured bows of 2–4px). The line the user liked is the
+  // one that threads the centres.
+  //
+  // So the curve is not changed at all. What changes is what gets DRAWN: each
+  // segment is sampled and split around the padded box of every gift — the name
+  // AND the memory line above it — and only the stretches outside them are
+  // emitted. The line runs its original path, disappears where the lasso takes
+  // over, and picks up again on the far side. Each surviving stretch inherits a
+  // slice of its segment's window, in proportion to where it sits along it, so
+  // the timing still reads left-to-right.
+  const PAD = 18
+  const base = [
+    { x: anchors[0].x, y: 0 },
+    ...anchors.map((a) => ({ x: a.x, y: a.y })),
+    { x: anchors[anchors.length - 1].x, y: H },
+  ]
+  const baseStops = [Math.max(0.01, at[0] - 0.14), ...at, 1]
+
+  // ⚠️ A WANDER POINT between every pair. Trimming the line around the words takes
+  // the curviest part of each Catmull-Rom segment with it — a spline bends most
+  // near its endpoints, where it turns to meet its neighbours' tangents, and those
+  // ends are exactly what sits against the words. Left alone the surviving middles
+  // were long straight diagonals. So each run gets a control point pushed
+  // PERPENDICULAR to it, alternating side, which puts the bow back where the ink
+  // actually survives.
+  const WANDER = 0.34
+  const pts = []
+  const stops = []
+  for (let i = 0; i < base.length; i++) {
+    pts.push(base[i]); stops.push(baseStops[i])
+    if (i === base.length - 1) break
+    const p = base[i], q = base[i + 1]
+    const dx = q.x - p.x, dy = q.y - p.y
+    const len = Math.hypot(dx, dy) || 1
+    const side = i % 2 === 0 ? 1 : -1
+    // perpendicular, scaled by the run's own length so it holds at any width
+    pts.push({
+      x: p.x + dx / 2 + (-dy / len) * len * WANDER * side,
+      y: p.y + dy / 2 + (dx / len) * len * WANDER * side,
+    })
+    stops.push((baseStops[i] + baseStops[i + 1]) / 2)
+  }
+
+  // Every box the ink must stay out of, in scene coordinates.
+  const blocks = []
+  for (const sel of ['.gift-name', '.memory']) {
+    for (const el of scene.querySelectorAll(sel)) {
+      const r = el.getBoundingClientRect()
+      if (!r.width) continue
+      blocks.push({
+        l: r.left - sr.left - PAD, r: r.right - sr.left + PAD,
+        t: r.top - sr.top - PAD, b: r.bottom - sr.top + PAD,
+      })
+    }
+  }
+  const inside = (x, y) => blocks.some((k) => x > k.l && x < k.r && y > k.t && y < k.b)
 
   const segs = []
+  const probe = document.createElementNS('http://www.w3.org/2000/svg', 'path')
   for (let i = 0; i < pts.length - 1; i++) {
-    if (skip.has(i)) continue     // the lasso owns this stretch
     const p0 = pts[i - 1] || pts[i]
     const p3 = pts[i + 2] || pts[i + 1]
     const a = stops[i]
     const b = Math.max(stops[i + 1], a + 0.02)
-    segs.push({ d: crSegment(p0, pts[i], pts[i + 1], p3), win: `${a.toFixed(3)},${b.toFixed(3)}` })
+    const d = crSegment(p0, pts[i], pts[i + 1], p3)
+    probe.setAttribute('d', d)
+    const L = probe.getTotalLength()
+    if (!L) continue
+    const STEP = 3
+    let run = null
+    const flush = (endT) => {
+      if (!run || run.pts.length < 2) { run = null; return }
+      const wa = a + (b - a) * (run.t0 / L)
+      const wb = Math.max(wa + 0.008, a + (b - a) * (endT / L))
+      segs.push({
+        d: 'M ' + run.pts.map((q) => `${q.x.toFixed(1)} ${q.y.toFixed(1)}`).join(' L '),
+        win: `${wa.toFixed(3)},${wb.toFixed(3)}`,
+      })
+      run = null
+    }
+    for (let t = 0; t <= L; t += STEP) {
+      const q = probe.getPointAtLength(t)
+      if (inside(q.x, q.y)) { flush(t); continue }
+      if (!run) run = { t0: t, pts: [] }
+      run.pts.push(q)
+    }
+    flush(L)
   }
   segments.value = segs
   loops.value = anchors.map((a, j) => ({
@@ -270,6 +363,7 @@ let resizeT = 0
 const onResize = () => { clearTimeout(resizeT); resizeT = setTimeout(measure, 150) }
 
 onMounted(async () => {
+  window.addEventListener('keydown', onPanelKey)
   await nextTick()
   measure()
   // Web fonts change text metrics — the lassos would sit around the wrong box.
@@ -281,6 +375,8 @@ onMounted(async () => {
   rafId = requestAnimationFrame(tick)
 })
 onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onPanelKey)
+  panel.value = null
   cancelAnimationFrame(rafId)
   window.removeEventListener('resize', onResize)
   ro?.disconnect()
@@ -403,6 +499,47 @@ onBeforeUnmount(() => {
   text-transform: uppercase;
   opacity: 0.5;
 }
+
+/* ── or, simply — the on-page panel ── */
+.cash-layer {
+  position: fixed;
+  inset: 0;
+  /* Above the nav (20) and About (50); below the custom cursor (100). */
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8vh 6vw;
+  background: color-mix(in srgb, #E8EDF2 88%, transparent);
+  backdrop-filter: blur(3px);
+  cursor: none;
+}
+.cash-panel {
+  position: relative;
+  width: min(30rem, 100%);
+  text-align: center;
+  color: #2E4A52;
+}
+.cash-x {
+  position: absolute;
+  top: -2.4rem;
+  inset-inline-end: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: none;
+  padding: 0.25rem;
+  color: #2E4A52;
+  opacity: 0.5;
+  cursor: none;
+  transition: opacity 0.25s ease;
+}
+.cash-x:hover, .cash-x:focus-visible { outline: none; opacity: 1; }
+.cash-x svg { width: 100%; height: 100%; display: block; }
+.panel-enter-active, .panel-leave-active { transition: opacity 0.3s ease; }
+.panel-enter-from, .panel-leave-to { opacity: 0; }
 
 /* ── cash ── */
 /* ── signing ── */

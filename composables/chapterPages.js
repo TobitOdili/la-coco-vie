@@ -87,8 +87,10 @@ export const POPUPS = {
   // other chapters use, so the offer is present without interrupting the writing.
   cashNote: {
     title: 'Or, simply —',
-    params: ['toward the honeymoon', 'no account numbers here'],
-    url: '#',
+    params: ['monetize your gift to us'],
+    // ⚠️ `action` (not `url`) — this opens the panel ON the page rather than
+    // jumping to another tab. WithLove renders it; PopupCard only raises the flag.
+    action: 'cash',
   },
   regFund: {
     title: 'The Honeymoon Fund',
@@ -419,6 +421,20 @@ export const CHAPTER_PAGES = {
           },
         ],
         popups: ['cashNote'],
+      },
+      // ⚠️ Not a section — the panel the `cashNote` dock card opens. It replaced a
+      // bordered box that sat mid-page and read as out of character on a chapter
+      // that is otherwise ink on paper.
+      {
+        kind: 'cashPanel',
+        heading: 'or, simply —',
+        body:
+          'if you would rather send something toward the honeymoon, that is more than ' +
+          'welcome, and we will think of you every single day of it.',
+        cta: 'open the payment link',
+        // ⚠️ PLACEHOLDER — the couple's payment destination goes here.
+        url: '#',
+        popups: [],
       },
       {
         kind: 'sign',

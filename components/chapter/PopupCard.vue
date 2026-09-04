@@ -2,12 +2,18 @@
   <!-- A floating popup card pinned to the viewport while its section is active. Generic:
        photo and url are both optional — registry items may be text-only, "moment"
        polaroids may not link, map/calendar cards link out. (Was DressTail.vue.) -->
+  <!-- ⚠️ Three shapes, not two: a link out (`url`), a plain card, or — new — a
+       BUTTON that opens something on the page (`action`). With Love's cash card
+       needs the last one: sending money is a conversation, not a jump to another
+       tab. -->
   <component
-    :is="popup.url ? 'a' : 'div'"
+    :is="popup.action ? 'button' : popup.url ? 'a' : 'div'"
     class="popup-card"
-    :href="popup.url || undefined"
-    :target="popup.url ? '_blank' : undefined"
-    :rel="popup.url ? 'noopener noreferrer' : undefined"
+    :type="popup.action ? 'button' : undefined"
+    :href="!popup.action && popup.url ? popup.url : undefined"
+    :target="!popup.action && popup.url ? '_blank' : undefined"
+    :rel="!popup.action && popup.url ? 'noopener noreferrer' : undefined"
+    @click="popup.action && open()"
   >
     <img
       v-if="popup.photo"
@@ -24,13 +30,23 @@
 </template>
 
 <script setup>
-defineProps({
-  popup: { type: Object, required: true }, // { title, params[], photo?, url? }
+const props = defineProps({
+  popup: { type: Object, required: true }, // { title, params[], photo?, url?, action? }
 })
+
+// Shared with the chapter component that owns the panel — the dock lives in
+// `[slug].vue`, the content belongs to the page.
+const openPanel = useState('chapterPanel', () => null)
+const open = () => { openPanel.value = props?.popup?.action ?? null }
 </script>
 
 <style scoped>
 .popup-card {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  font: inherit;
+  text-align: start;
   display: flex;
   align-items: center;
   gap: 0.75rem;
