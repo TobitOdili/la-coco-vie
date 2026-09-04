@@ -86,7 +86,7 @@ export const POPUPS = {
   // is otherwise ink on paper. It is the floating dock card now, the same widget the
   // other chapters use, so the offer is present without interrupting the writing.
   cashNote: {
-    title: 'Or, simply —',
+    title: 'Even better,',
     params: ['monetize your gift to us'],
     // ⚠️ `action` (not `url`) — this opens the panel ON the page rather than
     // jumping to another tab. WithLove renders it; PopupCard only raises the flag.
@@ -436,7 +436,7 @@ export const CHAPTER_PAGES = {
       // that is otherwise ink on paper.
       {
         kind: 'cashPanel',
-        heading: 'or, simply —',
+        heading: 'even better —',
         body:
           'if you would rather send something toward the honeymoon, that is more than ' +
           'welcome, and we will think of you every single day of it.',

@@ -106,6 +106,76 @@ above. Constant speed and a reversed exit are not in conflict.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
 
+**▶▶ STATE (2026-09-04, latest) — WITH LOVE: THE PEN LEARNS TO LEAVE A CIRCLE. AND THE
+HOMEPAGE STOPS LEADING.**
+User: *"The line that comes off currently doesn't look good jutting out this way. It should flow
+with a natural curve out of the circle… even the link lines between items look very repeated. Can't
+we, i dunno, draw a nice rose or something. Also the line draw speed is too fast relative to
+scroll… When I reload an inner page, why does the homepage lead first?… an inner page drops back
+into homepage on end of scroll [and] has this jarring reset with a layout shift of the cards
+downward… It should be one fluid uninterrupted motion."*
+
+- ⚠️⚠️ **THE JUT WAS A TANGENT MISTAKEN FOR A BEARING** (AUDIT #33). The loop around each word is an
+  ellipse sampled over its angle parameter `a`, and the previous build aimed the pen out of it by
+  setting `a` to the **bearing** of the next word — `atan2(next.y − c.y, next.x − c.x)`. But the
+  tangent at parameter `a` is **perpendicular to the radius there**: `(−rx·sin a, ry·cos a)`. So the
+  pen was told to leave at 90° to the direction it then had to travel, and every loop ended in a hard
+  V. `angleFor(d)` inverts it properly — `atan2(−d'x/rx, d'y/ry)` in the ellipse's own (un-leaned)
+  frame — so the parameter is the one whose TANGENT points at the next word. The bridge hack that
+  used to paper over the corner is gone with it; the join is exact, not patched.
+- **The legs are drawn, not generated.** Each is a cubic hung off the real tangents of the loops
+  either side, with a character on top from a small vocabulary — a bow, a wave, a loop-the-loop, and
+  **one rose per page**: a scalloped spiral that runs into a tight centre and opens outward through
+  two and a half turns. The rose does NOT return to where it started (a closed detour is what made
+  the old lassos read as stamped graphics) — the leg is re-drawn from wherever the last petal left
+  the pen.
+  - ⚠️ **The displacement envelope is `sin²`, not `sin`.** `sin(πs)` is zero at both ends but its
+    SLOPE is not, and at ±100px of offset on a 450px leg that is a **15° kink at both joins** — the
+    exact defect being fixed, reintroduced by the fix. `sin²` has zero slope at the ends.
+  - ⚠️ **The lean on a loop is capped by its WIDTH, not by an angle.** These ellipses track the word,
+    so `rx ≈ 150`; a flat ±0.13 rad tips the far end by `rx·sin(tilt)` = **20px**, straight up into
+    the sentence above. Capped at 13px of lift (`Math.min(0.15, 13 / rx)`), which still lets a short
+    word lean like a hand.
+- ⚠️⚠️ **THE PEN WAS FAST BECAUSE THE WINDOWS WERE NARROW, NOT BECAUSE THE LINE WAS LONG.** Each
+  stroke's scrub window used to be derived from the *surviving fraction of a trimmed segment*, so a
+  whole loop plus its run was packed into a sliver of scroll. **Measured, prod build, 1440×900:
+  0.69 / 4.52 / 5.41 / 3.64 / 7.30 / 4.78 / 1.44 px of ink per px of scroll.** Chaining the windows
+  gift-to-gift gives every stroke the full span between two words — the most scroll there is to give
+  it — and sizing the head and tail at the median pace fixes the two odd ends. **Now: 2.45 / 2.64 /
+  3.88 / 3.19 / 2.61 / 2.65 / 2.71.** Peak halved, spread collapsed. Row pitch went 46vh → 72vh and
+  the `--dy` jitter was halved (±6vh swung the gap between words by ±15%, and the pen gets exactly
+  one gap's worth of scroll to cross each gap, so it sped up and slowed down with the jitter).
+- **The trimming is per-gift now.** A loop necessarily sits inside its OWN word's padded no-go box —
+  the 45° point of an ellipse with (30, 24) margins is well within a box padded by 18 — so testing a
+  leg against the word it has just circled cut every leg off at birth. Each leg is tested against
+  every block EXCEPT its own gift's. **Verified: 0 path vertices inside any `.memory` box** at both
+  1440×900 and 390×844.
+- **"OR, SIMPLY" is "Even better, / monetize your gift to us"**, and ⚠️ **the panel it opens had no
+  styles at all** — `.cash-heading`, `.cash-body` and `.cash-cta` were never written, so the words
+  rendered in the browser default on a page that is otherwise ink on paper.
+
+- ⚠️⚠️ **A RELOAD OF AN INNER PAGE PLAYED THE WHOLE HOMEPAGE FIRST** (AUDIT #34). `runIntro()` ran
+  unconditionally and `onReadyCallback` — the hook that applies a deep-linked chapter — fired only at
+  `introEndAt`. So landing on `/{slug}` meant **6s (desktop) / 3.8s (mobile) of carousel assembly**
+  before the chapter you asked for by URL even began to open. The scene now takes a `deepLinkIdx`
+  from the URL it BOOTED on (captured in `WebGLScene`'s setup, not in its async `onMounted`, where
+  the Nuxt context is no longer guaranteed) and runs `runArrive()` instead: ring posed instantly, no
+  spin, background already the chapter accent, and a 1.1s hero morph. **Measured: hero settled at
+  1153–1190ms on all four chapters, 0 console errors, scroll unlocks normally.**
+  - `onReady(cb)` now fires immediately if `introComplete` is already set. A callback that is only
+    ever fired at the end of an intro that never ran is never fired.
+- ⚠️⚠️ **THE "JARRING RESET" WAS TWELVE WORLD UNITS** (AUDIT #35). `setExitProgress` lerped the ring
+  to `carousel.position.y = 0` at `de = 1`, and `endExit()` — called one frame later, at the moment
+  the exit commits — parked it at `idleCarouselY()`, which is **`IDLE_Y_DESKTOP = -12`**. Every card
+  stepped down together the instant the page handed over. Both ends now name the same value.
+  **Verified by scrubbing to `de=1` and calling `endExit()`: carousel Y −12 → −12, group rotation
+  unchanged, carousel rotation unchanged, and ZERO of the eight posters moved in x, y, scale or
+  opacity.** Live wheel-to-the-bottom confirms the same: −19.6 → −15 → −13.2 → −12.4 → −12.2 → −12.1
+  → −12 → −12 across the route change.
+  - Also fixed in passing: the centre wordmark was left on the chapter you were reading for the whole
+    exit, so the WRONG word faded in at the end and the idle tracker cross-faded it afterwards. It is
+    synced to the front card while still invisible (`t < 0.55`).
+
 **▶▶ STATE (2026-08-11, latest) — HOMEPAGE: HOVER, LEAN AND THE EXPLORE CIRCLE.**
 Five reports, fixed and prod-verified. Full root causes in AUDIT #22–#24.
 - **Bottom-edge hover flicker (reported twice).** Hover is now screen-space **containment** with

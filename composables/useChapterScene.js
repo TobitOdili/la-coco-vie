@@ -291,6 +291,7 @@ export function useChapterScene() {
   let isIntro = true
   let introComplete = false
   let isMobile = false
+  let deepLinkIdx = -1      // chapter index the page was loaded ON (a reload / shared link), else -1
 
   const N = 8
   const baseDistance = 40  // original source: ve=40
@@ -459,8 +460,13 @@ export function useChapterScene() {
     return { w: window.innerWidth, h: window.innerHeight }
   }
 
-  async function init(canvas) {
+  async function init(canvas, opts = {}) {
     canvasEl = canvas
+    // ⚠️ Landing straight on /{slug} is NOT the homepage. The scene used to run the full
+    // carousel intro (6s desktop / 3.8s mobile) on every load and only select the deep-linked
+    // chapter when it finished — so reloading an inner page made you watch the homepage
+    // assemble itself first. `deepLinkIdx` routes the arrival through runArrive() instead.
+    deepLinkIdx = Number.isInteger(opts.deepLinkIdx) ? opts.deepLinkIdx : -1
     const vp = getViewportSize()
     width = vp.w
     height = vp.h
@@ -734,7 +740,35 @@ export function useChapterScene() {
     }
   }
 
+  // ── Deep-link arrival ───────────────────────────────────────────────────────
+  // A reload or a shared link that lands on /{slug} should open ON that chapter, not
+  // replay the homepage. The ring is placed at its resting pose instantly (no spin, no
+  // fly-in), the chapter is selected with the SHORT entry, and `introComplete` is set
+  // right away so the page's settle-poll and the route watcher have something to hold.
+  // Leaving the chapter afterwards still finds a properly-posed ring behind it, so the
+  // reverse-spin and the bottom exit are unchanged.
+  function runArrive(idx) {
+    posters.forEach((p) => {
+      p.mesh.position.set(p.baseX, p.baseY, p.baseZ)
+      if (p.material.uniforms.axisPosition) p.material.uniforms.axisPosition.value.z = baseDistance
+    })
+    // The intro's camera sweep starts the mouse proxy at (-10,-10); park it at rest instead,
+    // or the parallax spring drags the camera off-axis on the first frames.
+    mouse.set(0.5, 0.5)
+    prevMouse.set(0.5, 0.5)
+    carousel.animatedRotationY = 0
+    carousel.rotation.y = 0
+    carousel.position.y = idleCarouselY()
+    isIntro = false
+    introComplete = true
+    selectChapter(idx, true)
+    // The route watcher is already pointed at this chapter, but app.vue gates every scene
+    // call on introComplete — tell it the gate is open.
+    if (onReadyCallback) onReadyCallback()
+  }
+
   function runIntro() {
+    if (deepLinkIdx >= 0 && deepLinkIdx < CHAPTERS.length) { runArrive(deepLinkIdx); return }
     isIntro = true
     introComplete = false
 
@@ -1236,7 +1270,11 @@ export function useChapterScene() {
     selectChapter(chapterIdxForSlot(slot))
   }
 
-  function selectChapter(chIdx) {
+  // `fast` — the deep-link arrival (see runArrive). Same end state, but the ring is posed
+  // instantly instead of spinning in: there is no homepage to spin away from when the visitor
+  // loaded straight onto the chapter, and a 3s carousel turn in front of a page they asked for
+  // by URL is exactly the "homepage leads first" complaint.
+  function selectChapter(chIdx, fast = false) {
     if (chIdx === selectedIndex) return  // idempotent — safe to call from the route watcher
     // A still-running deselect would clobber this selection when its onComplete fired
     // (it resets selectedIndex/selectedHero mid-select). Kill it and clear its flag.
@@ -1283,8 +1321,14 @@ export function useChapterScene() {
     // Background fades to the chapter accent as it opens (the ring/page sit on the accent; the bottom
     // exit later reveals the ring spinning on it). Fades back out at the homepage on exit.
     exitBg.set(CHAPTERS[chIdx].accent)
-    const bgP = { a: exitBgAlpha }
-    tl.to(bgP, { a: 1, duration: 1.4, ease: 'power2.inOut', onUpdate: () => { exitBgAlpha = bgP.a } }, 0)
+    if (fast) {
+      // Already the chapter's ground when the loader lifts — a fade from transparent would
+      // flash the white body behind the arriving card.
+      exitBgAlpha = 1
+    } else {
+      const bgP = { a: exitBgAlpha }
+      tl.to(bgP, { a: 1, duration: 1.4, ease: 'power2.inOut', onUpdate: () => { exitBgAlpha = bgP.a } }, 0)
+    }
 
     // Fade out txt mesh
     if (groupG.userData.txtMat) {
@@ -1329,23 +1373,34 @@ export function useChapterScene() {
     // [180°,540°) so every chapter is one controlled ~360° turn in the intro/exit
     // direction (the residual ±135° spread is the cards' real 45°-apart ring positions).
     let targetRot = toRad(heroPoster.intRotationY - 90) - scrollRotationY
-    while (targetRot - carousel.animatedRotationY < Math.PI) targetRot += TWO_PI
-    tl.to(carousel, { animatedRotationY: targetRot, duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
+    if (fast) {
+      // Snap BOTH the animated value and the lerp anchor: the render loop eases rotation.y
+      // toward (scrollRotationY + animatedRotationY) at 0.06/frame, so setting only the
+      // former would still swing the deck round for half a second behind the hero.
+      carousel.animatedRotationY = targetRot
+      carousel.rotation.y = scrollRotationY + targetRot
+      carousel.position.y = selectedCarouselY()
+      groupG.rotation.set(0, 0, 0)
+    } else {
+      while (targetRot - carousel.animatedRotationY < Math.PI) targetRot += TWO_PI
+      tl.to(carousel, { animatedRotationY: targetRot, duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
 
-    // Move carousel down
-    tl.to(carousel.position, { y: selectedCarouselY(), duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
+      // Move carousel down
+      tl.to(carousel.position, { y: selectedCarouselY(), duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
 
-    // Flatten groupG
-    tl.to(groupG.rotation, { x: 0, y: 0, z: 0, duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
+      // Flatten groupG
+      tl.to(groupG.rotation, { x: 0, y: 0, z: 0, duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
+    }
 
     // Scale tuned to the shader's progress=1 content framing (the wordmark/logo sit
     // at a fixed UV; over-scaling pushes them out of the hero). aspectRatio*2.07 is
     // the reference-tuned value.
     const s = heroFillScale()
 
-    tl.to(heroPoster.material.uniforms.blendFactor, { value: 1.0, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
-    tl.to(heroPoster.material.uniforms.progress, { value: 1.0, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
-    tl.to(heroPoster.mesh.scale, { x: s, y: s, z: 1, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
+    const heroDur = fast ? 1.1 : 2
+    tl.to(heroPoster.material.uniforms.blendFactor, { value: 1.0, duration: heroDur, ease: 'power3.inOut', overwrite: true }, 0)
+    tl.to(heroPoster.material.uniforms.progress, { value: 1.0, duration: heroDur, ease: 'power3.inOut', overwrite: true }, 0)
+    tl.to(heroPoster.mesh.scale, { x: s, y: s, z: 1, duration: heroDur, ease: 'power3.inOut', overwrite: true }, 0)
 
     // Hide every other poster (including the same chapter's back copy) by dropping it below the
     // frame. The offset must clear the CAROUSEL's selected height, not just be "a big number":
@@ -1365,6 +1420,8 @@ export function useChapterScene() {
       hideFrom = -(halfH + 16 + 12) - selectedCarouselY()    // 16 = card half-height, 12 = margin
     }
     posters.filter((p) => p !== heroPoster).forEach((p, idx) => {
+      // On a deep link they were never on screen — park them, don't animate them off.
+      if (fast) { p.mesh.position.y = hideFrom - idx * 8; return }
       tl.to(p.mesh.position, { y: hideFrom - idx * 8, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
     })
   }
@@ -1517,7 +1574,13 @@ export function useChapterScene() {
       cy = lp(exitStart.cy, BOWL_Y, a)
       tx = lp(exitStart.gx, bowlTilt.x, a); ty = lp(exitStart.gy, bowlTilt.y, a); tz = lp(exitStart.gz, bowlTilt.z, a)
     } else {
-      cy = lp(BOWL_Y, 0, b)
+      // ⚠️ `idleCarouselY()`, NOT 0. The exit used to rise the ring to y=0 and then endExit()
+      // — one frame later, at the moment of commit — parked it at IDLE_Y_DESKTOP (-12). That
+      // 12-unit drop was the "jarring reset with a layout shift of the cards downward": the
+      // whole deck stepped down the instant the page handed over. The exit now lands ON the
+      // homepage's resting height, so endExit changes nothing visible and the motion is one
+      // continuous rise.
+      cy = lp(BOWL_Y, idleCarouselY(), b)
       tx = lp(bowlTilt.x, homeTilt.x, b); ty = lp(bowlTilt.y, homeTilt.y, b); tz = lp(bowlTilt.z, homeTilt.z, b)
     }
     carousel.position.y = cy
@@ -1555,6 +1618,11 @@ export function useChapterScene() {
 
     // Center wordmark: stays out through the unfurl (the reference shows no floating wordmark mid-exit),
     // fading in only as the homepage fan settles over the last ~40% of de.
+    // ⚠️ Swap it to the FRONT card's wordmark while it is still invisible. It was left on the
+    // chapter you were reading for the whole exit, so the word that faded in at the end was the
+    // wrong one — and the idle tracker then cross-faded it to the right one the instant the exit
+    // committed. Nothing visible changes here; the fade below still owns the opacity.
+    if (t < 0.55) setTxtChapter(frontChapterIdx(), true)
     if (groupG.userData.txtMat) groupG.userData.txtMat.opacity = lp(exitStart.txtOpacity, 1, ss(Math.max(0, (t - 0.6) / 0.4)))
 
     // Background: opaque chapter accent through the spin, fading to the homepage over the late rise.
@@ -1740,7 +1808,10 @@ export function useChapterScene() {
   function onHover(cb) { onHoverCallback = cb }
   function onFrontChapter(cb) { onFrontChapterCallback = cb }
   function onProgress(cb) { onProgressCallback = cb }
-  function onReady(cb) { onReadyCallback = cb }
+  // ⚠️ Fire straight away if the gate is already open. The deep-link arrival sets
+  // `introComplete` inside init(), which can land before the app registers this — and a
+  // callback that is only ever fired at the end of an intro that never ran is never fired.
+  function onReady(cb) { onReadyCallback = cb; if (introComplete) cb() }
 
   return {
     init,

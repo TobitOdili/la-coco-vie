@@ -12,13 +12,16 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useChapterScene } from '~/composables/useChapterScene'
+import { useChapterScene, CHAPTERS } from '~/composables/useChapterScene'
 
 const emit = defineEmits(['chapter-select', 'chapter-hover', 'chapter-unhover', 'progress', 'chapter-front'])
 
 const canvasRef = ref(null)
 const hitLayerRef = ref(null)
 const scene = useChapterScene()
+// Captured in setup (not in the async onMounted, where the Nuxt context is no longer
+// guaranteed): the chapter the visitor LANDED on, if any.
+const bootSlug = useRoute().params.slug
 
 function onHitClick(e) {
   // Ignore the click a swipe leaves behind (see onTouchEnd) — otherwise rotating the
@@ -97,7 +100,12 @@ onMounted(async () => {
   // Registered BEFORE init() so we catch every texture load.
   scene.onProgress((pct) => emit('progress', pct))
 
-  await scene.init(canvasRef.value)
+  // ⚠️ The URL we BOOTED on, read once. If it names a chapter, the scene skips the homepage
+  // intro and arrives on that chapter instead (see runArrive) — a reload of an inner page
+  // used to sit through the whole carousel assembly before selecting anything.
+  await scene.init(canvasRef.value, {
+    deepLinkIdx: bootSlug ? CHAPTERS.findIndex((c) => c.slug === bootSlug) : -1,
+  })
 
   // Safety net: scene is fully ready — guarantee the loader can complete
   // even if the asset count drifts.
