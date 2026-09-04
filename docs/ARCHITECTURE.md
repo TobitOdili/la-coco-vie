@@ -291,6 +291,15 @@ months graded 🟢 Low as "gray-on-gray", which sounds like a contrast nit; what
 saw was an empty screen. The `html` defaults are the site's real palette now — treat a placeholder
 keyword in a shipped variable as a bug, not a default. (AUDIT #16.)
 
+⚠️ **A scrub-driven path cannot be "forced visible" by writing `strokeDashoffset` from a probe** —
+the rAF loop rewrites it from the scroll window on the very next frame. Three of my screenshots
+looked like the trace was missing its runs; it was showing the true reveal state at that scroll all
+along, and I chased a bug that did not exist. To inspect a finished shape, scroll to where it IS
+finished and assert on the revealed fraction (`1 - strokeDashoffset`), or read the geometry directly.
+⚠️ Likewise, sampling a path with `getPointAtLength` every N px reports gaps of N px and tells you
+NOTHING about discontinuity — `getPointAtLength` walks straight chords as happily as curves. To find
+a real break, read the `d` attribute's own vertices.
+
 ⚠️ **With Love's trace took four passes to get back to where it started, and that is the lesson.**
 The original was a plain Catmull-Rom through each gift's centre. It was then (1) re-routed around the
 words with entry/exit points, which gave every run vertical tangents and flattened it into straight

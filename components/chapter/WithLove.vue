@@ -20,12 +20,12 @@
       <section v-else-if="s.kind === 'gifts'" class="chapter-section love-scene gifts-scene"
         :data-idx="i" :style="{ '--rows': s.items.length }">
         <svg class="trace" :viewBox="`0 0 ${box.w} ${box.h}`" aria-hidden="true">
+          <!-- ⚠️ ONE stroke per run, loop included — see measure(). There is no
+               separate lasso path any more, so there is no second opacity either:
+               a pen does not change weight when it comes round a word. -->
           <path v-for="(seg, k) in segments" :key="`s${k}`" class="scrub" :data-window="seg.win"
             pathLength="1" :d="seg.d" :stroke="ink" stroke-width="2.6" fill="none"
-            stroke-linecap="round" opacity="0.62" />
-          <path v-for="(lo, k) in loops" :key="`l${k}`" class="scrub" :data-window="lo.win"
-            pathLength="1" :d="lo.d" :stroke="ink" stroke-width="2.6" fill="none"
-            stroke-linecap="round" />
+            stroke-linecap="round" stroke-linejoin="round" opacity="0.85" />
         </svg>
 
         <div v-for="(it, j) in s.items" :key="j" class="gift"
@@ -187,22 +187,29 @@ function rng(seed) {
 // carries on (sometimes more than a full extra turn), how much the radius drifts
 // as it goes round, and a per-vertex jitter. A real circling of a word is never
 // closed and never round.
-function lasso(cx, cy, w, h, seed = 1) {
+// ⚠️ `exitAngle` is where the pen LEAVES, and it is not decorative: the loop is
+// drawn as part of the same stroke as the run that follows it, so it has to finish
+// pointing at wherever that run resumes. The loop therefore ends at `exitAngle` and
+// works BACKWARD to its start, rather than starting somewhere and ending wherever
+// it lands.
+function lasso(cx, cy, w, h, seed = 1, exitAngle = Math.PI * 0.5) {
   const r = rng(seed * 7 + 3)
-  const rx = w / 2 + 22 + r() * 10
-  const ry = h / 2 + 11 + r() * 7
-  const from = Math.PI * (1.0 + r() * 0.35)
+  const rx = w / 2 + 27 + r() * 10
+  const ry = h / 2 + 10 + r() * 6
   // ⚠️ 1.02–1.18 turns. At 1.05–1.55 some loops came all the way round twice and
   // the page read as chaotic — a hand circling a word overshoots a little, it does
   // not orbit. Enough variation that no two match, not enough to become a feature.
   const turns = 1.02 + r() * 0.16
-  const to = from + Math.PI * 2 * turns
-  const drift = 0.03 + r() * 0.05       // the loop spirals slightly as it goes
+  const to = exitAngle
+  const from = to - Math.PI * 2 * turns
+  const drift = 0.015 + r() * 0.025     // the loop spirals slightly as it goes
   const freq = 2.6 + r() * 1.4          // how many bumps around the ring
   const amp = 0.025 + r() * 0.03
   const phase = r() * Math.PI * 2
   const tilt = (r() - 0.5) * 0.13       // the whole loop leans a little
-  const N = 26
+  // ⚠️ Sampled densely, because these points are now spliced into a run whose own
+  // samples are 3px apart and the whole thing is drawn as a POLYLINE.
+  const N = 72
   const pts = []
   for (let i = 0; i <= N; i++) {
     const t = i / N
@@ -214,7 +221,7 @@ function lasso(cx, cy, w, h, seed = 1) {
     const cs = Math.cos(tilt), sn = Math.sin(tilt)
     pts.push({ x: cx + x * cs - y * sn, y: cy + x * sn + y * cs })
   }
-  return crPath(pts)
+  return pts
 }
 
 function lassoOld(cx, cy, w, h) {
@@ -319,27 +326,24 @@ function measure() {
   }
   const inside = (x, y) => blocks.some((k) => x > k.l && x < k.r && y > k.t && y < k.b)
 
-  const segs = []
+  // ── trim the through-curve, keeping the raw points ──
+  const runs = []
   const probe = document.createElementNS('http://www.w3.org/2000/svg', 'path')
   for (let i = 0; i < pts.length - 1; i++) {
     const p0 = pts[i - 1] || pts[i]
     const p3 = pts[i + 2] || pts[i + 1]
     const a = stops[i]
     const b = Math.max(stops[i + 1], a + 0.02)
-    const d = crSegment(p0, pts[i], pts[i + 1], p3)
-    probe.setAttribute('d', d)
+    probe.setAttribute('d', crSegment(p0, pts[i], pts[i + 1], p3))
     const L = probe.getTotalLength()
     if (!L) continue
     const STEP = 3
     let run = null
     const flush = (endT) => {
       if (!run || run.pts.length < 2) { run = null; return }
-      const wa = a + (b - a) * (run.t0 / L)
-      const wb = Math.max(wa + 0.008, a + (b - a) * (endT / L))
-      segs.push({
-        d: 'M ' + run.pts.map((q) => `${q.x.toFixed(1)} ${q.y.toFixed(1)}`).join(' L '),
-        win: `${wa.toFixed(3)},${wb.toFixed(3)}`,
-      })
+      run.wa = a + (b - a) * (run.t0 / L)
+      run.wb = Math.max(run.wa + 0.008, a + (b - a) * (endT / L))
+      runs.push(run)
       run = null
     }
     for (let t = 0; t <= L; t += STEP) {
@@ -350,11 +354,56 @@ function measure() {
     }
     flush(L)
   }
-  segments.value = segs
-  loops.value = anchors.map((a, j) => ({
-    d: lasso(a.x, a.y, a.w, a.h, j + 1),
-    win: `${at[j].toFixed(3)},${(at[j] + 0.045).toFixed(3)}`,
-  }))
+
+  // ── ONE STROKE: the loop is the start of the run that leaves it ──
+  // ⚠️ The lasso used to be its own path, drawn over a separately-trimmed line —
+  // so the pen appeared to circle the word and then, elsewhere, a second line
+  // started. It is the same stroke now: for each gift, the loop is PREPENDED to
+  // the run that resumes after it, and the loop is told to finish pointing at that
+  // run's first point (`exitAngle`), so the two meet head-on with no corner. The
+  // gap the line leaves before each memory note is untouched — that is the one
+  // break in the stroke, and it is deliberate.
+  anchors.forEach((a, j) => {
+    const nextIdx = runs.findIndex((rn) => rn.wa >= at[j] && !rn.claimed)
+    if (nextIdx < 0) {
+      // the last gift has no run after it — the loop closes the trace on its own
+      runs.push({ pts: lasso(a.x, a.y, a.w, a.h, j + 1), wa: at[j], wb: at[j] + 0.05 })
+      return
+    }
+    const rn = runs[nextIdx]
+    const head = rn.pts[0]
+    const exitAngle = Math.atan2(head.y - a.y, head.x - a.x)
+    const lp = lasso(a.x, a.y, a.w, a.h, j + 1, exitAngle)
+    // ⚠️ BRIDGE the two. Ending the loop at the right ANGLE is not the same as
+    // ending it at the right POINT — the loop finishes on its own ellipse and the
+    // run starts wherever the trimmed through-curve resumed, up to 85px away, and
+    // a polyline joined them with a straight chord. That chord is exactly the
+    // "loop, then separately a line" the morph is meant to remove. A Catmull-Rom
+    // through the last two loop points and the first two run points matches the
+    // tangent at both ends, so the pen comes out of the circle already travelling.
+    const bridge = []
+    if (lp.length > 1 && rn.pts.length > 1) {
+      probe.setAttribute('d', crSegment(lp[lp.length - 2], lp[lp.length - 1], rn.pts[0], rn.pts[1]))
+      const BL = probe.getTotalLength()
+      for (let t = 3; t < BL; t += 3) bridge.push(probe.getPointAtLength(t))
+    }
+    rn.pts = [...lp, ...bridge, ...rn.pts]
+    rn.wa = at[j]
+    rn.claimed = true
+  })
+
+  // ⚠️ A POLYLINE, not `crPath`. Catmull-Rom through these points overshot badly at
+  // the splice: the loop's samples are ~15px apart and the run's are 3px, and a
+  // spline fed wildly uneven spacing throws a wide tangent at the join — the pen
+  // appeared to leave the loop, swing out and double back. Both halves are already
+  // sampled finely enough that straight joins are invisible.
+  segments.value = runs
+    .sort((m, n) => m.wa - n.wa)
+    .map((rn) => ({
+      d: 'M ' + rn.pts.map((q) => `${q.x.toFixed(1)} ${q.y.toFixed(1)}`).join(' L '),
+      win: `${rn.wa.toFixed(3)},${rn.wb.toFixed(3)}`,
+    }))
+  loops.value = []
 
   // Text fades in just ahead of the line reaching it.
   anchors.forEach((a, j) => {
@@ -494,7 +543,10 @@ onBeforeUnmount(() => {
   font-family: 'Over the Rainbow', cursive;
   font-size: clamp(1.05rem, 2.1vw, 1.6rem);
   opacity: 0.9;
-  margin: 0 0 0.75rem;
+  /* ⚠️ Room for the lasso. The loop is sized from the NAME's box and has to clear
+     the memory line above it; at 0.75rem it was caught between cutting the name
+     and grazing the sentence. */
+  margin: 0 0 1.7rem;
   line-height: 1.45;
 }
 .gift-name {
