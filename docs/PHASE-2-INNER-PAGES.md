@@ -16,7 +16,7 @@ state, everything below it is history — newest first.)
 > | **US** | margin notes: the whole page in one hand, **nothing set in type**; taped polaroids | **written word by word** off each block's own rect |
 > | **THE BIG DAY** | **the calendar** — October 2026, the two days ringed in marker; hover one and the marker writes the times beside it, with the day set out as a programme below | a latch: it sets, then holds still |
 > | **IN FRAMES** | **the archive** — one window in the room showing a path (`...\Media\`), the three events as folders inside; click one and it opens, then the window navigates into it | **no scroll**: folder-open, then a stacked-view swap; the room's film on a time loop |
-> | **WITH LOVE** | the ink wanders past scattered gift words and **lassoes** each; hover shows the item on torn paper | measured spline + `.scrub`/`.write` |
+> | **WITH LOVE** | **the strung room** — one thread across the page in real catenaries, a paper tag hanging from it per gift; turn a tag over for the note | catenaries solved from the section's own box |
 >
 > **ALSO DONE & LIVE (prod-verified):** the homepage carousel (per-card hover/click via
 > `posterAtScreen`, scroll-following lift, live cursor tint, names + date + countdown, welcome note,
@@ -105,6 +105,59 @@ above. Constant speed and a reversed exit are not in conflict.
 ⚠️ **Perforations must be painted INTO `.film`'s background**, not as absolutely-positioned children.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
+
+**▶▶ STATE (2026-09-04, latest) — WITH LOVE IS A STRUNG ROOM. THE SCRIBBLE IS GONE.**
+User: *"The lines on with love are still not elegant enough… Put yourself in the shoes of a world
+class ui/ux designer and come up with a plan that reimagines that page… elegant but simple and most
+of all — extremely unique and outstanding."*  Direction chosen from three: **the thread and the
+tags.**
+
+- ⚠️⚠️ **THE GESTURE WAS WRONG, NOT THE TUNING.** Six rounds went into making the wandering ink line
+  look inevitable and none of them could, for two reasons that no amount of smoothing reaches.
+  **Circling a word is a proofreader's CORRECTION mark**, not a gesture of giving. And the line
+  between the circles was **invented** — it had no job, so there was no right answer for its shape.
+  Elegance is marks that had to be there. Everything below follows from replacing the gesture.
+- **One thread strung across the page, a paper tag hanging from it per gift.** The tag carries the
+  name; turn it over (hover, focus, or centre-of-screen on touch) for the item and its note. That is
+  the whole page. It also **deletes far more than it adds**: `makeLoop`, `bloom`, `rose`, `sweep`,
+  `makeLeg`, `legStyles`, `cutAt`, `cubic`, the per-gift block trimming, the torn-scrap clip-paths
+  and the seeded ornament vocabulary are all gone, replaced by one catenary solver.
+- **The curve is SOLVED, not drawn** — `y = a·cosh((x−mid)/a)`, the shape a hanging chain takes,
+  with `a` found by bisection from the sag you actually want (`sag(a) = a(cosh(half/a) − 1)` is
+  monotonic). *That* is where the elegance comes from: a curve that exists in physics needs no
+  tuning, and every previous pass was tuning a curve that existed only because someone drew it.
+  - ⚠️ **Screen space runs y DOWNWARD**, so a hanging line is a cosh *reflected*: `y + base − a·cosh`.
+    Written the other way round it solves and samples perfectly and draws three arches.
+  - ⚠️ **THE ANCHORS MUST BE LEVEL.** The first pass strung ONE thread in descending swags — nail
+    high left, lower right, lower again left — because a descending catenary sags toward its lower
+    anchor, which alternates the tags across the page for free. It does, and it also makes every
+    swag dip through the two below it: **measured sag 415px against a row of 275**, so the page read
+    as a pile of crossing arcs. Level lines cannot cross. The thread stays continuous because it
+    **turns outside the frame** — off one edge, down to the next line's height in the margin nobody
+    sees, and back. One string, three passes, no visible corner. (A few pixels of `tilt` are sheared
+    across each span, because nobody strings a line dead level; at ≈0.6° the true unequal-anchor
+    solve differs by hundredths of a pixel, so it stays one solver.)
+- ⚠️⚠️ **THE THREAD FADES; IT DOES NOT DRAW.** Scrubbing a `stroke-dashoffset` down six catenaries
+  costs **~11,000px of ink against ~2,400px of scroll** — the pen races, and no window is wide
+  enough to fix it. But a string strung across a room **was never drawn**: it is simply there. This
+  retires the draw-speed complaint instead of tuning it for a seventh time. The arrival belongs to
+  the tags, which drop in one at a time, left to right.
+- ⚠️ **The paper is WARM stock on a cool ground.** At `#F4F1EA` the tags sat within 0.08 of the
+  page's own luminance and looked half-faded at full opacity — the reveal was being blamed for what
+  was a value problem. `#EFE6D4` now, with a punched hole (one path, `fill-rule="evenodd"`, so the
+  thread genuinely shows through it), a reinforcing eyelet, seeded size and hang-angle variation.
+- ⚠️ **Two tags per line only where there is room.** At 390px a pair of 118px tags share a 390px
+  line and their placement bands overlap — measured collision. Portrait gets one per line and twice
+  as many lines.
+- ⚠️ The bottom clearance is solved against the **hole**, not the nail: tags hang up to a full sag
+  below their anchor, and reckoning the row grid from the anchor overflowed the section by 15px.
+- **Prod-build verified at 1440×900 and 390×844**: 0 tag overlaps, every tag inside the frame, the
+  last tag clear of the section bottom (1492/1620 desktop, 2315/2448 portrait), the reveal sequences
+  left to right (`--in` 1,1,0.46,0,0,0 → 1,1,1,1,1,1), no horizontal overflow, turn works on hover
+  and on focus, and all four chapters still deep-link and scroll with 0 console errors.
+- ⚠️ Probe lesson: `[[0,0.22],[1,0.5]].entries()` yields `[index, PAIR]`, so the scroll target came
+  out `NaN`, `Math.abs(x − NaN) > 14` is false, the loop never ran, and three screenshots of an
+  unscrolled page looked like the tags had stopped revealing. The page was fine.
 
 **▶▶ STATE (2026-09-04, latest) — WITH LOVE: THE PEN LEARNS TO LEAVE A CIRCLE. AND THE
 HOMEPAGE STOPS LEADING.**
