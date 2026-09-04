@@ -45,6 +45,10 @@ export const CHAPTERS = [
     video: asset('/video/in-frames.mp4'),
     txt: asset('/images/cu-txt3.png'),
     svg: asset('/images/cu-p3.png'),
+    // ⚠️ The only chapter whose PAGE ground is dark. The nav is inked in `accent`,
+    // which on this page is also roughly the room's colour — so the nav has to flip
+    // to `accentLight` once you are past the hero or it vanishes into the room.
+    darkPage: true,
     index: 2,
   },
   {
@@ -1751,6 +1755,11 @@ export function useChapterScene() {
     // Forward ring-reassembly primitives (de 0→1), reserved for the scroll-driven BOTTOM exit rebuild
     // (page scrolls out → ring "outro" section; see docs/PHASE-2-INNER-PAGES.md). Currently driven only
     // by the ?debug __exit* hooks.
+    // ⚠️ The renderer's clear colour is the chapter ACCENT during an exit, and the
+    // nav is inked in that same accent. The canvas carries no CSS background, so a
+    // DOM walk behind the nav cannot see it — the page has to ask the scene.
+    // Returns true only once the accent is actually opaque enough to matter.
+    clearIsDark: () => exitBgAlpha > 0.6,
     beginExit,        // capture the selected/scrolled state + hide the chapter's own cards
     setExitProgress,  // de 0→1 — ring rises from below, spins forward, un-tilts; hero returns from off-top
     cancelExit,       // abort → restore the selected/scrolled state

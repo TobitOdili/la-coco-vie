@@ -51,7 +51,7 @@
           <!-- BRAND WORDMARK — the couple's names. -->
           <div
             class="wordmark whitespace-nowrap text-[17px] lg:text-[26px] pointer-events-auto"
-            :style="{ color: accentColor }"
+            :style="{ color: navInk }"
             @click="$emit('go-home')"
           >
             COVENANT <span class="amp">&amp;</span> UVIE
@@ -112,7 +112,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { SITE } from '~/site.config'
 
 // Whole days until the next wedding (static per page load — day resolution needs no
@@ -133,7 +133,11 @@ const countLabel = computed(() =>
   nextEvent.value === (SITE.events || [])[0] ? SITE.dateLabel : nextEvent.value?.label
 )
 
-defineProps({
+// ⚠️ Over a dark ground the nav's own accent IS the background — see the flag's
+// definition in `pages/[slug].vue`. Flip to the chapter's light tone there.
+const navOnDark = useState('navOnDark', () => false)
+
+const props = defineProps({
   isHome: {
     type: Boolean,
     default: true,
@@ -147,6 +151,14 @@ defineProps({
     default: false,
   },
 })
+
+// The wordmark, and every `.menu-item` via the CSS below, flip together.
+const navInk = computed(() => (navOnDark.value ? 'var(--accentLight)' : props.accentColor))
+
+// `.menu-item` is coloured from main.css, so the flag has to reach CSS too.
+watch(navOnDark, (on) => {
+  if (import.meta.client) document.body.classList.toggle('nav-on-dark', !!on)
+}, { immediate: true })
 
 defineEmits(['toggle-about', 'go-home', 'toggle-sound'])
 </script>

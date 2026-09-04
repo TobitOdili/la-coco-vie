@@ -6,7 +6,7 @@
 > Tools: Browserless (Playwright/CDP) against the live prod URL, bundle greps, DOM/computed-style probes.
 
 > **Doc map:** this file is the **forensic issue history** — per-issue root causes, fixes,
-> and commit refs (numbered #1–#32). For orientation start at [`README.md`](README.md);
+> and commit refs (numbered #1–#34). For orientation start at [`README.md`](README.md);
 > how-it-works is [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); live status is
 > [`PROGRESS.md`](PROGRESS.md). The **Priority Order table near the bottom is the quickest
 > index** of every issue and its status.
@@ -1138,6 +1138,50 @@ WELCOME now returns the label's own `SPAN`, and the panel opens on tap.
 
 ---
 
+## Issue #33 — The nav vanished into the page on every chapter 🟠 HIGH (2026-09-03)
+
+### Symptom
+User: *"the logo and header elements are same color as the header bg and doesn't show till the user
+scrolls down."* Reported on With Love; it was every chapter.
+
+### Root cause
+**The nav is inked in the chapter's `accent`, and two backgrounds on every chapter page ARE that
+accent:** the exit background the scene paints behind the reassembling ring as you scroll off the
+bottom, and In Frames' dark room. Measured contrast where they meet — **1.08** on With Love and The
+Big Day, **1.33** on In Frames, **1.46** on US. Anything under 3 is unreadable; 1.08 is invisible.
+
+### Fix, and two wrong turns worth recording
+The flag that flips the nav to `accentLight` is **measured, not inferred**, and the first two
+attempts were both inferred and both wrong:
+1. *"In Frames is a dark chapter, so go light there"* — but its page GROUND is its light tone and
+   only the room section is dark. *"The exit has begun (de > 0.12)"* — but the exit spends its first
+   half scrolling the article out over the light ground. The nav went light over light: 1.02–1.07,
+   no better than before.
+2. Walking the DOM behind the nav for the first opaque background fixed the CSS cases (With Love
+   1.08 → 5.68, US 1.46 → 4.51) but not the canvas: the WebGL clear colour has no CSS background to
+   find. The scene exposes `clearIsDark()` for that.
+⚠️ And it could not live inside `updateExit()`, which early-returns in several states — including at
+scroll 0, where a selected chapter already has the accent painted behind the transparent hero. It
+runs on every Lenis scroll and once on arrival.
+
+---
+
+## Issue #34 — "thank you" was clipped at the descender 🟡 MEDIUM (2026-09-03)
+
+### Symptom
+User: *"Thank you seems cutoff on the bottom of the Y."*
+
+### Root cause
+The `.write` clip-path reveal was `inset(0 …% 0 0)` — zero vertical inset, so it clipped at the line
+box, and the script face's descenders hang **below** it. The tail of the y was shaved off.
+
+### Fix
+`inset(-0.3em …% -0.45em 0)`, the same slack US's writing already had.
+⚠️ **This is the second page to need it.** Any clip-path reveal over a script face needs negative
+vertical inset; the line box is not the ink box.
+
+---
+
 ## Updated Priority Order (as of 2026-05-27)
 
 | # | Issue | Priority | Status |
@@ -1158,6 +1202,8 @@ WELCOME now returns the label's own `SPAN`, and the panel opens on tap.
 | ~~7~~ | ~~Scroll-driven chapter exit~~ | ~~🟢 Low~~ | ✅ Fixed (`bcc9b342`) — back-scroll past threshold runs the reverse animation via `onScroll`; `onDeselect` callback resets app state. Verified live. |
 | ~~15~~ | ~~Chapter selection broken — hit layer click-transparent~~ | 🔴 High | ✅ Fixed (`bbedb5ec`) — `#canvas-hit-layer` inherited `pointer-events:none`; clicks fell through to `.app-root` so `@click` never fired. Set `pointer-events:auto`. Found while verifying #7; verified live (clicking now selects). |
 | ~~16~~ | ~~About panel gray-on-gray when opened from homepage~~ | ~~🟠 High~~ | ✅ **Fixed 2026-09-03** — both vars resolved to the literal `gray`, so the welcome panel showed NOTHING. The `html` defaults are the site's real palette now. Mis-graded 🟢 Low for three months. See §Issue #16. |
+| ~~33~~ | ~~The nav vanished into the page on every chapter~~ | ~~🟠 High~~ | ✅ Fixed 2026-09-03 — nav ink is the chapter accent and so are the exit background and In Frames' room. Contrast 1.08→5.68 (With Love), 1.46→4.51 (US). Measured ground, not inferred. See §Issue #33. |
+| ~~34~~ | ~~"thank you" clipped at the descender~~ | ~~🟡 Medium~~ | ✅ Fixed — a `.write` clip with zero vertical inset shaves a script face's descenders. See §Issue #34. |
 | ~~32~~ | ~~No way into the welcome panel on a phone~~ | ~~🟠 High~~ | ✅ Fixed 2026-09-03 — the centre wordmark block's `pointer-events-auto` wrapper is as wide as the countdown line and was painted over the WELCOME label, swallowing every tap. Moved onto the wordmark itself. See §Issue #32. |
 | ~~17~~ | ~~Every image 404s on GitHub Pages — `import.meta.env.BASE_URL` is `'./'` in Nuxt production builds~~ | ~~🔴 High~~ | ✅ Fixed (`67693fd3`) — baked via `vite.define.__APP_BASE__`, one helper `utils/asset.js`. Verified on both hosts. See §Issue #17. |
 | ~~18~~ | ~~Template ref inside `v-for` is an array → threw on frame 1 → killed the whole rAF loop~~ | ~~🔴 High~~ | ✅ Fixed (`5d19b9e7`) — query the DOM inside `tick()`. See §Issue #18. |

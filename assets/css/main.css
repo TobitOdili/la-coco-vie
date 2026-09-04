@@ -237,6 +237,14 @@ body::after {
   color: var(--accent);
 }
 
+/* ⚠️ The nav flips to the chapter's LIGHT tone over a dark ground (In Frames' room,
+   and the exit background the scene paints as you scroll off the bottom of ANY
+   chapter). Both are the chapter's `accent`, which is also the nav's ink — measured
+   contrast ratios down to 1.08 before this. The flag is set in `pages/[slug].vue`. */
+body.nav-on-dark .menu-item,
+body.nav-on-dark .menu-item svg { color: var(--accentLight); fill: var(--accentLight); }
+
+
 @media (min-width: 640px) {
   .menu-item {
     font-size: 0.875rem;

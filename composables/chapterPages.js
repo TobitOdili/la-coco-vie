@@ -81,6 +81,15 @@ export const POPUPS = {
   },
 
   // “With Love” — dummy registry items until the real list arrives.
+  // ⚠️ Was a bordered box mid-page on With Love ("or, simply —"). The user's note:
+  // it read as out of character — a hard rectangle with a button, on a chapter that
+  // is otherwise ink on paper. It is the floating dock card now, the same widget the
+  // other chapters use, so the offer is present without interrupting the writing.
+  cashNote: {
+    title: 'Or, simply —',
+    params: ['toward the honeymoon', 'no account numbers here'],
+    url: '#',
+  },
   regFund: {
     title: 'The Honeymoon Fund',
     params: ['contribute any amount', 'placeholder link'],
@@ -409,20 +418,7 @@ export const CHAPTER_PAGES = {
             image: PLACEHOLDER_ITEM, x: 66, claimed: false,
           },
         ],
-        popups: [],
-      },
-      {
-        kind: 'cash',
-        heading: 'or, simply —',
-        body:
-          'if you would rather send something toward the honeymoon, that is more than ' +
-          'welcome, and we will think of you every single day of it.',
-        cta: 'how to send it',
-        // ⚠️ PLACEHOLDER — becomes a payment link or a get-in-touch destination.
-        // NO bank details on the page (user decision 2026-08-10).
-        url: '#',
-        note: 'no account numbers here, on purpose — this just puts you in touch with us.',
-        popups: [],
+        popups: ['cashNote'],
       },
       {
         kind: 'sign',

@@ -159,6 +159,43 @@ function doExit() {
   router.push('/')
 }
 
+// ── nav legibility ──────────────────────────────────────────────────────────
+// ⚠️ The nav is inked in the chapter's `accent`, and TWO backgrounds on every
+// chapter page are that same accent: In Frames' room, and the exit background the
+// scene paints behind the ring as you scroll off the bottom. Where they meet, the
+// nav disappears — measured contrast ratios of 1.08 on With Love and The Big Day,
+// 1.33 on In Frames, 1.46 on US. This flag flips it to `accentLight` over those,
+// and `SiteNav` reads it. Shared state rather than props because the page owns the
+// scroll and the nav is mounted a level above it.
+const navOnDark = useState('navOnDark', () => false)
+
+// ⚠️ MEASURED, not guessed. The first attempt keyed this off "In Frames is a dark
+// chapter" and "the exit has begun", and both were wrong: In Frames' page ground is
+// its LIGHT tone and only the room section is dark, and the exit spends its first
+// half scrolling the article out over a light background. The nav flipped to light
+// while the ground was still light — contrast 1.02–1.07, no better than before.
+// So: read what is ACTUALLY behind the nav. Walk the elements under the nav's
+// centre point, skip the nav itself, and take the first one with an opaque
+// background. The WebGL canvas has no CSS background, so the exit — which paints
+// the chapter accent through the renderer's clear colour — is OR'd in separately.
+const NAV_PROBE_Y = 10
+function syncNavInk() { navOnDark.value = groundIsDark() }
+function groundIsDark() {
+  if (!import.meta.client) return false
+  const els = document.elementsFromPoint(Math.round(window.innerWidth / 2), NAV_PROBE_Y)
+  for (const el of els) {
+    if (el.closest('.\\!fixed')) continue          // the nav's own fixed bars
+    if (el === document.body || el === document.documentElement) break
+    const m = getComputedStyle(el).backgroundColor.match(/[\d.]+/g)
+    if (!m) continue
+    if (m.length > 3 && Number(m[3]) < 0.5) continue  // see-through, keep walking
+    const lum = (c) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }
+    return 0.2126 * lum(+m[0]) + 0.7152 * lum(+m[1]) + 0.0722 * lum(+m[2]) < 0.35
+  }
+  // Nothing opaque in the DOM means we are looking straight at the canvas.
+  return !!webglSceneRef?.value?.scene?.clearIsDark?.()
+}
+
 // BOTTOM exit — driven by scroll position within the .chapter-outro section.
 function updateExit(scrollY) {
   if (!ready || exiting || !lenis) return
@@ -175,6 +212,7 @@ function updateExit(scrollY) {
     const span = Math.max(1, end - outroTop)
     de = DROP_START + Math.min(1, (scrollY - outroTop) / span) * (1 - DROP_START)  // the drop
   }
+  // The exit background is the chapter accent, so the nav must go light over it.
   if (de <= 0) {
     if (exitEngaged) { scene.cancelExit?.(); exitEngaged = false }  // scrolled back up into the article
     return
@@ -209,7 +247,13 @@ onMounted(() => {
     content: scrollEl.value,
     autoRaf: true,
   })
-  lenis.on('scroll', (e) => { scene?.setScroll(e.scroll); updateExit(e.scroll) })
+  lenis.on('scroll', (e) => { scene?.setScroll(e.scroll); syncNavInk(); updateExit(e.scroll) })
+  // ⚠️ Also on arrival: a chapter selected at scroll 0 already has the accent
+  // painted behind the transparent hero, so the nav can be invisible before the
+  // visitor has scrolled at all. And `updateExit` early-returns in several states,
+  // which is why this cannot live inside it.
+  syncNavInk()
+  setTimeout(syncNavInk, 400)
   scene?.setScroll(0)
 
   // Hold scrolling until the select-in animation settles. Scrolling mid-select used
@@ -266,6 +310,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  navOnDark.value = false   // the homepage has no dark ground
   pageEl.value?.removeEventListener('wheel', onWheel)
   pageEl.value?.removeEventListener('touchstart', onTouchStart)
   pageEl.value?.removeEventListener('touchmove', onTouchMove)

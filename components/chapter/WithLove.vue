@@ -3,15 +3,15 @@
     <template v-for="(s, i) in sections" :key="i">
       <!-- ── Opening · the ink writes the thank-you, before anything is asked. ── -->
       <section v-if="s.kind === 'open'" class="chapter-section love-scene open-scene" :data-idx="i">
-        <div class="lead fade" data-window="0.04,0.24">{{ s.lead }}</div>
-        <div class="big-thanks write" data-window="0.14,0.58">{{ s.big }}</div>
+        <div class="lead fade" data-window="0.02,0.14">{{ s.lead }}</div>
+        <div class="big-thanks write" data-window="0.08,0.34">{{ s.big }}</div>
         <svg class="flourish" viewBox="0 0 600 60" preserveAspectRatio="none" aria-hidden="true">
-          <path class="scrub" data-window="0.5,0.72" pathLength="1"
+          <path class="scrub" data-window="0.30,0.42" pathLength="1"
             d="M 20 34 C 160 12, 300 12, 430 30 C 500 40, 560 34, 585 22"
             :stroke="ink" stroke-width="3" fill="none" stroke-linecap="round" />
         </svg>
-        <div class="sub fade" data-window="0.6,0.8">{{ s.sub }}</div>
-        <div class="pivot fade" data-window="0.8,0.97">{{ s.pivot }}</div>
+        <div class="sub fade" data-window="0.38,0.50">{{ s.sub }}</div>
+        <div class="pivot fade" data-window="0.52,0.64">{{ s.pivot }}</div>
       </section>
 
       <!-- ── Gifts · the words are scattered; one line wanders through and lassoes
@@ -42,46 +42,36 @@
         </div>
       </section>
 
-      <!-- ── Cash · the only thing to click in the whole chapter. ── -->
-      <section v-else-if="s.kind === 'cash'" class="chapter-section love-scene cash-scene" :data-idx="i">
-        <div class="cash-card fade" data-window="0.12,0.34">
-          <h3 class="cash-heading">{{ s.heading }}</h3>
-          <p class="cash-body">{{ s.body }}</p>
-          <a class="cash-cta" :href="s.url" target="_blank" rel="noopener noreferrer">{{ s.cta }}</a>
-          <p class="cash-note">{{ s.note }}</p>
-        </div>
-      </section>
-
       <!-- ── Signing · the ink splits in two and signs both names. ── -->
       <section v-else-if="s.kind === 'sign'" class="chapter-section love-scene sign-scene" :data-idx="i">
-        <div class="closer fade" data-window="0.14,0.34">{{ s.closer }}</div>
+        <div class="closer fade" data-window="0.08,0.22">{{ s.closer }}</div>
         <div class="sign-block">
           <svg class="fork" viewBox="0 0 1000 160" preserveAspectRatio="none" aria-hidden="true">
-            <path class="scrub" data-window="0.16,0.32" pathLength="1" d="M 500 0 C 500 40, 500 70, 500 88"
+            <path class="scrub" data-window="0.12,0.24" pathLength="1" d="M 500 0 C 500 40, 500 70, 500 88"
               :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55" />
-            <path class="scrub" data-window="0.32,0.44" pathLength="1" d="M 500 88 C 440 118, 300 128, 230 160"
+            <path class="scrub" data-window="0.24,0.34" pathLength="1" d="M 500 88 C 440 118, 300 128, 230 160"
               :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55" />
-            <path class="scrub" data-window="0.32,0.44" pathLength="1" d="M 500 88 C 560 118, 700 128, 770 160"
+            <path class="scrub" data-window="0.24,0.34" pathLength="1" d="M 500 88 C 560 118, 700 128, 770 160"
               :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" opacity="0.55" />
           </svg>
           <div class="sig-row">
             <div class="sig">
-              <span class="sig-name write" data-window="0.42,0.58">{{ s.names[0] }}</span>
+              <span class="sig-name write" data-window="0.30,0.42">{{ s.names[0] }}</span>
               <svg class="sig-line" viewBox="0 0 360 24" preserveAspectRatio="none" aria-hidden="true">
-                <path class="scrub" data-window="0.56,0.66" pathLength="1" d="M 12 14 C 120 6, 250 6, 348 12"
+                <path class="scrub" data-window="0.42,0.52" pathLength="1" d="M 12 14 C 120 6, 250 6, 348 12"
                   :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" />
               </svg>
             </div>
             <div class="sig">
-              <span class="sig-name write" data-window="0.52,0.68">{{ s.names[1] }}</span>
+              <span class="sig-name write" data-window="0.38,0.50">{{ s.names[1] }}</span>
               <svg class="sig-line" viewBox="0 0 360 24" preserveAspectRatio="none" aria-hidden="true">
-                <path class="scrub" data-window="0.66,0.76" pathLength="1" d="M 12 14 C 120 6, 250 6, 348 12"
+                <path class="scrub" data-window="0.50,0.60" pathLength="1" d="M 12 14 C 120 6, 250 6, 348 12"
                   :stroke="ink" stroke-width="2.5" fill="none" stroke-linecap="round" />
               </svg>
             </div>
           </div>
         </div>
-        <div class="tail fade" data-window="0.80,0.92">{{ s.tail }}</div>
+        <div class="tail fade" data-window="0.62,0.74">{{ s.tail }}</div>
       </section>
     </template>
   </div>
@@ -198,15 +188,29 @@ function measure() {
   // you are looking at the word.
   const at = anchors.map((a) => (a.y + vh / 2) / (H + vh))
 
-  const pts = [
-    { x: anchors[0].x, y: 0 },
-    ...anchors.map((a) => ({ x: a.x, y: a.y })),
-    { x: anchors[anchors.length - 1].x, y: H },
-  ]
-  const stops = [Math.max(0.01, at[0] - 0.14), ...at, 1]
+  // ⚠️ THE LINE MUST NOT CROSS THE WORDS. It used to run through each gift's
+  // CENTRE, so the spline struck straight through the name it was meant to be
+  // circling. Each anchor now contributes TWO points — an entry just above the
+  // word and an exit just below — and the segment BETWEEN them is not drawn at
+  // all: the lasso is what joins them. The line comes down, the loop goes round,
+  // the line carries on.
+  const PAD = 16
+  const pts = [{ x: anchors[0].x, y: 0 }]
+  const stops = [Math.max(0.01, at[0] - 0.14)]
+  const skip = new Set()          // indices of segments the lasso replaces
+  anchors.forEach((a, j) => {
+    pts.push({ x: a.x, y: a.y - (a.h / 2 + PAD) })   // entry, above the word
+    stops.push(Math.max(0.01, at[j] - 0.01))
+    skip.add(pts.length - 1)                          // entry → exit is the lasso
+    pts.push({ x: a.x, y: a.y + (a.h / 2 + PAD) })   // exit, below the word
+    stops.push(at[j] + 0.045)
+  })
+  pts.push({ x: anchors[anchors.length - 1].x, y: H })
+  stops.push(1)
 
   const segs = []
   for (let i = 0; i < pts.length - 1; i++) {
+    if (skip.has(i)) continue     // the lasso owns this stretch
     const p0 = pts[i - 1] || pts[i]
     const p3 = pts[i + 2] || pts[i + 1]
     const a = stops[i]
@@ -248,7 +252,7 @@ function tick() {
         const [a, b] = win.split(',').map(Number)
         const lp = Math.min(1, Math.max(0, (p - a) / (b - a)))
         if (el.classList.contains('scrub')) el.style.strokeDashoffset = String(1 - lp)
-        else if (el.classList.contains('write')) el.style.clipPath = `inset(0 ${((1 - lp) * 100).toFixed(1)}% 0 0)`
+        else if (el.classList.contains('write')) el.style.clipPath = `inset(-0.3em ${((1 - lp) * 100).toFixed(1)}% -0.45em 0)`
         else el.style.opacity = String(lp)
       }
       if (coarse() && scene.classList.contains('gifts-scene')) {
@@ -299,7 +303,10 @@ onBeforeUnmount(() => {
 }
 .scrub { stroke-dasharray: 1; stroke-dashoffset: 1; }
 .fade { opacity: 0; }
-.write { clip-path: inset(0 100% 0 0); }
+/* ⚠️ Vertical slack on the clip. `inset(0 …% 0 0)` clips at the line box, and a
+   script face's descenders hang BELOW it — the y of "thank you" was cut off at the
+   tail. Same fix US needed. */
+.write { clip-path: inset(-0.3em 100% -0.45em 0); }
 
 /* ── opening ── */
 .open-scene { min-height: 116dvh; }
@@ -398,29 +405,6 @@ onBeforeUnmount(() => {
 }
 
 /* ── cash ── */
-.cash-scene { min-height: 92dvh; }
-.cash-card {
-  border: 1px solid currentColor;
-  padding: clamp(2.2rem, 5vw, 3.2rem) clamp(1.6rem, 5vw, 3.4rem);
-  max-width: 32rem;
-}
-.cash-heading { font-family: 'Italiana', serif; font-size: clamp(1.3rem, 3vw, 2rem); margin: 0 0 1rem; }
-.cash-body { font-size: 0.95rem; line-height: 1.7; opacity: 0.8; margin: 0 0 1.8rem; }
-.cash-cta {
-  display: inline-block;
-  font-family: 'Bague', sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-  font-size: 0.74rem;
-  padding: 0.8rem 1.9rem;
-  border: 1px solid currentColor;
-  color: inherit;
-  text-decoration: none;
-  transition: background 0.4s ease, color 0.4s ease;
-}
-.cash-cta:hover { background: var(--accent, #2e4a52); color: var(--accentLight, #e8edf2); }
-.cash-note { margin: 1.3rem 0 0; font-size: 0.76rem; line-height: 1.6; opacity: 0.55; }
-
 /* ── signing ── */
 .sign-scene { min-height: 112dvh; }
 .closer { font-family: 'Italiana', serif; font-size: clamp(1.4rem, 3vw, 2.4rem); margin-bottom: 2rem; }
