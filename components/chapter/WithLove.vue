@@ -168,7 +168,54 @@ function crPath(pts) {
 }
 // A lasso: 1.05 turns around the word's box with a wobbling radius and a tail,
 // so it reads as drawn by hand rather than stamped.
-function lasso(cx, cy, w, h) {
+// ⚠️ SEEDED, not `Math.random()`. `measure()` re-runs on every resize and on
+// `document.fonts.ready`, so a live random would re-roll the whole drawing under
+// the reader — the line would twitch on every breakpoint. A seed per item gives a
+// hand that is different everywhere and the same every time.
+function rng(seed) {
+  let t = seed * 1103515245 + 12345
+  return () => {
+    t = (t * 1103515245 + 12345) % 2147483648
+    return t / 2147483648
+  }
+}
+
+// ⚠️ NO TWO LASSOS ALIKE. This used to be one ellipse with a fixed wobble, drawn
+// six times — same size, same start angle, same overshoot, and it read as a
+// repeated graphic rather than as something drawn by hand. Everything is now
+// rolled per item: the radii, where the pen starts, how far past the start it
+// carries on (sometimes more than a full extra turn), how much the radius drifts
+// as it goes round, and a per-vertex jitter. A real circling of a word is never
+// closed and never round.
+function lasso(cx, cy, w, h, seed = 1) {
+  const r = rng(seed * 7 + 3)
+  const rx = w / 2 + 18 + r() * 22
+  const ry = h / 2 + 9 + r() * 14
+  const from = Math.PI * (0.75 + r() * 0.9)
+  // 1.05–1.55 turns: some barely close, some come round again
+  const turns = 1.05 + r() * 0.5
+  const to = from + Math.PI * 2 * turns
+  const drift = 0.06 + r() * 0.1        // the loop spirals slightly as it goes
+  const freq = 2.2 + r() * 2.4          // how many bumps around the ring
+  const amp = 0.03 + r() * 0.05
+  const phase = r() * Math.PI * 2
+  const tilt = (r() - 0.5) * 0.28       // the whole loop leans a little
+  const N = 26
+  const pts = []
+  for (let i = 0; i <= N; i++) {
+    const t = i / N
+    const a = from + (to - from) * t
+    const wob = 1 + amp * Math.sin(a * freq + phase) - drift * t
+    let x = Math.cos(a) * rx * wob
+    let y = Math.sin(a) * ry * wob
+    // lean it, so it is not axis-aligned
+    const cs = Math.cos(tilt), sn = Math.sin(tilt)
+    pts.push({ x: cx + x * cs - y * sn, y: cy + x * sn + y * cs })
+  }
+  return crPath(pts)
+}
+
+function lassoOld(cx, cy, w, h) {
   const rx = w / 2 + 26
   const ry = h / 2 + 14
   const pts = []
@@ -247,7 +294,12 @@ function measure() {
   // were long straight diagonals. So each run gets a control point pushed
   // PERPENDICULAR to it, alternating side, which puts the bow back where the ink
   // actually survives.
-  const WANDER = 0.34
+  // ⚠️ A WANDER, not a bulge. One perpendicular midpoint per run gave every stretch
+  // the same symmetrical bow — predictable, and read as a repeated graphic. Each
+  // run now gets THREE offsets at uneven positions along it, each with its own
+  // seeded size and side, so no two behave alike. And roughly every other run
+  // takes a CURL: a tight three-point detour that carries the line past itself and
+  // back, the way a pen doodles rather than draws.
   const pts = []
   const stops = []
   for (let i = 0; i < base.length; i++) {
@@ -256,14 +308,41 @@ function measure() {
     const p = base[i], q = base[i + 1]
     const dx = q.x - p.x, dy = q.y - p.y
     const len = Math.hypot(dx, dy) || 1
-    const side = i % 2 === 0 ? 1 : -1
-    // perpendicular, scaled by the run's own length so it holds at any width
-    pts.push({
-      x: p.x + dx / 2 + (-dy / len) * len * WANDER * side,
-      y: p.y + dy / 2 + (dx / len) * len * WANDER * side,
-    })
-    stops.push((baseStops[i] + baseStops[i + 1]) / 2)
+    const nx = -dy / len, ny = dx / len        // unit perpendicular
+    const r = rng(i * 13 + 5)
+    const push = (t, off) => {
+      pts.push({ x: p.x + dx * t + nx * off, y: p.y + dy * t + ny * off })
+      stops.push(baseStops[i] + (baseStops[i + 1] - baseStops[i]) * t)
+    }
+    let side = r() < 0.5 ? 1 : -1
+    // three uneven waypoints — the amplitude falls off toward the ends so the
+    // line still meets each gift roughly head-on
+    const ts = [0.2 + r() * 0.1, 0.46 + r() * 0.1, 0.74 + r() * 0.1]
+    for (const t of ts) {
+      const taper = Math.sin(Math.PI * t)
+      push(t, side * len * (0.14 + r() * 0.24) * taper)
+      side *= -1                                // alternate, so it snakes
+    }
+    // …and sometimes it loops back on itself
+    if (r() < 0.55) {
+      const lt = 0.55 + r() * 0.2
+      const rad = len * (0.07 + r() * 0.06)
+      const dir = r() < 0.5 ? 1 : -1
+      const cx = p.x + dx * lt, cy = p.y + dy * lt
+      for (let k = 1; k <= 5; k++) {
+        const a = (k / 5) * Math.PI * 2 * dir + Math.atan2(dy, dx)
+        pts.push({ x: cx + Math.cos(a) * rad, y: cy + Math.sin(a) * rad * 0.8 })
+        stops.push(baseStops[i] + (baseStops[i + 1] - baseStops[i]) * (lt + k * 0.006))
+      }
+    }
   }
+  // the waypoints were pushed in `ts` order but the loop appends after them —
+  // sort so the path (and its scrub windows) still run top to bottom
+  const order = pts.map((pt, k) => k).sort((a2, b2) => stops[a2] - stops[b2])
+  const sortedPts = order.map((k) => pts[k])
+  const sortedStops = order.map((k) => stops[k])
+  pts.length = 0; stops.length = 0
+  pts.push(...sortedPts); stops.push(...sortedStops)
 
   // Every box the ink must stay out of, in scene coordinates.
   const blocks = []
@@ -312,7 +391,7 @@ function measure() {
   }
   segments.value = segs
   loops.value = anchors.map((a, j) => ({
-    d: lasso(a.x, a.y, a.w, a.h),
+    d: lasso(a.x, a.y, a.w, a.h, j + 1),
     win: `${at[j].toFixed(3)},${(at[j] + 0.045).toFixed(3)}`,
   }))
 

@@ -291,6 +291,17 @@ months graded 🟢 Low as "gray-on-gray", which sounds like a contrast nit; what
 saw was an empty screen. The `html` defaults are the site's real palette now — treat a placeholder
 keyword in a shipped variable as a bug, not a default. (AUDIT #16.)
 
+⚠️ **A "hand-drawn" line has to be RANDOM, and the random has to be SEEDED.** With Love's trace
+was one perpendicular bulge per run and one ellipse per word, repeated — symmetrical, identical, and
+it read as a graphic rather than as something drawn. It is now three uneven waypoints per run with
+alternating sides and tapered amplitude, plus a tight loop-back on roughly half of them; and every
+lasso rolls its own radii, start angle, number of turns (1.05–1.55, so some come round twice), radial
+drift, wobble frequency and tilt. Measured spread across the six loops: path lengths 852–1485px, no
+two alike. ⚠️ **Seeded, never `Math.random()`** — `measure()` re-runs on resize and on
+`document.fonts.ready`, so a live random would re-roll the whole drawing under the reader and the
+line would twitch at every breakpoint. A seed per item is different everywhere and identical every
+time.
+
 ⚠️ **A `vh`-only top padding cannot guarantee clearance of the fixed site nav.** The nav is ~88px
 tall regardless of viewport height, so `padding-top: 9vh` is 81px at 900px and less on anything
 shorter. It went unnoticed for as long as the Big Day's content was *shorter* than its section:

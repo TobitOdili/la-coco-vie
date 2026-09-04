@@ -8,7 +8,12 @@ const TWO_PI = Math.PI * 2
 // Chapter data — the four chapters of the Covenant & Uvie journey.
 // The card FILMS are the couple's own (2026-08-10, sourced from `new frames/`,
 // crop-encoded to the 900×1200 the card shader expects — see CONTENT-AND-ASSETS).
-// AUDIO is still inherited from the Milla Nova build as a PLACEHOLDER; the cu-*
+// ⚠️ AUDIO renamed 2026-09-03 to `/audio/{slug}.mp3`, matching the video naming.
+// The four files were still called `amour-getway`, `la-storia`, `wine-time` and
+// `eat-merry-love` — the REFERENCE SITE's own chapter names, which went over the
+// wire as request URLs the moment a visitor turned sound on. The tracks themselves
+// are still placeholders; the couple's own go in the same four filenames.
+// The cu-*
 // textures are ours.
 export const CHAPTERS = [
   {
@@ -17,7 +22,7 @@ export const CHAPTERS = [
     accent: '#42221A',
     accentLight: '#F2EEE8',
     accentLighter: '#D2C3AE',
-    audio: asset('/audio/eat-merry-love.mp3'),
+    audio: asset('/audio/us.mp3'),
     video: asset('/video/us.mp4'),
     txt: asset('/images/cu-txt1.png'),
     svg: asset('/images/cu-p1.png'),
@@ -29,7 +34,7 @@ export const CHAPTERS = [
     accent: '#41492D',
     accentLight: '#E9ECE2',
     accentLighter: '#A6B18A',
-    audio: asset('/audio/la-storia.mp3'),
+    audio: asset('/audio/the-big-day.mp3'),
     video: asset('/video/the-big-day.mp4'),
     txt: asset('/images/cu-txt2.png'),
     svg: asset('/images/cu-p2.png'),
@@ -41,7 +46,7 @@ export const CHAPTERS = [
     accent: '#453350',
     accentLight: '#EFE8F5',
     accentLighter: '#C3A6D8',
-    audio: asset('/audio/wine-time.mp3'),
+    audio: asset('/audio/in-frames.mp3'),
     video: asset('/video/in-frames.mp4'),
     txt: asset('/images/cu-txt3.png'),
     svg: asset('/images/cu-p3.png'),
@@ -57,7 +62,7 @@ export const CHAPTERS = [
     accent: '#2E4A52',
     accentLight: '#E8EDF2',
     accentLighter: '#9FB4C8',
-    audio: asset('/audio/amour-getway.mp3'),
+    audio: asset('/audio/with-love.mp3'),
     video: asset('/video/with-love.mp4'),
     txt: asset('/images/cu-txt4.png'),
     svg: asset('/images/cu-p4.png'),
