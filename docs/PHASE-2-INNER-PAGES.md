@@ -16,7 +16,7 @@ state, everything below it is history — newest first.)
 > | **US** | margin notes: the whole page in one hand, **nothing set in type**; taped polaroids | **written word by word** off each block's own rect |
 > | **THE BIG DAY** | **the calendar** — October 2026, the two days ringed in marker; hover one and the marker writes the times beside it, with the day set out as a programme below | a latch: it sets, then holds still |
 > | **IN FRAMES** | **the archive** — one window in the room showing a path (`...\Media\`), the three events as folders inside; click one and it opens, then the window navigates into it | **no scroll**: folder-open, then a stacked-view swap; the room's film on a time loop |
-> | **WITH LOVE** | **the strung room** — one thread across the page in real catenaries, a paper tag hanging from it per gift; turn a tag over for the note | catenaries solved from the section's own box |
+> | **WITH LOVE** | **the ribbon** — one length of satin falls the whole page and TURNS as it goes, never still; the gifts read down the side of it | a twist angle per point, on canvas, at 60fps |
 >
 > **ALSO DONE & LIVE (prod-verified):** the homepage carousel (per-card hover/click via
 > `posterAtScreen`, scroll-following lift, live cursor tint, names + date + countdown, welcome note,
@@ -105,6 +105,56 @@ above. Constant speed and a reversed exit are not in conflict.
 ⚠️ **Perforations must be painted INTO `.film`'s background**, not as absolutely-positioned children.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
+
+**▶▶ STATE (2026-09-04, latest) — WITH LOVE IS A RIBBON, AND IT DOES NOT STOP MOVING.**
+User, on the strung room: *"I don't love it. Let's come up with other ideas. I do want some kinda
+motion."*  Four directions offered (a ribbon, a morphing line drawing, a wall of moving type, a
+horizontal procession); **the ribbon** chosen. The strung room was correct and completely still —
+which is why it died.
+
+- **One length of satin falls the whole page and turns over as it goes.** A ribbon is a flat strip
+  rotated about its own centreline, so the entire thing is ONE number per point:
+  `halfWidth = W·|cos θ|`, and the sign of `cos θ` says whether you are looking at the front of the
+  material or the back. `θ = TWIST·sin(2π(u·K − phase))`, and `phase` advances every frame — so the
+  turns travel down the ribbon whether or not you are scrolling, and scrolling gusts them.
+- **Canvas, not SVG.** The geometry is rebuilt every frame; 250 quads shaded by how square-on that
+  bit of the ribbon is, which is what gives it its sheen. **Measured 60fps at both 1440×900 and
+  390×844.**
+  - ⚠️ **STICKY, viewport-sized — not a canvas the height of the section.** At 1440×3528 × dpr2 that
+    is a 25-megapixel redraw per frame. Pinned to the viewport it is 1440×900 and the draw covers
+    only the visible slice.
+  - ⚠️ **`overflow: hidden` had to come OFF the section.** It makes the section its own scrollport,
+    and a sticky child of a scrollport that never scrolls behaves as if it were static.
+  - ⚠️ **The silhouette needs ONE path for its shadow.** A canvas shadow set on 250 adjacent quads
+    shadows each onto the next and the ribbon comes out with a seam every 5px.
+- ⚠️⚠️ **AN INFINITE LOOP INSIDE `requestAnimationFrame`.** The face-splitting walk did
+  `i = j - 1`, and when two consecutive samples straddle a pinch the inner scan cannot advance, so
+  `j` stays at `i + 1` and `i` lands back where it started. It hangs the tab hard: **two headless
+  probes timed out at 600s and 300s with no error and no output**, which reads exactly like a slow
+  page. `i = Math.max(j - 1, i + 1)`.
+- ⚠️⚠️ **A TEMPLATE `ref` INSIDE A `v-for` IS AN ARRAY — the fourth time in this codebase.** The
+  canvas sits inside the sections loop, so `cvEl.value.style` was `undefined`, the tick threw on its
+  first frame in the section, and **because the rAF is re-armed at the END of the tick the entire
+  loop died** — no ribbon, no reveals, one line in the console. Query the DOM.
+- ⚠️ **A ribbon wide enough to print a name across is too wide to be a ribbon.** The first cut
+  printed each gift ON the strip, which forced it to 224px with long flat panels between the turns
+  (and an envelope holding the twist still under every word). It read as a chain of lozenges. A
+  ribbon reads as a ribbon at about **5:1**, so the strip is 164px, the twist is uniform and
+  travels the whole length, and the names sit BESIDE it with a short leader — flat, legible, and
+  still while the material turns past them.
+- ⚠️ **`K` is turns ÷ 4, not turns.** `θ = TWIST·sin(…)` crosses ±π/2 **four times per period**, so
+  a period is four turns. At `(n+1)·1.4` that was a turn every 40px.
+- ⚠️ **Portrait puts the ribbon down the left third** and reads every word out to the right of it.
+  Centred on 390px there is no room for a word on either side — measured, names ran off **both**
+  edges — and the word's width is now measured against the ribbon's rightmost swing rather than set
+  in `vw`, which was overrunning by a few pixels.
+- **`prefers-reduced-motion` freezes the twist.** The ribbon is still there; it stops travelling.
+- **Prod-build verified at 1440×900 and 390×844**: 60fps, no knot off either edge, no horizontal
+  overflow, the slip opens on hover and on focus, the twist holds still under reduced motion, and
+  all four chapters still deep-link and scroll with 0 console errors.
+- ⚠️ Probe lesson: breaking a wheel-scroll loop the moment the target is passed leaves **Lenis still
+  easing**, so the screenshot lands hundreds of pixels further on and a "reduced motion still
+  animates" reading was really the page still gliding. Wait for the rect to stop changing.
 
 **▶▶ STATE (2026-09-04, latest) — WITH LOVE IS A STRUNG ROOM. THE SCRIBBLE IS GONE.**
 User: *"The lines on with love are still not elegant enough… Put yourself in the shoes of a world

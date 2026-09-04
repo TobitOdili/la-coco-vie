@@ -14,57 +14,28 @@
         <div class="pivot fade" data-window="0.52,0.64">{{ s.pivot }}</div>
       </section>
 
-      <!-- ── Gifts · one thread strung down the page, a tag hanging from each drape.
-           The thread is NOT drawn: every span is a CATENARY solved from its two
-           anchors (see `catenary`) — the curve a real string makes under its own
-           weight. That is the whole idea. The previous pass invented a wandering
-           line and then spent five rounds trying to make an invented curve look
-           inevitable; a curve that exists in physics needs no tuning, and a tag is
-           an object that already knows how to hang. ── -->
+      <!-- ── Gifts · one ribbon runs the length of the page and TURNS as it goes.
+           Each gift is printed on a stretch that the twist deliberately leaves flat
+           and still, so the type never rides a fold; the turning lives in the spans
+           between them and travels, so the page is moving even when you are not. ── -->
       <section v-else-if="s.kind === 'gifts'" class="chapter-section love-scene gifts-scene"
-        :data-idx="i" :style="{ '--rows': Math.ceil(s.items.length / perLine) }">
-        <!-- ⚠️ It FADES, it does not draw. Scrubbing a `stroke-dashoffset` down six
-             catenaries costs ~11,000px of ink against ~2,400px of scroll — the pen
-             races, and no window is wide enough to fix it. But a string strung across
-             a room was never drawn in the first place: it is simply there. Fading it
-             retires the draw-speed problem instead of tuning it, and it is the truer
-             behaviour for the object. The arrival belongs to the tags. -->
-        <svg class="thread fade" data-window="0.02,0.09"
-          :viewBox="`0 0 ${box.w} ${box.h}`" aria-hidden="true">
-          <path v-for="(dr, k) in drapes" :key="`d${k}`" :d="dr.d" :stroke="ink"
-            stroke-width="1.4" fill="none" stroke-linecap="round" opacity="0.72" />
-        </svg>
+        :data-idx="i" :style="{ '--rows': s.items.length }">
+        <!-- ⚠️ STICKY + one viewport of canvas, not a canvas the height of the section.
+             The twist travels every frame, so the geometry is rebuilt every frame; at
+             1440×2600 × dpr2 that is 14M pixels of redraw per frame. Pinned to the
+             viewport it is 1440×900 and the draw only covers the visible slice. -->
+        <div class="stage"><canvas class="ribbon" aria-hidden="true" /></div>
 
-        <!-- One tag per gift. It hangs from the point on the thread where the string
-             actually sags lowest, which is why they alternate across the page without
-             any `x` being art-directed: the sag moves toward the lower anchor. -->
-        <!-- Focusable, because turning the tag over is the only way to read the note and
-             a hover is not an affordance a keyboard has. -->
-        <article v-for="(it, j) in s.items" :key="j" class="tag" tabindex="0"
-          :class="{ 'is-taken': it.claimed }" :style="tagPos[j]">
-          <div class="swing">
-            <div class="flip">
-              <div class="face front">
-                <svg class="paper" viewBox="0 0 120 168" aria-hidden="true">
-                  <path :d="TAG_D" fill-rule="evenodd" />
-                  <circle class="eyelet" cx="60" :cy="HOLE_Y" r="9.5" />
-                </svg>
-                <div class="front-in">
-                  <span class="tag-name">{{ it.name }}</span>
-                  <span v-if="it.claimed" class="tag-taken">already given</span>
-                </div>
-              </div>
-              <div class="face back">
-                <svg class="paper" viewBox="0 0 120 168" aria-hidden="true">
-                  <path :d="TAG_D" fill-rule="evenodd" />
-                  <circle class="eyelet" cx="60" :cy="HOLE_Y" r="9.5" />
-                </svg>
-                <div class="back-in">
-                  <img class="tag-shot" :src="it.image" alt="" aria-hidden="true" decoding="async" />
-                  <p class="tag-note">{{ it.memory }}</p>
-                </div>
-              </div>
-            </div>
+        <article v-for="(it, j) in s.items" :key="j" class="knot"
+          :class="[!side && j % 2 ? 'to-left' : 'to-right', { 'is-taken': it.claimed }]"
+          tabindex="0" :style="knots[j]">
+          <h3 class="gift-name">{{ it.name }}</h3>
+          <span v-if="it.claimed" class="gift-taken">already given</span>
+          <!-- Slides out from behind the ribbon; it is the only thing on the page that
+               is not the ribbon, so it stays small and it stays quiet. -->
+          <div class="slip">
+            <img class="slip-shot" :src="it.image" alt="" aria-hidden="true" decoding="async" />
+            <p class="slip-note">{{ it.memory }}</p>
           </div>
         </article>
       </section>
@@ -141,90 +112,55 @@ function onPanelKey(e) { if (e.key === 'Escape' && panel.value) panel.value = nu
 
 const rootEl = ref(null)
 const box = ref({ w: 1000, h: 1000 })
-const drapes = ref([])
-const tagPos = ref([])
 let rafId = 0
 let ro = null
 
-// ── The tag ─────────────────────────────────────────────────────────────────
-// A luggage tag: a pointed top, a punched hole, softened bottom corners. ONE path
-// with two subpaths and `fill-rule="evenodd"`, so the hole is genuinely empty —
-// the thread passes behind the paper and shows through it. A hole filled with the
-// page colour would hide the string and the whole conceit with it.
-// Coordinates are the 120×168 viewBox; HOLE_Y is what the CSS uses to hang the tag
-// from exactly that point, so the two can never drift apart.
-const HOLE_Y = 21
-const TAG_D =
-  'M 60 6 L 112 30 Q 116 32 116 36 L 116 156 Q 116 164 108 164 L 12 164 Q 4 164 4 156 ' +
-  'L 4 36 Q 4 32 8 30 Z ' +
-  `M 66 ${HOLE_Y} A 6 6 0 1 1 54 ${HOLE_Y} A 6 6 0 1 1 66 ${HOLE_Y} Z`
-
-// ── The catenary ────────────────────────────────────────────────────────────
-// y = y₀ + a·[cosh((x − mid)/a) − cosh(half/a)] — the shape a hanging chain takes
-// between two anchors at the SAME height. `a` is the tension, and it is easier to
-// author the sag than the tension, so `solveA` inverts it: sag(a) = a(cosh(half/a) − 1)
-// is strictly decreasing in `a`, which is all a bisection needs.
+// ── The ribbon ──────────────────────────────────────────────────────────────
+// A ribbon is a flat strip twisted about its own centreline. Seen head-on, a strip
+// rotated by θ presents a width of `w·cos θ` — so the band pinches to nothing every
+// time θ passes a quarter turn, and past it you are looking at the BACK of the same
+// piece of material. That is the whole model: one angle per point along the ribbon.
 //
-// ⚠️ THE ANCHORS ARE LEVEL, and this is the whole layout. The first pass strung one
-// long thread in DESCENDING swags — nail high on the left, lower on the right, lower
-// again on the left — because a descending swag sags toward its lower anchor, which
-// alternates the tags across the page for free. It does, and it also makes every swag
-// dip through the two below it: sag came out at ~415px against a row of 275, so the
-// page read as a pile of crossing arcs rather than as one string. Level lines cannot
-// cross. The thread stays continuous because it turns OUTSIDE the frame — each line
-// runs off one edge, drops to the next line's height in the margin nobody sees, and
-// comes back. One string, three passes, no visible corner.
-function solveA(half, sag) {
-  let lo = half / 60
-  let hi = half * 60
-  for (let i = 0; i < 46; i++) {
-    const a = (lo + hi) / 2
-    if (a * (Math.cosh(half / a) - 1) > sag) lo = a
-    else hi = a
-  }
-  return (lo + hi) / 2
-}
+//   halfWidth(u) = RIBBON_W · |cos θ(u)|
+//   face(u)      = sign(cos θ(u))          → front stock, or the same stock shaded
+//
+// θ is a travelling wave, `sin(2π(u·K − phase))`, and `phase` advances every frame —
+// which is the motion. ⚠️ It is the TWIST that travels, not the material: a torsional
+// wave running down a hanging ribbon is a real thing, and it means the names printed
+// on the ribbon never move an inch while the ribbon turns underneath them.
+const TWIST = Math.PI * 1.05     // rad — enough to carry θ past ±π/2 and show the back
+const FRONT = [239, 230, 212]
+const BACK = [206, 195, 171]
+const SHADE = [116, 106, 88]
+const EDGE = 'rgba(46, 74, 82, 0.32)'
 
-function levelLine(y, x0, x1, sag) {
-  const mid = (x0 + x1) / 2
-  const half = Math.abs(x1 - x0) / 2
-  const a = solveA(half, sag)
-  const base = a * Math.cosh(half / a)
-  // ⚠️ MINUS the cosh, not plus. In screen space y grows downward, so a hanging line is
-  // a cosh REFLECTED: anchors at `y`, and the middle at `y + sag`. Written the other way
-  // round it solves and samples perfectly and draws three arches.
-  // ⚠️ `tilt` — nobody strings a line dead level. A few pixels of difference between the
-  // two nails is applied as a linear shear across the span. The true unequal-anchor
-  // catenary is a different solve, but at this tilt (≈0.6°) the two differ by hundredths
-  // of a pixel — second-order in Δy/span — so this keeps one solver instead of two.
-  return {
-    at: (x, tilt = 0) => y + base - a * Math.cosh((x - mid) / a) + tilt * ((x - x0) / (x1 - x0) - 0.5),
-    x0, x1,
-  }
-}
-
-const toPath = (pts) => 'M ' + pts.map((q) => `${q.x.toFixed(1)} ${q.y.toFixed(1)}`).join(' L ')
-
-// ⚠️ SEEDED, not `Math.random()`. `measure()` re-runs on resize and on
-// `document.fonts.ready`; a live random would re-string the whole page under the
-// reader every time. One hand, strung the same way every time.
-function rng(seed) {
-  let t = seed * 1103515245 + 12345
-  return () => {
-    t = (t * 1103515245 + 12345) % 2147483648
-    return t / 2147483648
-  }
-}
+// ⚠️ NO ENVELOPE, and the names are NOT printed on the ribbon. The first cut held the
+// twist flat under each word so the type had somewhere level to sit — which forced the
+// ribbon to be wide enough to carry a name (224px) with long still panels between the
+// turns, and at those proportions it stopped reading as a ribbon and started reading as
+// a chain of lozenges. A ribbon reads as a ribbon at about five to one. So the strip is
+// narrow now, the twist is uniform and travels the whole length, and the names sit
+// BESIDE it — flat, legible, and still while the material turns past them.
+const mix = (c1, c2, t) =>
+  `rgb(${Math.round(c1[0] + (c2[0] - c1[0]) * t)},${Math.round(c1[1] + (c2[1] - c1[1]) * t)},${Math.round(c1[2] + (c2[2] - c1[2]) * t)})`
 
 // ── Measure ─────────────────────────────────────────────────────────────────
-// Everything is derived from the section's own box, so the breakpoints are free.
-// Tags per line. ⚠️ TWO ONLY IF THERE IS ROOM: at 390px a pair of 118px tags share a
-// 390px line and the bands they are placed in overlap, so they collided. Portrait gets
-// one tag per line and twice as many lines.
-const perLine = ref(2)
-const syncPerLine = () => { perLine.value = window.innerWidth < 700 ? 1 : 2 }
-const tags = []          // per-tag swing state, rebuilt on every measure
-let tagEls = []
+// The ribbon's shape and the words' places come from the section's own box, so the
+// breakpoints are free. Only `phase` changes per frame.
+// ⚠️ NOT a template `ref`. This canvas lives inside the sections `v-for`, and a ref
+// bound inside a `v-for` resolves to an ARRAY — so `cvEl.value.style` was `undefined`,
+// the tick threw on its first frame inside the section, and because the rAF is
+// re-armed at the END of the tick the whole loop died silently: no ribbon, no reveals,
+// one console error. Fourth time this trap has bitten this codebase; query the DOM.
+let cv = null
+const knots = ref([])
+const side = ref(false)   // true = portrait: everything reads to the right of the ribbon
+let geo = null           // { H, W, cx, amp, wave, halfW, stops, K }
+let knotEls = []
+
+function centreX(u) {
+  return geo.cx + geo.amp * Math.sin(Math.PI * 2 * u * geo.wave + 0.6)
+}
 
 function measure() {
   const root = rootEl.value
@@ -233,100 +169,177 @@ function measure() {
   const r = scene.getBoundingClientRect()
   const W = r.width
   const H = r.height
-  const n = scene.querySelectorAll('.tag').length
-  if (!n || !W) return
+  const n = scene.querySelectorAll('.knot').length
+  if (!n || !W || !H) return
   box.value = { w: W, h: H }
 
-  const vh = window.innerHeight
-  const atY = (y) => (y + vh / 2) / (H + vh)
-  // The real, untransformed height of a hanging tag — read, not assumed, because it is
-  // set in `clamp()` against the viewport and changes under every breakpoint.
-  const tagH = scene.querySelector('.swing')?.offsetHeight || 200
+  // ⚠️ PORTRAIT PUTS THE RIBBON TO ONE SIDE. Centred on a 390px screen there is no room
+  // for a word on either side of it — measured: names ran off BOTH edges. So on a narrow
+  // screen the ribbon falls down the left third and every word reads out to the right of
+  // it, which is also just a better column to read.
+  const narrow = W < 700
+  side.value = narrow
+  // Ribbon proportions: about 5:1 between turns. Wider than this and it is a sash.
+  const halfW = narrow ? Math.min(W * 0.10, 46) : Math.min(W * 0.065, 82)
+  // ⚠️ A real wander. At 58px the ribbon was a vertical band in the middle of an empty
+  // page; it has to travel across the frame for the fall to read as a fall.
+  const amp = narrow ? Math.min(W * 0.07, 44) : Math.min(W * 0.15, 196)
 
-  const PER_LINE = perLine.value
-  const lines = Math.ceil(n / PER_LINE)
-  const EDGE = 0.13                        // how far past each edge the nails sit
-  const x0 = -EDGE * W
-  const x1 = (1 + EDGE) * W
-  const rnd = rng(23)
+  // The words: evenly down the page, alternating sides, clear of the strip.
+  const top = 0.09
+  const bot = 0.92
+  const stops = []
+  for (let j = 0; j < n; j++) stops.push(top + ((bot - top) * j) / Math.max(1, n - 1))
 
-  // Vertical rhythm: a line needs to clear its own sag AND the tags hanging off it
-  // before the next one starts. Anything tighter and the page reads as a tangle.
-  const SAG = Math.min(H * 0.10, W * 0.135)
-  // A line needs to clear its own sag AND everything hanging off it before the next one
-  // starts. Anything tighter reads as a tangle; much looser and you only ever see one
-  // line at a time, which is a lonelier page than this one wants to be.
-  const need = SAG + tagH + Math.max(112, H * 0.06)
-  const top = Math.max(H * 0.11, SAG + 40)
-  // ⚠️ The tags hang BELOW their anchors, by up to the deepest sag on the page — so the
-  // last one clears the bottom only if the row grid is solved against the hole, not
-  // against the nail. It overflowed by 15px when this was reckoned from the nail.
-  const room = H * 0.97 - tagH - SAG * 1.34 - 22 - top
-  const row = Math.max(need, lines > 1 ? room / (lines - 1) : need)
-
-  const pts = []
-  const pos = []
-  tags.length = 0
-  for (let li = 0; li < lines; li++) {
-    const y = top + li * row
-    // Each line is strung by the same hand, not the same machine.
-    const line = levelLine(y, x0, x1, SAG * (0.72 + rnd() * 0.62))
-    const tilt = (rnd() - 0.5) * 44
-    const N = 40
-    const seq = []
-    for (let i = 0; i <= N; i++) {
-      const x = x0 + ((x1 - x0) * i) / N
-      seq.push({ x, y: line.at(x, tilt) })
-    }
-    // Serpentine: even lines run left→right, odd ones right→left, so the polyline's
-    // own join between two lines IS the drop at the nail — off-frame, and clipped.
-    pts.push(...(li % 2 === 0 ? seq : seq.reverse()))
-
-    for (let k = 0; k < PER_LINE; k++) {
-      const j = li * PER_LINE + k
-      if (j >= n) break
-      // One band per slot, and the tag sits somewhere inside its own band — so no two
-      // are ever in the same column and none can collide with its neighbour.
-      const b0 = 0.10 + (k * 0.78) / PER_LINE
-      const b1 = 0.10 + ((k + 1) * 0.78) / PER_LINE
-      const tx = W * (b0 + (b1 - b0) * (0.08 + rnd() * 0.84))
-      const ty = line.at(tx, tilt)
-      // No two tags are quite the same size, and one always hangs more crooked than
-      // its neighbour. Six identical rectangles at six identical angles is a grid.
-      pos.push({ '--x': `${tx.toFixed(1)}px`, '--y': `${ty.toFixed(1)}px`, '--scale': (0.9 + rnd() * 0.2).toFixed(3) })
-      const ha = atY(ty)
-      tags.push({
-        at: ha,
-        // Tags on the same line arrive a beat apart, left to right, the way you would
-        // notice them — not all six at once when the line comes into view.
-        wa: Math.max(0, ha - 0.075 + k * 0.022),
-        wb: Math.max(0.02, ha - 0.02 + k * 0.022),
-        // A tag that has been handled hangs a touch crooked.
-        base: (rnd() - 0.5) * 7.5,
-        mass: 0.75 + rnd() * 0.55,
-        a: 0,
-        v: 0,
-      })
-    }
+  geo = {
+    H, W, halfW, amp,
+    cx: narrow ? W * 0.26 : W / 2,
+    wave: 1.1,                  // lateral wander over the whole length
+    // ⚠️ θ = TWIST·sin(2π(u·K − phase)) crosses ±π/2 FOUR times per period, so a period
+    // is four turns, not one. At K = (n+1)·1.4 that was a turn every 40px. K = 1.5 puts
+    // one turn roughly every 470px, which is a ribbon falling, not a corkscrew.
+    K: 1.5,
+    stops,
   }
 
-  drapes.value = [{ d: toPath(pts) }]
-  tagPos.value = pos
-  // ⚠️ Queried from the root, never a `ref` inside `v-for` — that yields an ARRAY,
-  // and reading it as an element has silently blanked a section three times now.
-  tagEls = [...scene.querySelectorAll('.tag')]
+  const pad = halfW + Math.min(W * 0.022, 30)
+  // ⚠️ In portrait the word's width is MEASURED, not set in vw. Every word starts at
+  // `centreX + pad` and the ribbon wanders, so a fixed 56vw ran the longest ones off the
+  // right edge by a few pixels at the ribbon's rightmost swing.
+  knots.value = stops.map((u, j) => {
+    const x = centreX(u) + (!narrow && j % 2 ? -pad : pad)
+    const st = { '--y': `${(u * H).toFixed(1)}px`, '--x': `${x.toFixed(1)}px` }
+    if (narrow) st['--w'] = `${Math.max(120, W - x - 16).toFixed(0)}px`
+    return st
+  })
+  knotEls = [...scene.querySelectorAll('.knot')]
+  cv = scene.querySelector('.ribbon')
+  sizeCanvas()
 }
 
-// Touch has no hover: turn the tag over when it reaches the middle of the screen
+let dpr = 1
+function sizeCanvas() {
+  if (!cv) return
+  dpr = Math.min(2, window.devicePixelRatio || 1)
+  const w = cv.clientWidth
+  const h = cv.clientHeight
+  if (!w || !h) return
+  cv.width = Math.round(w * dpr)
+  cv.height = Math.round(h * dpr)
+}
+
+// ── Draw ────────────────────────────────────────────────────────────────────
+// One quad per 5px of ribbon, shaded by how square-on that bit of it is — which is
+// what gives the material its sheen. Only the slice inside the viewport is built.
+function drawRibbon(offset, vh) {
+  if (!cv || !geo) return
+  const ctx = cv.getContext('2d')
+  if (!ctx) return
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  ctx.clearRect(0, 0, cv.width, cv.height)
+
+  const STEP = 5
+  const y0 = Math.max(0, offset - STEP)
+  const y1 = Math.min(geo.H, offset + vh + STEP)
+  if (y1 <= y0) return
+
+  const pts = []
+  for (let y = y0; y <= y1; y += STEP) {
+    const u = y / geo.H
+    const th = TWIST * Math.sin(Math.PI * 2 * (u * geo.K - phase))
+    const c = Math.cos(th)
+    // Taper to a point at both ends, so the ribbon runs out rather than being cut off.
+    const t0 = Math.min(1, y / (geo.H * 0.055))
+    const t1 = Math.min(1, (geo.H - y) / (geo.H * 0.055))
+    const taper = Math.sin((Math.PI / 2) * Math.max(0, Math.min(1, t0))) * Math.sin((Math.PI / 2) * Math.max(0, Math.min(1, t1)))
+    const cx = centreX(u)
+    // The normal, from the centreline's own slope — the ribbon leans as it wanders.
+    const dx = geo.amp * Math.PI * 2 * geo.wave * Math.cos(Math.PI * 2 * u * geo.wave + 0.6) / geo.H
+    const m = Math.hypot(1, dx)
+    const w = geo.halfW * Math.abs(c) * taper
+    pts.push({ x: cx, y: y - offset, nx: 1 / m, ny: -dx / m, w, c })
+  }
+
+  // ⚠️ ONE silhouette path for the shadow, drawn before the quads. Setting a canvas
+  // shadow on 250 adjacent quads shadows each of them onto the next and the ribbon comes
+  // out with a seam every 5px; the outline has to be a single path.
+  ctx.save()
+  ctx.shadowColor = 'rgba(24, 34, 40, 0.20)'
+  ctx.shadowBlur = 22
+  ctx.shadowOffsetY = 9
+  ctx.fillStyle = 'rgba(0,0,0,1)'
+  ctx.beginPath()
+  pts.forEach((p, k) => {
+    const x = p.x + p.nx * p.w
+    const y = p.y + p.ny * p.w
+    if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+  })
+  for (let k = pts.length - 1; k >= 0; k--) {
+    const p = pts[k]
+    ctx.lineTo(p.x - p.nx * p.w, p.y - p.ny * p.w)
+  }
+  ctx.closePath()
+  ctx.fill()
+  ctx.restore()
+
+  // Split at every pinch: on each side of one, you are looking at a different face.
+  let i = 0
+  while (i < pts.length - 1) {
+    let j = i + 1
+    const front = pts[i].c >= 0
+    while (j < pts.length && (pts[j].c >= 0) === front) j++
+    for (let k = i; k < j - 1; k++) {
+      const p = pts[k]
+      const q = pts[k + 1]
+      const shade = 1 - Math.abs((p.c + q.c) / 2)
+      ctx.fillStyle = mix(front ? FRONT : BACK, SHADE, shade * 0.5)
+      ctx.beginPath()
+      ctx.moveTo(p.x + p.nx * p.w, p.y + p.ny * p.w)
+      ctx.lineTo(q.x + q.nx * q.w, q.y + q.ny * q.w)
+      ctx.lineTo(q.x - q.nx * q.w, q.y - q.ny * q.w)
+      ctx.lineTo(p.x - p.nx * p.w, p.y - p.ny * p.w)
+      ctx.closePath()
+      ctx.fill()
+    }
+    // ⚠️ `Math.max(…, i + 1)`. When two consecutive samples straddle a pinch the inner
+    // walk cannot advance, `j` stays at `i + 1`, and `i = j - 1` puts `i` back where it
+    // started — an infinite loop inside requestAnimationFrame, which hangs the tab hard
+    // enough that a headless probe times out with no error to show for it.
+    i = Math.max(j - 1, i + 1)
+  }
+
+  // The two selvedges, drawn last so they sit crisply on top of the quads.
+  ctx.strokeStyle = EDGE
+  ctx.lineWidth = 1
+  for (const side of [1, -1]) {
+    ctx.beginPath()
+    pts.forEach((p, k) => {
+      const x = p.x + side * p.nx * p.w
+      const y = p.y + side * p.ny * p.w
+      if (k === 0) ctx.moveTo(x, y)
+      else ctx.lineTo(x, y)
+    })
+    ctx.stroke()
+  }
+}
+
+// Touch has no hover: open the slip when its gift reaches the middle of the screen
 // instead. Pointer devices keep the hover, which feels better.
 const coarse = () => window.matchMedia('(hover: none)').matches
 const clamp01 = (v) => Math.min(1, Math.max(0, v))
 
-// The swing is driven by how fast the section is moving up the screen — no scroll
-// listener, no Lenis coupling, just the section's own rect, which the tick already
-// has in hand. A spring with real overshoot, so the tags settle rather than stop.
-const SWING = 7          // degrees at full gust
+// `phase` is the whole animation. It drifts on its own so the ribbon is turning when
+// you are still, and scrolling gusts it — the twist runs faster while the page moves
+// and eases back to its drift when it stops.
+let phase = 0
 let lastTop = null
+let gust = 0
+// ⚠️ The ribbon turns continuously and forever. That is the point of the page, and it is
+// exactly what someone who has asked their system for less motion does not want, so the
+// twist is frozen at its resting shape for them — the ribbon is still there, it just
+// stops travelling.
+const stillness = () => import.meta.client && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+let calm = false
 
 function tick() {
   const root = rootEl.value
@@ -344,21 +357,27 @@ function tick() {
         else if (el.classList.contains('write')) el.style.clipPath = `inset(-0.3em ${((1 - lp) * 100).toFixed(1)}% -0.45em 0)`
         else el.style.opacity = String(lp)
       }
-      if (!scene.classList.contains('gifts-scene') || !tagEls.length) continue
+      if (!scene.classList.contains('gifts-scene') || !geo) continue
 
-      const gust = lastTop === null ? 0 : Math.max(-1, Math.min(1, (lastTop - r.top) / 40))
+      const v = lastTop === null ? 0 : lastTop - r.top
       lastTop = r.top
+      gust += (Math.min(60, Math.abs(v)) - gust) * 0.08
+      if (!calm) phase += 0.00055 + gust * 0.00022
+
+      // Nothing to draw while the section is off screen — and the canvas is sticky, so
+      // it would otherwise keep painting over the scenes either side of it.
+      const on = r.bottom > -40 && r.top < vh + 40
+      if (cv) cv.style.opacity = on ? '1' : '0'
+      if (on) drawRibbon(-r.top, vh)
+
       const near = coarse()
-      for (let j = 0; j < tagEls.length; j++) {
-        const st = tags[j]
-        if (!st) continue
-        st.v += (gust * st.mass * SWING - st.a) * 0.05
-        st.v *= 0.92
-        st.a += st.v
-        const el = tagEls[j]
-        el.style.setProperty('--in', clamp01((p - st.wa) / (st.wb - st.wa)).toFixed(3))
-        el.style.setProperty('--rot', `${(st.base + st.a).toFixed(2)}deg`)
-        if (near) el.classList.toggle('is-near', Math.abs(p - st.at) < 0.045)
+      for (let j = 0; j < knotEls.length; j++) {
+        const el = knotEls[j]
+        const u = geo.stops[j]
+        // A word appears just before the ribbon carries it into the middle of the frame.
+        const at = (u * geo.H + vh / 2) / (geo.H + vh)
+        el.style.setProperty('--in', clamp01((p - (at - 0.07)) / 0.05).toFixed(3))
+        if (near) el.classList.toggle('is-near', Math.abs(p - at) < 0.04)
       }
     }
   }
@@ -366,15 +385,16 @@ function tick() {
 }
 
 let resizeT = 0
-const onResize = () => { clearTimeout(resizeT); resizeT = setTimeout(() => { syncPerLine(); measure() }, 150) }
+const onResize = () => { clearTimeout(resizeT); resizeT = setTimeout(measure, 150) }
 
 onMounted(async () => {
   window.addEventListener('keydown', onPanelKey)
-  syncPerLine()
+  calm = stillness()
   await nextTick()
   measure()
-  await nextTick()
-  measure()   // the tags exist only after the first pass gave them a position
+  // The section's height comes from `min-height` in vh and the canvas from `100%` of a
+  // sticky box — neither is final on the first tick.
+  requestAnimationFrame(() => measure())
   document.fonts?.ready.then(() => setTimeout(measure, 60))
   const scene = rootEl.value?.querySelector('.gifts-scene')
   if (scene && 'ResizeObserver' in window) { ro = new ResizeObserver(onResize); ro.observe(scene) }
@@ -434,127 +454,119 @@ onBeforeUnmount(() => {
   max-width: 30rem;
 }
 
-/* ── the line and what hangs from it ── */
+/* ── the ribbon ── */
 .gifts-scene {
   display: block;
-  min-height: calc(var(--rows, 3) * 46vh + 42vh);
+  min-height: calc(var(--rows, 6) * 58vh + 44vh);
   padding: 0;
-  /* The drapes are anchored off both edges on purpose — clip them, so the page
-     never scrolls sideways to reach a knot nobody is meant to see. */
-  overflow: hidden;
+  /* ⚠️ NO `overflow: hidden` here. It would make this element its own scrollport and
+     the sticky stage inside it would stick to a box that never scrolls — i.e. behave
+     as if it were static. The canvas is viewport-sized and clips itself. */
 }
-.thread {
-  position: absolute;
-  inset: 0;
+.stage {
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  pointer-events: none;
+  z-index: 0;
+}
+.ribbon {
+  display: block;
   width: 100%;
   height: 100%;
-  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s linear;
 }
 
-.tag {
+/* A word printed on the ribbon. It sits in a stretch the twist is enveloped to leave
+   flat, so it never has to follow a fold. */
+.knot {
   position: absolute;
   left: var(--x, 50%);
   top: var(--y, 0);
-  width: 0;
-  height: 0;
-  z-index: 1;
-}
-.swing {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: calc(clamp(6.4rem, 9.2vw, 8.2rem) * var(--scale, 1));
-  /* The tag hangs from its HOLE, so the box is offset by exactly where the hole is
-     punched in the 120×168 artwork (21/168 = 12.5%) and turns about that same point.
-     One number, used twice, or the tag pivots somewhere it has no hole. */
-  transform: translate(-50%, -12.5%) rotate(var(--rot, 0deg)) translateY(calc((1 - var(--in, 0)) * -9px));
-  transform-origin: 50% 12.5%;
-  perspective: 1000px;
+  transform: translateY(-50%);
+  width: var(--w, min(13rem, 34vw));
+  text-align: start;
+  z-index: 2;
+  outline: none;
   opacity: var(--in, 0);
-  will-change: transform;
 }
-.flip {
-  position: relative;
-  transform-style: preserve-3d;
-  transition: transform 0.75s cubic-bezier(0.2, 0.72, 0.24, 1);
-}
-.tag:hover .flip,
-.tag:focus-visible .flip,
-.tag.is-near .flip { transform: rotateY(180deg); }
-.tag { outline: none; }
-.tag:focus-visible .paper { stroke-opacity: 0.9; stroke-width: 1.4; }
-
-.face {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  position: relative;
-}
-.back { position: absolute; inset: 0; transform: rotateY(180deg); }
-.paper {
-  display: block;
-  width: 100%;
-  height: auto;
-  /* ⚠️ WARM stock on a cool ground. At #F4F1EA the paper sat within 0.08 of the page's
-     own luminance and every tag looked half-faded even at full opacity — the reveal was
-     blamed for what was really a value problem. */
-  fill: #EFE6D4;
-  stroke: #2E4A52;
-  stroke-width: 0.9;
-  stroke-opacity: 0.42;
-  filter: drop-shadow(0 5px 9px rgba(20, 30, 36, 0.11));
-}
-/* The reinforcing ring a real tag has punched into it. */
-.eyelet { fill: none; stroke: #2E4A52; stroke-width: 0.7; stroke-opacity: 0.3; }
-.is-taken .eyelet { stroke-opacity: 0.2; }
-.front-in,
-.back-in {
+.to-left { transform: translate(-100%, -50%); text-align: end; }
+/* A short leader, so the word reads as belonging to the ribbon rather than floating
+   next to it — the strip is pinched to a point at some of these heights and a word
+   112px from a point has nothing to hold on to. */
+.knot::after {
+  content: '';
   position: absolute;
-  /* below the hole, inside the paper */
-  inset: 22% 10% 7%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
+  top: 50%;
+  width: 1.4rem;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.35;
+  color: #3A3327;
 }
-.tag-name {
+.to-right::after { right: 100%; margin-right: 0.55rem; }
+.to-left::after { left: 100%; margin-left: 0.55rem; }
+.gift-name {
+  margin: 0;
   font-family: 'Bague', sans-serif;
-  font-size: clamp(0.56rem, 0.78vw, 0.68rem);
-  letter-spacing: 0.16em;
+  font-weight: 700;
+  font-size: clamp(0.72rem, 0.98vw, 0.9rem);
+  letter-spacing: 0.15em;
   text-transform: uppercase;
-  line-height: 1.55;
-  color: #2E4A52;
+  line-height: 1.6;
+  color: #3A3327;
+  cursor: default;
 }
-.tag-taken {
+.gift-taken {
+  display: block;
+  margin-top: 0.35rem;
   font-family: 'Bague', sans-serif;
-  font-size: 0.52rem;
-  letter-spacing: 0.2em;
+  font-size: 0.56rem;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  opacity: 0.5;
+  opacity: 0.55;
+  color: #3A3327;
 }
-.is-taken .tag-name { opacity: 0.45; text-decoration: line-through; text-decoration-thickness: 1px; }
-.is-taken .paper { fill: #EEEAE1; }
+.is-taken .gift-name { opacity: 0.5; text-decoration: line-through; text-decoration-thickness: 1px; }
 
-.back-in { justify-content: flex-start; gap: 0.55rem; padding-top: 0.1rem; }
-.tag-shot {
+/* The slip slides out from behind the ribbon — the only thing on the page that is not
+   the ribbon, so it stays small and quiet. */
+.slip {
+  position: absolute;
+  top: 50%;
+  width: clamp(9rem, 15vw, 12rem);
+  padding: 0.85rem 0.85rem 0.95rem;
+  background: #F6F3EC;
+  box-shadow: 0 10px 24px rgba(24, 34, 40, 0.14);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.2, 0.72, 0.24, 1);
+}
+.slip { top: calc(100% + 0.9rem); }
+.to-right .slip { left: 0; transform: translateY(-0.6rem) rotate(0.9deg); }
+.to-left .slip { right: 0; transform: translateY(-0.6rem) rotate(-0.9deg); }
+.knot:hover .slip,
+.knot:focus-visible .slip,
+.knot.is-near .slip { opacity: 1; transform: translateY(0) rotate(var(--tilt, 0.9deg)); }
+.to-left { --tilt: -0.9deg; }
+.slip-shot {
+  display: block;
   width: 100%;
   aspect-ratio: 5 / 3;
   object-fit: cover;
-  display: block;
-  filter: grayscale(1) contrast(1.05);
-  opacity: 0.82;
+  filter: grayscale(1) contrast(1.04);
+  opacity: 0.85;
 }
-.tag-note {
-  margin: 0;
-  /* ⚠️ Bague, not Italiana. A display serif set at 10px on a 130px tag is decoration,
-     not a sentence — and the tag reads better as ONE typographic object anyway: the
-     name in caps on the front, the note in the same face lowercase on the back. */
+.slip-note {
+  margin: 0.6rem 0 0;
   font-family: 'Bague', sans-serif;
-  font-size: clamp(0.6rem, 0.82vw, 0.72rem);
-  line-height: 1.5;
+  font-size: clamp(0.6rem, 0.8vw, 0.7rem);
+  line-height: 1.55;
   color: #2E4A52;
-  opacity: 0.88;
+  opacity: 0.85;
 }
+.knot:focus-visible .gift-name { text-decoration: underline; text-underline-offset: 0.35em; }
 
 /* ── even better — the on-page panel ── */
 .cash-layer {
@@ -648,14 +660,13 @@ onBeforeUnmount(() => {
   margin-top: 3rem;
 }
 
-/* ── portrait: a narrower room, so the string is strung tighter ── */
+/* ── portrait ── */
 @media (max-width: 767px) {
-  .gifts-scene { min-height: calc(var(--rows, 3) * 42vh + 38vh); }
-  .swing { width: calc(min(7.4rem, 34vw) * var(--scale, 1)); }
+  .gifts-scene { min-height: calc(var(--rows, 6) * 46vh + 36vh); }
+  .slip { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .flip { transition: transform 0.3s ease; }
-  .swing { transition: none; }
+  .slip { transition: opacity 0.3s ease; }
 }
 </style>
