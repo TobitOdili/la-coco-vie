@@ -16,7 +16,7 @@ state, everything below it is history — newest first.)
 > | **US** | margin notes: the whole page in one hand, **nothing set in type**; taped polaroids | **written word by word** off each block's own rect |
 > | **THE BIG DAY** | **the calendar** — October 2026, the two days ringed in marker; hover one and the marker writes the times beside it, with the day set out as a programme below | a latch: it sets, then holds still |
 > | **IN FRAMES** | **the archive** — one window in the room showing a path (`...\Media\`), the three events as folders inside; click one and it opens, then the window navigates into it | **no scroll**: folder-open, then a stacked-view swap; the room's film on a time loop |
-> | **WITH LOVE** | **the ribbon** — one length of satin falls the whole page and TURNS as it goes, never still; the gifts read down the side of it | a twist angle per point, on canvas, at 60fps |
+> | **WITH LOVE** | **the wall** — six bands of the gift list sliding across the screen at their own speeds, forever; point at a word and its band stops and the thing opens under it | one transform per band per frame; no artwork at all |
 >
 > **ALSO DONE & LIVE (prod-verified):** the homepage carousel (per-card hover/click via
 > `posterAtScreen`, scroll-following lift, live cursor tint, names + date + countdown, welcome note,
@@ -105,6 +105,46 @@ above. Constant speed and a reversed exit are not in conflict.
 ⚠️ **Perforations must be painted INTO `.film`'s background**, not as absolutely-positioned children.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
+
+**▶▶ STATE (2026-09-05, latest) — WITH LOVE IS A WALL OF MOVING TYPE.**
+User, on the ribbon: *"Oh that's kinda bad. Can you show me those options you gave me earlier?"* →
+**the wall of type**, from the same list of four. Third build of this page; the two before it are
+below. What the first two taught: **a quiet, scroll-revealed page is the failure mode here**, and
+an ornament that has to carry a name across it stops being an ornament.
+
+- **The names ARE the page.** Six bands, each carrying the whole gift list, each sliding at its own
+  speed in its own direction, endlessly. Point at a word: its band eases to a halt, the word fills
+  in solid, the rest of the wall steps back, and the item opens underneath it. **No illustration at
+  all** — which also makes this the only version of the page that stays current for free: adding a
+  gift is adding a word.
+- **The deceleration is the design.** A band does not switch off, it *coasts* — `v` eases toward
+  zero while you are on it and back up when you leave. That is most of what the page feels like.
+- ⚠️ **SHUFFLED per band, not rotated.** The first cut gave each band the same cyclic order started
+  at a different index, so the bands slid past each other looking like six copies of one strip.
+  And ⚠️ **each band needs its own starting PHASE** — with every band starting at 0 the word
+  boundaries line up in columns down the wall and the repetition (unavoidable with six items) is
+  the first thing you see.
+- ⚠️⚠️ **A BAND'S OWN BORDER BOX WAS 10,562px WIDE.** A flex item's automatic minimum size is its
+  MIN-CONTENT size, and each band wraps a `nowrap` track thirteen screens long — so `min-width:
+  auto` blew the band's width out to the content. Invisible (the wall clips it) but it makes the
+  band useless as a coordinate space, and the reveal panel — positioned from it — landed at
+  **left: −536 on a 390px screen**. Fixed twice over: `width: 100%; min-width: 0` on the band, and
+  the panel clamped against the **viewport**, which is the only honest bound for something
+  following a word on an endless strip.
+- ⚠️⚠️ **ON TOUCH A BAND IS ALWAYS OPEN.** There is no hover, so the band nearest the middle of the
+  screen opens itself — which meant the `busy` rule that dims every *other* band left the entire
+  wall permanently ghosted at 0.16 opacity in portrait. The dimming is pointer-only now, and the
+  chosen word carries its own `.on` class rather than relying on `:hover`, which does not exist
+  there either.
+- **`prefers-reduced-motion` stops the wall.** Six bands of type sliding forever is exactly what
+  that setting is asking you not to do; the reveal and the focus states still work.
+- **Prod-build verified at 1440×900 and 390×844**: 60fps, the bands move, hover opens and stops a
+  band, **keyboard focus opens one too**, the panel stays in frame at both sizes, no horizontal
+  overflow, reduced motion holds it still, and all four chapters deep-link and scroll with 0 console
+  errors.
+- ⚠️ Probe lesson: a small circle sitting on the hovered word in three screenshots was **the site's
+  own custom cursor**, not a stray separator. `elementsFromPoint` said so in one call; guessing at
+  it cost three.
 
 **▶▶ STATE (2026-09-04, latest) — WITH LOVE IS A RIBBON, AND IT DOES NOT STOP MOVING.**
 User, on the strung room: *"I don't love it. Let's come up with other ideas. I do want some kinda

@@ -14,30 +14,36 @@
         <div class="pivot fade" data-window="0.52,0.64">{{ s.pivot }}</div>
       </section>
 
-      <!-- ── Gifts · one ribbon runs the length of the page and TURNS as it goes.
-           Each gift is printed on a stretch that the twist deliberately leaves flat
-           and still, so the type never rides a fold; the turning lives in the spans
-           between them and travels, so the page is moving even when you are not. ── -->
-      <section v-else-if="s.kind === 'gifts'" class="chapter-section love-scene gifts-scene"
-        :data-idx="i" :style="{ '--rows': s.items.length }">
-        <!-- ⚠️ STICKY + one viewport of canvas, not a canvas the height of the section.
-             The twist travels every frame, so the geometry is rebuilt every frame; at
-             1440×2600 × dpr2 that is 14M pixels of redraw per frame. Pinned to the
-             viewport it is 1440×900 and the draw only covers the visible slice. -->
-        <div class="stage"><canvas class="ribbon" aria-hidden="true" /></div>
-
-        <article v-for="(it, j) in s.items" :key="j" class="knot"
-          :class="[!side && j % 2 ? 'to-left' : 'to-right', { 'is-taken': it.claimed }]"
-          tabindex="0" :style="knots[j]">
-          <h3 class="gift-name">{{ it.name }}</h3>
-          <span v-if="it.claimed" class="gift-taken">already given</span>
-          <!-- Slides out from behind the ribbon; it is the only thing on the page that
-               is not the ribbon, so it stays small and it stays quiet. -->
-          <div class="slip">
-            <img class="slip-shot" :src="it.image" alt="" aria-hidden="true" decoding="async" />
-            <p class="slip-note">{{ it.memory }}</p>
+      <!-- ── Gifts · the names ARE the page. Five bands of the gift list running
+           across the screen at their own speeds, forever; point at a word and its
+           band eases to a stop and the thing opens underneath it. No illustration
+           to keep current — adding a gift is adding a word. ── -->
+      <section v-else-if="s.kind === 'gifts'" class="chapter-section love-scene wall"
+        :class="{ busy: active.some((a) => a >= 0), touch }"
+        :data-idx="i" :style="{ '--rows': bands.length }">
+        <div v-for="(band, r) in bands" :key="r" class="band"
+          :class="{ solid: r % 2 === 1, on: active[r] >= 0 }"
+          :style="{ '--fs': mo[r]?.fs || 1 }" @pointerleave="clearBand(r)">
+          <div class="track">
+            <!-- ⚠️ The list is repeated until it is wider than the viewport PLUS one
+                 whole repetition, because the wrap subtracts exactly one repetition's
+                 width — anything less and a gap crosses the screen once per loop. -->
+            <span v-for="c in (copies[r] || 3)" :key="c" class="grp">
+              <button v-for="(w, k) in band" :key="k" type="button" class="word"
+                :class="{ taken: w.claimed }" :data-i="w.i"
+                @pointerenter="setBand(r, w.i, $event)" @focus="setBand(r, w.i, $event)">
+                {{ w.name }}<i class="sep" aria-hidden="true" />
+              </button>
+            </span>
           </div>
-        </article>
+          <!-- Opens beneath whichever word you are on, and TRACKS it while the band
+               coasts to a halt, so it never appears to jump into place. -->
+          <div class="reveal" :class="{ open: active[r] >= 0 }">
+            <img class="reveal-shot" :src="itemAt(active[r])?.image" alt=""
+              aria-hidden="true" decoding="async" />
+            <p class="reveal-note">{{ itemAt(active[r])?.memory }}</p>
+          </div>
+        </div>
       </section>
 
       <!-- ── Even better · not a section. The dock card raises a flag and this
@@ -96,9 +102,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue'
 
-defineProps({
+const props = defineProps({
   sections: { type: Array, required: true },
 })
 
@@ -111,235 +117,130 @@ const panel = useState('chapterPanel', () => null)
 function onPanelKey(e) { if (e.key === 'Escape' && panel.value) panel.value = null }
 
 const rootEl = ref(null)
-const box = ref({ w: 1000, h: 1000 })
 let rafId = 0
 let ro = null
 
-// ── The ribbon ──────────────────────────────────────────────────────────────
-// A ribbon is a flat strip twisted about its own centreline. Seen head-on, a strip
-// rotated by θ presents a width of `w·cos θ` — so the band pinches to nothing every
-// time θ passes a quarter turn, and past it you are looking at the BACK of the same
-// piece of material. That is the whole model: one angle per point along the ribbon.
-//
-//   halfWidth(u) = RIBBON_W · |cos θ(u)|
-//   face(u)      = sign(cos θ(u))          → front stock, or the same stock shaded
-//
-// θ is a travelling wave, `sin(2π(u·K − phase))`, and `phase` advances every frame —
-// which is the motion. ⚠️ It is the TWIST that travels, not the material: a torsional
-// wave running down a hanging ribbon is a real thing, and it means the names printed
-// on the ribbon never move an inch while the ribbon turns underneath them.
-const TWIST = Math.PI * 1.05     // rad — enough to carry θ past ±π/2 and show the back
-const FRONT = [239, 230, 212]
-const BACK = [206, 195, 171]
-const SHADE = [116, 106, 88]
-const EDGE = 'rgba(46, 74, 82, 0.32)'
+// ── The wall ────────────────────────────────────────────────────────────────
+// Five bands, each carrying the whole gift list, each starting the list at a different
+// place and running at its own speed in its own direction. Nothing is illustrated and
+// nothing is measured off the page: the motion IS the page.
+const BANDS = 6
+const items = ref([])
+const bands = ref([])
+const copies = ref([])
+const active = ref([])
+const touch = ref(false)
 
-// ⚠️ NO ENVELOPE, and the names are NOT printed on the ribbon. The first cut held the
-// twist flat under each word so the type had somewhere level to sit — which forced the
-// ribbon to be wide enough to carry a name (224px) with long still panels between the
-// turns, and at those proportions it stopped reading as a ribbon and started reading as
-// a chain of lozenges. A ribbon reads as a ribbon at about five to one. So the strip is
-// narrow now, the twist is uniform and travels the whole length, and the names sit
-// BESIDE it — flat, legible, and still while the material turns past them.
-const mix = (c1, c2, t) =>
-  `rgb(${Math.round(c1[0] + (c2[0] - c1[0]) * t)},${Math.round(c1[1] + (c2[1] - c1[1]) * t)},${Math.round(c1[2] + (c2[2] - c1[2]) * t)})`
+// Per-band motion state. `v` is the live speed and it EASES toward `target`, which is
+// zero while you are on that band — so a band coasts to a halt and picks up again
+// rather than switching on and off. That deceleration is most of the feel of the page.
+const mo = reactive([])
+let trackEls = []
+let bandEls = []
+let revealEls = []
+let wordEls = []          // the live element under the pointer, per band
+
+const itemAt = (i) => (i >= 0 ? items.value[i] : null)
+
+function setBand(r, i, e) {
+  active.value[r] = i
+  const el = e?.currentTarget || null
+  // ⚠️ The chosen word needs its own class, not just `:hover`. On touch there is no
+  // hover at all, so without this the band would open its panel while every word in it
+  // stayed ghosted — which is what the first portrait build looked like.
+  if (wordEls[r] && wordEls[r] !== el) wordEls[r].classList.remove('on')
+  if (el) el.classList.add('on')
+  wordEls[r] = el
+}
+function clearBand(r) {
+  active.value[r] = -1
+  wordEls[r]?.classList.remove('on')
+  wordEls[r] = null
+}
+
+function buildBands(list) {
+  items.value = list
+  const n = list.length
+  const rows = Math.max(2, Math.min(BANDS, n))
+  const out = []
+  const sh = rng(7)
+  for (let r = 0; r < rows; r++) {
+    // ⚠️ SHUFFLED per band, not rotated. Rotating one order gives every band the same
+    // cyclic sequence, so they slide past each other looking like five copies of the
+    // same strip at different offsets — which is exactly how the first cut read.
+    const idx = Array.from({ length: n }, (_, k) => k)
+    for (let k = n - 1; k > 0; k--) {
+      const m = Math.floor(sh() * (k + 1))
+      const t = idx[k]; idx[k] = idx[m]; idx[m] = t
+    }
+    out.push(idx.map((i) => ({ i, name: list[i].name, claimed: !!list[i].claimed })))
+  }
+  bands.value = out
+  copies.value = out.map(() => 3)
+  active.value = out.map(() => -1)
+  mo.length = 0
+  const rnd = rng(41)
+  for (let r = 0; r < rows; r++) {
+    mo.push({
+      dir: r % 2 ? -1 : 1,
+      // 24–58 px/s. Slow enough that a word can be read as it passes.
+      speed: (0.40 + rnd() * 0.58),
+      // Bands are not all the same size — a wall has depth, a table does not.
+      fs: (0.62 + rnd() * 0.62).toFixed(3),
+      v: 0,
+      // ⚠️ A different starting phase per band. With every band starting at 0 the word
+      // boundaries line up in columns down the wall and the repetition — unavoidable with
+      // six items — becomes the first thing you see. `ph` is a FRACTION of one repetition,
+      // applied once the width is known.
+      ph: rnd(),
+      off: 0,
+      w: 0,
+    })
+  }
+}
 
 // ── Measure ─────────────────────────────────────────────────────────────────
-// The ribbon's shape and the words' places come from the section's own box, so the
-// breakpoints are free. Only `phase` changes per frame.
-// ⚠️ NOT a template `ref`. This canvas lives inside the sections `v-for`, and a ref
-// bound inside a `v-for` resolves to an ARRAY — so `cvEl.value.style` was `undefined`,
-// the tick threw on its first frame inside the section, and because the rAF is
-// re-armed at the END of the tick the whole loop died silently: no ribbon, no reveals,
-// one console error. Fourth time this trap has bitten this codebase; query the DOM.
-let cv = null
-const knots = ref([])
-const side = ref(false)   // true = portrait: everything reads to the right of the ribbon
-let geo = null           // { H, W, cx, amp, wave, halfW, stops, K }
-let knotEls = []
-
-function centreX(u) {
-  return geo.cx + geo.amp * Math.sin(Math.PI * 2 * u * geo.wave + 0.6)
-}
-
+// One repetition's width per band, then enough repetitions to cover the viewport plus
+// one more. Re-run on resize and once the web font has actually loaded, because the
+// width of a word in a fallback face is not the width of the word.
 function measure() {
   const root = rootEl.value
-  const scene = root?.querySelector('.gifts-scene')
+  const scene = root?.querySelector('.wall')
   if (!scene) return
-  const r = scene.getBoundingClientRect()
-  const W = r.width
-  const H = r.height
-  const n = scene.querySelectorAll('.knot').length
-  if (!n || !W || !H) return
-  box.value = { w: W, h: H }
-
-  // ⚠️ PORTRAIT PUTS THE RIBBON TO ONE SIDE. Centred on a 390px screen there is no room
-  // for a word on either side of it — measured: names ran off BOTH edges. So on a narrow
-  // screen the ribbon falls down the left third and every word reads out to the right of
-  // it, which is also just a better column to read.
-  const narrow = W < 700
-  side.value = narrow
-  // Ribbon proportions: about 5:1 between turns. Wider than this and it is a sash.
-  const halfW = narrow ? Math.min(W * 0.10, 46) : Math.min(W * 0.065, 82)
-  // ⚠️ A real wander. At 58px the ribbon was a vertical band in the middle of an empty
-  // page; it has to travel across the frame for the fall to read as a fall.
-  const amp = narrow ? Math.min(W * 0.07, 44) : Math.min(W * 0.15, 196)
-
-  // The words: evenly down the page, alternating sides, clear of the strip.
-  const top = 0.09
-  const bot = 0.92
-  const stops = []
-  for (let j = 0; j < n; j++) stops.push(top + ((bot - top) * j) / Math.max(1, n - 1))
-
-  geo = {
-    H, W, halfW, amp,
-    cx: narrow ? W * 0.26 : W / 2,
-    wave: 1.1,                  // lateral wander over the whole length
-    // ⚠️ θ = TWIST·sin(2π(u·K − phase)) crosses ±π/2 FOUR times per period, so a period
-    // is four turns, not one. At K = (n+1)·1.4 that was a turn every 40px. K = 1.5 puts
-    // one turn roughly every 470px, which is a ribbon falling, not a corkscrew.
-    K: 1.5,
-    stops,
-  }
-
-  const pad = halfW + Math.min(W * 0.022, 30)
-  // ⚠️ In portrait the word's width is MEASURED, not set in vw. Every word starts at
-  // `centreX + pad` and the ribbon wanders, so a fixed 56vw ran the longest ones off the
-  // right edge by a few pixels at the ribbon's rightmost swing.
-  knots.value = stops.map((u, j) => {
-    const x = centreX(u) + (!narrow && j % 2 ? -pad : pad)
-    const st = { '--y': `${(u * H).toFixed(1)}px`, '--x': `${x.toFixed(1)}px` }
-    if (narrow) st['--w'] = `${Math.max(120, W - x - 16).toFixed(0)}px`
-    return st
-  })
-  knotEls = [...scene.querySelectorAll('.knot')]
-  cv = scene.querySelector('.ribbon')
-  sizeCanvas()
-}
-
-let dpr = 1
-function sizeCanvas() {
-  if (!cv) return
-  dpr = Math.min(2, window.devicePixelRatio || 1)
-  const w = cv.clientWidth
-  const h = cv.clientHeight
-  if (!w || !h) return
-  cv.width = Math.round(w * dpr)
-  cv.height = Math.round(h * dpr)
-}
-
-// ── Draw ────────────────────────────────────────────────────────────────────
-// One quad per 5px of ribbon, shaded by how square-on that bit of it is — which is
-// what gives the material its sheen. Only the slice inside the viewport is built.
-function drawRibbon(offset, vh) {
-  if (!cv || !geo) return
-  const ctx = cv.getContext('2d')
-  if (!ctx) return
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-  ctx.clearRect(0, 0, cv.width, cv.height)
-
-  const STEP = 5
-  const y0 = Math.max(0, offset - STEP)
-  const y1 = Math.min(geo.H, offset + vh + STEP)
-  if (y1 <= y0) return
-
-  const pts = []
-  for (let y = y0; y <= y1; y += STEP) {
-    const u = y / geo.H
-    const th = TWIST * Math.sin(Math.PI * 2 * (u * geo.K - phase))
-    const c = Math.cos(th)
-    // Taper to a point at both ends, so the ribbon runs out rather than being cut off.
-    const t0 = Math.min(1, y / (geo.H * 0.055))
-    const t1 = Math.min(1, (geo.H - y) / (geo.H * 0.055))
-    const taper = Math.sin((Math.PI / 2) * Math.max(0, Math.min(1, t0))) * Math.sin((Math.PI / 2) * Math.max(0, Math.min(1, t1)))
-    const cx = centreX(u)
-    // The normal, from the centreline's own slope — the ribbon leans as it wanders.
-    const dx = geo.amp * Math.PI * 2 * geo.wave * Math.cos(Math.PI * 2 * u * geo.wave + 0.6) / geo.H
-    const m = Math.hypot(1, dx)
-    const w = geo.halfW * Math.abs(c) * taper
-    pts.push({ x: cx, y: y - offset, nx: 1 / m, ny: -dx / m, w, c })
-  }
-
-  // ⚠️ ONE silhouette path for the shadow, drawn before the quads. Setting a canvas
-  // shadow on 250 adjacent quads shadows each of them onto the next and the ribbon comes
-  // out with a seam every 5px; the outline has to be a single path.
-  ctx.save()
-  ctx.shadowColor = 'rgba(24, 34, 40, 0.20)'
-  ctx.shadowBlur = 22
-  ctx.shadowOffsetY = 9
-  ctx.fillStyle = 'rgba(0,0,0,1)'
-  ctx.beginPath()
-  pts.forEach((p, k) => {
-    const x = p.x + p.nx * p.w
-    const y = p.y + p.ny * p.w
-    if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
-  })
-  for (let k = pts.length - 1; k >= 0; k--) {
-    const p = pts[k]
-    ctx.lineTo(p.x - p.nx * p.w, p.y - p.ny * p.w)
-  }
-  ctx.closePath()
-  ctx.fill()
-  ctx.restore()
-
-  // Split at every pinch: on each side of one, you are looking at a different face.
-  let i = 0
-  while (i < pts.length - 1) {
-    let j = i + 1
-    const front = pts[i].c >= 0
-    while (j < pts.length && (pts[j].c >= 0) === front) j++
-    for (let k = i; k < j - 1; k++) {
-      const p = pts[k]
-      const q = pts[k + 1]
-      const shade = 1 - Math.abs((p.c + q.c) / 2)
-      ctx.fillStyle = mix(front ? FRONT : BACK, SHADE, shade * 0.5)
-      ctx.beginPath()
-      ctx.moveTo(p.x + p.nx * p.w, p.y + p.ny * p.w)
-      ctx.lineTo(q.x + q.nx * q.w, q.y + q.ny * q.w)
-      ctx.lineTo(q.x - q.nx * q.w, q.y - q.ny * q.w)
-      ctx.lineTo(p.x - p.nx * p.w, p.y - p.ny * p.w)
-      ctx.closePath()
-      ctx.fill()
+  bandEls = [...scene.querySelectorAll('.band')]
+  trackEls = bandEls.map((b) => b.querySelector('.track'))
+  revealEls = bandEls.map((b) => b.querySelector('.reveal'))
+  const vw = scene.clientWidth || window.innerWidth
+  const next = []
+  bandEls.forEach((b, r) => {
+    const grp = b.querySelector('.grp')
+    const w = grp ? grp.getBoundingClientRect().width : 0
+    if (mo[r]) {
+      if (!mo[r].w && w) mo[r].off = mo[r].ph * w   // seed the phase the first time only
+      mo[r].w = w
     }
-    // ⚠️ `Math.max(…, i + 1)`. When two consecutive samples straddle a pinch the inner
-    // walk cannot advance, `j` stays at `i + 1`, and `i = j - 1` puts `i` back where it
-    // started — an infinite loop inside requestAnimationFrame, which hangs the tab hard
-    // enough that a headless probe times out with no error to show for it.
-    i = Math.max(j - 1, i + 1)
-  }
-
-  // The two selvedges, drawn last so they sit crisply on top of the quads.
-  ctx.strokeStyle = EDGE
-  ctx.lineWidth = 1
-  for (const side of [1, -1]) {
-    ctx.beginPath()
-    pts.forEach((p, k) => {
-      const x = p.x + side * p.nx * p.w
-      const y = p.y + side * p.ny * p.w
-      if (k === 0) ctx.moveTo(x, y)
-      else ctx.lineTo(x, y)
-    })
-    ctx.stroke()
-  }
+    next[r] = w > 8 ? Math.ceil((vw + w) / w) + 1 : 3
+  })
+  copies.value = next
 }
 
-// Touch has no hover: open the slip when its gift reaches the middle of the screen
-// instead. Pointer devices keep the hover, which feels better.
+// Touch has no hover: open whichever band is nearest the middle of the screen, on the
+// word nearest the middle of it. Pointer devices keep the hover, which feels better.
 const coarse = () => window.matchMedia('(hover: none)').matches
-const clamp01 = (v) => Math.min(1, Math.max(0, v))
-
-// `phase` is the whole animation. It drifts on its own so the ribbon is turning when
-// you are still, and scrolling gusts it — the twist runs faster while the page moves
-// and eases back to its drift when it stops.
-let phase = 0
-let lastTop = null
-let gust = 0
-// ⚠️ The ribbon turns continuously and forever. That is the point of the page, and it is
-// exactly what someone who has asked their system for less motion does not want, so the
-// twist is frozen at its resting shape for them — the ribbon is still there, it just
-// stops travelling.
+// ⚠️ Six bands of type sliding across the screen forever is exactly what someone who has
+// asked their system for less motion does not want. For them the wall simply holds still;
+// everything else about the page — the reveal, the focus states — still works.
 const stillness = () => import.meta.client && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 let calm = false
+const clamp01 = (v) => Math.min(1, Math.max(0, v))
+
+function rng(seed) {
+  let t = seed * 1103515245 + 12345
+  return () => {
+    t = (t * 1103515245 + 12345) % 2147483648
+    return t / 2147483648
+  }
+}
 
 function tick() {
   const root = rootEl.value
@@ -357,31 +258,73 @@ function tick() {
         else if (el.classList.contains('write')) el.style.clipPath = `inset(-0.3em ${((1 - lp) * 100).toFixed(1)}% -0.45em 0)`
         else el.style.opacity = String(lp)
       }
-      if (!scene.classList.contains('gifts-scene') || !geo) continue
+    }
 
-      const v = lastTop === null ? 0 : lastTop - r.top
-      lastTop = r.top
-      gust += (Math.min(60, Math.abs(v)) - gust) * 0.08
-      if (!calm) phase += 0.00055 + gust * 0.00022
-
-      // Nothing to draw while the section is off screen — and the canvas is sticky, so
-      // it would otherwise keep painting over the scenes either side of it.
-      const on = r.bottom > -40 && r.top < vh + 40
-      if (cv) cv.style.opacity = on ? '1' : '0'
-      if (on) drawRibbon(-r.top, vh)
-
+    if (bandEls.length) {
       const near = coarse()
-      for (let j = 0; j < knotEls.length; j++) {
-        const el = knotEls[j]
-        const u = geo.stops[j]
-        // A word appears just before the ribbon carries it into the middle of the frame.
-        const at = (u * geo.H + vh / 2) / (geo.H + vh)
-        el.style.setProperty('--in', clamp01((p - (at - 0.07)) / 0.05).toFixed(3))
-        if (near) el.classList.toggle('is-near', Math.abs(p - at) < 0.04)
+      if (touch.value !== near) touch.value = near
+      if (near) syncTouch(vh)
+      for (let r = 0; r < bandEls.length; r++) {
+        const m = mo[r]
+        const track = trackEls[r]
+        if (!m || !track || !m.w) continue
+        const held = active.value[r] >= 0
+        m.v += ((held || calm ? 0 : m.speed) - m.v) * 0.045
+        m.off += m.v
+        if (m.off >= m.w) m.off -= m.w
+        // ⚠️ Both directions run the SAME accumulator and wrap on the same width; only
+        // the sign of the translate differs. Running one of them backwards through the
+        // wrap is how a marquee ends up with a seam.
+        const x = m.dir > 0 ? -m.off : m.off - m.w
+        track.style.transform = `translate3d(${x.toFixed(2)}px,0,0)`
+
+        // The panel follows its word while the band is still coasting.
+        const rev = revealEls[r]
+        const we = wordEls[r]
+        if (rev && held && we) {
+          const bb = bandEls[r].getBoundingClientRect()
+          const wb = we.getBoundingClientRect()
+          // ⚠️ CLAMPED AGAINST THE VIEWPORT, not against the band. The word it follows is
+          // on an endless strip and is very often half off one edge, so unclamped the panel
+          // went with it — measured at left: -536 on a 390px screen. And the band is NOT a
+          // reliable ruler: it is a flex item wrapping a track of nowrap content, so its own
+          // border box is far wider than the screen. The viewport is the only honest bound.
+          const w = rev.offsetWidth || 220
+          const lo = 10 - bb.left
+          const hi = window.innerWidth - w - 10 - bb.left
+          rev.style.left = `${Math.max(lo, Math.min(hi, wb.left - bb.left)).toFixed(1)}px`
+        }
       }
     }
   }
   rafId = requestAnimationFrame(tick)
+}
+
+// The touch equivalent of a hover: the band closest to the middle of the screen opens,
+// on whichever of its words is closest to the middle of that band.
+let lastTouchBand = -1
+function syncTouch(vh) {
+  let best = -1
+  let bestD = vh * 0.22
+  bandEls.forEach((b, r) => {
+    const bb = b.getBoundingClientRect()
+    const d = Math.abs(bb.top + bb.height / 2 - vh * 0.42)
+    if (d < bestD) { bestD = d; best = r }
+  })
+  if (best === lastTouchBand) return
+  if (lastTouchBand >= 0) clearBand(lastTouchBand)
+  lastTouchBand = best
+  if (best < 0) return
+  const b = bandEls[best]
+  const bb = b.getBoundingClientRect()
+  let win = null
+  let wd = Infinity
+  b.querySelectorAll('.word').forEach((w) => {
+    const r = w.getBoundingClientRect()
+    const d = Math.abs(r.left + r.width / 2 - (bb.left + bb.width * 0.4))
+    if (d < wd) { wd = d; win = w }
+  })
+  if (win) setBand(best, +win.dataset.i, { currentTarget: win })
 }
 
 let resizeT = 0
@@ -390,13 +333,12 @@ const onResize = () => { clearTimeout(resizeT); resizeT = setTimeout(measure, 15
 onMounted(async () => {
   window.addEventListener('keydown', onPanelKey)
   calm = stillness()
+  buildBands(props.sections.find((x) => x.kind === 'gifts')?.items || [])
   await nextTick()
   measure()
-  // The section's height comes from `min-height` in vh and the canvas from `100%` of a
-  // sticky box — neither is final on the first tick.
   requestAnimationFrame(() => measure())
   document.fonts?.ready.then(() => setTimeout(measure, 60))
-  const scene = rootEl.value?.querySelector('.gifts-scene')
+  const scene = rootEl.value?.querySelector('.wall')
   if (scene && 'ResizeObserver' in window) { ro = new ResizeObserver(onResize); ro.observe(scene) }
   window.addEventListener('resize', onResize)
   rafId = requestAnimationFrame(tick)
@@ -454,119 +396,131 @@ onBeforeUnmount(() => {
   max-width: 30rem;
 }
 
-/* ── the ribbon ── */
-.gifts-scene {
-  display: block;
-  min-height: calc(var(--rows, 6) * 58vh + 44vh);
-  padding: 0;
-  /* ⚠️ NO `overflow: hidden` here. It would make this element its own scrollport and
-     the sticky stage inside it would stick to a box that never scrolls — i.e. behave
-     as if it were static. The canvas is viewport-sized and clips itself. */
+/* ── the wall ── */
+.wall {
+  /* ⚠️ Centred, not top-aligned. The section is taller than the bands so the wall has
+     somewhere to travel through as you scroll; block layout put all of that slack at the
+     bottom and left ~450px of empty page above the first band, which is the one thing a
+     wall of type cannot afford. */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: calc(var(--rows, 6) * 11vh + 78vh);
+  padding: 6vh 0;
+  /* Every band overruns both edges by a whole repetition — that is what makes the loop
+     seamless — so the section has to keep it. */
+  overflow: hidden;
 }
-.stage {
-  position: sticky;
-  top: 0;
-  height: 100dvh;
-  pointer-events: none;
-  z-index: 0;
-}
-.ribbon {
-  display: block;
+.band {
+  position: relative;
+  margin-bottom: 2.2vh;
+  /* ⚠️ A flex item's automatic minimum size is its MIN-CONTENT size, and this one wraps a
+     nowrap track thirteen screens wide — so the band's own border box measured 10,562px.
+     Harmless to look at (the wall clips it) but it makes the band useless as a coordinate
+     space, which is how the reveal panel ended up positioned off the screen. */
   width: 100%;
-  height: 100%;
-  opacity: 0;
-  transition: opacity 0.25s linear;
+  min-width: 0;
 }
+.band:last-child { margin-bottom: 0; }
+.track {
+  display: flex;
+  white-space: nowrap;
+  will-change: transform;
+}
+.grp { display: inline-flex; align-items: baseline; }
 
-/* A word printed on the ribbon. It sits in a stretch the twist is enveloped to leave
-   flat, so it never has to follow a fold. */
-.knot {
-  position: absolute;
-  left: var(--x, 50%);
-  top: var(--y, 0);
-  transform: translateY(-50%);
-  width: var(--w, min(13rem, 34vw));
-  text-align: start;
-  z-index: 2;
-  outline: none;
-  opacity: var(--in, 0);
-}
-.to-left { transform: translate(-100%, -50%); text-align: end; }
-/* A short leader, so the word reads as belonging to the ribbon rather than floating
-   next to it — the strip is pinched to a point at some of these heights and a word
-   112px from a point has nothing to hold on to. */
-.knot::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  width: 1.4rem;
-  height: 1px;
-  background: currentColor;
-  opacity: 0.35;
-  color: #3A3327;
-}
-.to-right::after { right: 100%; margin-right: 0.55rem; }
-.to-left::after { left: 100%; margin-left: 0.55rem; }
-.gift-name {
-  margin: 0;
+.word {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  display: inline-flex;
+  align-items: baseline;
   font-family: 'Bague', sans-serif;
   font-weight: 700;
-  font-size: clamp(0.72rem, 0.98vw, 0.9rem);
-  letter-spacing: 0.15em;
+  font-size: calc(clamp(2.2rem, 5.2vw, 4.8rem) * var(--fs, 1));
+  letter-spacing: 0.05em;
+  line-height: 1.1;
   text-transform: uppercase;
-  line-height: 1.6;
-  color: #3A3327;
-  cursor: default;
+  white-space: nowrap;
+  cursor: none;
+  /* ⚠️ OUTLINE is the resting state. Five solid bands of 4rem type is a shout; hollow,
+     the wall is a texture you look through, and the one you point at fills in. */
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(46, 74, 82, 0.55);
+  transition: color 0.5s ease, -webkit-text-stroke-color 0.5s ease, opacity 0.5s ease;
 }
-.gift-taken {
-  display: block;
-  margin-top: 0.35rem;
-  font-family: 'Bague', sans-serif;
-  font-size: 0.56rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  opacity: 0.55;
-  color: #3A3327;
+/* Alternating bands come pre-filled, so the wall has weight before you touch it. */
+.solid .word {
+  color: rgba(46, 74, 82, 0.16);
+  -webkit-text-stroke-color: rgba(46, 74, 82, 0.22);
 }
-.is-taken .gift-name { opacity: 0.5; text-decoration: line-through; text-decoration-thickness: 1px; }
+.band:hover .word { opacity: 0.42; }
+/* While one band is open the rest step back, so the panel has something to sit on and
+   the eye is not asked to read a moving wall and a still card at the same time.
+   ⚠️ POINTERS ONLY. On touch a band is ALWAYS open — the one nearest the middle of the
+   screen — so this rule left the entire wall permanently ghosted at 0.16. */
+.wall.busy:not(.touch) .band:not(.on) .word { opacity: 0.16; }
+.word.on {
+  opacity: 1;
+  color: #2E4A52;
+  -webkit-text-stroke-color: #2E4A52;
+}
+.band:hover .word:hover,
+.word:focus-visible {
+  opacity: 1;
+  outline: none;
+  color: #2E4A52;
+  -webkit-text-stroke-color: #2E4A52;
+}
+.word.taken { text-decoration: line-through; text-decoration-thickness: 2px; opacity: 0.4; }
 
-/* The slip slides out from behind the ribbon — the only thing on the page that is not
-   the ribbon, so it stays small and quiet. */
-.slip {
-  position: absolute;
-  top: 50%;
-  width: clamp(9rem, 15vw, 12rem);
-  padding: 0.85rem 0.85rem 0.95rem;
-  background: #F6F3EC;
-  box-shadow: 0 10px 24px rgba(24, 34, 40, 0.14);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.2, 0.72, 0.24, 1);
+/* The separator between one name and the next — a small mark, so the stream reads as a
+   list and not as one very long word. */
+.sep {
+  display: inline-block;
+  width: 0.30em;
+  height: 0.30em;
+  margin: 0 0.72em 0.2em;
+  border-radius: 50%;
+  background: currentColor;
+  border: 1px solid rgba(46, 74, 82, 0.45);
+  background: transparent;
+  flex: none;
 }
-.slip { top: calc(100% + 0.9rem); }
-.to-right .slip { left: 0; transform: translateY(-0.6rem) rotate(0.9deg); }
-.to-left .slip { right: 0; transform: translateY(-0.6rem) rotate(-0.9deg); }
-.knot:hover .slip,
-.knot:focus-visible .slip,
-.knot.is-near .slip { opacity: 1; transform: translateY(0) rotate(var(--tilt, 0.9deg)); }
-.to-left { --tilt: -0.9deg; }
-.slip-shot {
+
+.reveal {
+  position: absolute;
+  top: calc(100% + 0.7rem);
+  left: 0;
+  width: clamp(11rem, 17vw, 14rem);
+  padding: 0.9rem 0.9rem 1rem;
+  background: #F6F3EC;
+  box-shadow: 0 14px 30px rgba(24, 34, 40, 0.16);
+  opacity: 0;
+  transform: translateY(-0.55rem);
+  pointer-events: none;
+  transition: opacity 0.4s ease, transform 0.55s cubic-bezier(0.2, 0.72, 0.24, 1);
+  z-index: 3;
+}
+.reveal.open { opacity: 1; transform: translateY(0); }
+.reveal-shot {
   display: block;
   width: 100%;
   aspect-ratio: 5 / 3;
   object-fit: cover;
   filter: grayscale(1) contrast(1.04);
-  opacity: 0.85;
+  opacity: 0.86;
 }
-.slip-note {
-  margin: 0.6rem 0 0;
+.reveal-note {
+  margin: 0.65rem 0 0;
   font-family: 'Bague', sans-serif;
   font-size: clamp(0.6rem, 0.8vw, 0.7rem);
   line-height: 1.55;
   color: #2E4A52;
-  opacity: 0.85;
+  opacity: 0.88;
 }
-.knot:focus-visible .gift-name { text-decoration: underline; text-underline-offset: 0.35em; }
 
 /* ── even better — the on-page panel ── */
 .cash-layer {
@@ -662,11 +616,13 @@ onBeforeUnmount(() => {
 
 /* ── portrait ── */
 @media (max-width: 767px) {
-  .gifts-scene { min-height: calc(var(--rows, 6) * 46vh + 36vh); }
-  .slip { width: 100%; }
+  .wall { min-height: calc(var(--rows, 6) * 9vh + 70vh); padding: 5vh 0; }
+  .band { margin-bottom: 2.6vh; }
+  .word { font-size: calc(clamp(1.6rem, 9.4vw, 2.6rem) * var(--fs, 1)); }
+  .reveal { width: min(15rem, 62vw); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .slip { transition: opacity 0.3s ease; }
+  .reveal { transition: opacity 0.3s ease; }
 }
 </style>
