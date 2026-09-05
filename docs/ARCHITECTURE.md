@@ -154,7 +154,7 @@ what made With Love read as a repeat of US and get rebuilt.
 | `UsStory.vue` | margin notes — the whole page in one hand, nothing set in type; taped polaroids | **written word by word**: per-word `.write` clip off each block's OWN rect; the polaroid keeps a latch |
 | `BigDay.vue` | "The Calendar" — October 2026 ringed in marker with **both** days set out side by side beneath it, plus a second scene of tinted maps and directions | IntersectionObserver latch: it sets, then holds still; hover only draws a leader line |
 | `InFrames.vue` | **the archive** — one window in the room showing a path (`...\Media\`), the three events as folders inside; click one and it opens, then the window navigates into it | **no scroll at all**: a folder-open then a stacked-view swap; a time loop for the room's film behind it |
-| `WithLove.vue` | the ink wanders past scattered gift words and **lassoes** each | measured spline + `.scrub`/`.write` |
+| `WithLove.vue` | **the wall** — six bands of the gift list sliding across the screen at their own speeds, forever; point at a word and its band stops and the item opens under it | one `translate3d` per band per frame; the speed EASES to zero, it does not switch off |
 
 **The shared engine** is an rAF loop per component: it reads each scene's `getBoundingClientRect()`
 every frame and drives per-element `data-window="a,b"` attributes → `strokeDashoffset` (`.scrub` SVG
@@ -307,16 +307,31 @@ diagonals; (2) given a perpendicular midpoint per run, still symmetrical and rep
 three seeded waypoints plus loop-backs, which the user called chaotic. **The curve was right the
 whole time.** The only thing it ever needed was the GAP — the trimming that keeps ink off the words.
 Restored to the original point list, and the gap kept.
-⚠️ **If a "hand-drawn" element does vary, seed it — never `Math.random()`.** The lassos still roll
-their own radii, start angle, turns (1.02–1.18), drift, wobble and tilt, because six identical
-ellipses read as a graphic. But `measure()` re-runs on resize and on `document.fonts.ready`, so a
-live random would re-roll the drawing under the reader and the line would twitch at every
-breakpoint. Measured spread now: 320–406px wide, 99–110 tall — varied, not chaotic. The earlier
-852–1485px spread was the chaos.
-⚠️ **A lassoed word must not WRAP.** The loop is sized from the name's own box, so a two-line name
-makes it sprawl across both. Keep `items[].name` to three or four short words.
+⚠️ **If a generated element varies, SEED it — never `Math.random()`.** This outlived the ink line
+that taught it. Anything measured re-runs on resize and on `document.fonts.ready`, so a live random
+re-rolls the whole composition under the reader. With Love's bands still roll their own order,
+speed, direction, size and starting phase from a seed; they are identical on every re-measure.
 
-⚠️ **A `vh`-only top padding cannot guarantee clearance of the fixed site nav.** The nav is ~88px
+⚠️ **WITH LOVE WAS REBUILT THREE TIMES, and the reasons are worth keeping.** (1) *The ink line* —
+one stroke lassoing each gift word. It never read as elegant because the gesture was wrong:
+**circling a word is a proofreader's CORRECTION mark**, and the travel between circles was invented,
+so there was no correct shape for it. (2) *The strung room* — a thread in real catenaries with paper
+tags hanging from it. Honest and completely still, which is this page's failure mode. (3) *The
+ribbon* — a satin strip falling and turning; **an ornament wide enough to print a name across stops
+reading as an ornament** (5:1 is where a ribbon still looks like a ribbon). What finally worked was
+making the names themselves the page. ⚠️ Item names stay to three or four short words regardless —
+they now set at up to 6.4rem and a long one is wider than the viewport.
+
+⚠️ **THE SCENE'S CONSTANTS ARE TUNED AGAINST A ~900px-TALL FRAME, and only `fitScale()` keeps them
+honest below it.** Camera y/z, `IDLE_Y_DESKTOP`, the wordmark plane's y and the poster geometry are
+all absolute world values; none of them is keyed to viewport height, and `isMobile` is
+`aspectRatio < 1`, so a **landscape phone is treated as a desktop**. Below `FIT_MIN_H` (560px) the
+camera is pulled back by `560 / height`; at or above it the factor is exactly 1, so nothing the
+design was drawn for moves. ⚠️ **`DEPTH_FADE_NEAR/FAR` must scale with it** — they are distances, and
+pulling the camera back without them puts the whole ring past the far threshold and washes it out to
+the opacity floor.
+
+⚠️ **A `vh`-only top padding cannot guarantee clearance of the fixed site nav.**⚠️ **A `vh`-only top padding cannot guarantee clearance of the fixed site nav.** The nav is ~88px
 tall regardless of viewport height, so `padding-top: 9vh` is 81px at 900px and less on anything
 shorter. It went unnoticed for as long as the Big Day's content was *shorter* than its section:
 `align-items: center` was quietly pushing the month title well clear. The moment the redesigned

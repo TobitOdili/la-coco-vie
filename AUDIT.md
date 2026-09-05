@@ -1225,6 +1225,97 @@ survives. Measured after: **0 segments crossing a name, 0 crossing a memory**, b
 | ~~8~~ | ~~Center text/logo offset right — container width centering~~ | ~~🔴 High~~ | ✅ Closed — Browserless side-by-side (×2) shows nav/logo centered identically; no shift. Resolved by `59d6d91b`. |
 | ~~11~~ | ~~Logo-to-txtMesh spacing too small — txtMesh world Y=0 too high~~ | ~~🟡 Medium~~ | ✅ Fixed (`55e0b4b1`) — `txtMesh.position.y` 0 → -8 (~110px lower); text now clears the logo/subtitle. Verified live. |
 | ~~14~~ | ~~Default center text doesn't match front-facing card (initial txt hardcoded)~~ | ~~🟡 Medium~~ | ✅ Fixed (`e4e80d2e`) — `frontChapterIdx()` (nearest poster to camera) drives `setTxtChapter()` from the animate loop; intro completion sets it instantly. Rest-state verified live. |
+## Issue #36 — The nav wordmark sat on top of "WELCOME" on every common phone 🟠 HIGH
+
+### Symptom
+On `/{slug}` at 320, 360 and 390px the centred `COVENANT & UVIE` wordmark ran into the WELCOME label.
+
+### Root cause
+17px type at `0.14em` tracking is ~98px wide, and WELCOME + RSVP do not leave the centre that much
+room on a phone. Nothing was measuring it: every earlier "verified at 390×844" pass was
+FEATURE-scoped (does the folder window fit, does the calendar header clear the nav), so a chrome
+overlap present on all five routes went unseen for months.
+
+### Fix
+`14px` / `0.08em` below 400px. Measured overlap **35px @320, 25px @360, 18px @390 → clear by 19px+**.
+
+⚠️ On the HOMEPAGE the same measurement reads negative for a different and harmless reason: the
+`.wordmark` is a block `div` inside a flex item whose widest child is the countdown line, so its BOX
+stretches to the countdown while its text stays centred. `elementFromPoint` over WELCOME returns
+WELCOME, so taps land correctly — cf. #32, which was the same geometry when it *did* bite.
+
+---
+
+## Issue #37 — Watermarked stock clipart was the registry art, on the live site 🔴 HIGH
+
+### Symptom
+Every gift on With Love revealed the same picture, with `CoolClips.com` across the bottom of it.
+
+### Root cause
+`placeholder-item.png` was added as a deliberate stand-in — a free *preview*, not a licensed asset —
+and the code comment said so. It then survived four redesigns of the page because each rebuild
+carried `image:` through untouched.
+
+### Fix
+Deleted. `image` is `null` until it is real and the reveal panel sizes itself to what is there.
+⚠️ **A placeholder that renders is not a placeholder, it is content.** If it must ship, it has to
+look like an absence.
+
+---
+
+## Issue #38 — 3.2 MB of unreferenced media shipped on every build 🟡 MEDIUM
+
+### Symptom
+Nothing visible — which is why it lasted.
+
+### Root cause
+Two retired designs left their assets behind: the reference site's own editorial wedding stills
+(`{amour,eat,la,wine}-intro.jpg`, ~1.1 MB — models, not the couple) and 11 `proj-*` prints from the
+In Frames version that the folder window replaced (2.1 MB). Both were tracked, deployed, and
+referenced by nothing.
+
+### Fix
+Deleted (recoverable from git). ⚠️ **`.output/public` is NOT wiped between builds**, so a local probe
+was still serving files that no longer existed in `public/` — a stale local deploy can hide exactly
+this class of problem. Always `rm -rf .output` before an asset audit.
+
+---
+
+## Issue #39 — A placeholder `#` rendered as a link that opens a blank tab 🟡 MEDIUM
+
+### Symptom
+The With Love cash CTA, In Frames' "Add Your Photos" card and the nav credit were all
+`<a href="#" target="_blank">` — controls that open an empty tab on nothing.
+
+### Fix
+`#` and `''` now mean "not wired up yet" in all three places: `PopupCard` renders a plain card, the
+CTA renders plain text, the credit renders a `div`. Fill in the `url` and they become links again
+with no other change. **Prod-swept: 0 `href="#"` anchors on any route at any size.**
+
+---
+
+## Issue #40 — The homepage composition never scaled with viewport HEIGHT 🟠 HIGH
+
+### Symptom
+On a landscape phone (844×390) the carousel showed two half-cards and the centre tagline sitting on
+top of them.
+
+### Root cause
+`isMobile = aspectRatio < 1`, so a landscape phone is treated as a desktop — and every constant in
+the scene (camera y/z, the ring's idle height, the wordmark plane's y) was tuned against a ~900px
+frame with nothing keyed to height. The ring is *meant* to bleed off the bottom (it does at 1440×900
+and that is the approved look); at 390px tall there is nothing left of it.
+
+### Fix
+`fitScale()` pulls the camera back below **560px** of height and is exactly `1` above it, so no size
+the design was drawn for moves by a pixel (verified: camera z stays 100 at 600/800/900, 110 portrait).
+⚠️ **The first version of this fix made it worse.** `DEPTH_FADE_NEAR/FAR` are DISTANCES, so pulling
+the camera back put every card past the far threshold at once and the whole ring washed out to the
+0.2 opacity floor — a fit that "worked" and left a grey ghost. The fade thresholds scale with the
+same factor. Card opacities at 844×390 now track 1440×900's within 0.07.
+
+---
+
 | ~~3~~ | ~~Noise texture 404 — relative `--noise-url` resolves vs the `_nuxt/` CSS bundle~~ | ~~🟡 Medium~~ | ✅ Fixed (`1078a8f3`) — resolve `--noise-url` to an absolute URL via `new URL(path, location.href)`. Affected Vercel too (not just GH-Pages). Grain verified rendering live. |
 | 4 | Card scale → actually ring viewing-angle (tilt) | 🟡 Medium | ⏸️ Parked — GPU extraction confirms fov 45° + radius 40 already match; residual is subtle tilt, no clean target. See §Issue #4. |
 | ~~5~~ | ~~SVG colour saturation~~ | ~~🟡 Medium~~ | ✅ Closed — `NoToneMapping`+`SRGBColorSpace` already set; colours match in side-by-side. |
@@ -1250,4 +1341,9 @@ survives. Measured after: **0 segments crossing a name, 0 crossing a memory**, b
 | ~~28~~ | ~~Moving between the two wedding dates shifted the whole page~~ | ~~🟡 Medium~~ | ✅ **Structurally impossible now (2026-09-03)** — both days are shown side by side, so nothing appears or disappears on hover. Fixed → reverted → re-landed as a stacked swap → then superseded entirely. Prod-build: 0px. See §Issue #28. |
 | ~~31~~ | ~~The calendar's leader line rendered in two pieces~~ | ~~🟡 Medium~~ | ✅ Fixed — `pathLength` + `stroke-dasharray` + `non-scaling-stroke` + `preserveAspectRatio="none"` disagree about path length under a non-uniform stretch. Replaced the dash reveal with a `clip-path` wipe. See §Issue #31. |
 | ~~29~~ | ~~The Big Day rendered a completely blank section, with no error~~ | ~~🟠 High~~ | ✅ Fixed then reverted with the feature — but the TRAP is permanent: a `v-for` template ref is an ARRAY, `observe()` throws in `onMounted`, and the mount aborts silently (3rd occurrence, cf. #18). See §Issue #29. |
+| ~~36~~ | ~~The nav wordmark sat on top of "WELCOME" on every common phone~~ | ~~🟠 High~~ | ✅ Fixed 2026-09-05 — 35px of overlap at 320, 25 at 360, 18 at 390, on all five routes. Every earlier mobile check was feature-scoped and never looked at the chrome. See §Issue #36. |
+| ~~37~~ | ~~Watermarked stock clipart was the registry art, on the live site~~ | ~~🔴 High~~ | ✅ Fixed 2026-09-05 — a free-preview cut-out with the vendor's watermark, carried through four redesigns of With Love. `image` is null until it is real. See §Issue #37. |
+| ~~38~~ | ~~3.2 MB of unreferenced media shipped on every build~~ | ~~🟡 Medium~~ | ✅ Fixed 2026-09-05 — the reference site's own editorial stills + 11 orphaned prints. `.output/public` is not wiped between builds and was hiding it. See §Issue #38. |
+| ~~39~~ | ~~A placeholder `#` rendered as a link that opens a blank tab~~ | ~~🟡 Medium~~ | ✅ Fixed 2026-09-05 — `#`/'' now mean "not wired up yet" in PopupCard, the With Love CTA and the nav credit. Prod-swept: 0 dead anchors. See §Issue #39. |
+| ~~40~~ | ~~The homepage composition never scaled with viewport HEIGHT~~ | ~~🟠 High~~ | ✅ Fixed 2026-09-05 — landscape phone showed two half-cards under the tagline. Camera pulls back below 560px of height; the depth-fade thresholds had to scale with it or the ring washes out. See §Issue #40. |
 | 30 | The month-flip would have played entirely below the fold | 🟠 High | ↩️ Moot — the flip was reverted. The RULE stands: `threshold: 0` + a `rootMargin` band is the only trigger shape that cannot go unreachable. See §Issue #30. |

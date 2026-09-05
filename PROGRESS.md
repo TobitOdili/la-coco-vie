@@ -120,6 +120,24 @@ All in `/public/`:
 
 The carousel is `N=8` poster slots (4 chapters × 2, mirrored around a ring).
 
+### 2026-09-05 — With Love became the wall; site-wide responsive + provenance sweep
+- **With Love rebuilt twice more and landed on THE WALL** — six bands of the gift list sliding
+  across the screen forever; point at a word and its band coasts to a halt and the item opens under
+  it. The strung room (paper tags on a catenary thread) and the turning satin ribbon came first and
+  were both rejected: *a quiet, scroll-revealed page is this chapter's failure mode*, and an ornament
+  wide enough to carry a name stops reading as an ornament.
+- **Homepage/chapter transitions** — a reloaded inner page no longer plays the whole homepage intro
+  first (~7s → ~1.2s), and the bottom exit no longer steps the ring down 12 world units at the moment
+  it commits.
+- **Site-wide sweep**: 5 routes × 11 viewports on a clean build → 0 overflow, 0 errors, 0 failed
+  requests, 0 dead links. Fixed: the nav wordmark overlapping WELCOME on every phone, the homepage
+  never scaling with viewport height, and `#` rendering as a real link in three places.
+- **The old site is gone from the deploy** — the watermarked registry clipart, the reference's own
+  editorial stills, the `millanova-replica` package name and a studio credit in the nav markup.
+  Verified: 0 old-site strings in `.output/public`.
+- **Still outstanding (content, not code):** the real gift list, the With Love payment link, In
+  Frames' shared-drive link, and the two Big Day sound files.
+
 ### Camera
 ```js
 camera.position.set(0, -15, 100)

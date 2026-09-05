@@ -6,13 +6,17 @@
        BUTTON that opens something on the page (`action`). With Love's cash card
        needs the last one: sending money is a conversation, not a jump to another
        tab. -->
+  <!-- ⚠️ A PLACEHOLDER URL IS NOT A DESTINATION. `#` was rendering as
+       <a href="#" target="_blank"> — a card that opens a blank tab on nothing. Cards
+       whose destination is not wired up yet render as plain cards until it is. -->
   <component
-    :is="popup.action ? 'button' : popup.url ? 'a' : 'div'"
+    :is="popup.action ? 'button' : link ? 'a' : 'div'"
     class="popup-card"
+    :class="{ 'is-static': !popup.action && !link }"
     :type="popup.action ? 'button' : undefined"
-    :href="!popup.action && popup.url ? popup.url : undefined"
-    :target="!popup.action && popup.url ? '_blank' : undefined"
-    :rel="!popup.action && popup.url ? 'noopener noreferrer' : undefined"
+    :href="link || undefined"
+    :target="link ? '_blank' : undefined"
+    :rel="link ? 'noopener noreferrer' : undefined"
     @click="popup.action && open()"
   >
     <img
@@ -30,12 +34,19 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
 const props = defineProps({
   popup: { type: Object, required: true }, // { title, params[], photo?, url?, action? }
 })
 
 // Shared with the chapter component that owns the panel — the dock lives in
 // `[slug].vue`, the content belongs to the page.
+// `#` and '' both mean "not wired up yet", and neither is somewhere to send a guest.
+const link = computed(() => {
+  const u = props.popup?.url
+  return u && u !== '#' ? u : null
+})
+
 const openPanel = useState('chapterPanel', () => null)
 const open = () => { openPanel.value = props?.popup?.action ?? null }
 </script>
@@ -63,6 +74,9 @@ const open = () => { openPanel.value = props?.popup?.action ?? null }
 .popup-card:hover {
   transform: translateY(-3px);
 }
+/* Nothing to click — do not offer the lift that says there is. */
+.popup-card.is-static { cursor: default; }
+.popup-card.is-static:hover { transform: none; }
 .popup-photo {
   width: 44px;
   height: 60px;

@@ -64,13 +64,21 @@ prod- and real-browser-verified.
 - **Homepage card sizing on portrait** — cards read oversized/cropped. Root cause understood (three's `fov`
   is vertical, so portrait collapses the horizontal view), but every lever also moves the hero, which is
   currently correct — needs a compensating hero adjustment rather than a guess.
-- **Real gallery photos** — partly done: the **card films** (2026-08-10) and the **In Frames reel
-  photos** (2026-08-11) are the couple's own, from `new frames/`. The inner-page galleries (US's
-  polaroids) are still Milla Nova stills, and With Love's item art is one watermarked clipart
-  stand-in.
-- **Seven dead links to fill** — RSVP (nav + all four chapter ends, so it is the one that matters),
-  the With Love cash card, In Frames' "Add Your Photos" Drive folder, both maps, Add to Calendar
-  (needs a real `.ics`), and the footer credit. Counted properly 2026-08-31; earlier notes said three.
+- ~~**Real gallery photos**~~ ✅ **DONE 2026-09-05.** Card films (2026-08-10), the In Frames reel
+  (2026-08-11) and US's polaroids (2026-08-31) are all the couple's own. With Love's watermarked
+  clipart stand-in and the last four of the reference site's own editorial stills were deleted
+  2026-09-05. **Verified on a clean build: every shipped image, film and font is the couple's or
+  generated; zero old-site strings in `.output/public`.** What is still outstanding is *content*,
+  not provenance: the real gift list, and the wedding photos In Frames says are coming.
+- **Two destinations left to fill** (was seven, counted 2026-08-31): the **With Love payment link**
+  and In Frames' **"Add Your Photos" Drive folder**. RSVP is live, both maps are real keyless Google
+  Maps URLs, and Add to Calendar builds a real `.ics` in the browser. The footer credit may never
+  need one.
+  - ⚠️ **None of them is a dead LINK any more.** A placeholder `#` used to render as
+    `<a href="#" target="_blank">` — a control that opens a blank tab on nothing. `PopupCard`, the
+    With Love cash CTA and the nav credit now all treat `#`/empty as "not wired up yet" and render
+    as plain text or a plain card. Fill in the `url` and they become links again with no other
+    change.
 - Richer ScrollTrigger/Lenis parallax + inline films; section bg alternation (**G**).
 - Code-health debt: split the ~1500-line `useChapterScene.js` god-module; perf/a11y (no
   `prefers-reduced-motion`). *(The 34M of MP4s is resolved — the new films total 6.6M.)*

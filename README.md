@@ -73,9 +73,13 @@ is that no two pages share a language. Breaking it is what made With Love fail i
     in Bague. ⚠️ The nine photographs that used to be the subject here are **gone by request**: they
     were the couple's history, and the pictures this chapter is about are the wedding's, which don't
     exist yet. The page says so rather than standing in for them.
-  - **WITH LOVE** — the **ink** writes the thank-you, then wanders past gift words scattered across
-    the page and **lassoes** each in turn; hover shows the item on a torn paper scrap. Ends by
-    splitting in two to sign both names → RSVP.
+  - **WITH LOVE** — the **ink** writes the thank-you, then the gift names become the page: six
+    bands of the list sliding across the screen at their own speeds, forever. Point at a word and
+    its band coasts to a halt, the word fills in solid, the rest of the wall steps back, and the
+    item opens beneath it. ⚠️ **Third design.** A strung room of paper tags and a turning satin
+    ribbon came first; both were rejected, and for the same reason — *a quiet, scroll-revealed page
+    is this chapter's failure mode.* ⚠️ **No artwork at all**, which is also why it stays current
+    for free: adding a gift is adding a word. Ends by splitting in two to sign both names → RSVP.
 - ✅ **Shared engine** — persistent WebGL shell (no intro replay across routes), URL = source of
   truth, real `/{slug}` routes + prerender, deep-links + browser back/forward. Every bespoke page
   runs the same rAF pattern (read scene rects each frame → follows Lenis exactly, reverses for free)
@@ -168,7 +172,7 @@ components/
   chapter/UsStory.vue        ★ US — "the margin notes": every string written word-by-word on scroll
   chapter/BigDay.vue         ★ THE BIG DAY — "the calendar", days ringed in marker (bespoke page)
   chapter/InFrames.vue       ★ IN FRAMES — "the archive": a window you navigate, folders inside
-  chapter/WithLove.vue       ★ WITH LOVE — the ink wanders and lassoes each gift
+  chapter/WithLove.vue       ★ WITH LOVE — the wall: the gift names slide, forever
   chapter/ChapterSection.vue Generic section block — now the unused fallback
   chapter/PopupCard.vue      Floating white card (moment / utility / registry) pinned to the viewport
   chapter/ChapterEnd.vue     Chapter-end: "See you there — RSVP" + socials + disclaimer

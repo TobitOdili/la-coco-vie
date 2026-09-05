@@ -72,10 +72,12 @@ export const POPUPS = {
   },
 
   // “In Frames” — the shared Drive folder guests upload their own shots into.
-  // ⚠️ PLACEHOLDER url — swap for the real Google Drive folder link.
+  // ⚠️ PLACEHOLDER url — swap for the real Google Drive folder link. Until then
+  // PopupCard renders this as a plain card rather than a link, and the copy does not
+  // promise a jump: the `↗` was an arrow on a card that went nowhere.
   fullAlbum: {
     title: 'Add Your Photos',
-    params: ['your shots from the day', 'upload to our shared drive ↗'],
+    params: ['your shots from the day', 'a shared drive link is coming'],
     url: '#',
   },
 

@@ -106,6 +106,38 @@ above. Constant speed and a reversed exit are not in conflict.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
 
+**▶▶ STATE (2026-09-05, latest) — SITE-WIDE SWEEP: EVERY ROUTE, ELEVEN SIZES, AND THE OLD SITE
+IS GONE.**
+User: *"let's do a full sweep across all the pages to ensure ALL responsive screens are good [and]
+there's no reference or link to the old site. Then update all the docs and mds."*
+
+**Method.** All 5 routes × 11 viewports (320×568 → 2560×1440, portrait, landscape phone, tablet,
+laptop, 2560), touch and mouse, against a **clean** prod build — measuring horizontal overflow at
+five scroll depths, console errors, failed requests, nav clearance, sub-10.5px text, and dead
+anchors. 55 screenshots.
+
+**Result: 0 horizontal overflow, 0 console errors, 0 failed requests, 0 dead links — every route,
+every size.** What the sweep actually found:
+- ⚠️⚠️ **THE HOMEPAGE NEVER SCALED WITH VIEWPORT HEIGHT** (AUDIT #40). On a landscape phone the
+  carousel was two half-cards with the tagline on top of them. Fixed with a height-gated camera
+  pull-back; see the audit entry for why the first attempt made it worse.
+- ⚠️ **`#` was rendering as a real link** in three places (AUDIT #39) — cards that open a blank tab
+  on nothing. Now "not wired up yet" until a `url` exists.
+- ⚠️ **3.2 MB of unreferenced media** (AUDIT #38): the reference site's own editorial stills and 11
+  orphaned prints from a retired In Frames design.
+- **Old site: gone.** Verified on a clean build — **0 occurrences of millanova / milla nova /
+  coolclips / sarakuz** in `.output/public`, every shipped image/film/font is the couple's own or
+  generated, and every outbound URL in the source is Google Fonts, keyless Google Maps, or the real
+  RSVP link.
+
+⚠️⚠️ **TWO OF THE SWEEP'S OWN RED FLAGS WERE MEASUREMENT ARTIFACTS, and both cost real time.**
+(1) In Frames reported the nav wordmark overlapping at every size — it has **two** `.wordmark`
+elements (the room's big faint one) and `querySelector` took the first. (2) The homepage's negative
+nav gaps are a block `div` stretching to the countdown's width while its text stays centred.
+⚠️ And the sweep's own screenshots of `/` were **all unusable**: it waited 2.6s, which is right for a
+chapter's deep-link arrival but the homepage intro runs **7s**, so all eleven were mid-fly-in. Wait
+for the thing you are photographing, not for a number that worked somewhere else.
+
 **▶▶ STATE (2026-09-05, latest) — WITH LOVE: FINAL PASS. COPY, EVERY SCREEN, AND THE LAST
 OF THE OLD SITE.**
 User: *"i LOVE this page… Let's change the popup note to 'if you would rather send us cash, that is
@@ -1113,6 +1145,9 @@ collage page crawl. New scrub types beside `.fade`/`.scrub`: **`.paste`** and **
 ⚠️ **Placeholder art:** ONE stock clipart cut-out for every item
 (`public/images/registry/placeholder-item.png`), **watermark deliberately left in** — it's a free
 preview, not a licensed asset. Swap per item via `image:`.
+> ⚠️⚠️ **SUPERSEDED 2026-09-05 — THIS SHIPPED, WATERMARK AND ALL, FOR WEEKS.** "Deliberate" made it
+> invisible to every later review, and it survived four redesigns of the page because each one
+> carried `image:` through untouched. Deleted; `image` is `null` until it is real. See AUDIT #37.
 **Asset sourcing dead ends (don't repeat):** Openverse CC0 → rawpixel's "png sticker" collection
 looks perfect but the public preview URLs have a **checkerboard baked into the pixels**
 (`hasAlpha: false`, background alternating 238/255) — unusable, and clipart anyway. Wikimedia

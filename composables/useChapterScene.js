@@ -492,7 +492,15 @@ export function useChapterScene() {
     } else {
       camera.position.set(0, -15, 100)
     }
-    camera.basePosition = camera.position.clone()
+    // ⚠️ SHORT VIEWPORTS PULL THE CAMERA BACK. Every constant here — the camera's y and z,
+    // the ring's idle height, the wordmark plane's y — was tuned against a ~900px-tall
+    // frame, and NOTHING scaled with height. The ring is meant to bleed off the bottom
+    // (it does at 900 and that is the approved look), but on a landscape phone at 390px
+    // tall the same composition leaves two half-cards and a tagline sitting on top of
+    // them. `fitScale()` is 1 at every height the design was drawn for and only grows
+    // below FIT_MIN_H, so nothing a visitor has ever seen on a laptop or a portrait phone
+    // moves by a pixel.
+    applyFit()
     scene.add(camera)
 
     // Groups — original source uses default XYZ order (never sets rotation.order)
@@ -948,7 +956,12 @@ export function useChapterScene() {
         if (introComplete && selectedIndex === -1) {
           p.mesh.getWorldPosition(_frontVec)
           const dist = _frontVec.distanceTo(camera.position)
-          const t = (dist - DEPTH_FADE_NEAR) / (DEPTH_FADE_FAR - DEPTH_FADE_NEAR)
+          // ⚠️ The fade thresholds are DISTANCES, so they have to travel with the camera.
+          // Pulling it back on a short viewport put every card past DEPTH_FADE_FAR at once
+          // and the whole ring washed out to the 0.2 floor — the fit "worked" and left a
+          // tiny grey ghost in the middle of the frame.
+          const k = fitScale()
+          const t = (dist - DEPTH_FADE_NEAR * k) / ((DEPTH_FADE_FAR - DEPTH_FADE_NEAR) * k)
           const op = 1.0 - Math.min(1, Math.max(0, t))
           const ss = op * op * (3 - 2 * op)  // smoothstep
           target = DEPTH_FADE_FLOOR + (1 - DEPTH_FADE_FLOOR) * ss
@@ -1693,6 +1706,21 @@ export function useChapterScene() {
   // tagline; mobile keeps 0 (its ring/text separation is handled by TXT_Y_MOBILE + fitTxtMesh).
   function idleCarouselY() { return isMobile ? 0 : IDLE_Y_DESKTOP }
 
+  // Below this the frame is too short for the composition as drawn; above it, no-op.
+  const FIT_MIN_H = 500
+  const fitScale = () => Math.max(1, FIT_MIN_H / Math.max(1, height))
+  // Scale the camera's whole offset, not just its distance: `lookAt` aims at
+  // (0, basePosition.y, 0), so moving z alone would swing the view angle and re-frame the
+  // ring rather than simply fitting more of it in.
+  function applyFit() {
+    if (!camera) return
+    const k = fitScale()
+    const y = (isMobile ? 0 : -15) * k
+    const z = (isMobile ? 110 : 100) * k
+    camera.position.set(camera.position.x, y, z)
+    camera.basePosition = new THREE.Vector3(0, y, z)
+  }
+
   function fitTxtMesh() {
     const mesh = groupG?.userData?.txtMesh
     if (!mesh || !camera) return
@@ -1718,6 +1746,7 @@ export function useChapterScene() {
     camera.aspect = aspectRatio
     camera.updateProjectionMatrix()
     renderer.setSize(w, h, false)
+    applyFit()     // a rotate into landscape can halve the height — refit the framing
     fitTxtMesh()   // aspect changed (incl. iOS URL-bar show/hide) → refit the wordmark
 
     // Keep the hero full-bleed across resizes — its scale is aspect-dependent and was
