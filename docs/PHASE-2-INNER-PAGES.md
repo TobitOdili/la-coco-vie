@@ -106,6 +106,48 @@ above. Constant speed and a reversed exit are not in conflict.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
 
+**▶▶ STATE (2026-09-05, latest) — WITH LOVE: FINAL PASS. COPY, EVERY SCREEN, AND THE LAST
+OF THE OLD SITE.**
+User: *"i LOVE this page… Let's change the popup note to 'if you would rather send us cash, that is
+more than welcome'. Also change 'but if your love language comes wrapped with a bow…' to 'but if you
+insist'… Then, do a final pass across this page for: responsiveness on mobile and across all
+screens; removing references or links to old site."*
+
+- **Both copy changes are in** — the pivot line and the cash panel's body.
+- ⚠️⚠️ **THE GIFT IMAGE WAS WATERMARKED STOCK CLIPART, AND IT WAS ON THE LIVE PAGE.** Every registry
+  item pointed at one CoolClips cut-out — a free *preview*, never a licensed asset — carrying the
+  vendor's own watermark across the bottom, and the reveal panel rendered it, watermark and all, on
+  every single gift. The file is deleted; `image` is `null` until it is real, and the panel sizes
+  itself to whatever is there (note alone now, note + photo later).
+- ⚠️⚠️ **~1.1 MB OF THE REFERENCE SITE'S OWN WEDDING PHOTOGRAPHY WAS STILL SHIPPING.**
+  `amour-intro.jpg`, `eat-intro.jpg`, `la-intro.jpg`, `wine-intro.jpg` — editorial stills of models,
+  tracked in git, deployed on every build, and **referenced by nothing**. Deleted. `package-lock.json`
+  still called the project `millanova-replica`; the nav's own markup still carried a
+  `<!-- Copyright / Sarakuz -->` comment naming the reference site's studio. Both gone.
+  **Verified: zero occurrences of millanova / milla nova / coolclips / sarakuz anywhere in a clean
+  `.output/public`, and zero failed requests on all four chapters.**
+  - ⚠️ The clean rebuild mattered. `.output/public` is NOT wiped between builds, so it was still
+    serving `wine-intro.jpg` and other files that no longer exist in `public/` — a local probe would
+    have shown a page that CI could never produce.
+- **A placeholder URL is not a destination.** `cashPanel.url` and `SITE.credit.url` are both still
+  `#`. The cash CTA — this page's one call to action — rendered as an `<a target="_blank">` that
+  opened a blank tab on nothing; it reads *"the payment link is coming soon"* as plain text until
+  there is a real one. The bottom-left credit does the same.
+- ⚠️ **THE NAV WORDMARK SAT ON TOP OF "WELCOME" ON EVERY COMMON PHONE.** Measured overlap: **35px at
+  320, 25px at 360, 18px at 390** — the centred 17px/0.14em wordmark is ~98px wide and the two
+  labels either side do not leave it that much room. 14px and 0.08em below 400px; now clear by 19px
+  at 320 and more above it.
+- ⚠️ **THE BAND COUNT FOLLOWS THE SHAPE OF THE SCREEN.** Six bands fill a 16:9 desktop and covered a
+  768×1024 tablet by **34%** — a wall with two thirds of the screen empty. Bigger type is not the
+  answer on a narrow screen (at the size that would fill 1024px of height, one gift name is wider
+  than the viewport), so tall viewports get **eight**. Type is also sized off `max(vw, vh)` with a
+  higher cap, which is what fixed the other end — 2560 was hitting the old 4.8rem cap.
+- **Prod-build swept at ten sizes, 320×568 → 2560×1440, touch and mouse**: no horizontal overflow
+  anywhere, coverage **45–65%** (was 34–65%), no word under the fixed nav or the dock card at any
+  size, the reveal panel in frame at every touch size, and 0 console errors. All four chapters
+  re-checked at desktop and phone: 0 failed requests, 0 errors. Reduced motion still holds the wall
+  still.
+
 **▶▶ STATE (2026-09-05, latest) — WITH LOVE IS A WALL OF MOVING TYPE.**
 User, on the ribbon: *"Oh that's kinda bad. Can you show me those options you gave me earlier?"* →
 **the wall of type**, from the same list of four. Third build of this page; the two before it are

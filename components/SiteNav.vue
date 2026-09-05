@@ -71,11 +71,14 @@
     <!-- Bottom bar -->
     <div class="!fixed z-20 bottom-0 w-full pointer-events-none">
       <div class="container flex justify-between pb-2 md:pb-6">
-        <!-- Copyright / Sarakuz -->
-        <a
-          :href="SITE.credit.url"
-          rel="noopener noreferrer"
-          target="_blank"
+        <!-- The couple's own credit. ⚠️ A LINK ONLY IF IT GOES SOMEWHERE: `credit.url`
+             is a placeholder `#`, and as an <a target="_blank"> that opened a blank tab
+             on the visitor. It renders as plain text until there is a real destination. -->
+        <component
+          :is="creditLink ? 'a' : 'div'"
+          :href="creditLink || undefined"
+          :rel="creditLink ? 'noopener noreferrer' : undefined"
+          :target="creditLink ? '_blank' : undefined"
           class="pointer-events-auto"
         >
           <div class="flex items-center menu-item">
@@ -83,7 +86,7 @@
               <span class="opacity-40">{{ SITE.credit.prefix }}</span>{{ SITE.credit.name }}
             </div>
           </div>
-        </a>
+        </component>
 
         <!-- Sound toggle -->
         <div class="menu-item pointer-events-auto" @click="$emit('toggle-sound')">
@@ -135,6 +138,12 @@ const countLabel = computed(() =>
 
 // ⚠️ Over a dark ground the nav's own accent IS the background — see the flag's
 // definition in `pages/[slug].vue`. Flip to the chapter's light tone there.
+// A placeholder URL is not a destination. `#` and '' both mean "not wired up yet".
+const creditLink = computed(() => {
+  const u = SITE.credit?.url
+  return u && u !== '#' ? u : null
+})
+
 const navOnDark = useState('navOnDark', () => false)
 
 const props = defineProps({
@@ -168,6 +177,16 @@ defineEmits(['toggle-about', 'go-home', 'toggle-sound'])
   font-family: 'Bague', ui-sans-serif, sans-serif;
   letter-spacing: 0.14em;
   line-height: 1.1;
+}
+/* ⚠️ At 17px + 0.14em the centred wordmark is ~98px wide, and on a 320px screen WELCOME
+   and RSVP leave it under 90px of clear space between them — measured 35px of it sitting
+   ON TOP of "WELCOME" at 320, 25 at 360, 18 at 390. Every common phone. Tighten the
+   tracking and drop a point below 400px; both edges clear from 320 up. */
+@media (max-width: 400px) {
+  .wordmark {
+    font-size: 14px;
+    letter-spacing: 0.08em;
+  }
 }
 .wordmark .amp {
   font-family: 'Italiana', serif;

@@ -39,8 +39,10 @@
           <!-- Opens beneath whichever word you are on, and TRACKS it while the band
                coasts to a halt, so it never appears to jump into place. -->
           <div class="reveal" :class="{ open: active[r] >= 0 }">
-            <img class="reveal-shot" :src="itemAt(active[r])?.image" alt=""
-              aria-hidden="true" decoding="async" />
+            <!-- ⚠️ Only when there IS one. Bound to a null `src` the browser renders a
+                 broken-image box, which is a worse placeholder than no placeholder. -->
+            <img v-if="itemAt(active[r])?.image" class="reveal-shot"
+              :src="itemAt(active[r]).image" alt="" aria-hidden="true" decoding="async" />
             <p class="reveal-note">{{ itemAt(active[r])?.memory }}</p>
           </div>
         </div>
@@ -60,7 +62,12 @@
               </button>
               <h3 class="cash-heading">{{ s.heading }}</h3>
               <p class="cash-body">{{ s.body }}</p>
-              <a class="cash-cta" :href="s.url" target="_blank" rel="noopener noreferrer">{{ s.cta }}</a>
+              <!-- ⚠️ A LINK ONLY IF IT GOES SOMEWHERE. `url` is still a placeholder `#`,
+                   and this is the page's one call to action: a guest who taps it and lands
+                   nowhere is worse off than one who reads that it is coming. -->
+              <a v-if="s.url && s.url !== '#'" class="cash-cta" :href="s.url"
+                target="_blank" rel="noopener noreferrer">{{ s.cta }}</a>
+              <span v-else class="cash-cta is-pending">the payment link is coming soon</span>
             </div>
           </div>
         </transition>
@@ -124,7 +131,12 @@ let ro = null
 // Five bands, each carrying the whole gift list, each starting the list at a different
 // place and running at its own speed in its own direction. Nothing is illustrated and
 // nothing is measured off the page: the motion IS the page.
-const BANDS = 6
+// ⚠️ BAND COUNT FOLLOWS THE SHAPE OF THE SCREEN. Six bands fill a 16:9 desktop and leave
+// a tall tablet (768×1024) covered by 34% — a wall with two thirds of the screen empty
+// above and below it. Bigger type is not the answer on a narrow screen: at the size that
+// would fill 1024px of height, one gift name is wider than the viewport. More bands is.
+const rowsFor = () =>
+  import.meta.client && window.innerHeight / window.innerWidth >= 1.15 ? 8 : 6
 const items = ref([])
 const bands = ref([])
 const copies = ref([])
@@ -161,7 +173,7 @@ function clearBand(r) {
 function buildBands(list) {
   items.value = list
   const n = list.length
-  const rows = Math.max(2, Math.min(BANDS, n))
+  const rows = Math.max(2, rowsFor())
   const out = []
   const sh = rng(7)
   for (let r = 0; r < rows; r++) {
@@ -328,7 +340,15 @@ function syncTouch(vh) {
 }
 
 let resizeT = 0
-const onResize = () => { clearTimeout(resizeT); resizeT = setTimeout(measure, 150) }
+const onResize = () => {
+  clearTimeout(resizeT)
+  resizeT = setTimeout(() => {
+    // A rotation can change the band count; rebuild only when it actually differs, so an
+    // ordinary resize does not re-roll every speed and phase under the reader.
+    if (bands.value.length !== Math.max(2, rowsFor())) buildBands(items.value)
+    nextTick(measure)
+  }, 150)
+}
 
 onMounted(async () => {
   window.addEventListener('keydown', onPanelKey)
@@ -439,7 +459,11 @@ onBeforeUnmount(() => {
   align-items: baseline;
   font-family: 'Bague', sans-serif;
   font-weight: 700;
-  font-size: calc(clamp(2.2rem, 5.2vw, 4.8rem) * var(--fs, 1));
+  /* ⚠️ Sized off the LARGER of the two axes, and capped high. On vw alone a tall tablet
+     (768×1024) got 40px type on a 1024px-high screen and the wall covered 34% of it, while
+     a 2560 desktop hit the old 4.8rem cap and covered 42%. `max(vw, vh)` keeps the wall
+     filling the frame in portrait, and the higher cap lets it keep growing on a big one. */
+  font-size: calc(clamp(2.2rem, max(5.2vw, 3.6vh), 6.4rem) * var(--fs, 1));
   letter-spacing: 0.05em;
   line-height: 1.1;
   text-transform: uppercase;
@@ -459,9 +483,11 @@ onBeforeUnmount(() => {
 .band:hover .word { opacity: 0.42; }
 /* While one band is open the rest step back, so the panel has something to sit on and
    the eye is not asked to read a moving wall and a still card at the same time.
-   ⚠️ POINTERS ONLY. On touch a band is ALWAYS open — the one nearest the middle of the
-   screen — so this rule left the entire wall permanently ghosted at 0.16. */
+   ⚠️ On touch a band is ALWAYS open — the one nearest the middle of the screen — so the
+   full 0.16 would leave the entire wall permanently ghosted. It still steps back, just
+   far less, which is enough for the panel to read against it. */
 .wall.busy:not(.touch) .band:not(.on) .word { opacity: 0.16; }
+.wall.busy.touch .band:not(.on) .word { opacity: 0.45; }
 .word.on {
   opacity: 1;
   color: #2E4A52;
@@ -505,6 +531,7 @@ onBeforeUnmount(() => {
   z-index: 3;
 }
 .reveal.open { opacity: 1; transform: translateY(0); }
+.reveal-shot + .reveal-note { margin-top: 0.65rem; }
 .reveal-shot {
   display: block;
   width: 100%;
@@ -514,7 +541,7 @@ onBeforeUnmount(() => {
   opacity: 0.86;
 }
 .reveal-note {
-  margin: 0.65rem 0 0;
+  margin: 0;
   font-family: 'Bague', sans-serif;
   font-size: clamp(0.6rem, 0.8vw, 0.7rem);
   line-height: 1.55;
@@ -595,6 +622,7 @@ onBeforeUnmount(() => {
   transition: opacity 0.25s ease;
 }
 .cash-cta:hover, .cash-cta:focus-visible { outline: none; opacity: 1; }
+.cash-cta.is-pending { border-bottom-style: dashed; opacity: 0.5; cursor: default; }
 
 /* ── signing ── */
 .sign-scene { min-height: 112dvh; }
@@ -618,7 +646,7 @@ onBeforeUnmount(() => {
 @media (max-width: 767px) {
   .wall { min-height: calc(var(--rows, 6) * 9vh + 70vh); padding: 5vh 0; }
   .band { margin-bottom: 2.6vh; }
-  .word { font-size: calc(clamp(1.6rem, 9.4vw, 2.6rem) * var(--fs, 1)); }
+  .word { font-size: calc(clamp(1.75rem, max(9.4vw, 4.2vh), 3.1rem) * var(--fs, 1)); }
   .reveal { width: min(15rem, 62vw); }
 }
 

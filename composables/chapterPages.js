@@ -28,12 +28,11 @@
 
 import { asset } from '~/utils/asset'
 
-// ⚠️ PLACEHOLDER registry art — ONE stock clipart cut-out standing in for every
-// item, so the album's layout/motion can be judged before the real list exists.
-// It carries the stock vendor's watermark on purpose (it is a free preview, not a
-// licensed asset) — swap per item via `image:` before launch. See
-// docs/CONTENT-AND-ASSETS.md → "The registry album".
-const PLACEHOLDER_ITEM = asset('/images/registry/placeholder-item.png')
+// ⚠️ REGISTRY ART IS `null` UNTIL IT IS REAL. Every item used to point at one stock
+// clipart cut-out carrying the vendor's own watermark — a free preview, never a
+// licensed asset — and the wall rendered it, watermark and all, on every reveal. The
+// panel now sizes itself to whatever is there: give an item an `image:` and it shows
+// one, leave it null and the note stands alone. See docs/CONTENT-AND-ASSETS.md.
 
 // ── The floating popup cards ─────────────────────────────────────────────────
 export const POPUPS = {
@@ -383,7 +382,7 @@ export const CHAPTER_PAGES = {
         lead: 'before you give us a single thing —',
         big: 'thank you',
         sub: 'your presence on the day is the whole gift. truly.',
-        pivot: 'but if your love language comes wrapped with a bow…',
+        pivot: 'but if you insist…',
         popups: [],
       },
       {
@@ -401,32 +400,32 @@ export const CHAPTER_PAGES = {
           {
             memory: 'lorem ipsum dolor sit amet, consectetur adipiscing.',
             name: 'lorem ipsum dolor',
-            image: PLACEHOLDER_ITEM, x: 34, claimed: false,
+            image: null, x: 34, claimed: false,
           },
           {
             memory: 'sed do eiusmod tempor incididunt ut labore et dolore.',
             name: 'dolor sit amet',
-            image: PLACEHOLDER_ITEM, x: 68, claimed: false,
+            image: null, x: 68, claimed: false,
           },
           {
             memory: 'ut enim ad minim veniam, quis nostrud exercitation.',
             name: 'sed do eiusmod',
-            image: PLACEHOLDER_ITEM, x: 36, claimed: false,
+            image: null, x: 36, claimed: false,
           },
           {
             memory: 'duis aute irure dolor in reprehenderit in voluptate velit.',
             name: 'ut labore et dolore',
-            image: PLACEHOLDER_ITEM, x: 70, claimed: false,
+            image: null, x: 70, claimed: false,
           },
           {
             memory: 'excepteur sint occaecat cupidatat non proident, sunt.',
             name: 'minim veniam quis',
-            image: PLACEHOLDER_ITEM, x: 32, claimed: false,
+            image: null, x: 32, claimed: false,
           },
           {
             memory: 'qui officia deserunt mollit anim.',
             name: 'ex ea commodo',
-            image: PLACEHOLDER_ITEM, x: 66, claimed: false,
+            image: null, x: 66, claimed: false,
           },
         ],
         popups: ['cashNote'],
@@ -437,9 +436,7 @@ export const CHAPTER_PAGES = {
       {
         kind: 'cashPanel',
         heading: 'even better —',
-        body:
-          'if you would rather send something toward the honeymoon, that is more than ' +
-          'welcome, and we will think of you every single day of it.',
+        body: 'if you would rather send us cash, that is more than welcome.',
         cta: 'open the payment link',
         // ⚠️ PLACEHOLDER — the couple's payment destination goes here.
         url: '#',
