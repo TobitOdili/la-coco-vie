@@ -1316,6 +1316,40 @@ same factor. Card opacities at 844×390 now track 1440×900's within 0.07.
 
 ---
 
+## Issue #41 — The countdown ran straight through WELCOME and RSVP on every phone 🟠 HIGH
+
+### Symptom
+At 320–390px the homepage's date line overlapped both nav labels.
+
+### Root cause
+It is the **widest thing in the nav** — "OCTOBER 29, 2026 · LAGOS · 53 DAYS TO GO" is ~300px at
+10px/0.2em — and it sits on the same line as labels that leave it ~180px. ⚠️ **A previous sweep saw
+this and blamed the wrong element:** it measured `.wordmark`, whose box stretches to the countdown's
+width, decided that was an artifact, and moved on. The artifact was real AND there was a genuine
+overlap underneath it, in a sibling.
+
+### Fix
+Below 520px the countdown drops onto its own line under the nav row, at 9px/0.1em.
+
+---
+
+## Issue #42 — The wordmark's click target was as wide as the countdown 🟡 MEDIUM
+
+### Symptom
+None visible — taps on WELCOME still worked.
+
+### Root cause
+`.wordmark` is a block `div` inside a flex item whose widest child is the countdown, so its box
+stretched to ~300px while its text sat centred at ~135px — and that box carries `pointer-events-auto`
+and the go-home click. It only ever worked because WELCOME won the hit test by paint order. **This is
+the exact geometry of #32**, where the same shape swallowed every tap on WELCOME.
+
+### Fix
+`display: inline-block`, so the clickable area equals the words. Verified: box 135px at 320,
+`elementFromPoint` over WELCOME and RSVP returns each label at all eight widths tested.
+
+---
+
 | ~~3~~ | ~~Noise texture 404 — relative `--noise-url` resolves vs the `_nuxt/` CSS bundle~~ | ~~🟡 Medium~~ | ✅ Fixed (`1078a8f3`) — resolve `--noise-url` to an absolute URL via `new URL(path, location.href)`. Affected Vercel too (not just GH-Pages). Grain verified rendering live. |
 | 4 | Card scale → actually ring viewing-angle (tilt) | 🟡 Medium | ⏸️ Parked — GPU extraction confirms fov 45° + radius 40 already match; residual is subtle tilt, no clean target. See §Issue #4. |
 | ~~5~~ | ~~SVG colour saturation~~ | ~~🟡 Medium~~ | ✅ Closed — `NoToneMapping`+`SRGBColorSpace` already set; colours match in side-by-side. |
@@ -1346,4 +1380,6 @@ same factor. Card opacities at 844×390 now track 1440×900's within 0.07.
 | ~~38~~ | ~~3.2 MB of unreferenced media shipped on every build~~ | ~~🟡 Medium~~ | ✅ Fixed 2026-09-05 — the reference site's own editorial stills + 11 orphaned prints. `.output/public` is not wiped between builds and was hiding it. See §Issue #38. |
 | ~~39~~ | ~~A placeholder `#` rendered as a link that opens a blank tab~~ | ~~🟡 Medium~~ | ✅ Fixed 2026-09-05 — `#`/'' now mean "not wired up yet" in PopupCard, the With Love CTA and the nav credit. Prod-swept: 0 dead anchors. See §Issue #39. |
 | ~~40~~ | ~~The homepage composition never scaled with viewport HEIGHT~~ | ~~🟠 High~~ | ✅ Fixed 2026-09-05 — landscape phone showed two half-cards under the tagline. Camera pulls back below 560px of height; the depth-fade thresholds had to scale with it or the ring washes out. See §Issue #40. |
+| ~~41~~ | ~~The countdown ran straight through WELCOME and RSVP on every phone~~ | ~~🟠 High~~ | ✅ Fixed 2026-09-06 — it is the widest element in the nav and shares a line with both labels. An earlier sweep saw the overlap and blamed the wordmark's stretched box. See §Issue #41. |
+| ~~42~~ | ~~The wordmark's click target was as wide as the countdown~~ | ~~🟡 Medium~~ | ✅ Fixed 2026-09-06 — a block `div` carrying `pointer-events-auto` stretched to its sibling's width; same geometry as #32, working only by paint order. `inline-block`. See §Issue #42. |
 | 30 | The month-flip would have played entirely below the fold | 🟠 High | ↩️ Moot — the flip was reverted. The RULE stands: `threshold: 0` + a `rootMargin` band is the only trigger shape that cannot go unreachable. See §Issue #30. |

@@ -38,7 +38,11 @@ const FONTS = {
 }
 const face = (f) => `@font-face{font-family:'${f.fam}';src:url(data:font/${f.fmt};base64,${f.data}) format('${f.fmt}');}`
 
-// One entry per chapter (index-aligned with CHAPTERS). bg = accentLight, ink = accent.
+// ⚠️ KEYED BY TEXTURE NUMBER (`n`), NOT BY RING ORDER. `cu-p1` is the couple, 2 the day,
+// 3 the frames, 4 the gifts — and CHAPTERS in useChapterScene.js is now ordered
+// The Big Day → Coco & Uvie → In Frames → For Our Next Chapter, so the two no longer
+// line up. Each chapter points at its own `n`; renumbering these to match the ring would
+// repaint every card with another chapter's face. bg = accentLight, ink = accent.
 // `sub` is the line UNDER the title on the card face — what this chapter is, in a
 // guest's words. ⚠️ It replaced two generic lines that were on all four cards, the
 // second of which read "OCTOBER TWENTY-SEVEN · TWENTY TWENTY-SIX": a date that has
@@ -48,20 +52,28 @@ const face = (f) => `@font-face{font-family:'${f.fam}';src:url(data:font/${f.fmt
 const CH = [
   {
     n: 1, bg: '#F2EEE8', ink: '#42221A', font: 'rainbow',
-    title: [['Us', 230, 300]],   // [text, baseline-y, font-size]
-    sub: 'Our Journey So Far',
+    // ⚠️ THE LAST BASELINE MUST CLEAR ~385. The shader opens a photo window over the card's
+    // lower two-thirds, and it is NOT in this art's coordinate space — the only reliable
+    // ruler is the cards that already work: In Frames' lowest title baseline is 380 and is
+    // clear, "Coco & Uvie" at 440 and "CHAPTER" at 500 were both sliced in half by it.
+    title: [['Coco', 215, 195], ['& Uvie', 380, 195]],   // [text, baseline-y, font-size]
+    sub: 'all the way to I do',
     tagline: [
-      ['TWO STORIES,', 'xl'], ['ONE', 'sm'], ['BEGINNING —', 'xl'],
-      ['the TALE of', 'sm'], ['COVENANT', 'xl'], ['&', 'sm'], ['UVIE', 'xl'],
+      ['TWO STORIES,', 'xl'], ['ONE BEGINNING:', 'xl'],
+      ['our JOURNEY', 'sm'], ['SO FAR', 'xl'],
     ],
   },
   {
     n: 2, bg: '#E9ECE2', ink: '#41492D', font: 'italiana',
     title: [['THE BIG', 200, 190], ['DAY', 390, 190]],
-    sub: 'Wedding Details: Times and Dates',
+    sub: 'official countdown to our special day',
+    // ⚠️ "jé ká jó" carries accents, and the font subsets beside this script were fetched
+    // with the css2 `text=` param — a subset only contains the glyphs it was asked for.
+    // If é/á/ó are missing they render as .notdef boxes or silently swap face. CHECK THE
+    // PNG after regenerating; do not trust the source string.
     tagline: [
       ['SAVE the DATE —', 'xl'], ['CEREMONY,', 'xl'], ['RECEPTION,', 'xl'],
-      ['and a NIGHT of', 'sm'], ['DANCING', 'xl'], ['under the STARS', 'sm'],
+      ['and', 'sm'], ['JÉ KÁ JÓ', 'xl'],
     ],
   },
   {
@@ -75,7 +87,7 @@ const CH = [
   },
   {
     n: 4, bg: '#E8EDF2', ink: '#2E4A52', font: 'bague',
-    title: [['WITH', 210, 200], ['LOVE', 400, 200]],
+    title: [['FOR OUR', 235, 112], ['NEXT CHAPTER', 378, 112]],
     sub: 'Support Our Wedding in Cash or Kind',
     tagline: [
       ['YOUR PRESENCE', 'xl'], ['is the', 'sm'], ['GREATEST GIFT —', 'xl'],
@@ -98,14 +110,18 @@ for (const c of CH) {
   const f = FONTS[c.font]
   // ── poster face SVG (editable source) ──
   const titleEls = c.title
-    .map(([t, y, px]) => `<text x="500" y="${y}" text-anchor="middle" font-family="${f.fam}" font-size="${px}" fill="${c.ink}">${t}</text>`)
+    // ⚠️ ESCAPE the title too, not just the sub: "Coco & Uvie" is a title now, and a bare
+    // `&` makes the SVG unparseable — the card would render as a blank rectangle.
+    .map(([t, y, px]) => `<text x="500" y="${y}" text-anchor="middle" font-family="${f.fam}" font-size="${px}" fill="${c.ink}">${t.replace(/&/g, '&amp;')}</text>`)
     .join('\n')
   const svg = `<svg width="1000" height="1330" viewBox="0 0 1000 1330" fill="none" xmlns="http://www.w3.org/2000/svg">
-<style>${face(f)}${face(FONTS.bague)}</style>
+<style>${face(f)}${face(FONTS.bague)}${face(FONTS.rainbow)}</style>
 <rect width="1000" height="1330" fill="${c.bg}"/>
 ${titleEls}
-<g opacity="0.62" fill="${c.ink}" font-family="Bague" font-size="30" letter-spacing="2">
-<text x="500" y="1262" text-anchor="middle">${c.sub.replace(/&/g, '&amp;')}</text>
+<!-- ⚠️ The note is HANDWRITTEN (2026-09-06). A script face wants no tracking and a
+     larger size than the 30px/2 tracking this used to carry in Bague. -->
+<g opacity="0.72" fill="${c.ink}" font-family="Over the Rainbow" font-size="46">
+<text x="500" y="1258" text-anchor="middle">${c.sub.replace(/&/g, '&amp;')}</text>
 </g>
 </svg>`
   writeFileSync(`${IMG}/cu-p${c.n}.svg`, svg)

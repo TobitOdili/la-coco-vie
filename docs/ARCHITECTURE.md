@@ -151,10 +151,10 @@ what made With Love read as a repeat of US and get rebuilt.
 
 | file | what it is | how it moves |
 |---|---|---|
-| `UsStory.vue` | margin notes — the whole page in one hand, nothing set in type; taped polaroids | **written word by word**: per-word `.write` clip off each block's OWN rect; the polaroid keeps a latch |
-| `BigDay.vue` | "The Calendar" — October 2026 ringed in marker with **both** days set out side by side beneath it, plus a second scene of tinted maps and directions | IntersectionObserver latch: it sets, then holds still; hover only draws a leader line |
-| `InFrames.vue` | **the archive** — one window in the room showing a path (`...\Media\`), the three events as folders inside; click one and it opens, then the window navigates into it | **no scroll at all**: a folder-open then a stacked-view swap; a time loop for the room's film behind it |
-| `WithLove.vue` | **the wall** — six bands of the gift list sliding across the screen at their own speeds, forever; point at a word and its band stops and the item opens under it | one `translate3d` per band per frame; the speed EASES to zero, it does not switch off |
+| `UsStory.vue` (**Coco & Uvie**, slug `us`) | margin notes — the whole page in one hand, nothing set in type; taped polaroids | **written word by word**: per-word `.write` clip off each block's OWN rect; the polaroid keeps a latch |
+| `BigDay.vue` (**The Big Day** — ring slot 1) | "The Calendar" — October 2026 ringed in marker with **both** days set out side by side beneath it, plus a second scene of tinted maps and directions | IntersectionObserver latch: it sets, then holds still; hover only draws a leader line |
+| `InFrames.vue` (**In Frames**) | **the archive** — one window in the room showing a path (`...\Media\`), the three events as folders inside; click one and it opens, then the window navigates into it | **no scroll at all**: a folder-open then a stacked-view swap; a time loop for the room's film behind it |
+| `WithLove.vue` (**For Our Next Chapter**, slug `with-love`) | **the wall** — six bands of the gift list sliding across the screen at their own speeds, forever; point at a word and its band stops and the item opens under it | one `translate3d` per band per frame; the speed EASES to zero, it does not switch off |
 
 **The shared engine** is an rAF loop per component: it reads each scene's `getBoundingClientRect()`
 every frame and drives per-element `data-window="a,b"` attributes → `strokeDashoffset` (`.scrub` SVG
@@ -284,6 +284,12 @@ phone, painting an invisible click target straight over the WELCOME label in the
 fired `go-home` instead, and there was no way into the welcome panel on a phone at all. Desktop
 could never show it. **A copy change broke a hit target three components away** — which is why the
 check is `elementFromPoint` over each control, not a look at the screenshot. (AUDIT #32.)
+⚠️ **AND IT CAME BACK ONE ELEMENT IN.** Moving `pointer-events-auto` off the wrapper and onto the
+wordmark was not enough: the wordmark is itself a block `div` in that flex item, so its box ALSO
+stretched to the countdown's width and it still carried the go-home click. It only worked because
+WELCOME won the hit test by paint order. `display: inline-block` (2026-09-06) makes the target equal
+the words. **Shrink-wrap the control; do not merely move the handler.** (AUDIT #42.) The countdown
+itself, being the widest thing in the nav, also has to leave that line on a phone (AUDIT #41).
 ⚠️ **Two CSS variables resolving to the same value is an INVISIBLE element, not a low-contrast
 one.** `--accent` and `--accentLight` both defaulted to the keyword `gray`, so the welcome panel
 rendered `rgb(128,128,128)` on `rgb(128,128,128)` on the whole homepage. It sat open for three
@@ -321,6 +327,23 @@ ribbon* — a satin strip falling and turning; **an ornament wide enough to prin
 reading as an ornament** (5:1 is where a ribbon still looks like a ribbon). What finally worked was
 making the names themselves the page. ⚠️ Item names stay to three or four short words regardless —
 they now set at up to 6.4rem and a long one is wider than the viewport.
+
+⚠️ **THREE ORDERINGS EXIST AND ONLY ONE OF THEM IS THE RING.** (1) `CHAPTERS` array order **is**
+the ring order and `index` must equal the array position — the scene builds `txtTextures` by mapping
+over the array and `[slug].vue` compares `chapter.index` to `selectedIndex` to know a select has
+settled. (2) Each chapter's `txt`/`svg` stay bolted to their own **texture number** (`cu-*1` = the
+couple, 2 = the day, 3 = the frames, 4 = the gifts). (3) `CH[]` in `scripts/gen-textures.mjs` is
+keyed by that texture number. Since the 2026-09-06 reorder (**The Big Day → Coco & Uvie → In Frames
+→ For Our Next Chapter**) the ring order and the texture numbers no longer line up, and renumbering
+the files to "tidy" that would repaint every card with another chapter's face.
+⚠️ **SLUGS DID NOT CHANGE with the titles.** `us` and `with-love` are prerendered URLs that shared
+links already point at; the title is only what a guest reads.
+
+⚠️ **A CARD TITLE MUST CLEAR ~y=385 IN THE 1000×1330 ART.** The shader opens the photo window over
+the card's lower two-thirds, and its cutoff is in a transformed UV space that is NOT the art's — the
+only reliable ruler is the cards that already work (In Frames' lowest baseline is 380 and is clear).
+"Coco & Uvie" at 440 and "CHAPTER" at 500 were both sliced in half by it, and only on the ring —
+the flat PNG looked perfect.
 
 ⚠️ **THE SCENE'S CONSTANTS ARE TUNED AGAINST A ~900px-TALL FRAME, and only `fitScale()` keeps them
 honest below it.** Camera y/z, `IDLE_Y_DESKTOP`, the wordmark plane's y and the poster geometry are

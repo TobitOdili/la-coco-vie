@@ -16,18 +16,14 @@ const TWO_PI = Math.PI * 2
 // The cu-*
 // textures are ours.
 export const CHAPTERS = [
-  {
-    slug: 'us',
-    title: 'Us',
-    accent: '#42221A',
-    accentLight: '#F2EEE8',
-    accentLighter: '#D2C3AE',
-    audio: asset('/audio/us.mp3'),
-    video: asset('/video/us.mp4'),
-    txt: asset('/images/cu-txt1.png'),
-    svg: asset('/images/cu-p1.png'),
-    index: 0,
-  },
+  // ⚠️ ARRAY ORDER IS THE RING ORDER, and `index` MUST equal the array position — the
+  // scene builds `txtTextures` by mapping over this array and `[slug].vue` compares
+  // `chapter.index` against the scene's `selectedIndex` to know when a select has
+  // settled. Reordered 2026-09-06 at the couple's request.
+  // ⚠️ `txt`/`svg` stay bolted to each chapter's OWN texture number (cu-*1 = the couple,
+  // 2 = the day, 3 = the frames, 4 = the gifts) — those numbers key `CH[]` in
+  // scripts/gen-textures.mjs and are NOT the ring order. Renumbering the files to match
+  // this array would silently repaint every card with another chapter's face.
   {
     slug: 'the-big-day',
     title: 'The Big Day',
@@ -38,6 +34,20 @@ export const CHAPTERS = [
     video: asset('/video/the-big-day.mp4'),
     txt: asset('/images/cu-txt2.png'),
     svg: asset('/images/cu-p2.png'),
+    index: 0,
+  },
+  {
+    // ⚠️ The SLUG stays `us`. It is the chapter's URL, it is prerendered, and it is what
+    // any link already shared points at; the title is what a guest reads.
+    slug: 'us',
+    title: 'Coco & Uvie',
+    accent: '#42221A',
+    accentLight: '#F2EEE8',
+    accentLighter: '#D2C3AE',
+    audio: asset('/audio/us.mp3'),
+    video: asset('/video/us.mp4'),
+    txt: asset('/images/cu-txt1.png'),
+    svg: asset('/images/cu-p1.png'),
     index: 1,
   },
   {
@@ -57,8 +67,9 @@ export const CHAPTERS = [
     index: 2,
   },
   {
+    // ⚠️ Slug stays `with-love` for the same reason as `us` above.
     slug: 'with-love',
-    title: 'With Love',
+    title: 'For Our Next Chapter',
     accent: '#2E4A52',
     accentLight: '#E8EDF2',
     accentLighter: '#9FB4C8',

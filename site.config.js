@@ -7,10 +7,10 @@
 // credit), AboutPanel.vue (welcome-note copy).
 //
 // ⚠️ PLACEHOLDERS (2026-07-23, awaiting the couple's real details):
-//   • events / dateLabel — user-confirmed 2026-08-31: TWO weddings, the traditional
-//     on FRI 23 Oct 2026 and the white wedding + reception on Thu 29 Oct 2026.
-//     (Oct 27 was the original single placeholder; the traditional was briefly
-//     recorded as the 25th and corrected to the 23rd by the user on 2026-09-02.)
+//   • events / dateLabel — ONE wedding: the white wedding + reception, Thu 29 Oct 2026.
+//     ⚠️ The traditional marriage (23 Oct) was on the site until 2026-09-06 and was
+//     removed at the couple's request. The Big Day's inner page still carries both
+//     days — see docs/PHASE-2-INNER-PAGES.md.
 //   • the welcome-note copy below — tone draft for correction
 //
 // NOT here (by design):
@@ -23,16 +23,15 @@ export const SITE = {
   // Brand name, used to build document titles + the nav wordmark.
   brand: 'Covenant & Uvie',
 
-  // The big day is TWO days. In order — the countdown in SiteNav targets whichever
-  // is still ahead and ROLLS OVER to the next once one has passed, so keep these
-  // sorted ascending. Times are placeholders; the DATES are the couple's real ones.
+  // ⚠️ ONE DAY. The traditional marriage (23 Oct) was removed site-wide on 2026-09-06 at
+  // the couple's request: the site counts down to the white wedding and nothing else.
+  // The array shape is kept — SiteNav still `find`s the next event ahead and rolls over —
+  // so a second day can come back by adding a row, sorted ascending. Time is a
+  // placeholder; the DATE is the couple's real one.
   events: [
-    { name: 'Traditional Marriage',  date: '2026-10-23T12:00:00+01:00', label: 'October 23, 2026 · Lagos' },
     { name: 'White Wedding / Reception', date: '2026-10-29T12:00:00+01:00', label: 'October 29, 2026 · Lagos' },
   ],
-  // Shown while both days are still ahead; after the first passes, the countdown
-  // switches to that event's own label.
-  dateLabel: 'October 23 & 29, 2026 · Lagos',
+  dateLabel: 'October 29, 2026 · Lagos',
 
   // ⚠️ REMOVED from the nav on 2026-09-03 at the user's request — the homepage
   // wordmark now runs straight into the date and countdown. The string is kept
@@ -68,7 +67,7 @@ export const SITE = {
   about: [
     { text: 'WELCOME to OUR CORNER of the INTERNET — and THANK YOU for BEING HERE.' },
     {
-      text: 'WE ARE COVENANT & UVIE, and on OCTOBER 23 & 29, 2026 we are GETTING MARRIED.',
+      text: 'WE ARE COVENANT & UVIE, and on OCTOBER 29, 2026 we are GETTING MARRIED.',
       gap: true,
     },
     {

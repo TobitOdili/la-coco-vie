@@ -106,6 +106,33 @@ above. Constant speed and a reversed exit are not in conflict.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
 
+**▶▶ STATE (2026-09-06, latest) — ONE WEDDING, NEW NAMES, NEW ORDER.**
+User: remove the traditional wedding (starting with the homepage), rename **With Love → For Our Next
+Chapter** and **Us → Coco & Uvie**, reorder the ring to **The Big Day · Coco & Uvie · In Frames · For
+Our Next Chapter**, new taglines and notes, and set the notes in the handwritten face.
+
+- **One wedding.** `site.config` carries a single event; the countdown, the welcome note and With
+  Love's sign-off all name 29 October only. The rollover code is untouched, so a second day returns
+  by adding a row. ⚠️ **The Big Day's calendar and In Frames' `traditional` folder still carry both
+  days** — the user scoped this pass to the homepage.
+- **Titles changed, SLUGS DID NOT.** `us` and `with-love` are prerendered URLs that shared links
+  already point at.
+- **All four card faces and centre taglines regenerated** — see the table in CONTENT-AND-ASSETS.md.
+  The note under each title is now handwritten.
+- ⚠️⚠️ **THE SHADER'S PHOTO WINDOW SLICED TWO OF THE NEW TITLES IN HALF, and only on the ring.**
+  "Coco & Uvie" at baseline 440 and "CHAPTER" at 500 looked perfect in the flat PNG and were cut
+  clean through on the card. The window's cutoff lives in a transformed UV space that is not the
+  art's, so the only usable ruler is a card that already works: In Frames' lowest baseline is 380.
+  Both retitled to two lines clearing 385. **Always look at the card ON THE RING, not at the PNG.**
+- ⚠️ **The countdown overlapped WELCOME and RSVP on every phone** (AUDIT #41) — and an earlier sweep
+  had seen that overlap and blamed the wrong element (AUDIT #42). Both fixed.
+- **Verified**: ring order 0,1,2,3 at all 11 sizes; all four deep links resolve, settle (~3.6s) and
+  carry the new titles; 5 routes × 5 sizes → 0 overflow, 0 errors, 0 failed requests, 0 dead links;
+  nav clear and tap targets honest at 8 widths.
+- ⚠️ **THE CARD AUDIO IS STILL THE REFERENCE SITE'S.** All four `.mp3`s have a May-24 mtime; the
+  2026-09-04 commit only RENAMED the paths to the chapter slugs. The "old site is gone" claim of
+  2026-09-05 checked strings and images, **not the audio files**. Four tracks are still needed.
+
 **▶▶ STATE (2026-09-05, latest) — SITE-WIDE SWEEP: EVERY ROUTE, ELEVEN SIZES, AND THE OLD SITE
 IS GONE.**
 User: *"let's do a full sweep across all the pages to ensure ALL responsive screens are good [and]

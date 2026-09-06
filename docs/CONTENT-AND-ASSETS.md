@@ -76,12 +76,20 @@ export const CHAPTERS = [
 
 | idx | slug | title | accent | svg | txt | video | audio |
 |---|---|---|---|---|---|---|---|
-| 0 | `us` | Us | `#42221A` | cu-p1.png | cu-txt1.png | us.mp4 | eat-merry-love.mp3 ⚠️ |
-| 1 | `the-big-day` | The Big Day | `#41492D` | cu-p2.png | cu-txt2.png | the-big-day.mp4 | la-storia.mp3 ⚠️ |
-| 2 | `in-frames` | In Frames | `#453350` | cu-p3.png | cu-txt3.png | in-frames.mp4 | wine-time.mp3 ⚠️ |
-| 3 | `with-love` | With Love | `#2E4A52` | cu-p4.png | cu-txt4.png | with-love.mp4 | amour-getway.mp3 ⚠️ |
+| 0 | `the-big-day` | The Big Day | `#41492D` | cu-p2.png | cu-txt2.png | the-big-day.mp4 | the-big-day.mp3 ⚠️ |
+| 1 | `us` | **Coco & Uvie** | `#42221A` | cu-p1.png | cu-txt1.png | us.mp4 | us.mp3 ⚠️ |
+| 2 | `in-frames` | In Frames | `#453350` | cu-p3.png | cu-txt3.png | in-frames.mp4 | in-frames.mp3 ⚠️ |
+| 3 | `with-love` | **For Our Next Chapter** | `#2E4A52` | cu-p4.png | cu-txt4.png | with-love.mp4 | with-love.mp3 ⚠️ |
 
-⚠️ = still the reference's placeholder audio (the filenames are the old chapter slugs).
+⚠️⚠️ **THE AUDIO IS STILL THE REFERENCE SITE'S — it was RENAMED, never replaced.** These files
+used to be `eat-merry-love.mp3`, `la-storia.mp3`, `wine-time.mp3` and `amour-getway.mp3`; on
+2026-09-04 only the PATHS changed, to the couple's chapter slugs. All four still carry a **May-24
+mtime**, from the replica era. ⚠️ The 2026-09-05 "the old site is gone" verification checked strings
+and images and **did not look at the audio files** — a rename is exactly what defeats a filename
+audit. Four tracks are still needed (or drop the sound feature).
+
+⚠️ `idx` is the RING position and it is not the texture number — see ARCHITECTURE.md. The reorder on
+2026-09-06 (The Big Day first, Coco & Uvie second) means `cu-p1` is now the SECOND card.
 
 `accentLight` / `accentLighter` per chapter live in both `CHAPTERS` and as CSS vars in
 `assets/css/main.css` (the `.--{slug}` blocks) — **keep them in sync** if you change colors.
@@ -142,6 +150,31 @@ ever need them again.)
 
 **Section shapes are NOT uniform and are per-page by design** — each bespoke component reads its own
 fields (`kind`, and then whatever that page needs). Code that assumes a common shape will be wrong.
+
+### The card art (regenerate, never hand-edit)
+
+`node scripts/gen-textures.mjs` writes every `cu-*.png`. **Nothing about a card face is authored in
+the app** — title, the note under it, and the centre tagline all live in `CH[]` in that script.
+As of 2026-09-06:
+
+| `n` | card | title | note (handwritten) | centre tagline |
+|---|---|---|---|---|
+| 1 | Coco & Uvie | `Coco` / `& Uvie` | all the way to I do | TWO STORIES, ONE BEGINNING: our JOURNEY SO FAR |
+| 2 | The Big Day | `THE BIG` / `DAY` | official countdown to our special day | SAVE the DATE — CEREMONY, RECEPTION, and JÉ KÁ JÓ |
+| 3 | In Frames | `IN` / `FRAMES` | Wedding Photos & Videos | MAGICAL MOMENTS: PICTURES & VIDEOS WORTH a THOUSAND WORDS |
+| 4 | For Our Next Chapter | `FOR OUR` / `NEXT CHAPTER` | Support Our Wedding in Cash or Kind | YOUR PRESENCE is the GREATEST GIFT… |
+
+- ⚠️ **The note is set in Over the Rainbow** (2026-09-06) — a script face wants no tracking and a
+  larger size than the 30px/2-tracking it carried in Bague. Every card SVG now embeds that face.
+- ⚠️ **`n` is the TEXTURE number, not the ring order** — see ARCHITECTURE.md. Since the reorder they
+  differ.
+- ⚠️ **Titles must clear ~y=385** or the shader's photo window slices them. It only shows on the
+  ring; the flat PNG looks fine either way.
+- ⚠️ **Escape `&` in titles as well as notes.** "Coco & Uvie" is a title now, and a bare `&` makes
+  the SVG unparseable — the card renders as a blank rectangle.
+- ⚠️ **Accented glyphs are not guaranteed.** The subsets in `scripts/fonts/` were fetched with the
+  css2 `text=` param, so they contain only what was asked for. "JÉ KÁ JÓ" happens to render; check
+  the PNG after any copy change rather than trusting the source string.
 
 ### Inner-page assets (Phase 2 — all 4 chapters built)
 

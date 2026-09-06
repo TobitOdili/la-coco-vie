@@ -120,6 +120,16 @@ All in `/public/`:
 
 The carousel is `N=8` poster slots (4 chapters × 2, mirrored around a ring).
 
+### 2026-09-06 — One wedding, new chapter names, new ring order
+- **Traditional marriage removed** from the homepage and site chrome (countdown, welcome note,
+  sign-off). The Big Day's calendar and In Frames' folders still carry both days — follow-up.
+- **With Love → For Our Next Chapter**, **Us → Coco & Uvie** (slugs unchanged), ring reordered to
+  The Big Day · Coco & Uvie · In Frames · For Our Next Chapter, new centre taglines, and the note
+  under each card title is now handwritten. All card art regenerated.
+- **Fixed**: the countdown overlapping WELCOME/RSVP on every phone, and the wordmark's click target
+  being as wide as the countdown.
+- ⚠️ **The card audio is still the reference site's** — renamed, never replaced. Four tracks needed.
+
 ### 2026-09-05 — With Love became the wall; site-wide responsive + provenance sweep
 - **With Love rebuilt twice more and landed on THE WALL** — six bands of the gift list sliding
   across the screen forever; point at a word and its band coasts to a halt and the item opens under

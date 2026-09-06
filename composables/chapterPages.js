@@ -448,7 +448,7 @@ export const CHAPTER_PAGES = {
         kind: 'sign',
         closer: 'with love,',
         names: ['Covenant', 'Uvie'],
-        tail: 'see you on october 23 & 29.',
+        tail: 'see you on october 29.',
         popups: [],
       },
     ],

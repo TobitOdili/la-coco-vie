@@ -41,8 +41,8 @@
       <div class="container flex justify-center mt-2 md:mt-6">
         <!-- ⚠️ `pointer-events-auto` and the click belong to the WORDMARK ONLY, never
              to this wrapper. The wrapper is as wide as its widest child, and its
-             widest child is the countdown line — "OCTOBER 23 & 29, 2026 · LAGOS ·
-             51 DAYS TO GO" spans ~330px of a 390px phone. Sitting on `top-3` with the
+             widest child is the countdown line — "OCTOBER 29, 2026 · LAGOS ·
+             53 DAYS TO GO" spans ~300px of a 390px phone. Sitting on `top-3` with the
              same `z-20` as the nav bar but LATER in the DOM, that invisible box was
              painted over the WELCOME label and swallowed every tap on it: on a phone
              there was no way into the welcome panel at all. Measured —
@@ -56,11 +56,12 @@
           >
             COVENANT <span class="amp">&amp;</span> UVIE
           </div>
-          <!-- Countdown (homepage only). Two weddings: it counts to the traditional,
-               then rolls over to the white wedding. Times in site.config are placeholders. -->
+          <!-- Countdown (homepage only). ONE wedding as of 2026-09-06 — it counts to the
+               white wedding. The rollover logic is kept (see site.config) so a second day
+               can return by adding a row. Times in site.config are placeholders. -->
           <div
             v-if="isHome && daysToGo > 0"
-            class="text-accent uppercase text-[10px] lg:text-xs tracking-[0.2em] mt-1 opacity-70"
+            class="countdown text-accent uppercase text-[10px] lg:text-xs tracking-[0.2em] mt-1 opacity-70"
           >
             {{ countLabel }} · {{ daysToGo }} days to go
           </div>
@@ -119,10 +120,10 @@ import { computed, watch } from 'vue'
 import { SITE } from '~/site.config'
 
 // Whole days until the next wedding (static per page load — day resolution needs no
-// timer). There are TWO days, so the count ROLLS OVER: it targets the traditional
-// until that has passed, then the white wedding. While both are ahead it shows the
-// pair label ("October 23 & 29"); after the rollover it names the day it is counting
-// to, so the number and the date on screen can never disagree.
+// timer). ⚠️ ONE day as of 2026-09-06 — the traditional marriage was removed site-wide at
+// the couple's request. The rollover code is deliberately UNCHANGED: `find`ing the first
+// event still ahead works identically for one row, and a second day returns by adding one.
+// Both the number and the label are derived from the SAME event, so they cannot disagree.
 const nextEvent = computed(() => {
   const now = Date.now()
   return (SITE.events || []).find((e) => new Date(e.date).getTime() > now) || null
@@ -177,6 +178,13 @@ defineEmits(['toggle-about', 'go-home', 'toggle-sound'])
   font-family: 'Bague', ui-sans-serif, sans-serif;
   letter-spacing: 0.14em;
   line-height: 1.1;
+  /* ⚠️ SHRINK TO THE TEXT. As a block `div` inside a flex item whose widest child is the
+     countdown, the wordmark's BOX stretched to the countdown's ~300px while its text sat
+     centred at ~135px — and that box carries `pointer-events-auto` and the go-home click.
+     Nothing broke only because WELCOME happened to win the hit test by paint order; this
+     is the exact shape of AUDIT #32, where the same geometry swallowed every tap on
+     WELCOME. `inline-block` makes the clickable area equal the words. */
+  display: inline-block;
 }
 /* ⚠️ At 17px + 0.14em the centred wordmark is ~98px wide, and on a 320px screen WELCOME
    and RSVP leave it under 90px of clear space between them — measured 35px of it sitting
@@ -186,6 +194,19 @@ defineEmits(['toggle-about', 'go-home', 'toggle-sound'])
   .wordmark {
     font-size: 14px;
     letter-spacing: 0.08em;
+  }
+}
+/* ⚠️ THE COUNTDOWN IS THE WIDEST THING IN THE NAV, and it sits on the same line as
+   WELCOME and RSVP. "OCTOBER 29, 2026 · LAGOS · 53 DAYS TO GO" is ~300px at 10px/0.2em;
+   at 320 the labels leave it ~180px, so it ran straight through both of them. (The
+   wordmark above it is only ~135px and was always clear — an earlier sweep blamed it for
+   this because the wordmark's BOX stretches to the countdown's width.) Below 520px it
+   drops onto its own line under the nav row and tightens its tracking. */
+@media (max-width: 520px) {
+  .countdown {
+    margin-top: 1.5rem;
+    letter-spacing: 0.1em;
+    font-size: 9px;
   }
 }
 .wordmark .amp {

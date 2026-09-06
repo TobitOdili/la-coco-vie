@@ -57,6 +57,12 @@ prod- and real-browser-verified.
 - ✅ **Mobile / touch.** Carousel swipe + momentum, tap-vs-swipe guard, parked EXPLORE tap target, touch
   top-edge exit, and portrait geometry fixes. All gated on `isMobile`.
 
+⚠️ **ONE WEDDING (2026-09-06).** The traditional marriage (23 Oct) was removed at the couple's
+request: `site.config` carries a single event, the countdown and the welcome note name only the
+white wedding, and With Love's sign-off says "october 29". **Still carrying both days: The Big Day's
+calendar (two `marks`, two day cards) and In Frames' `traditional` folder** — the user scoped this
+pass to the homepage, so those are the follow-up.
+
 **Remaining (per the board):**
 - **Inner-page scaling vs the reference** — its copy is `16px/24px` Bague, headings use a striped display
   face scaled to width (ours is plain Bague), and images are **inset with margins** (ours are full-bleed).
