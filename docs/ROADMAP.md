@@ -59,9 +59,9 @@ prod- and real-browser-verified.
 
 ⚠️ **ONE WEDDING (2026-09-06).** The traditional marriage (23 Oct) was removed at the couple's
 request: `site.config` carries a single event, the countdown and the welcome note name only the
-white wedding, and With Love's sign-off says "october 29". **Still carrying both days: The Big Day's
-calendar (two `marks`, two day cards) and In Frames' `traditional` folder** — the user scoped this
-pass to the homepage, so those are the follow-up.
+white wedding, and With Love's sign-off says "october 29". **The Big Day's calendar went entirely**
+on 2026-09-06 (the page is the date, a heart and a countdown now), so the last of the traditional
+marriage is **In Frames' `traditional` folder** — the only place a second day is still named.
 
 **Remaining (per the board):**
 - **Inner-page scaling vs the reference** — its copy is `16px/24px` Bague, headings use a striped display

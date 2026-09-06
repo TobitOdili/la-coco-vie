@@ -52,16 +52,12 @@ is that no two pages share a language. Breaking it is what made With Love fail i
     and appears **word by word off the scroll position**, each word un-clipped left to right the way
     a pen lays it down, so scrolling back un-writes it. The heading finishes before the body starts,
     then he writes in the margin and she answers.
-  - **THE BIG DAY** — "the calendar": October 2026 as a page off a wall calendar, with the two
-    wedding days **ringed in marker** and annotated by hand (*traditional* · *white wedding*), and
-    **both days set out side by side** beneath it — full date, name, events, dress code, and a
-    working **Add to calendar** (the `.ics` is built in the browser, one day or both). Nothing swaps
-    on hover, so nothing can shift; hovering a ringed date only **draws a line from it out to the
-    margin**, where the times are written in marker. The grid is computed from the month, so the
-    weekday alignment can't go stale. Each date can also carry **its own sound** on hover (wired;
-    the files are still to come). A second scene, **Getting there**, puts the two venues on their
-    own maps — Oguta, Imo and Ikeja, Lagos, about 500km apart — tinted into the chapter's palette,
-    each with **Get directions** using the visitor's own location.
+  - **THE BIG DAY** — **the invitation.** The date written out in full, then two threads arrive
+    from either side, **draw a heart between them** and leave as one line, then a countdown
+    **spelled in words** — "fifty-two / DAYS" — with hours and minutes moving once a minute
+    beneath it. ⚠️ **The date is the only fact on the page.** The calendar, both venue maps and
+    every time/venue/address/dress line were removed by request: a guest who has not RSVP'd learns
+    when, and nothing else. The heart is recovered from this page's own first design (`b5a52348`).
   - **IN FRAMES** — **the archive**: a window sits in the room, its title bar showing a path —
     `...\Media\` — with the couple's three events as folders inside it: *traditional*, *white
     wedding*, *reception*. **Click** one (hovering only brightens it) and the folder physically
@@ -170,7 +166,7 @@ components/
   AboutPanel.vue             Full-screen About overlay
   LoadingScreen.vue          Asset-gated loading counter (GSAP)
   chapter/UsStory.vue        ★ COCO & UVIE (slug `us`) — "the margin notes": every string written word-by-word on scroll
-  chapter/BigDay.vue         ★ THE BIG DAY — "the calendar", days ringed in marker (bespoke page)
+  chapter/BigDay.vue         ★ THE BIG DAY — the invitation: date, heart, countdown
   chapter/InFrames.vue       ★ IN FRAMES — "the archive": a window you navigate, folders inside
   chapter/WithLove.vue       ★ FOR OUR NEXT CHAPTER (slug `with-love`) — the wall: the gift names slide, forever
   chapter/ChapterSection.vue Generic section block — now the unused fallback

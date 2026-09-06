@@ -14,7 +14,7 @@ state, everything below it is history — newest first.)
 > | chapter | what it is now | driven by |
 > |---|---|---|
 > | **US** | margin notes: the whole page in one hand, **nothing set in type**; taped polaroids | **written word by word** off each block's own rect |
-> | **THE BIG DAY** | **the calendar** — October 2026, the two days ringed in marker; hover one and the marker writes the times beside it, with the day set out as a programme below | a latch: it sets, then holds still |
+> | **THE BIG DAY** | **the invitation** — the date written out, a heart drawn by two threads that arrive from either side and leave as one, and a countdown spelled in words. Nothing else: the RSVP is the gate | scroll-scrubbed, with one sticky hold for the heart |
 > | **IN FRAMES** | **the archive** — one window in the room showing a path (`...\Media\`), the three events as folders inside; click one and it opens, then the window navigates into it | **no scroll**: folder-open, then a stacked-view swap; the room's film on a time loop |
 > | **WITH LOVE** | **the wall** — six bands of the gift list sliding across the screen at their own speeds, forever; point at a word and its band stops and the thing opens under it | one transform per band per frame; no artwork at all |
 >
@@ -105,6 +105,36 @@ above. Constant speed and a reversed exit are not in conflict.
 ⚠️ **Perforations must be painted INTO `.film`'s background**, not as absolutely-positioned children.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
+
+**▶▶ STATE (2026-09-06, latest) — THE BIG DAY IS THE INVITATION, NOT THE ITINERARY.**
+User: *"remove the calendar, then the maps as well. I essentially don't want anyone who hasn't
+rsvp'd to get any info on the wedding beyond the date… we also have to remove the hover effect as
+that would be more detail."* Plus two additions: a countdown that is not a regular countdown, and
+*"the ink effect… where two lines connected at some point to form a heart and continued on."*
+
+- **Gone**: the October calendar grid and its ringed dates, both venue maps, every time / venue /
+  address / dress line, the leader-line hover, the per-date sound easter egg and the `.ics` builder.
+  ~970 lines of component and ~120 of data down to three scenes. **The RSVP is the gate now.**
+  ⚠️ Do not re-add a `place`, a time or a programme to this page's data.
+- **THE HEART IS RECOVERED, NOT INVENTED.** The user half-remembered "two lines that formed a heart
+  and continued on"; it was `b5a52348` — *"'The Hours' — two threads tie the knot at noon"*, July,
+  this page's own first idea, deleted when the calendar replaced it. The original tied a *knot*
+  (two mirrored loops); reshaped into the heart it was always reaching for: each thread comes in
+  from an edge, they meet at the notch, sweep over one lobe each, rejoin at the point, and leave as
+  one line. **Search the history before designing — the answer was in the repo.**
+- **The countdown is SPELLED, NOT TICKED.** "fifty-two / DAYS", written in Italiana with the `.write`
+  clip so it appears to be written; the only live thing on the page is a line of hours and minutes
+  that moves **once a minute**. A digital clock counting seconds is the one idiom this site has no
+  vocabulary for.
+- ⚠️ **Two geometry traps, both documented in ARCHITECTURE**: the sticky hold band, and the
+  `viewBox` that has to be cropped to the ink.
+- ⚠️ **`max-height` IS NOT `max-width`.** A landscape phone is 844px WIDE — every width query misses
+  it, and the 390px sticky frame could not hold a word, a 540×270 knot and another word: measured
+  top 60, under the nav. And the fix then needed `and (orientation: landscape)`, because a 320×568
+  portrait phone is also under 600px tall and had its knot shrunk from 294px to 141.
+- **Verified at 13 sizes** (320×568 → 2560×1440, portrait, three landscape phones, tablet, laptop):
+  knot in frame and clear of the nav at every one, no horizontal overflow, 0 errors. Full site
+  re-checked at 5 routes × 5 sizes: 0 overflow, 0 errors, 0 failed requests, 0 dead links.
 
 **▶▶ STATE (2026-09-06, latest) — ONE WEDDING, NEW NAMES, NEW ORDER.**
 User: remove the traditional wedding (starting with the homepage), rename **With Love → For Our Next

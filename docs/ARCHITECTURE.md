@@ -152,7 +152,7 @@ what made With Love read as a repeat of US and get rebuilt.
 | file | what it is | how it moves |
 |---|---|---|
 | `UsStory.vue` (**Coco & Uvie**, slug `us`) | margin notes — the whole page in one hand, nothing set in type; taped polaroids | **written word by word**: per-word `.write` clip off each block's OWN rect; the polaroid keeps a latch |
-| `BigDay.vue` (**The Big Day** — ring slot 1) | "The Calendar" — October 2026 ringed in marker with **both** days set out side by side beneath it, plus a second scene of tinted maps and directions | IntersectionObserver latch: it sets, then holds still; hover only draws a leader line |
+| `BigDay.vue` (**The Big Day** — ring slot 1) | **the invitation** — the date, a heart drawn by two threads, and a countdown spelled in words. Nothing else: everything a guest could ask beyond the date lives behind the RSVP | scroll-scrubbed `.scrub`/`.write`; one sticky hold for the knot |
 | `InFrames.vue` (**In Frames**) | **the archive** — one window in the room showing a path (`...\Media\`), the three events as folders inside; click one and it opens, then the window navigates into it | **no scroll at all**: a folder-open then a stacked-view swap; a time loop for the room's film behind it |
 | `WithLove.vue` (**For Our Next Chapter**, slug `with-love`) | **the wall** — six bands of the gift list sliding across the screen at their own speeds, forever; point at a word and its band stops and the item opens under it | one `translate3d` per band per frame; the speed EASES to zero, it does not switch off |
 
@@ -186,7 +186,7 @@ paths with `pathLength=1`), `opacity` (`.fade`), an L→R clip reveal (`.write`)
 
 ⚠️ **Class names in scoped CSS still collide with TAILWIND's utility layer.** `<style scoped>` scopes
 the selector, not the NAME, so a component class called `ring` also matches Tailwind's `.ring`
-utility — which is how every ringed date on the calendar acquired a 1px square box-shadow that no
+utility — which is how every ringed date on The Big Day's calendar acquired a 1px square box-shadow that no
 amount of `border: 0` could remove (AUDIT #26). Avoid `ring`, `grid`, `container`, `shadow`,
 `hidden`, `block`, `fixed`… — prefix instead (`marker-ring`, `cal-grid`).
 ⚠️ **A `<button>` needs `appearance: none`,** not just `border: 0`, or the UA paints its native
@@ -201,6 +201,8 @@ Use the scrub engine when the motion IS the content; use a latch when the conten
 the viewport bottom, and once a scene outgrows `100dvh` its sheet is pinned by padding-**top** — so
 raising padding-bottom just grows the section and leaves the copy at the same viewport y (measured:
 identical with 11rem and with 0). Shorten the column instead, and keep popup `params` to one line.
+⚠️ *(The calendar itself was removed on 2026-09-06 — the RULE is what matters: scoped CSS does not
+scope the class NAME, and Tailwind's utilities are global.)*
 
 ⚠️ **A preload observer and a "you can interact with this" observer are not the same observer.**
 In Frames preloads on `rootMargin: '80% 0px'` — deliberately a screen early — and the swipe nudge was
@@ -328,6 +330,16 @@ reading as an ornament** (5:1 is where a ribbon still looks like a ribbon). What
 making the names themselves the page. ⚠️ Item names stay to three or four short words regardless —
 they now set at up to 6.4rem and a long one is wider than the viewport.
 
+⚠️ **A SCROLL WINDOW ON A STICKY SCENE MUST LIVE INSIDE THE HOLD.** A scene of height `H`
+around a `100dvh` sticky child pins from `p = vh/(H+vh)` until `p = (vh + H − vh)/(H+vh)` — for The
+Big Day's 240dvh knot that is **p ∈ [0.29, 0.71]**, and windows outside it draw while the frame is
+already sliding away. The knot's tail and its closing word were at 0.76 and 0.80 and both played to
+an audience that had left. Derive the band from the scene height; do not eyeball it.
+⚠️ **AND THE `viewBox` MUST BE THE PICTURE, NOT THE PATH'S COORDINATE SPACE.** The heart's paths run
+in a 1000×760 space but only occupy y 300–760, so an uncropped `viewBox` gave the element ~240px of
+empty height above the ink — which pushed the scene's first word out of the sticky frame entirely
+and slid the drawing up under the fixed nav. Cropped to `0 280 1000 500`.
+
 ⚠️ **THREE ORDERINGS EXIST AND ONLY ONE OF THEM IS THE RING.** (1) `CHAPTERS` array order **is**
 the ring order and `index` must equal the array position — the scene builds `txtTextures` by mapping
 over the array and `[slug].vue` compares `chapter.index` to `selectedIndex` to know a select has
@@ -372,7 +384,7 @@ protecting an element — re-measure the clearance rather than carrying the old 
 ⚠️ **`threshold: 0` + a `rootMargin` band is the only trigger shape that cannot go
 unreachable** (fourth and fifth encounters with this family of bug). The Big Day's month-flip
 first hung off the section's own `threshold: 0.12` latch — which fires correctly, but the section
-is 1008px tall and starts a full screen below the hero, so at 12% the calendar itself is still
+is 1008px tall and starts a full screen below the hero, so at 12% the calendar itself was still
 ~400px BELOW the fold: the entire riffle would have played where nobody could see it, exactly as
 In Frames' nudge did. Fixed by giving the flip its own observer on the **deck**, with
 `rootMargin: '-18% 0px -28% 0px'` and `threshold: 0`. Prefer this over any threshold above 0:

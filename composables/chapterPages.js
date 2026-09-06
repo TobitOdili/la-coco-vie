@@ -209,87 +209,34 @@ export const CHAPTER_PAGES = {
   //     • No floating popups on this scene: the expanding card IS the detail, and a
   //       docked card would sit on top of it.
   //   notes = { title, lines[{ label, value }] } — the practical leftovers.
+  // ⚠️ THE DATE IS THE ONLY FACT ON THIS PAGE (user, 2026-09-06): "I don't want anyone
+  // who hasn't RSVP'd to get any info on the wedding beyond the date." Removed with that
+  // instruction: the October calendar grid, both venue maps, every time/venue/address/dress
+  // line, and the hover that revealed them. The RSVP is the gate; this page is the invitation.
+  // ⚠️ Do not re-add a `place`, a time or a programme here. Those belong behind the RSVP.
   'the-big-day': {
     sections: [
       {
-        kind: 'calendar',
-        num: 'I',
-        title: 'October 2026',
-        monthISO: '2026-10',
-        marks: [
-          {
-            day: 23,
-            label: 'Traditional Marriage',
-            scrawl: 'traditional',
-            rot: -7,
-            // ── THE HOVER EASTER EGG ──
-            // A path under `public/` turns it on; hovering (or, on touch, tapping)
-            // this date then plays it. e.g. sound: '/audio/trad.wav'
-            // ⚠️ Optional and OFF by default: a mark with no `sound`, or one whose
-            // file fails to load, is simply silent. The page must never depend on
-            // audio existing. The site's own sound toggle already governs these —
-            // Howler's mute is global, so there is no second switch.
-            // ⏳ AWAITING FILES (2026-09-03): the user is sourcing the traditional
-            // cue; the white wedding wants a royalty-free "Here Comes the Bride".
-            sound: null,
-            dress: 'Colours of the day: [tbc]',
-            // ⚠️ A real place (user, 2026-09-03), city-level until the venue is
-            // confirmed. Both the day card and the map section below build their
-            // Google Maps and directions URLs from this one string, so they can
-            // never disagree — and it replaced `map: '#'` on each event, which was
-            // a dead link a guest could actually reach.
-            place: 'Oguta, Imo, Nigeria',
-            events: [
-              { time: '[time]', name: 'The Ceremony', venue: '[venue name]', address: '[address]' },
-            ],
-          },
-          {
-            day: 29,
-            label: 'White Wedding / Reception',
-            scrawl: 'white wedding',
-            rot: 5,
-            sound: null,   // ← royalty-free "Here Comes the Bride" goes here
-            dress: 'Dress code: [tbc]',
-            place: 'Ikeja, Lagos, Nigeria',
-            events: [
-              { time: '[time]', name: 'The Ceremony', venue: '[venue name]', address: '[address]' },
-              { time: '[time]', name: 'The Reception', venue: '[venue name]', address: '[address]' },
-            ],
-          },
-        ],
-        popups: [],
-        align: 'center',
+        kind: 'date',
+        kicker: 'save the date',
+        day: 'Thursday',
+        date: 'the twenty-ninth of October',
+        year: 'two thousand and twenty-six',
+        note: 'everything else — where, when, what to wear — comes with your rsvp.',
       },
-      // ⚠️ REPLACED the "Good to know" list (user, 2026-09-03). That section was
-      // five lines of `[placeholder]` answering questions nobody had asked yet;
-      // where the two days actually ARE is the question every guest has, and the
-      // two are 500km apart, which a list of labels hid completely.
-      //
-      // `place` is the only input — the component derives the map embed and the
-      // directions URL from it, so there is nothing here to keep in sync. When a
-      // venue is confirmed, put the full address in `place` and both the pin and
-      // the directions sharpen from the city to the door.
       {
-        kind: 'map',
-        num: 'II',
-        title: 'Getting there',
-        sub: 'Two days, two states — about 500km apart. Plan for the journey between them.',
-        places: [
-          {
-            label: 'Traditional Marriage',
-            when: 'Friday 23 October',
-            place: 'Oguta, Imo, Nigeria',
-            venue: '[venue — tbc]',
-          },
-          {
-            label: 'White Wedding / Reception',
-            when: 'Thursday 29 October',
-            place: 'Ikeja, Lagos, Nigeria',
-            venue: '[venue — tbc]',
-          },
-        ],
-        popups: [],
-        align: 'center',
+        // Two threads come in from either side, meet, draw a heart between them and leave
+        // as one line. Recovered from `b5a52348` ("two threads tie the knot at noon"), the
+        // page's own first idea, reshaped into the heart it was always reaching for.
+        kind: 'knot',
+        before: 'two people,',
+        after: 'one day.',
+      },
+      {
+        kind: 'countdown',
+        lead: 'until then —',
+        unit: 'days',
+        tail: 'and counting.',
       },
     ],
   },

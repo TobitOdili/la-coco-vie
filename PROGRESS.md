@@ -120,6 +120,13 @@ All in `/public/`:
 
 The carousel is `N=8` poster slots (4 chapters × 2, mirrored around a ring).
 
+### 2026-09-06 (later) — The Big Day is the invitation, not the itinerary
+- **Removed**: the calendar grid, both maps, all times/venues/addresses/dress lines and the hover
+  that revealed them. A guest who has not RSVP'd now learns the date and nothing else.
+- **Added**: the date written out; **a heart drawn by two threads** (recovered from `b5a52348`, this
+  page's own July idea); and a countdown **spelled in words**, live at minute resolution.
+- Verified at 13 viewport sizes including three landscape phones.
+
 ### 2026-09-06 — One wedding, new chapter names, new ring order
 - **Traditional marriage removed** from the homepage and site chrome (countdown, welcome note,
   sign-off). The Big Day's calendar and In Frames' folders still carry both days — follow-up.
