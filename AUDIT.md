@@ -1350,6 +1350,42 @@ the exact geometry of #32**, where the same shape swallowed every tap on WELCOME
 
 ---
 
+## Issue #43 — Effects began after their content had left the screen 🟠 HIGH
+
+### Symptom
+User: *"lots of the effects on my laptop don't start till the page is almost all the way past the
+viewport."*
+
+### Root cause
+On a scene-progress page `p = 0.5` means "the scene is centred", so a window opening at 0.72 fires
+when its element is at the very top edge. The Big Day (rebuilt the same day) had `.count-tail` and
+`.note` at 0.72 — **measured at 14% and 29% of the screen**, and its date-scene thread at 0.62.
+⚠️ **The first audit blamed the wrong page.** Run against US with a scene-progress model it reported
+31 late effects and four at negative positions; US is on a per-block model (`unitProgress`) and,
+measured correctly, every one of its 116 words starts between 64% and 100% of the screen. In Frames
+and With Love were clean throughout.
+
+### Fix
+Every non-sticky window on The Big Day now ends by ~0.5. **Prod-measured across 13 viewports
+(320×568 → 2560×1440, including 1440×700): the latest any effect starts is 88% of the screen.**
+
+---
+
+## Issue #44 — Tailwind's `.ring` utility drew a box round the calendar date, again 🟡 MEDIUM
+
+### Symptom
+A 1px rectangle around the ringed 29.
+
+### Root cause
+`class="ring"` on the SVG. **Scoped CSS does not scope the class NAME**, so Tailwind's global `.ring`
+utility applied its `box-shadow`. This is **AUDIT #26 verbatim, on the same calendar, walked into a
+second time** — the rule was already written in ARCHITECTURE.md.
+
+### Fix
+`day-ring`. ⚠️ Never name a class after a Tailwind utility, however well-scoped the component is.
+
+---
+
 | ~~3~~ | ~~Noise texture 404 — relative `--noise-url` resolves vs the `_nuxt/` CSS bundle~~ | ~~🟡 Medium~~ | ✅ Fixed (`1078a8f3`) — resolve `--noise-url` to an absolute URL via `new URL(path, location.href)`. Affected Vercel too (not just GH-Pages). Grain verified rendering live. |
 | 4 | Card scale → actually ring viewing-angle (tilt) | 🟡 Medium | ⏸️ Parked — GPU extraction confirms fov 45° + radius 40 already match; residual is subtle tilt, no clean target. See §Issue #4. |
 | ~~5~~ | ~~SVG colour saturation~~ | ~~🟡 Medium~~ | ✅ Closed — `NoToneMapping`+`SRGBColorSpace` already set; colours match in side-by-side. |
@@ -1382,4 +1418,6 @@ the exact geometry of #32**, where the same shape swallowed every tap on WELCOME
 | ~~40~~ | ~~The homepage composition never scaled with viewport HEIGHT~~ | ~~🟠 High~~ | ✅ Fixed 2026-09-05 — landscape phone showed two half-cards under the tagline. Camera pulls back below 560px of height; the depth-fade thresholds had to scale with it or the ring washes out. See §Issue #40. |
 | ~~41~~ | ~~The countdown ran straight through WELCOME and RSVP on every phone~~ | ~~🟠 High~~ | ✅ Fixed 2026-09-06 — it is the widest element in the nav and shares a line with both labels. An earlier sweep saw the overlap and blamed the wordmark's stretched box. See §Issue #41. |
 | ~~42~~ | ~~The wordmark's click target was as wide as the countdown~~ | ~~🟡 Medium~~ | ✅ Fixed 2026-09-06 — a block `div` carrying `pointer-events-auto` stretched to its sibling's width; same geometry as #32, working only by paint order. `inline-block`. See §Issue #42. |
+| ~~43~~ | ~~Effects began after their content had left the screen~~ | ~~🟠 High~~ | ✅ Fixed 2026-09-06 — windows past `p=0.5` fire as content leaves the top. The first audit blamed US, which is on a different clock entirely. Latest start now 88% of screen. See §Issue #43. |
+| ~~44~~ | ~~Tailwind's `.ring` utility drew a box round the calendar date, again~~ | ~~🟡 Medium~~ | ✅ Fixed 2026-09-06 — `class="ring"` a second time on the same calendar; scoped CSS does not scope the NAME. Renamed `day-ring`. See §Issue #44 and #26. |
 | 30 | The month-flip would have played entirely below the fold | 🟠 High | ↩️ Moot — the flip was reverted. The RULE stands: `threshold: 0` + a `rootMargin` band is the only trigger shape that cannot go unreachable. See §Issue #30. |

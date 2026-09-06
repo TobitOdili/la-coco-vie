@@ -214,29 +214,35 @@ export const CHAPTER_PAGES = {
   // instruction: the October calendar grid, both venue maps, every time/venue/address/dress
   // line, and the hover that revealed them. The RSVP is the gate; this page is the invitation.
   // ⚠️ Do not re-add a `place`, a time or a programme here. Those belong behind the RSVP.
+  // ⚠️ THE DATE IS THE ONLY FACT ON THIS PAGE (user, 2026-09-06): "I don't want anyone
+  // who hasn't RSVP'd to get any info on the wedding beyond the date." No times, no venue,
+  // no dress code, no map, and no hover that reveals any of them. The RSVP is the gate.
+  // ⚠️ Do not re-add a `place`, a time or a programme here.
   'the-big-day': {
     sections: [
       {
-        kind: 'date',
+        // The month, rendered as a ghost — every other date barely there, the one that
+        // matters inked and ringed. A calendar is the fastest way to read "a Thursday, late
+        // October"; making 30 of its 31 numerals recede is what stops it looking like a
+        // widget. The grid is BUILT from `monthISO`, so it can never disagree with itself.
+        kind: 'calendar',
         kicker: 'save the date',
-        day: 'Thursday',
-        date: 'the twenty-ninth of October',
-        year: 'two thousand and twenty-six',
+        monthISO: '2026-10',
+        mark: 29,
         note: 'everything else — where, when, what to wear — comes with your rsvp.',
       },
       {
-        // Two threads come in from either side, meet, draw a heart between them and leave
-        // as one line. Recovered from `b5a52348` ("two threads tie the knot at noon"), the
-        // page's own first idea, reshaped into the heart it was always reaching for.
+        // ⚠️ THE ORIGINAL KNOT, restored verbatim from `b5a52348` ("two threads tie the knot
+        // at noon"). It was briefly redrawn as a literal heart on 2026-09-06 and that was
+        // wrong — the shape the two threads make as they cross and loop is the thing worth
+        // keeping. Do not "tidy" these curves.
         kind: 'knot',
         before: 'two people,',
         after: 'one day.',
       },
       {
         kind: 'countdown',
-        lead: 'until then —',
-        unit: 'days',
-        tail: 'and counting.',
+        lead: 'until then',
       },
     ],
   },

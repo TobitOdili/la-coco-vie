@@ -330,6 +330,18 @@ reading as an ornament** (5:1 is where a ribbon still looks like a ribbon). What
 making the names themselves the page. ⚠️ Item names stay to three or four short words regardless —
 they now set at up to 6.4rem and a long one is wider than the viewport.
 
+⚠️ **ON A SCENE-PROGRESS PAGE, `p = 0.5` IS "THE SCENE IS CENTRED IN THE VIEWPORT".** So any
+window opening later than ~0.5 fires while its content is already climbing out of the top of the
+screen. The Big Day shipped with `.count-tail` at 0.72 and `.note` at 0.72 — measured on screen at
+**14%** and **29%**, i.e. all but gone before they began. Keep every window on a non-sticky scene
+inside **[0, ~0.5]**, and verify by scrolling to `p = a` and reading the element's own rect.
+⚠️ **US IS NOT ON THIS MODEL and must not be "fixed" to match it.** It drives each block from its
+OWN rect (`unitProgress`: 0 when the block's top is at 92% of the screen, 1 when it reaches the
+reading band), which is why it survives every breakpoint. An audit that assumed scene progress
+reported 31 late effects on US and four at negative positions — **all of them measurement artifacts
+of using the wrong model.** Measured correctly, every one of its 116 words starts between 64% and
+100%. Check which clock a page is on before auditing it.
+
 ⚠️ **A SCROLL WINDOW ON A STICKY SCENE MUST LIVE INSIDE THE HOLD.** A scene of height `H`
 around a `100dvh` sticky child pins from `p = vh/(H+vh)` until `p = (vh + H − vh)/(H+vh)` — for The
 Big Day's 240dvh knot that is **p ∈ [0.29, 0.71]**, and windows outside it draw while the frame is

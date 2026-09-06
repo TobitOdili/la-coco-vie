@@ -120,6 +120,14 @@ All in `/public/`:
 
 The carousel is `N=8` poster slots (4 chapters × 2, mirrored around a ring).
 
+### 2026-09-06 (later still) — The Big Day, corrected
+- **Calendar back** as a ghost October with the 29th inked and ringed; **countdown made obvious**
+  (days · hours · minutes, seconds as a sweeping line); **knot restored verbatim** from `b5a52348`
+  after a wrong turn redrew it as a literal heart.
+- **Fixed effects that started as their content left the screen** (windows past `p=0.5`). The first
+  audit blamed US, which runs on a different clock entirely and was always fine.
+- `class="ring"` hit Tailwind's global `.ring` utility for the second time on the same calendar.
+
 ### 2026-09-06 (later) — The Big Day is the invitation, not the itinerary
 - **Removed**: the calendar grid, both maps, all times/venues/addresses/dress lines and the hover
   that revealed them. A guest who has not RSVP'd now learns the date and nothing else.

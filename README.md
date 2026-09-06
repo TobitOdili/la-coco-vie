@@ -52,12 +52,13 @@ is that no two pages share a language. Breaking it is what made With Love fail i
     and appears **word by word off the scroll position**, each word un-clipped left to right the way
     a pen lays it down, so scrolling back un-writes it. The heading finishes before the body starts,
     then he writes in the margin and she answers.
-  - **THE BIG DAY** — **the invitation.** The date written out in full, then two threads arrive
-    from either side, **draw a heart between them** and leave as one line, then a countdown
-    **spelled in words** — "fifty-two / DAYS" — with hours and minutes moving once a minute
-    beneath it. ⚠️ **The date is the only fact on the page.** The calendar, both venue maps and
-    every time/venue/address/dress line were removed by request: a guest who has not RSVP'd learns
-    when, and nothing else. The heart is recovered from this page's own first design (`b5a52348`).
+  - **THE BIG DAY** — **the invitation.** A **ghost October**: the whole month, every numeral
+    faded back, and the 29th inked and ringed by a hand-drawn loop. Then the **knot** — two threads
+    arrive from either side, cross, loop around one another and leave as one line (restored verbatim
+    from this page's own first design, `b5a52348`). Then a **countdown**: days · hours · minutes in
+    large numerals, with the seconds as a line that sweeps once a minute. ⚠️ **The date is the only
+    fact on the page** — no times, no venue, no map, no dress code and no hover that reveals any of
+    them. A guest who has not RSVP'd learns when, and nothing else.
   - **IN FRAMES** — **the archive**: a window sits in the room, its title bar showing a path —
     `...\Media\` — with the couple's three events as folders inside it: *traditional*, *white
     wedding*, *reception*. **Click** one (hovering only brightens it) and the folder physically

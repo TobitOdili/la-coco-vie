@@ -14,7 +14,7 @@ state, everything below it is history — newest first.)
 > | chapter | what it is now | driven by |
 > |---|---|---|
 > | **US** | margin notes: the whole page in one hand, **nothing set in type**; taped polaroids | **written word by word** off each block's own rect |
-> | **THE BIG DAY** | **the invitation** — the date written out, a heart drawn by two threads that arrive from either side and leave as one, and a countdown spelled in words. Nothing else: the RSVP is the gate | scroll-scrubbed, with one sticky hold for the heart |
+> | **THE BIG DAY** | **the invitation** — a ghost October with the 29th inked and ringed, the knot (two threads cross, loop and leave as one), and a countdown of days · hours · minutes. Nothing else: the RSVP is the gate | scroll-scrubbed, with one sticky hold for the knot |
 > | **IN FRAMES** | **the archive** — one window in the room showing a path (`...\Media\`), the three events as folders inside; click one and it opens, then the window navigates into it | **no scroll**: folder-open, then a stacked-view swap; the room's film on a time loop |
 > | **WITH LOVE** | **the wall** — six bands of the gift list sliding across the screen at their own speeds, forever; point at a word and its band stops and the thing opens under it | one transform per band per frame; no artwork at all |
 >
@@ -105,6 +105,34 @@ above. Constant speed and a reversed exit are not in conflict.
 ⚠️ **Perforations must be painted INTO `.film`'s background**, not as absolutely-positioned children.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
+
+**▶▶ STATE (2026-09-06, latest) — THE BIG DAY, CORRECTED: THE CALENDAR IS BACK AND THE KNOT IS
+THE ORIGINAL ONE.**
+User on the previous cut: *"Um no, we have it all wrong now."* Four corrections.
+
+1. **The calendar returns**, rendered as a **ghost month**: the full October 2026 grid built from
+   `monthISO`, every numeral at 0.22 opacity, and the 29th inked and ringed by a hand-drawn loop
+   that draws on scroll. A calendar is the fastest way to read "a Thursday, late October"; making
+   thirty of its thirty-one numerals recede is what stops it looking like a widget. Still no hover
+   and still no second date. ⚠️ Rows are sized **by height**, not by `aspect-ratio` — square cells
+   in a 44rem grid put the one date that matters below the fold.
+2. **The countdown is plainly a countdown**: days · hours · minutes in large numerals with hairline
+   rules, ticking every second. The seconds are a line that sweeps once a minute rather than a
+   fourth number. (The previous cut spelled it in words — elegant and, per the user, not obvious
+   enough.) ⚠️ `font-variant-numeric: tabular-nums` **and** a `min-width`, or the row shunts
+   sideways every time a digit changes.
+3. **The knot is restored verbatim from `b5a52348`.** The 2026-09-06 pass redrew it as a literal
+   heart on the strength of the user's own "form a heart" description; the shape they actually
+   wanted was the original crossing loops. **When someone half-remembers a thing, find the thing —
+   do not reconstruct it from the description.**
+4. **Effects that started too late** — see AUDIT #43. ⚠️ And AUDIT #44: `class="ring"` collided with
+   Tailwind's global `.ring` utility and drew a box round the date. That is AUDIT #26, on this same
+   calendar, for the second time.
+
+- **Verified at 13 viewports** (320×568 → 2560×1440, portrait, two landscape phones, tablet, laptop,
+  and a short 1440×700): calendar, knot and clock all fit and clear the nav at every one, no
+  horizontal overflow, 0 errors, and the latest effect start is 88% of the screen. Full site
+  re-checked at 5 routes × 5 sizes: 0 overflow, 0 errors, 0 failed requests, 0 dead links.
 
 **▶▶ STATE (2026-09-06, latest) — THE BIG DAY IS THE INVITATION, NOT THE ITINERARY.**
 User: *"remove the calendar, then the maps as well. I essentially don't want anyone who hasn't
