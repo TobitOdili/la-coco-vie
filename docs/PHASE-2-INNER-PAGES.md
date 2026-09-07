@@ -14,7 +14,7 @@ state, everything below it is history — newest first.)
 > | chapter | what it is now | driven by |
 > |---|---|---|
 > | **US** | margin notes: the whole page in one hand, **nothing set in type**; taped polaroids | **written word by word** off each block's own rect |
-> | **THE BIG DAY** | **the invitation** — a ghost October with the 29th inked and ringed, the knot (two threads cross, loop and leave as one), and a countdown of days · hours · minutes. Nothing else: the RSVP is the gate | scroll-scrubbed, with one sticky hold for the knot |
+> | **THE BIG DAY** | **the invitation** — a ghost October with the 29th inked and ringed, the knot (two threads cross, loop and leave as one), then **one unbroken thread** out of "one special day." that opens around the clock and becomes the line the numerals stand on. Nothing else: the RSVP is the gate | scroll-scrubbed, with one sticky hold for the knot; the countdown's frame is measured from the live rects, so it survives the numbers changing |
 > | **IN FRAMES** | **the archive** — one window in the room showing a path (`...\Media\`), the three events as folders inside; click one and it opens, then the window navigates into it | **no scroll**: folder-open, then a stacked-view swap; the room's film on a time loop |
 > | **WITH LOVE** | **the wall** — six bands of the gift list sliding across the screen at their own speeds, forever; point at a word and its band stops and the thing opens under it | one transform per band per frame; no artwork at all |
 >
@@ -106,7 +106,48 @@ above. Constant speed and a reversed exit are not in conflict.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
 
-**▶▶ STATE (2026-09-06, latest) — THE BIG DAY, CORRECTED: THE CALENDAR IS BACK AND THE KNOT IS
+**▶▶ STATE (2026-09-06, latest) — ONE THREAD FROM THE KNOT INTO THE CLOCK.**
+User: *"The ink is just what I wanted, but it starts too late… Is it possible for a line starting
+from below 'one day' (rename to 'one special day') to extend and form or merge into some sort of
+countdown? We'd need it to be somewhat dynamic since the values would be ever-changing."*
+
+1. **The ink starts ~0.8vh of scroll earlier.** The knot's drawing used to open at scene `p = 0.34`
+   — measured, the scene's own top was 16% of a screen ABOVE the viewport, i.e. the whole knot had
+   already climbed a full viewport in silence. It now opens at `p = 0.19`, while the drawing is
+   still rising through the lower third, and is finished and held by the time it centres. The
+   calendar was retimed the same way, which closes the dead gap between the two scenes from
+   **1.27vh of scroll to 0.47vh**.
+   ⚠️ **THE SCENE'S `min-height` IS PART OF ITS TIMING.** `p` is a fraction of `H + vh`, so a
+   per-breakpoint height override (the knot had a 210dvh mobile one) silently re-maps every window
+   to a different place on the screen. The knot is 170dvh at every size now; only the ink scales.
+2. **The thread is continuous across the section boundary.** Below "one special day." a stem grows
+   down to the bottom of the sticky hold; the countdown scene opens with a stem at its own top; and
+   the two meet at **0px, measured at all 12 viewports.** That works because a sticky child is
+   constrained by its containing block's **padding** box — so `padding: 0` on the knot scene makes
+   the pin release at the exact moment the next scene's top reaches the viewport bottom. With the
+   old 10vh bottom pad the line would have broken 10vh short of the seam.
+3. **The thread becomes the clock.** It comes down the centre, breaks around "UNTIL THEN", opens
+   into two arms, passes outside the numbers and closes underneath them into the line the numerals
+   stand on; from the middle of that line it drops once more to the seconds. Two threads parting
+   and rejoining is the page's own grammar — the same figure as the knot, at rest.
+   ⚠️ **The frame is MEASURED, not drawn.** `syncThread()` reads the real rects of the kicker, the
+   clock and the seconds line and rebuilds the path whenever they move, which is what makes it
+   survive the numbers themselves: "9 days" is a narrower clock than "128 days". The `<svg>` carries
+   **no viewBox**, so its user units are the section's CSS pixels — the alternative,
+   `preserveAspectRatio="none"`, stretches a hairline into a wedge (cf. AUDIT #31).
+   ⚠️ **The fan's height comes from the gap above the numbers.** With a shallow gap the arms open
+   almost horizontally and the whole thing reads as a box, not a draped thread.
+4. **AUDIT #45 — the seconds line was invisible.** The faint track carried `.fade` itself, and the
+   engine writes `style.opacity` on whatever holds the window, so the CSS `opacity: 0.14` that made
+   it a *track* was overridden to 1 — full-ink fill sweeping across a full-ink bar. The fade goes on
+   a wrapper now. The earlier verification checked that the transform moved, not that anything showed.
+
+- **Verified at 12 viewports** (320×568 → 2560×1440, two landscape phones, tablet, short 1440×700):
+  seam gap 0px everywhere, thread geometry valid, arms clear the clock at every width (16px of
+  clearance at 320px, 52px at 1440px), and **every window still closes with its content on screen**.
+  Full site re-swept at 5 routes × 6 sizes: 0 overflow, 0 errors, 0 failed requests.
+
+**▶▶ STATE (2026-09-06) — THE BIG DAY, CORRECTED: THE CALENDAR IS BACK AND THE KNOT IS
 THE ORIGINAL ONE.**
 User on the previous cut: *"Um no, we have it all wrong now."* Four corrections.
 

@@ -238,9 +238,14 @@ export const CHAPTER_PAGES = {
         // keeping. Do not "tidy" these curves.
         kind: 'knot',
         before: 'two people,',
-        after: 'one day.',
+        after: 'one special day.',
       },
       {
+        // ⚠️ The thread that leaves the knot below "one special day." does not stop at the
+        // section boundary — it comes down the centre of this scene, parts around the
+        // clock and closes under it into the line the numbers stand on. `lead` is drawn
+        // INSIDE a break in that thread, so keep it short: BigDay measures the kicker and
+        // opens a gap around it, and a two-line kicker makes a long hole in the line.
         kind: 'countdown',
         lead: 'until then',
       },
