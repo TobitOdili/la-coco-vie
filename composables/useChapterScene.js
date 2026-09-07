@@ -731,7 +731,24 @@ export function useChapterScene() {
     reportProgress()
     stillTex.wrapS = THREE.ClampToEdgeWrapping
     stillTex.wrapT = THREE.ClampToEdgeWrapping
-    stillTex.colorSpace = THREE.SRGBColorSpace
+    // ⚠️ NoColorSpace, NOT SRGBColorSpace — AND THAT IS NOT A TYPO. This shader is a hand-written
+    // ShaderMaterial: three injects no decode into it and no encode out of it, so whatever a
+    // `texture2D()` returns goes straight to the framebuffer. A VideoTexture's frames arrive raw
+    // and land correctly. Tagging this image sRGB makes three upload it as an sRGB internal
+    // format, so the HARDWARE decodes it to linear on sample — a decode the film beside it never
+    // gets — and those linear values, written to an sRGB framebuffer, read as a gamma-darkened
+    // picture. Measured on the same card, same frame, same geometry: the still came out with the
+    // couple as near-black silhouettes against a muddy background while the film showed their
+    // faces. AUDIT #51.
+    // ⚠️ The poster FACE above does need `SRGBColorSpace` — do not "make these consistent".
+    // It is composited against `fromLinear(borderColor)` in the shader; the window is not
+    // composited against anything, it replaces the pixel outright.
+    stillTex.colorSpace = THREE.NoColorSpace
+    // The rest match the VideoTexture this hands over to, so the handover cannot show a change in
+    // sharpness either (VideoTexture sets generateMipmaps = false).
+    stillTex.minFilter = THREE.LinearFilter
+    stillTex.magFilter = THREE.LinearFilter
+    stillTex.generateMipmaps = false
     stillTextures[chapterIdx] = stillTex
     const photoTex = stillTex
 

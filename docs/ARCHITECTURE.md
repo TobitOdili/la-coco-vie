@@ -819,6 +819,19 @@ The same build must work at `/` (Cloudflare, Vercel) and `/la-coco-vie/` (GitHub
 public-asset URLs go through one helper — `asset()` in [`utils/asset.js`](../utils/asset.js)** — and
 nothing else should build them by hand.
 
+⚠️ **THE CARD SHADER IS COLOUR-UNMANAGED, SO `texture.colorSpace` IS NOT A FREE CHOICE.** It is a
+hand-written `ShaderMaterial`: three injects no decode into it and appends no encode after it, so
+whatever `texture2D()` returns is what reaches the framebuffer. Tagging a texture `SRGBColorSpace`
+makes three upload it with an sRGB internal format and the **hardware** decodes it to linear on
+sample — invisible in a built-in material, which encodes on the way out, and a **gamma-darkening bug
+here**. A `VideoTexture`'s frames do not get that treatment, so anything sharing the window with one
+must be `NoColorSpace` to match (AUDIT #51). The poster FACE is the opposite case and does want
+`SRGBColorSpace`; the two are not inconsistent, they are composited differently — the face is mixed
+with `fromLinear(borderColor)`, the window replaces the pixel outright. **Never "make these
+consistent" without rendering both and comparing.** The way to check is to render the same card, the
+same frame and the same geometry from each texture and compare mean RGB — by eye a gamma shift on a
+small warped quad reads as "the photo is a bit moody".
+
 ⚠️ **THE CARD'S PHOTO WINDOW IS THE VIDEO TEXTURE — SO IT NEEDS A STILL BEHIND IT.** There is no
 poster image inside the window; the shader samples `photoTexture` there. With the films at
 `preload='none'` and playback starting only on hover, every window on the homepage was **empty on

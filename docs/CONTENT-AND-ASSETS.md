@@ -70,7 +70,7 @@ export const CHAPTERS = [
 | `accentLighter` | hex | (defined; available for tints) |
 | `audio` | url | Howler ambient loop (hover/select) |
 | `video` | url | `VideoTexture` film shown inside the poster on hover/select |
-| `still` | url | frame 0.04 of `video` — **what the poster's window shows before that film has played**. Without it the window is blank on arrival, and on touch (no hover) until a chapter is opened. `npm run gen:stills` |
+| `still` | url | frame 0.04 of `video` — **what the poster's window shows before that film has played**. Without it the window is blank on arrival, and on touch (no hover) until a chapter is opened. `npm run gen:stills`. ⚠️ Loaded with `NoColorSpace` to match the film's texture — see AUDIT #51 before changing that |
 | `txt` | url | the floating center-text plane (`cu-txtN.png`) for this chapter |
 | `svg` | url | the poster artwork (`cu-pN.png`) — the card face |
 | `index` | int | 0-based chapter index |
