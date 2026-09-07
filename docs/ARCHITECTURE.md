@@ -342,6 +342,14 @@ reported 31 late effects on US and four at negative positions — **all of them 
 of using the wrong model.** Measured correctly, every one of its 116 words starts between 64% and
 100%. Check which clock a page is on before auditing it.
 
+⚠️ **A TRANSPARENT SECTION IS NOT A CURTAIN.** The bottom exit's first phase was written as
+happening "behind the still-scrolling-out article" — but `.chapter-outro` is transparent so the scene
+shows through it, which means phase A is a window OPENING FROM THE BOTTOM of the frame, and the exit
+bowl sits low: exactly the strip that is revealed first. Anything staged there is on camera from the
+first pixel. Measured, the ring was fully assembled at `de = 0.30` with the article still covering
+the top third, and phase B then replayed the same landing. **Stage a transition against what is
+VISIBLE at each progress, not against which DOM element is nominally on top.** AUDIT #47.
+
 ⚠️ **AN OUTLINE CARRIES NO WEIGHT OF ITS OWN.** `-webkit-text-stroke` at the page's measured ink
 width makes type the same line as everything drawn around it — and because the weight no longer
 scales with the point size, the type can be as large as the composition wants. It needs room

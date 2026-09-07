@@ -367,6 +367,12 @@ export function useChapterScene() {
   //  • HERO_FIT_END — the second wine copy un-frames + shrinks to ring size by this de (EARLY, while still
   //    off-top + hidden) so its phase-B descent reads as a clean ring card, not a full-bleed morph.
   const HERO_FIT_END = 0.25
+  // ⚠️ How much of the deck's assembly is allowed to run BEHIND the still-scrolling-out article.
+  // The outro section is transparent, so phase A is not hidden — it is a window that opens from the
+  // bottom of the frame, over the low bowl. Anything above a hint here and the ring finishes
+  // arriving before the page has left, and phase B replays it. Measured at 0.12: the deck is a
+  // sliver at the bottom edge when the article clears, and every landing happens after.
+  const ASM_LEAD = 0.12
   // Exit "bowl": during phase A the ring gathers LOW + steeply tilted + at a small radius so you look down
   // INTO a tight cluster (the reference view); phase B rises + un-tilts + unfurls it to the homepage fan.
   const BOWL_Y = -58                                           // carousel.y at the bowl (below selected -43)
@@ -1583,8 +1589,21 @@ export function useChapterScene() {
     // the article is gone → the cluster UNFURLS (radius grows) + rises + un-tilts to the homepage fan while
     // it spins, and the second wine copy DROPS in from the top into its slot. Card faces stay visible the
     // whole unfurl (no hide) and the accent background fades to the homepage over the late rise.
-    const a = ss(Math.min(1, t / DROP_START))                       // gather into the cluster (behind the page)
-    const b = ss(Math.max(0, (t - DROP_START) / (1 - DROP_START)))  // unfurl + the drop
+    const aLin = Math.min(1, t / DROP_START)
+    const bLin = Math.max(0, (t - DROP_START) / (1 - DROP_START))
+    const a = ss(aLin)                       // sink into the bowl (behind the page)
+    const b = ss(bLin)                       // unfurl + the drop
+    // ⚠️ THE ASSEMBLY MUST NOT HAPPEN WHILE THE ARTICLE IS STILL ON SCREEN. `.chapter-outro` is
+    // transparent, so from the FIRST pixel of phase A a growing strip of the scene is already
+    // visible at the bottom of the frame — and the bowl sits low, which is exactly the strip that
+    // opens first. Driving the deck's rise and its radius off phase A therefore played the whole
+    // arrival in that window: measured, the ring was fully assembled at de = 0.30 with the article
+    // still covering the top third. Phase B then rebuilt it, so the landing read twice ("a card
+    // drops in before the page has finished scrolling out… then the correct drop, repeated").
+    // `asm` is the single assembly clock: ASM_LEAD of it is allowed behind the page — enough that
+    // the deck is not frozen, not enough for anything to look like it has ARRIVED — and the rest
+    // runs in phase B, where it belongs.
+    const asm = ss(ASM_LEAD * aLin + (1 - ASM_LEAD) * bLin)
 
     // Spin the whole way, in the down-scroll direction (EXIT_SPIN negative) → flows into the homepage idle.
     carousel.animatedRotationY = exitStart.rot + EXIT_SPIN * t
@@ -1612,7 +1631,7 @@ export function useChapterScene() {
     // Radius grows MONOTONICALLY from the tight cluster out to the full ring across the whole exit — the deck
     // starts small and continuously expands (no shrink-first dip), so the front cards keep coming toward the
     // camera and the second wine "catches" at the right size as it drops in.
-    const radius = lp(CLUSTER_R, baseDistance, ss(t))
+    const radius = lp(CLUSTER_R, baseDistance, asm)
     const rf = radius / baseDistance                                // scale every ring slot by the current radius
 
     // Phase B sub-progresses for the second wine copy: descend over most of B, fade in early.
@@ -1620,12 +1639,13 @@ export function useChapterScene() {
     const reveal = ss(Math.min(1, b / 0.35))
     const fitT = Math.min(1, t / HERO_FIT_END)                      // shrink to ring size early (while off-top)
 
-    // EVERY other card (incl. the wine MIRROR = the copy that's "already there") gathers into the cluster in
-    // phase A and unfurls in B — present + visible the whole time (no hide). x/z scaled by the radius.
+    // EVERY other card (incl. the chapter's MIRROR copy = the one that's "already there") rides the single
+    // `asm` clock: held low and tight behind the article, then rising and unfurling once it is gone. Present
+    // the whole time (no hide) — they are simply below the frame until the unfurl lifts them into it.
     for (const o of exitStart.others) {
       o.p.mesh.position.x = o.p.baseX * rf
       o.p.mesh.position.z = o.p.baseZ * rf
-      o.p.mesh.position.y = lp(o.y, o.p.baseY, a)
+      o.p.mesh.position.y = lp(o.y, o.p.baseY, asm)
       if (o.p.material.uniforms.uOpacity) o.p.material.uniforms.uOpacity.value = 1
     }
 

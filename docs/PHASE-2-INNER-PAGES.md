@@ -106,7 +106,35 @@ above. Constant speed and a reversed exit are not in conflict.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
 
-**▶▶ STATE (2026-09-07, latest) — THE NUMERALS ARE DRAWN, AND THE RINGS READ THE NUMBERS.**
+**▶▶ STATE (2026-09-07, latest) — THE BOTTOM EXIT LANDS ONCE.**
+User: *"The cards unfurl in a way that appears to have a card drop in before the page has finished
+scrolling out of viewport. Then the correct card drop animation plays (but at this point it's
+repeated)."*
+
+Real, and the cause is a wrong mental model in the code's own comments. Phase A of the bottom exit
+was described as running *"behind the still-scrolling-out article"* — but **`.chapter-outro` is
+transparent**. Phase A is not a hidden rehearsal; it is a window opening from the bottom of the
+frame, and the exit bowl (`BOWL_Y = -58`) sits low — precisely the strip that is revealed first. So
+the deck's rise and its radius, both driven off phase A, played the entire arrival in plain view.
+**Measured: the ring was fully assembled at `de = 0.30`, with the article still covering the top
+third of the screen.** Phase B then rebuilt the same ring and dropped the hero into it — the
+"repeat".
+
+Fix: one assembly clock, `asm`, weighted so **`ASM_LEAD` (0.12) of it runs behind the page** and the
+rest in phase B. The deck's y-rise and the ring radius both read from it. Frame by frame now: a
+sliver of cluster at the bottom edge as the article leaves, a tight low cluster when it clears
+(`de = 0.44`), then one continuous unfurl-and-rise with the hero descending into its slot
+(`de = 0.70`), landing on the homepage pose. **One arrival.**
+
+⚠️ The general rule, now in ARCHITECTURE: **stage a transition against what is VISIBLE at each
+progress, not against which DOM element is nominally on top.**
+
+- Verified frame-by-frame at 13 exit positions on The Big Day, and the whole exit driven to commit on
+  **/us, /with-love, /the-big-day (390×844) and /in-frames (844×390)** — 0 errors, every one
+  navigating home cleanly. Full site swept at 5 routes × 6 sizes: 0 overflow, 0 errors, 0 failed
+  requests, 0 dead links.
+
+**▶▶ STATE (2026-09-07) — THE NUMERALS ARE DRAWN, AND THE RINGS READ THE NUMBERS.**
 User: *"Let's use the outlined on desktop and the bague for smaller screen sizes where it'll be an
 issue… Let the circle fade be tied to the actual numbers, so hours is highest at 23 and diminishes
 at 1 or 0hrs and minutes full circle at 59 and diminishes till 1min. Days should be fixed to the
