@@ -815,9 +815,18 @@ drives two exits — a top-edge reverse rewind and a scroll-driven bottom "outro
 
 ## Base URL & assets
 
-The same build must work at `/` (Vercel) and `/la-coco-vie/` (GitHub Pages). **All public-asset
-URLs go through one helper — `asset()` in [`utils/asset.js`](../utils/asset.js)** — and nothing
-else should build them by hand.
+The same build must work at `/` (Cloudflare, Vercel) and `/la-coco-vie/` (GitHub Pages). **All
+public-asset URLs go through one helper — `asset()` in [`utils/asset.js`](../utils/asset.js)** — and
+nothing else should build them by hand.
+
+⚠️ **THE DEPLOY ARTEFACT IS `.output/public`, NOT A SERVER.** `ssr: false` + the prerender list make
+`nuxt build` emit a finished static site; the Nitro server it also builds is never used. Cloudflare
+therefore ships as a **static-assets Worker with no script** ([`wrangler.jsonc`](../wrangler.jsonc)).
+Without that config `wrangler deploy` enters its framework auto-setup path, detects Nuxt and fails on
+a version floor (3.21.0) that exists to wire Nitro up as a *server*-side Worker — see AUDIT #49. The
+absolute asset base is also what makes host trailing-slash policy a non-issue: Cloudflare serves
+`/with-love` from `/with-love/index.html`, Pages serves `/la-coco-vie/with-love/`, and `asset()`
+yields the same absolute URL under both.
 
 ⚠️ **`import.meta.env.BASE_URL` DOES NOT WORK for this** (fixed 2026-08-10; it had been the
 mechanism, and this doc previously documented it). Nuxt hardcodes Vite's client `base` to `'./'`

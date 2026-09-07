@@ -9,6 +9,7 @@ opens into its own bespoke scroll page.
 |---|---|
 | **Live** | https://la-coco-vie.vercel.app/ |
 | **Repo** | https://github.com/TobitOdili/la-coco-vie |
+| **Cloudflare** | Workers static-assets deploy — see [Deployment](#deployment) |
 | **Secondary deploy** | https://tobitodili.github.io/la-coco-vie/ (GitHub Pages) |
 
 > ### ℹ️ What this project is (and its history)
@@ -150,7 +151,7 @@ npm run preview   # preview a production build
 | Scroll | **Lenis** (inner pages) · homepage carousel: window `wheel` listener + touch handlers with release momentum on `#canvas-hit-layer` |
 | Styling | Tailwind v4 (via `@tailwindcss/vite`) + `assets/css/main.css` |
 | Fonts | Bague & Movie (local `.woff`) + Italiana / Monoton / Over the Rainbow (Google Fonts) |
-| Hosting | **Vercel** (primary, auto-deploys `main`) + GitHub Pages (CI fallback) |
+| Hosting | **Cloudflare Workers** (static assets, `wrangler.jsonc`) + **Vercel** (auto-deploys `main`) + GitHub Pages (CI fallback) |
 | QA tooling | **Browserless** (cloud headless — geometry, probes, screenshots; token in `.env.bless`). ⚠️ It cannot decode H.264, so the **films** and anything about *feel* need a human (Claude-in-Chrome, the real-browser tier, was not connected as of 2026-08-11). Films + both breakpoints were user-confirmed 2026-08-31. See ARCHITECTURE → QA workflow |
 
 ---
@@ -185,6 +186,7 @@ assets/css/main.css          Fonts, cursor, noise overlay, container, per-chapte
 public/                      Static assets — posters, films, audio, fonts (see CONTENT-AND-ASSETS)
 new frames/                  📁 Media drop — the couple's raw photos/films, processed into public/
 .github/workflows/deploy.yml GitHub Pages CI (npm run generate, base /la-coco-vie/)
+wrangler.jsonc              Cloudflare deploy — static assets from .output/public, NO Worker script
 ```
 
 `composables/useChapterScene.js` (~1500 lines) is where ~90% of the project lives. Read
@@ -211,12 +213,26 @@ Each doc has **one job** — start with the README, then go deep where needed.
 
 ## Deployment
 
-- **Vercel** is primary and auto-deploys on push to `main`. Base URL `/`.
+**There is no server.** `ssr: false` plus the prerender list in `nuxt.config.ts` means `nuxt build`
+emits a complete static site — one `index.html` per route under `.output/public`. Every target below
+just serves that directory.
+
+- **Cloudflare Workers** — build `npm run build`, deploy `npx wrangler deploy`, config
+  [`wrangler.jsonc`](wrangler.jsonc) (static assets, no Worker script). Base URL `/`.
+  ⚠️ **The config file is load-bearing.** Without it `wrangler deploy` falls into its framework
+  auto-setup path, detects Nuxt and refuses: *"The version of Nuxt used in the project ("3.13.2")
+  cannot be automatically configured. Please update the Nuxt version to at least "3.21.0"."* That
+  path is for running **Nitro as a server-side Worker**, which this site has no use for — do not
+  "fix" it by upgrading Nuxt. See AUDIT #49.
+- **Vercel** auto-deploys on push to `main`. Base URL `/`.
 - **GitHub Pages** builds via `.github/workflows/deploy.yml` (`npm run generate` with
   `NUXT_APP_BASE_URL=/la-coco-vie/`, adds `.nojekyll` so `_nuxt/` assets serve).
 
-Asset paths are resolved at build time via `import.meta.env.BASE_URL` so the same code
-works under both `/` (Vercel) and `/la-coco-vie/` (Pages). See ARCHITECTURE → "Base URL & assets".
+Asset paths are baked at build time by `vite.define.__APP_BASE__` and read through `asset()` in
+`utils/asset.js` — **not** `import.meta.env.BASE_URL`, which Nuxt hardcodes to `'./'` in production
+builds. That is what lets the same code work at `/` (Cloudflare, Vercel) and `/la-coco-vie/`
+(Pages), and it is why trailing-slash differences between hosts cannot break images. See
+ARCHITECTURE → "Base URL & assets".
 
 ---
 

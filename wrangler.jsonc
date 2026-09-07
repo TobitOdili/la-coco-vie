@@ -1,0 +1,34 @@
+{
+  // ─────────────────────────────────────────────────────────────────────────
+  // Cloudflare deploy — STATIC ASSETS ONLY, no Worker script.
+  //
+  // ⚠️ THIS FILE EXISTS TO STOP WRANGLER GUESSING. Without a config in the repo
+  // root, `wrangler deploy` falls into its framework auto-setup path, detects
+  // Nuxt, and refuses:
+  //     "The version of Nuxt used in the project ("3.13.2") cannot be
+  //      automatically configured. Please update the Nuxt version to at least
+  //      "3.21.0" and try again."
+  // That path exists to wire Nitro up as a server-side Worker — which this site
+  // has no use for. `ssr: false` plus the prerender list in nuxt.config means
+  // `nuxt build` already emits a COMPLETE static site: one index.html per route
+  // under .output/public. There is nothing to run on a server. With this file
+  // present wrangler skips the guessing and simply uploads that directory.
+  //
+  // ⚠️ Do NOT "fix" the build error by upgrading Nuxt to 3.21+. It would satisfy
+  // wrangler's check and then deploy a Nitro Worker to render a site that has
+  // nothing to render — and 3.13 → 3.21 is eight minors under an app that leans
+  // hard on Nuxt's build (baked `__APP_BASE__`, per-slug prerender, the SPA
+  // shell). The static output is the artefact; ship the artefact.
+  // ─────────────────────────────────────────────────────────────────────────
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "la-coco-vie",
+  "compatibility_date": "2025-01-01",
+  "assets": {
+    "directory": "./.output/public",
+    // The five chapter routes are real files (/us/index.html …) and are served
+    // directly. Anything else falls back to the SPA shell so the Vue router can
+    // answer it — the same behaviour the local prod harness has all along
+    // (`npx serve -s .output/public`).
+    "not_found_handling": "single-page-application"
+  }
+}
