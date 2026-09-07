@@ -342,6 +342,13 @@ reported 31 late effects on US and four at negative positions — **all of them 
 of using the wrong model.** Measured correctly, every one of its 116 words starts between 64% and
 100%. Check which clock a page is on before auditing it.
 
+⚠️ **ON A PAGE MADE OF HAIRLINES, TYPE SIZE IS A LINE WEIGHT.** A high-contrast display serif
+(Italiana here) renders stems at roughly 8–9% of its font size: 11px at 8rem, ~5px at 3.6rem. Set
+beside a 1.75px drawn line the first reads as a different design; the second belongs. When type and
+drawing share a frame, **check the stem weight against the stroke weight** — not the point size
+against a grid. The Big Day's calendar already had the right ratio and the countdown had blown it up
+5×. Sizing the type down fixed what looked like a typeface problem.
+
 ⚠️ **A `stroke-width` MEANS NOTHING WITHOUT ITS viewBox SCALE.** The Big Day's knot is `2.6` in a
 **1000-unit** viewBox rendered at 672px, so its ink is **1.75px** — and 0.93px on a 390px phone. The
 plain-pixel stem and thread that continue that same line used `2.6` as *pixels* and came out half

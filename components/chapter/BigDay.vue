@@ -384,8 +384,14 @@ onBeforeUnmount(() => { cancelAnimationFrame(rafId) })
 }
 .clock {
   /* ⚠️ ONE SOURCE FOR THE SCALE. The dial is sized off the numeral, so the ring can never
-     end up too small to hold its own number at some in-between width. */
-  --num: clamp(2.6rem, 12vw, 8rem);
+     end up too small to hold its own number at some in-between width.
+     ⚠️ AND THE NUMERAL IS SIZED TO THE INK. Italiana is a high-contrast face: at 8rem its
+     stems render ~11px against a 1.75px ring — six times the weight of every other line on
+     the page, which is what made the countdown read as a different design. At 3.6rem the
+     stems are ~5px, in the same range as the month title beside it, and the ring becomes
+     the dominant form instead of a whisper around a black mass. This is the calendar's
+     relationship: a delicate numeral inside a hand-weight circle. */
+  --num: clamp(1.85rem, 5.6vw, 3.6rem);
   display: flex;
   align-items: flex-start;
   gap: clamp(1.4rem, 6vw, 4.5rem);
@@ -394,8 +400,9 @@ onBeforeUnmount(() => { cancelAnimationFrame(rafId) })
 .unit { position: relative; display: flex; flex-direction: column; align-items: center; }
 .u-dial {
   position: relative;
-  width: calc(var(--num) * 1.62);
-  height: calc(var(--num) * 1.62);
+  /* A generous ring, not a collar — the circle is the shape you read first. */
+  width: calc(var(--num) * 2.7);
+  height: calc(var(--num) * 2.7);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -430,7 +437,15 @@ onBeforeUnmount(() => { cancelAnimationFrame(rafId) })
 @media (max-width: 767px) {
   .knot { width: 92vw; }
   .cal { width: 92vw; grid-auto-rows: clamp(1.8rem, 5.2vh, 2.6rem); }
-  .clock { gap: 1.5rem; }
+  .clock { gap: 1rem; }
+}
+
+/* ⚠️ The three dials are a fixed multiple of the numeral, so on the narrowest phones the
+   row runs to the edges before anything else complains — at 320px it was 272px wide inside
+   282px of content box, i.e. 5px a side. Step the numeral down here rather than squeezing
+   the gap, which would make the rings read as one linked chain. */
+@media (max-width: 380px) {
+  .clock { --num: 1.62rem; }
 }
 
 /* ⚠️ SHORT VIEWPORTS, NOT NARROW ONES. A landscape phone is 844px WIDE, so every width
@@ -444,7 +459,7 @@ onBeforeUnmount(() => { cancelAnimationFrame(rafId) })
   .knot-word { font-size: clamp(0.9rem, 2.4vw, 1.15rem); }
   .day-scene { padding-top: max(14vh, 5.5rem); }
   .cal { width: min(60vw, 32rem); margin-top: 0.7rem; grid-auto-rows: clamp(1.3rem, 6vh, 2rem); }
-  .clock { --num: clamp(2rem, 6.2vw, 3.4rem); margin-top: clamp(1.4rem, 6vh, 2.4rem); }
+  .clock { --num: clamp(1.7rem, 4.4vw, 2.6rem); margin-top: clamp(1.4rem, 6vh, 2.4rem); }
   .u-label { margin-top: 0.55rem; }
 }
 </style>

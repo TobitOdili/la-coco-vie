@@ -14,7 +14,7 @@ state, everything below it is history — newest first.)
 > | chapter | what it is now | driven by |
 > |---|---|---|
 > | **US** | margin notes: the whole page in one hand, **nothing set in type**; taped polaroids | **written word by word** off each block's own rect |
-> | **THE BIG DAY** | **the invitation** — a ghost October with the 29th inked and ringed, the knot (two threads cross, loop and leave as one), then **one unbroken thread** out of "one special day." that comes down and stops at "until then". Under it, three dials: rings that drain over a day, an hour and a minute. Nothing else: the RSVP is the gate | scroll-scrubbed, with one sticky hold for the knot; ink weight and the thread's length are measured from the live DOM, so they hold at every size |
+> | **THE BIG DAY** | **the invitation** — a ghost October with the 29th inked and ringed, the knot (two threads cross, loop and leave as one), then **one unbroken thread** out of "one special day." that comes down and stops at "until then". Under it, three dials: rings that drain over a day, an hour and a minute, each holding a numeral set at the page's own weight rather than at display size. Nothing else: the RSVP is the gate | scroll-scrubbed, with one sticky hold for the knot; ink weight and the thread's length are measured from the live DOM, so they hold at every size |
 > | **IN FRAMES** | **the archive** — one window in the room showing a path (`...\Media\`), the three events as folders inside; click one and it opens, then the window navigates into it | **no scroll**: folder-open, then a stacked-view swap; the room's film on a time loop |
 > | **WITH LOVE** | **the wall** — six bands of the gift list sliding across the screen at their own speeds, forever; point at a word and its band stops and the thing opens under it | one transform per band per frame; no artwork at all |
 >
@@ -106,7 +106,37 @@ above. Constant speed and a reversed exit are not in conflict.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
 
-**▶▶ STATE (2026-09-07, latest) — THE THREAD STOPS, AND THE CLOCK BECOMES THREE DIALS.**
+**▶▶ STATE (2026-09-07, latest) — THE NUMERALS ARE SIZED TO THE INK.**
+User: *"I don't love the fonts of the countdown relative to the rest of the page / lines that circle
+it."*
+
+The face was never the problem — **the weight was.** Italiana is a high-contrast display serif: at
+8rem its stems render about **11px**, against a **1.75px** ring and a 1.75px thread. Six times the
+weight of every other line on the page, so the countdown read as a different design pasted into it.
+Nothing else on The Big Day is set anywhere near that size — the month title is 3rem and the knot's
+words 1.8rem.
+
+`--num` is **clamp(1.85rem, 5.6vw, 3.6rem)** now (58px at 1440, 26–30px on phones), which puts the
+stems at ~5px — the same range as the month title beside it — and the dial went from `1.62em` to
+`2.7em`, so the **ring is the shape you read first** and the numeral floats inside it. That is the
+calendar's own relationship, the one the page already had: a delicate numeral inside a hand-weight
+circle. Still plainly a countdown, still the largest type on the page.
+
+⚠️ **Rendered alternatives before choosing**, against the live build rather than in the abstract:
+Bague at display size (monoline, agrees with the hairline, but swaps the page's serif voice for the
+label font) and **outlined Italiana** — `-webkit-text-stroke` at `inkW`, so the digits are drawn by
+the same pen as the rings. The outline is the most striking of the three and is worth remembering,
+but at 0.93px of stroke on a phone it goes fragile and noisy. Sizing beat restyling.
+
+⚠️ **The dial is a fixed multiple of the numeral, so the row hits the viewport before anything else
+complains** — at 320px it came to 272px inside a 282px content box. The numeral steps down under
+380px rather than the gap closing, which would make three rings read as one linked chain.
+
+- **Re-verified at all 14 viewports**: no overflow, every numeral inside its ring (half-diagonal of
+  the glyph box against the radius, not a bounding-box guess), the clock clear of the nav and above
+  the fold at each one, seam still 0px, every window still closing with its content on screen.
+
+**▶▶ STATE (2026-09-07) — THE THREAD STOPS, AND THE CLOCK BECOMES THREE DIALS.**
 User: *"1. The line that continues after one special day is thicker. Make it same thickness as the
 earlier one. 2. Don't encompass. just stop at until then. 3. For countdown let's have circles (same
 line thickness) wrapped around the day hours mins whose circumference slowly fades out relative to

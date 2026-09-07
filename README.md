@@ -58,7 +58,8 @@ is that no two pages share a language. Breaking it is what made With Love fail i
     from this page's own first design, `b5a52348`). From below the last word one thread carries on,
     unbroken across the section boundary, and stops at **until then**. Under it a **countdown**:
     days · hours · minutes, each numeral inside a ring whose circumference drains over that unit's
-    own cycle and snaps back full as the number changes — a day, an hour, a minute. ⚠️ **The date is the only
+    own cycle and snaps back full as the number changes — a day, an hour, a minute. The numerals are
+    set at the page's own weight, not at display size, so they read as part of the same drawing. ⚠️ **The date is the only
     fact on the page** — no times, no venue, no map, no dress code and no hover that reveals any of
     them. A guest who has not RSVP'd learns when, and nothing else.
   - **IN FRAMES** — **the archive**: a window sits in the room, its title bar showing a path —
