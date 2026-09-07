@@ -819,6 +819,22 @@ The same build must work at `/` (Cloudflare, Vercel) and `/la-coco-vie/` (GitHub
 public-asset URLs go through one helper — `asset()` in [`utils/asset.js`](../utils/asset.js)** — and
 nothing else should build them by hand.
 
+⚠️ **THE CARD'S PHOTO WINDOW IS THE VIDEO TEXTURE — SO IT NEEDS A STILL BEHIND IT.** There is no
+poster image inside the window; the shader samples `photoTexture` there. With the films at
+`preload='none'` and playback starting only on hover, every window on the homepage was **empty on
+arrival** — measured on a prod build nine seconds in: readyState 0, videoWidth 0, and not one byte of
+any `.mp4` requested. On a touch device, where nothing hovers, they stayed empty until a chapter was
+opened. `CHAPTERS[].still` is now frame 0.04 of each film (`npm run gen:stills`), loaded with the
+poster textures and counted by the loader; `animate()` hands the window over to the video texture
+**one-way**, the first time that film has real frames. One-way because a paused `<video>` keeps
+showing its last frame, so swapping back on unhover would snap the picture to frame 0 exactly as the
+card settles — and the handover is invisible because the still *is* that film's first frame.
+⚠️ **`preload` IS A HINT, NOT A BUDGET.** The obvious fix — leave the window on the video texture and
+prime each `<video>` to its first frame — was built and measured: `preload='metadata'` plus a seek
+pulled **7 MB** (the whole 6.3 MB of film, plus one file fetched twice), because Chrome fetches short
+media entire regardless. Four JPEGs are 184 KB, a 38× saving, and they let each film stay unfetched
+until someone actually asks for it.
+
 ⚠️ **THE DEPLOY ARTEFACT IS `.output/public`, NOT A SERVER.** `ssr: false` + the prerender list make
 `nuxt build` emit a finished static site; the Nitro server it also builds is never used. Cloudflare
 therefore ships as a **static-assets Worker with no script** ([`wrangler.jsonc`](../wrangler.jsonc)).

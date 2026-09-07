@@ -129,6 +129,7 @@ npm run dev      # → http://localhost:3001
 ```bash
 npm run build    # production build (.output/)
 npm run generate # static export (used by the GitHub Pages CI)
+npm run gen:stills # re-extract the card-window stills — run whenever a film changes
 npm run preview   # preview a production build
 ```
 
