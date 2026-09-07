@@ -304,10 +304,16 @@ export const CHAPTER_PAGES = {
         // state are UI text, so they are set in Bague like the rest of the window's
         // chrome. Shadows Into Light is no longer used on this page.
         root: '...\\Media',
+        // ⚠️ CHRONOLOGICAL — the window reads as the day in order.
+        // ⚠️ `traditional` was REMOVED here on 2026-09-07. The traditional marriage was taken
+        // off the site sitewide on 2026-09-06 at the couple's request and this folder was the
+        // last place it was still named; adding folders was the moment to finish that. One
+        // line to put back if it was meant to stay.
         folders: [
-          { name: 'traditional' },
+          { name: 'pre-wedding shoot' },
           { name: 'white wedding' },
           { name: 'reception' },
+          { name: 'after-party' },
         ],
         emptyTitle: 'Empty Folder',
         emptyNote: 'Photos & videos will be available soon.',

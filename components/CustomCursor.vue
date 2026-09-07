@@ -126,4 +126,26 @@ defineExpose({ activate, deactivate, confirm, endConfirm })
   pointer-events: auto;   /* overrides the base `none` so the button is tappable */
   cursor: pointer;
 }
+/* ⚠️ GONE ONCE TAPPED. `confirming` used to only light the circle and hold it expanded until
+   the destination page was up — on touch that parked a big EXPLORE blob over the chapter you
+   had just opened, for the whole transition. It acknowledges the tap (the 0.18s squeeze and
+   brighten in main.css) and then leaves. Must come AFTER `.ready`: same specificity, so order
+   is what decides. */
+.cursor.parked.confirming {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease 0.08s;
+}
+/* ⚠️ SIZED TO THE SCREEN, not to the 104px the pointer version uses. On a 390px phone that is
+   27% of the width sitting over the deck; and one fixed size across a 320 and a 430 screen is
+   proportionally a different button on each. The label has to come with it — 14px inside a
+   68px circle runs edge to edge. Touch only: `.parked` is set only when there is no pointer. */
+.cursor.parked.active {
+  width: clamp(4.25rem, 20vw, 6rem);
+  height: clamp(4.25rem, 20vw, 6rem);
+}
+.cursor.parked .explore {
+  font-size: clamp(9px, 2.6vw, 13px);
+  letter-spacing: 0.04em;
+}
 </style>

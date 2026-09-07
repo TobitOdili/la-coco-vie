@@ -76,7 +76,7 @@
                reader. Same reason the Big Day's day cards are stacked. -->
           <div class="win-views">
             <div class="view view-root" :class="{ on: path === null }" :aria-hidden="path !== null || null">
-              <ul class="grid-list">
+              <ul class="grid-list" :style="{ '--cols': cols }">
                 <li v-for="(f, k) in folders" :key="k">
                   <button
                     type="button"
@@ -138,6 +138,13 @@ const props = defineProps({
 const reel = computed(() => props.sections.find((s) => s.kind === 'reel'))
 const frames = computed(() => reel.value?.frames || [])
 const folders = computed(() => reel.value?.folders || [])
+// ⚠️ THE COLUMN COUNT COMES FROM THE FOLDER COUNT. It was hard-coded to 3, and the list is
+// data-driven: going to four left one folder alone on a second row. `auto-fit` is not the fix
+// either — it packs by available width, so the same four folders came out 1-up at 320px, 2×2 at
+// 390, 4-across at 768 and 3+1 at 1440. Deriving it means the grid is always balanced.
+const narrow = ref(false)
+const cols = computed(() => Math.max(1, Math.min(folders.value.length || 1, narrow.value ? 2 : 4)))
+const syncNarrow = () => { narrow.value = typeof window !== 'undefined' && window.innerWidth < 640 }
 const emptyTitle = computed(() => reel.value?.emptyTitle || 'Empty Folder')
 const emptyNote = computed(() => reel.value?.emptyNote || '')
 // The window's title bar is a PATH, appended the way a file system would:
@@ -255,9 +262,10 @@ function tick(now) {
 
 let io = null
 let resizeT = 0
-const onResize = () => { clearTimeout(resizeT); resizeT = setTimeout(measure, 150) }
+const onResize = () => { syncNarrow(); clearTimeout(resizeT); resizeT = setTimeout(measure, 150) }
 
 onMounted(() => {
+  syncNarrow()
   preload()
   nextTick(measure)
   const scene = rootEl.value?.querySelector('.arc-scene')
@@ -558,7 +566,10 @@ onBeforeUnmount(() => {
   list-style: none;
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* ⚠️ NOT `repeat(3, …)`. The folder list is data-driven and went to four on 2026-09-07,
+     which left one orphan on a second row. `auto-fit` lays out whatever the data holds and
+     drops to two columns inside a phone-width window on its own. */
+  grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
   gap: clamp(0.4rem, 1.5vw, 1rem);
   padding: clamp(1.8rem, 4.5vh, 2.8rem) clamp(0.9rem, 3vw, 1.8rem);
 }

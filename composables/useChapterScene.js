@@ -292,7 +292,19 @@ export function useChapterScene() {
   // TOUCH, where no mousemove ever fires, there was nothing to bring it back. That is
   // the "cards are offset to the left, worse on mobile" report. Rest is now 0° (upright)
   // and input only ever deflects it from there.
-  const LEAN_MAX_DEG = 10        // deflection at full mouse travel / a hard swipe
+  // ⚠️ ONE SOURCE OF TRUTH for the ring's resting tilt. It used to be typed out in SIX places
+  // (init, deselect, endExit, setExitProgress, the fit/resize paths) and ARCHITECTURE carried a
+  // standing warning to keep them in sync by hand.
+  // ⚠️ The Z TERM IS THE ROLL — it is what makes the cards read as leaning. Dropped 15° → 8° on
+  // 2026-09-07 ("cards still look kinda bent to the right"): enough tilt for the deck to read as
+  // a tipped cylinder rather than a flat band, without the whole composition listing over.
+  // Mobile has no roll and no yaw at all, which is why the complaint is a desktop one.
+  const homeTilt = () => (isMobile
+    ? { x: toRad(22), y: 0, z: 0 }
+    : { x: toRad(25), y: toRad(70), z: toRad(8) })
+  const LEAN_MAX_DEG = 4         // deflection at full mouse travel / a hard swipe. ⚠️ Was 10, which
+                                 // skewed the cards noticeably whenever the pointer sat off-centre —
+                                 // half of "the cards look bent" was simply where the mouse was.
   const LEAN_EASE = 0.06         // how fast the deck follows
   // Touch lean is driven by the RING'S OWN angular velocity, not by an accumulator over
   // raw scroll deltas. The accumulator was unmeasurable from outside and calibrating it
@@ -540,12 +552,9 @@ export function useChapterScene() {
     // Groups — original source uses default XYZ order (never sets rotation.order)
     groupG = new THREE.Group()
     // Do NOT set rotation.order — use THREE.js default 'XYZ' to match original
-    if (isMobile) {
-      groupG.rotation.set(toRad(22), 0, 0)
-    } else {
-      // Original source confirmed: W = (degToRad(25), degToRad(70), degToRad(15)) — +70°
-      groupG.rotation.set(toRad(25), toRad(70), toRad(15))
-    }
+    // ⚠️ `homeTilt()` branches on isMobile itself — see the constant. (The reference's desktop
+    // value was 25/70/15; the roll is 8 here, see the note there.)
+    { const t = homeTilt(); groupG.rotation.set(t.x, t.y, t.z) }
     scene.add(groupG)
 
     carousel = new THREE.Group()
@@ -956,7 +965,11 @@ export function useChapterScene() {
       const clampM = (v) => (introComplete ? Math.max(-1.2, Math.min(1.2, v)) : v)
       const mx = isMobile ? 0 : clampM(mouse.x)   // x.x in original
       const my = isMobile ? 0 : clampM(mouse.y)   // x.y in original
-      const ne = 0.7, oe = 18
+      // ⚠️ `ne` is how hard the pointer drags the camera; at 0.7 the spring settles ~15 units off
+      // axis at full travel, against a 40-unit ring radius — a big swing for a mouse that is just
+      // resting somewhere. Halved on 2026-09-07 with LEAN_MAX_DEG ("limiting the motion response
+      // to the cursor"); the deck still answers the pointer, it no longer lurches after it.
+      const ne = 0.32, oe = 18
       const dx = camera.position.x - camera.basePosition.x
       const dy = camera.position.y - camera.basePosition.y
       camera.position.x += mx * ne - dx / oe
@@ -1264,7 +1277,9 @@ export function useChapterScene() {
   // gate) and the intro's done with nothing selected. Shared by mousemove, the per-frame
   // scroll re-target, and click — so all three agree on the card under the pointer.
   function resolveHoverTarget(x, y) {
-    if (!introComplete || selectedIndex !== -1) return -1
+    // Same gate as onClick — the deck is on its way home and is a legitimate target. See there.
+    if (!introComplete) return -1
+    if (selectedIndex !== -1 && !isDeselecting) return -1
     const found = posterAtScreen(x, y)
     if (found) return found.i
 
@@ -1359,7 +1374,13 @@ export function useChapterScene() {
   }
 
   function onClick(e) {
-    if (!introComplete || selectedIndex !== -1) return
+    // ⚠️ `&& !isDeselecting`. A deselect runs for 2.5s and only clears `selectedIndex` in its
+    // onComplete, so for that whole window every click and every hover on the homepage was
+    // dropped — the "state freeze" after coming back from a chapter, which cleared on its own
+    // and so looked like it cleared "when I scrolled". selectChapter has always known how to
+    // interrupt a running deselect; that path was simply unreachable from a click.
+    if (!introComplete) return
+    if (selectedIndex !== -1 && !isDeselecting) return
 
     // Open the card actually under the pointer — front OR side — matching what hover lifts.
     // resolveHoverTarget requires the pointer to be INSIDE a visible card, so a click on
@@ -1376,7 +1397,11 @@ export function useChapterScene() {
   // loaded straight onto the chapter, and a 3s carousel turn in front of a page they asked for
   // by URL is exactly the "homepage leads first" complaint.
   function selectChapter(chIdx, fast = false) {
-    if (chIdx === selectedIndex) return  // idempotent — safe to call from the route watcher
+    // Idempotent — safe to call from the route watcher. ⚠️ EXCEPT mid-deselect, where
+    // `selectedIndex` still names the chapter being left: re-opening the one you just came
+    // back from is a perfectly ordinary thing to do, and this was silently dropping it (on
+    // touch that is the EXPLORE button doing nothing, since it always targets the front card).
+    if (chIdx === selectedIndex && !isDeselecting) return
     // A still-running deselect would clobber this selection when its onComplete fired
     // (it resets selectedIndex/selectedHero mid-select). Kill it and clear its flag.
     // NOTE: when we interrupt a deselect, do NOT re-capture preSelectRot below — the
@@ -1561,11 +1586,7 @@ export function useChapterScene() {
     tl.to(carousel, { animatedRotationY: preSelectRot, duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
 
     // Restore groupG
-    if (isMobile) {
-      tl.to(groupG.rotation, { x: toRad(22), y: 0, z: 0, duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
-    } else {
-      tl.to(groupG.rotation, { x: toRad(25), y: toRad(70), z: toRad(15), duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
-    }
+    tl.to(groupG.rotation, { ...homeTilt(), duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
 
     // Restore carousel
     tl.to(carousel.position, { y: idleCarouselY(), duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
@@ -1674,9 +1695,9 @@ export function useChapterScene() {
     // frame later, at the moment of commit — parked it at IDLE_Y_DESKTOP (-12). That 12-unit drop
     // was the "jarring reset with a layout shift of the cards downward". Landing ON the homepage's
     // resting height means endExit changes nothing visible.
-    const homeTilt = isMobile ? { x: toRad(22), y: 0, z: 0 } : { x: toRad(25), y: toRad(70), z: toRad(15) }
+    const ht = homeTilt()
     carousel.position.y = lp(exitStart.cy, idleCarouselY(), set)
-    groupG.rotation.set(lp(exitStart.gx, homeTilt.x, set), lp(exitStart.gy, homeTilt.y, set), lp(exitStart.gz, homeTilt.z, set))
+    groupG.rotation.set(lp(exitStart.gx, ht.x, set), lp(exitStart.gy, ht.y, set), lp(exitStart.gz, ht.z, set))
     // ⚠️ NO RADIUS ANIMATION. Selecting a chapter never changed the ring's radius — it only pushed the
     // other cards down — so there is nothing to unfurl. The "gather to CLUSTER_R and grow back" the exit
     // used to do was an invention, and at radius 18 eight cards on a 40-unit ring overlap into a knot of
@@ -1760,7 +1781,7 @@ export function useChapterScene() {
     // back to its homepage slot here, else the ring is left low/tilted/collapsed-inward. (animatedRotationY
     // is intentionally left at its spun value — EXIT_SPIN is negative so it flows into the idle, no reversal.)
     carousel.position.y = idleCarouselY()
-    groupG.rotation.set(isMobile ? toRad(22) : toRad(25), isMobile ? 0 : toRad(70), isMobile ? 0 : toRad(15))
+    { const t = homeTilt(); groupG.rotation.set(t.x, t.y, t.z) }
     // ⚠️ Only the HERO's opacity is forced. The rest are already sitting on the homepage depth falloff
     // (animate() has owned them through the exit), and setting them all to 1 here made the far side
     // flash bright at the commit and then dim again over the next ~20 frames.
@@ -1892,11 +1913,7 @@ export function useChapterScene() {
       carousel.position.y = selectedCarouselY()
     }
 
-    if (isMobile && selectedIndex === -1) {
-      groupG.rotation.set(toRad(22), 0, 0)
-    } else if (!isMobile && selectedIndex === -1) {
-      groupG.rotation.set(toRad(25), toRad(70), toRad(15))
-    }
+    if (selectedIndex === -1) { const t = homeTilt(); groupG.rotation.set(t.x, t.y, t.z) }
   }
 
   // Pause/resume the render loop with tab visibility (added in init, removed in destroy).

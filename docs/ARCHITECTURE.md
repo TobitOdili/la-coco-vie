@@ -819,6 +819,12 @@ The same build must work at `/` (Cloudflare, Vercel) and `/la-coco-vie/` (GitHub
 public-asset URLs go through one helper — `asset()` in [`utils/asset.js`](../utils/asset.js)** — and
 nothing else should build them by hand.
 
+⚠️ **AN ANIMATION THAT LEAVES ITS "IS SOMETHING OPEN" FLAG SET UNTIL ITS `onComplete` WILL EAT
+INPUT FOR ITS WHOLE DURATION.** The 2.5s deselect held `selectedIndex`, and every click and hover
+gate on the homepage read that field — so coming back from a chapter froze the deck for two and a
+half seconds. Gate input on *both* "is something open" and "is it on its way out", and let the
+interrupt path that already exists actually be reachable. AUDIT #53.
+
 ⚠️ **A DRAG IS NOT A SCROLL, AND A SCROLL SMOOTHER IS NOT A DRAG SMOOTHER.** The phone carousel was
 built by mirroring the wheel handler — same `deltaY - deltaX` mapping, same `onScroll`, same 0.06
 render lerp — and got both halves wrong. A wheel is an *indirect* input where sign is a convention;
