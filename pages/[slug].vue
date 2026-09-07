@@ -355,9 +355,12 @@ onBeforeUnmount(() => {
 }
 
 /* Scroll-driven exit "outro" — transparent, so the WebGL ring (on the accent bg) shows through as the
-   article scrolls out above it. ~1 vh of the article scrolls out, then the rest is the drop scroll. */
+   article scrolls out above it. 1vh of that is the article leaving; the REST is the drop.
+   ⚠️ 250vh gave the drop 150vh of scroll, which was fine while the ring also had to unfurl and rise
+   through it. It does not any more — the ring is finished before it is uncovered — so 150vh of scroll
+   for one falling card was a long wait with nothing else happening. 200vh ⇒ 100vh of drop. */
 .chapter-outro {
-  height: 250vh;
+  height: 200vh;
 }
 
 /* Content scrolls up over the (fixed) WebGL hero on the chapter's light accent. */

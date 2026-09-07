@@ -106,7 +106,48 @@ above. Constant speed and a reversed exit are not in conflict.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
 
-**▶▶ STATE (2026-09-07, latest) — THE BOTTOM EXIT LANDS ONCE.**
+**▶▶ STATE (2026-09-07, latest) — THE RING IS ALREADY THE RING WHEN THE PAGE COMES OFF.**
+User: *"I think there's probably a grow/unfurl effect that causes them to look too packed like this.
+Let's make sure when the cards come into view, they're already unfurled the right amount, rotate the
+right amount, and have the [card] drop in after leaving viewport at the right moment."*
+
+Right on all three counts, and the root cause is that **the exit was animating a restoration that did
+not exist.** Selecting a chapter never changed the ring's radius or its slots — it only pushed the
+other cards down — so there was nothing to unfurl. The "gather to `CLUSTER_R` 18 then grow back out"
+was invented by the exit, and 18 against a 40-unit ring puts eight cards on top of one another: the
+knot of white shapes in the report. The low `BOWL_Y`/`BOWL_TILT` was the same kind of invention.
+
+1. **The whole pose change now happens inside `SETTLE_END` = 0.03 of `de`.** The reveal grows at
+   `de / DROP_START` of the screen height, so at 0.03 the strip is under 7% tall and the ring's own
+   lowest edge has not reached it — nothing is ever seen moving into place. What the visitor sees is
+   the article sliding off a ring that is already at the homepage radius, tilt and height, with one
+   slot empty. **`CLUSTER_R`, `BOWL_Y`, `BOWL_TILT` and the radius lerp are gone.**
+2. **`EXIT_SPIN` is one slot (−45°), not −300°.** The empty slot belongs to the chapter you were
+   reading, which is front-and-centre when the exit starts; three quarters of a turn carried it to the
+   BACK of the ring, where the depth falloff dims a card to 0.2 and the tilt lifts it off the top of
+   the frame. Measured: at `de = 0.70` the dropping card was at distance 130 and opacity 0.2 — the one
+   moment the exit is built around, landing where it could not be seen. At −45° it stays in the front
+   arc: distance 62, opacity 1.
+3. **The drop starts from a computed height.** It used to start wherever the page's scroll-coupling
+   had left the card, which is proportional to how long the chapter is *and* only correct if
+   `animate()` had run since the last `setScroll` — a flick straight to the bottom captures the
+   pre-scroll value, 0, and the card "drops" from inside its own slot. `offTop` is now the first height
+   that clears the frame at the ring's **far** depth, so it is the same fall on every page.
+4. **The card drops on a beat after the page has gone**, not on the same frame — `drop` opens at 6% of
+   phase B, which is what lets the ring read as complete-but-for-one-slot first.
+5. **The outro is 200vh, not 250vh.** With the ring no longer unfurling and rising through it, 150vh of
+   scroll for one falling card was a long wait with nothing else happening; it is 100vh now.
+6. **The far side of the ring carries the homepage depth falloff throughout.** It used to be pinned at
+   full opacity for the whole exit and dim only once the route committed — with a motionless ring that
+   dim was the only thing moving at the handover.
+
+- **Handover measured, not eyeballed**: driving the exit to commit on `/the-big-day`, `/us`,
+  `/with-love` (390×844) and `/in-frames` (844×390), the difference across the route change is
+  **Δ local-y 0, Δ carousel height 0, Δ tilt 0.0000** on every card; the only delta is opacity drift
+  from the ring continuing to turn (0.05–0.08 over 150ms). 0 errors, all four navigate home cleanly.
+  Full site swept at 5 routes × 6 sizes: 0 overflow, 0 errors, 0 failed requests, 0 dead links.
+
+**▶▶ STATE (2026-09-07) — THE BOTTOM EXIT LANDS ONCE.**
 User: *"The cards unfurl in a way that appears to have a card drop in before the page has finished
 scrolling out of viewport. Then the correct card drop animation plays (but at this point it's
 repeated)."*
@@ -1674,13 +1715,13 @@ homepage idle with **no spin reversal**. (Every prior "morph the page" approach 
 saga below. Top ≠ bottom, and that's fine.)
 
 **✅ BUILT & prod-verified (M1 = `38e2cce2`; M2-ChunkA = `0c1edfee`+`49df9f17`):**
-- **Plumbing (M1):** transparent `.chapter-outro` (250vh) below the article in `pages/[slug].vue`;
+- **Plumbing (M1):** transparent `.chapter-outro` (200vh — was 250vh) below the article in `pages/[slug].vue`;
   `updateExit(scroll)` maps scroll → `de` → `scene.setExitProgress(de)`; reversible (`cancelExit`); `de`→1
   commits → `endExit` + navigate `/`. Leaving mid-exit (back button) finalizes to a clean ring.
 - **Background:** `renderer.setClearColor(exitBg, exitBgAlpha)` in `animate()`; `exitBg.set(chapter.accent)`
   + a fade-in tween on `selectChapter`; faded back out on `deselectChapter`/`endExit`; driven 1→0 over de
   0.7→1 by `setExitProgress`. The ring spins on the accent during the exit, → light at the homepage.
-- **No spin reversal:** `EXIT_SPIN` = `toRad(-300)` (NEGATIVE — matches `onScroll`'s `scrollRotationY -=
+- **No spin reversal:** `EXIT_SPIN` = `toRad(-45)` (was −300; NEGATIVE — matches `onScroll`'s `scrollRotationY -=
   delta*0.0008` down-scroll). Verified: animRotY 7.07→1.83 (decreasing).
 - **Gotcha fixed:** `animate()`'s idle depth-fade uOpacity lerp was overriding the card opacity → gated on
   `!isDeselecting` so `setExitProgress` owns the chapter cards' opacity through the exit.
