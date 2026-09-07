@@ -33,6 +33,14 @@ export const SITE = {
   ],
   dateLabel: 'October 29, 2026 · Lagos',
 
+  // The Big Day's days dial reads as a fraction of the whole wait, so it needs a start.
+  // Hours and minutes have their own natural full marks (23 and 59); days do not — the
+  // ring is full on this date and empty on the wedding day.
+  // ⚠️ PLACEHOLDER: currently the day the dials shipped, which makes the ring full from
+  // launch. Change it to whatever the wait should be measured from — the engagement, or
+  // the day the save-the-dates went out — and the dial re-scales on its own.
+  countdownFrom: '2026-09-07T00:00:00+01:00',
+
   // ⚠️ REMOVED from the nav on 2026-09-03 at the user's request — the homepage
   // wordmark now runs straight into the date and countdown. The string is kept
   // because `chapterPages`/docs still describe the site this way; nothing renders it.

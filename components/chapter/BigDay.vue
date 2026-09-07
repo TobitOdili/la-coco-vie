@@ -115,7 +115,8 @@
         </svg>
 
         <div class="kicker fade" data-window="0.22,0.29">{{ s.lead }}</div>
-        <div class="clock fade" data-window="0.32,0.42">
+        <div class="clock fade" data-window="0.32,0.42"
+          :class="{ settled: ringReveal >= 1 }" :style="{ '--ink-w': inkW + 'px' }">
           <div v-for="u in units" :key="u.label" class="unit">
             <div class="u-dial">
               <!-- The drain is a CONIC MASK, not a dash: the tail ramps out over `--ramp`
@@ -147,6 +148,7 @@ defineProps({
 })
 
 const ink = '#41492D'
+const clamp01 = (v) => Math.min(1, Math.max(0, v))
 const rootEl = ref(null)
 let rafId = 0
 
@@ -168,20 +170,31 @@ const days = (iso) => {
 }
 
 // ── The countdown, and the three dials ──────────────────────────────────────
-// ⚠️ `now` is driven by the rAF loop, NOT a 1s interval. Each ring's fraction has to be
-// continuous or the minutes dial steps in sixtieths once a second; a CSS transition would
-// smooth that but would then smear the scroll reveal by a second as well.
+// ⚠️ `now` is driven by the rAF loop, not a second timer — one clock for the page, and the
+// rollover lands within a frame of the minute turning. The values below are integers, so
+// Vue touches the DOM only when a number actually changes.
 const now = ref(Date.now())
-const left = computed(() => Math.max(0, new Date(SITE.events[0].date).getTime() - now.value))
+const TARGET = new Date(SITE.events[0].date).getTime()
+const left = computed(() => Math.max(0, TARGET - now.value))
 const pad2 = (n) => String(n).padStart(2, '0')
-// `f` is the fraction of THAT unit's own cycle still to run, so it reaches 0 and resets to
-// 1 at exactly the moment the numeral beside it changes.
+
+// ⚠️ EACH RING IS A GAUGE OF THE NUMBER INSIDE IT, not of elapsed time. Hours is full at
+// 23 and empty at 0; minutes full at 59 and empty at 0 — so the arc and the numeral can
+// never disagree, and the ring visibly steps the moment the digit does. (The first cut
+// drove them from `left % period`, which drained continuously and was full *between*
+// readings — smooth, but it meant the arc said one thing and the numeral another.)
+// Days has no natural full mark, so it takes one from `SITE.countdownFrom`.
+const DAY = 86400000
+const SPAN_DAYS = Math.max(1, Math.round((TARGET - new Date(SITE.countdownFrom).getTime()) / DAY))
 const units = computed(() => {
   const L = left.value
+  const d = Math.floor(L / DAY)
+  const h = Math.floor((L % DAY) / 3600000)
+  const m = Math.floor((L % 3600000) / 60000)
   return [
-    { label: 'days', value: String(Math.floor(L / 86400000)), f: (L % 86400000) / 86400000 },
-    { label: 'hours', value: pad2(Math.floor((L % 86400000) / 3600000)), f: (L % 3600000) / 3600000 },
-    { label: 'minutes', value: pad2(Math.floor((L % 3600000) / 60000)), f: (L % 60000) / 60000 },
+    { label: 'days', value: String(d), f: clamp01(d / SPAN_DAYS) },
+    { label: 'hours', value: pad2(h), f: h / 23 },
+    { label: 'minutes', value: pad2(m), f: m / 59 },
   ]
 })
 
@@ -219,7 +232,6 @@ function syncFrame(root) {
 }
 
 // ── The shared scrub engine ─────────────────────────────────────────────────
-const clamp01 = (v) => Math.min(1, Math.max(0, v))
 const RING_WIN = [0.36, 0.48]
 function tick() {
   const root = rootEl.value
@@ -407,6 +419,12 @@ onBeforeUnmount(() => { cancelAnimationFrame(rafId) })
   align-items: center;
   justify-content: center;
 }
+/* ⚠️ REGISTERED so they can be transitioned. An unregistered custom property is an
+   untyped token and animates as a step; `@property` gives these a type, which is what lets
+   a ring SWEEP to its new reading when the minute turns instead of jumping. */
+@property --a0 { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@property --a1 { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+
 .u-ring {
   position: absolute;
   inset: 0;
@@ -417,13 +435,44 @@ onBeforeUnmount(() => { cancelAnimationFrame(rafId) })
   -webkit-mask-image: conic-gradient(from -90deg, #000 0deg, #000 var(--a0, 0deg), transparent var(--a1, 0deg));
   mask-image: conic-gradient(from -90deg, #000 0deg, #000 var(--a0, 0deg), transparent var(--a1, 0deg));
 }
+/* ⚠️ ONLY ONCE THE SCROLL REVEAL IS DONE. The same two angles carry the draw-in, and a
+   transition on them would make every ring lag three-quarters of a second behind the
+   scroll. `settled` arms the ease for the once-a-minute tick and nothing else. */
+.clock.settled .u-ring { transition: --a0 0.75s ease, --a1 0.75s ease; }
+/* ⚠️ TWO TREATMENTS, ONE REASON: the numeral has to sit at the weight of the lines around
+   it. Below, that means Bague — the site's own light sans, monoline, so it agrees with a
+   hairline instead of arguing with it. Above the breakpoint it means OUTLINED Italiana:
+   `-webkit-text-stroke` at `--ink-w`, the exact weight of the ring and the thread, so the
+   digits are drawn by the same pen as the rest of the page.
+   The outline is the better of the two and it is gated only because it needs room — at
+   0.93px of stroke on a phone, and 26px of glyph, the counters close up and it goes
+   noisy. The gate is on WIDTH AND HEIGHT: a landscape phone is 844px wide and would
+   otherwise sail through a width-only query with a 0.92px stroke. */
 .u-num {
-  font-family: 'Italiana', serif;
+  font-family: 'Bague', ui-sans-serif, sans-serif;
+  font-weight: 300;
+  letter-spacing: 0.04em;
   font-size: var(--num);
   line-height: 0.94;
   /* The dial is a fixed width, so a digit change can no longer shunt the row — but tabular
      figures keep the numeral itself from shifting inside its own ring. */
   font-variant-numeric: tabular-nums;
+}
+@media (min-width: 768px) and (min-height: 620px) {
+  .clock {
+    /* An outline carries no weight of its own — it is `--ink-w` wide whatever the point
+       size — so the numerals can go back UP without bringing back the heaviness that made
+       the solid ones wrong. The dial tightens to match. */
+    --num: clamp(3rem, 6.6vw, 6rem);
+  }
+  .u-dial { width: calc(var(--num) * 2.05); height: calc(var(--num) * 2.05); }
+  .u-num {
+    font-family: 'Italiana', serif;
+    font-weight: 400;
+    letter-spacing: 0;
+    color: transparent;
+    -webkit-text-stroke: var(--ink-w, 1.75px) #41492D;
+  }
 }
 .u-label {
   font-family: 'Bague', sans-serif;

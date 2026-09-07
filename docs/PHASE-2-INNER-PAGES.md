@@ -14,7 +14,7 @@ state, everything below it is history — newest first.)
 > | chapter | what it is now | driven by |
 > |---|---|---|
 > | **US** | margin notes: the whole page in one hand, **nothing set in type**; taped polaroids | **written word by word** off each block's own rect |
-> | **THE BIG DAY** | **the invitation** — a ghost October with the 29th inked and ringed, the knot (two threads cross, loop and leave as one), then **one unbroken thread** out of "one special day." that comes down and stops at "until then". Under it, three dials: rings that drain over a day, an hour and a minute, each holding a numeral set at the page's own weight rather than at display size. Nothing else: the RSVP is the gate | scroll-scrubbed, with one sticky hold for the knot; ink weight and the thread's length are measured from the live DOM, so they hold at every size |
+> | **THE BIG DAY** | **the invitation** — a ghost October with the 29th inked and ringed, the knot (two threads cross, loop and leave as one), then **one unbroken thread** out of "one special day." that comes down and stops at "until then". Under it, three dials whose rings read the numbers they hold — full at 23 hours, at 59 minutes, at the whole wait in days — around numerals drawn in outline at the ink's own weight (Bague, solid, where the outline would be too fine). Nothing else: the RSVP is the gate | scroll-scrubbed, with one sticky hold for the knot; ink weight and the thread's length are measured from the live DOM, so they hold at every size |
 > | **IN FRAMES** | **the archive** — one window in the room showing a path (`...\Media\`), the three events as folders inside; click one and it opens, then the window navigates into it | **no scroll**: folder-open, then a stacked-view swap; the room's film on a time loop |
 > | **WITH LOVE** | **the wall** — six bands of the gift list sliding across the screen at their own speeds, forever; point at a word and its band stops and the thing opens under it | one transform per band per frame; no artwork at all |
 >
@@ -106,7 +106,52 @@ above. Constant speed and a reversed exit are not in conflict.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
 
-**▶▶ STATE (2026-09-07, latest) — THE NUMERALS ARE SIZED TO THE INK.**
+**▶▶ STATE (2026-09-07, latest) — THE NUMERALS ARE DRAWN, AND THE RINGS READ THE NUMBERS.**
+User: *"Let's use the outlined on desktop and the bague for smaller screen sizes where it'll be an
+issue… Let the circle fade be tied to the actual numbers, so hours is highest at 23 and diminishes
+at 1 or 0hrs and minutes full circle at 59 and diminishes till 1min. Days should be fixed to the
+number of days as well."*
+
+1. **Two treatments, one reason — the numeral sits at the weight of the lines around it.**
+   - **≥768px wide AND ≥620px tall: outlined Italiana.** `color: transparent` +
+     `-webkit-text-stroke: var(--ink-w)`, where `--ink-w` is the same measured number the rings and
+     the thread use — so the digits are drawn by the same pen as everything else on the page. And
+     because **an outline carries no weight of its own**, the numerals could go back UP (`--num` to
+     `clamp(3rem, 6.6vw, 6rem)`, 96px at 1440) without bringing back the heaviness that made the
+     solid ones wrong. Dial tightens to `2.05em`.
+   - **Everything smaller or shorter: Bague at 300, solid.** The site's own light sans is monoline,
+     so it agrees with a hairline rather than arguing with it.
+   - ⚠️ **THE GATE IS ON WIDTH *AND* HEIGHT.** A landscape phone is **844px wide** with a 0.92px
+     stroke and a 37px glyph — a width-only query would have handed it the outline, which is exactly
+     where the outline falls apart. This is the same trap as the knot's media queries; the third
+     time this page has needed `min-height` in a query that looks like it is about width.
+2. **Each ring is now a gauge of the number inside it, not of elapsed time.** `h / 23`, `m / 59`,
+   `d / SPAN_DAYS`. Hours is full at 23 and empty at 0; minutes full at 59 and empty at 0 — so the
+   arc and the numeral can never disagree. The first cut drove them from `left % period`, which
+   drained continuously and was therefore *full between readings*: smooth, but the arc said one
+   thing and the digit said another. Measured: 19 hours → **297.39°** (19/23), 57 minutes →
+   **347.8°** (57/59), 51 days → **346.42°** (51/53).
+   - **Days has no natural full mark**, so it takes one from **`SITE.countdownFrom`** — the ring is
+     full on that date and empty on the wedding day. ⚠️ It is currently the day the dials shipped;
+     point it at the engagement or the save-the-date send and the dial re-scales itself.
+   - **A gauge of an integer steps, and a still page needs the step to be visible.** `--a0` / `--a1`
+     are **registered with `@property`** so they can be transitioned — an unregistered custom
+     property is an untyped token and animates as a jump. The ring now *sweeps* to its new reading
+     each time a digit turns. Verified end-to-end across a real minute boundary: intermediate angles
+     347.32 → 346.30 → 345.08 → … → 341.69, none of them on a 360/59 step.
+   - ⚠️ **The ease is armed only once the scroll reveal has finished** (`.clock.settled`). The same
+     two angles carry the draw-in, so an always-on transition would make every ring lag
+     three-quarters of a second behind the scroll.
+   - At 0 minutes / 0 hours / 0 days the ring is genuinely **gone** — that is the reading, and with
+     the ease it sweeps out and back rather than blinking.
+
+- **Re-verified at all 14 viewports**: correct face and stroke at each (Bague below the gate,
+  Italiana + a 1.24–1.75px outline above it), every numeral inside its ring, no overflow, clock
+  clear of the nav and above the fold, seam still 0px, every window closing with its content on
+  screen. Full site swept at 5 routes × 6 sizes: 0 overflow, 0 errors, 0 failed requests, 0 dead
+  links.
+
+**▶▶ STATE (2026-09-07) — THE NUMERALS ARE SIZED TO THE INK.**
 User: *"I don't love the fonts of the countdown relative to the rest of the page / lines that circle
 it."*
 

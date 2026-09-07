@@ -342,6 +342,21 @@ reported 31 late effects on US and four at negative positions — **all of them 
 of using the wrong model.** Measured correctly, every one of its 116 words starts between 64% and
 100%. Check which clock a page is on before auditing it.
 
+⚠️ **AN OUTLINE CARRIES NO WEIGHT OF ITS OWN.** `-webkit-text-stroke` at the page's measured ink
+width makes type the same line as everything drawn around it — and because the weight no longer
+scales with the point size, the type can be as large as the composition wants. It needs room
+though: below roughly a 1.2px stroke and a 40px glyph the counters close up and it reads as noise,
+which is why The Big Day gates it on **`(min-width: 768px) and (min-height: 620px)`** and falls back
+to a monoline sans. ⚠️ **A width-only gate hands a landscape phone (844px wide, 390 tall) the
+treatment that needs the most room** — the third time this codebase has needed `min-height` in a
+query that looks like it is about width.
+⚠️ **A CUSTOM PROPERTY CANNOT BE TRANSITIONED UNTIL IT IS REGISTERED.** Unregistered, it is an
+untyped token and animates as a step. `@property { syntax: '<angle>' }` gives it a type, and then
+`transition: --a1 .75s` genuinely interpolates — which is the difference between a dial that jumps
+once a minute and one that sweeps. ⚠️ **Arm such a transition only when the same property is not
+also being scrubbed**: The Big Day's ring angles carry both the scroll reveal and the clock, so the
+ease is gated behind a `settled` class or every ring lags the scroll by its own duration.
+
 ⚠️ **ON A PAGE MADE OF HAIRLINES, TYPE SIZE IS A LINE WEIGHT.** A high-contrast display serif
 (Italiana here) renders stems at roughly 8–9% of its font size: 11px at 8rem, ~5px at 3.6rem. Set
 beside a 1.75px drawn line the first reads as a different design; the second belongs. When type and

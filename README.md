@@ -57,9 +57,10 @@ is that no two pages share a language. Breaking it is what made With Love fail i
     arrive from either side, cross, loop around one another and leave as one line (restored verbatim
     from this page's own first design, `b5a52348`). From below the last word one thread carries on,
     unbroken across the section boundary, and stops at **until then**. Under it a **countdown**:
-    days · hours · minutes, each numeral inside a ring whose circumference drains over that unit's
-    own cycle and snaps back full as the number changes — a day, an hour, a minute. The numerals are
-    set at the page's own weight, not at display size, so they read as part of the same drawing. ⚠️ **The date is the only
+    days · hours · minutes, each numeral inside a ring that **reads the number it holds** — full at 23
+    hours, at 59 minutes, at the whole wait in days — and sweeps to its new arc as the digit turns.
+    The numerals are **drawn, not set**: outlined at exactly the ink weight of the rings, so they are
+    part of the same drawing (a monoline sans stands in where the outline would be too fine). ⚠️ **The date is the only
     fact on the page** — no times, no venue, no map, no dress code and no hover that reveals any of
     them. A guest who has not RSVP'd learns when, and nothing else.
   - **IN FRAMES** — **the archive**: a window sits in the room, its title bar showing a path —

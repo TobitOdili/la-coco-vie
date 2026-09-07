@@ -387,6 +387,8 @@ the repo root: **`site.config.js`**. Edit it to re-brand the shell — no compon
 ```js
 export const SITE = {
   brand, subtitle,
+  events:  [ { name, date, label } ],   // the wedding itself — the countdown's target
+  countdownFrom,                        // the days dial is FULL on this date, empty on the day
   titles:  { home, chapterSuffix },
   nav:     { aboutLabel, collectionLabel, collectionUrl },
   credit:  { prefix, name, url },
@@ -398,6 +400,8 @@ export const SITE = {
 | Content | Field | Consumed by |
 |---|---|---|
 | Nav subtitle ("Chapter the bride") | `subtitle` | `SiteNav.vue` |
+| The wedding date (nav countdown + The Big Day) | `events[0].date` | `SiteNav.vue`, `BigDay.vue` |
+| **What the days dial is full at** — hours and minutes have natural full marks (23, 59); days does not, so it is measured from here. Currently the day the dials shipped; point it at the engagement or the save-the-date send and it re-scales itself | `countdownFrom` | `BigDay.vue` |
 | Nav labels + Collection URL | `nav.*` | `SiteNav.vue` |
 | Credit ("Made by Sarakuz" + link) | `credit.*` | `SiteNav.vue` |
 | About-panel body | `about[]` | `AboutPanel.vue` |
