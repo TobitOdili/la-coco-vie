@@ -152,7 +152,7 @@ what made With Love read as a repeat of US and get rebuilt.
 | file | what it is | how it moves |
 |---|---|---|
 | `UsStory.vue` (**Coco & Uvie**, slug `us`) | margin notes — the whole page in one hand, nothing set in type; taped polaroids | **written word by word**: per-word `.write` clip off each block's OWN rect; the polaroid keeps a latch |
-| `BigDay.vue` (**The Big Day** — ring slot 1) | **the invitation** — the date, a heart drawn by two threads, and a countdown spelled in words. Nothing else: everything a guest could ask beyond the date lives behind the RSVP | scroll-scrubbed `.scrub`/`.write`; one sticky hold for the knot |
+| `BigDay.vue` (**The Big Day** — ring slot 0) | **the invitation** — a ghost October with one date ringed, the knot two threads tie, then one thread on into the countdown, where each numeral sits in a ring that drains over its own cycle. Nothing else: everything a guest could ask beyond the date lives behind the RSVP | scroll-scrubbed `.scrub`/`.fade`/`.grow`; one sticky hold for the knot; ink weight and the thread's length measured from the live DOM each frame |
 | `InFrames.vue` (**In Frames**) | **the archive** — one window in the room showing a path (`...\Media\`), the three events as folders inside; click one and it opens, then the window navigates into it | **no scroll at all**: a folder-open then a stacked-view swap; a time loop for the room's film behind it |
 | `WithLove.vue` (**For Our Next Chapter**, slug `with-love`) | **the wall** — six bands of the gift list sliding across the screen at their own speeds, forever; point at a word and its band stops and the item opens under it | one `translate3d` per band per frame; the speed EASES to zero, it does not switch off |
 
@@ -341,6 +341,19 @@ reading band), which is why it survives every breakpoint. An audit that assumed 
 reported 31 late effects on US and four at negative positions — **all of them measurement artifacts
 of using the wrong model.** Measured correctly, every one of its 116 words starts between 64% and
 100%. Check which clock a page is on before auditing it.
+
+⚠️ **A `stroke-width` MEANS NOTHING WITHOUT ITS viewBox SCALE.** The Big Day's knot is `2.6` in a
+**1000-unit** viewBox rendered at 672px, so its ink is **1.75px** — and 0.93px on a 390px phone. The
+plain-pixel stem and thread that continue that same line used `2.6` as *pixels* and came out half
+again as thick, more than twice as thick on a phone. When two elements have to read as one line,
+**measure one and derive the other** (`inkW`), never type the number twice. AUDIT #46.
+⚠️ **`vector-effect="non-scaling-stroke"` is the right tool for a px stroke in a unit-box SVG — but
+only where there is no dash.** `pathLength` + `stroke-dasharray` + a scaled stroke disagree about
+what "length" means (AUDIT #31); the countdown's rings get away with it because their reveal is a
+**conic mask**, not a dash.
+⚠️ **A per-second `setInterval` is too coarse for anything drawn.** A ring that drains once a minute
+steps in visible sixtieths at 1Hz; a CSS transition smooths it but then smears every *scroll*-driven
+value on the same element. Drive the clock from the rAF loop that is already running.
 
 ⚠️ **A SCROLL WINDOW ON A STICKY SCENE MUST LIVE INSIDE THE HOLD.** A scene of height `H`
 around a `100dvh` sticky child pins from `p = vh/(H+vh)` until `p = (vh + H − vh)/(H+vh)` — for The

@@ -55,8 +55,10 @@ is that no two pages share a language. Breaking it is what made With Love fail i
   - **THE BIG DAY** — **the invitation.** A **ghost October**: the whole month, every numeral
     faded back, and the 29th inked and ringed by a hand-drawn loop. Then the **knot** — two threads
     arrive from either side, cross, loop around one another and leave as one line (restored verbatim
-    from this page's own first design, `b5a52348`). Then a **countdown**: days · hours · minutes in
-    large numerals, with the seconds as a line that sweeps once a minute. ⚠️ **The date is the only
+    from this page's own first design, `b5a52348`). From below the last word one thread carries on,
+    unbroken across the section boundary, and stops at **until then**. Under it a **countdown**:
+    days · hours · minutes, each numeral inside a ring whose circumference drains over that unit's
+    own cycle and snaps back full as the number changes — a day, an hour, a minute. ⚠️ **The date is the only
     fact on the page** — no times, no venue, no map, no dress code and no hover that reveals any of
     them. A guest who has not RSVP'd learns when, and nothing else.
   - **IN FRAMES** — **the archive**: a window sits in the room, its title bar showing a path —

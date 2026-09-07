@@ -86,50 +86,52 @@
           </div>
           <!-- The thread leaving the knot. It grows down out of the last word and is still
                growing when the pin releases — at which point the countdown's own stem picks
-               it up at the seam. -->
-          <div class="knot-stem" aria-hidden="true">
+               it up at the seam.
+               ⚠️ WIDTH IS MEASURED, NOT TYPED. The knot is drawn in a 1000-unit viewBox at
+               2.6 units, so on screen its ink is 2.6 × (rendered width ÷ 1000) — 1.75px at
+               1440, 0.93px on a phone. A hard-coded 2.6px div was visibly fatter than the
+               line it continues. `inkW` carries the real number to every plain-pixel stroke
+               on this page. -->
+          <div class="knot-stem" :style="{ width: inkW + 'px' }" aria-hidden="true">
             <span class="stem-line grow" data-window="0.58,0.63" />
           </div>
         </div>
       </section>
 
-      <!-- ── The countdown · the same thread, arriving. It comes down the centre, parts
-           around the clock, and closes underneath it into the line the numbers stand on;
-           from the middle of that line it drops once more to the seconds.
-
-           The frame is MEASURED, not hand-drawn: `syncThread()` reads the real rects of the
-           kicker, the clock and the seconds line and rebuilds the path whenever they move.
-           That is what makes it survive the numbers themselves changing — "9 days" is a
-           narrower clock than "128 days", and the embrace has to know. ── -->
+      <!-- ── The countdown · the thread arrives, and stops. It comes down the centre and
+           ends at "until then" — it does not enclose the clock. Underneath, each unit is a
+           dial: a ring whose circumference drains away over that unit's own cycle and snaps
+           back full the instant the number beneath it changes. Days empty over 24h, hours
+           over 60 minutes, minutes over 60 seconds — so the minutes ring is the only thing
+           on the page that visibly moves, and all three are exactly in step with the
+           numerals they surround. ── -->
       <section v-else-if="s.kind === 'countdown'" class="chapter-section day-scene count-scene" :data-idx="i">
+        <!-- One path, measured: it has to begin at the section's own top edge (which is the
+             seam the knot's stem ends on) and stop short of the kicker. The <svg> carries no
+             viewBox, so its user units ARE the section's CSS pixels. -->
         <svg class="thread" aria-hidden="true">
-          <path class="scrub" data-window="0.03,0.28" pathLength="1" :d="thread.stem"
-            :stroke="ink" stroke-width="2.6" fill="none" stroke-linecap="round" />
-          <!-- Two paths, not one: a single path with two subpaths would draw the left arm
-               to completion before the right one started, and the point of the gesture is
-               that the thread parts. -->
-          <path class="scrub" data-window="0.31,0.44" pathLength="1" :d="thread.armL"
-            :stroke="ink" stroke-width="2.6" fill="none" stroke-linecap="round" />
-          <path class="scrub" data-window="0.31,0.44" pathLength="1" :d="thread.armR"
-            :stroke="ink" stroke-width="2.6" fill="none" stroke-linecap="round" />
-          <path class="scrub" data-window="0.45,0.50" pathLength="1" :d="thread.tail"
-            :stroke="ink" stroke-width="2.6" fill="none" stroke-linecap="round" />
+          <path class="scrub" data-window="0.03,0.28" pathLength="1" :d="stem"
+            :stroke="ink" :stroke-width="inkW" fill="none" stroke-linecap="round" />
         </svg>
 
         <div class="kicker fade" data-window="0.22,0.29">{{ s.lead }}</div>
-        <div class="clock fade" data-window="0.35,0.45">
+        <div class="clock fade" data-window="0.32,0.42">
           <div v-for="u in units" :key="u.label" class="unit">
-            <span class="u-num">{{ u.value }}</span>
+            <div class="u-dial">
+              <!-- The drain is a CONIC MASK, not a dash: the tail ramps out over `--ramp`
+                   instead of ending on a hard cut, so the ring reads as fading away rather
+                   than as a progress bar. `--a1` is where it has got to; `--a0` is where the
+                   ramp begins. `vector-effect` keeps the stroke in real pixels, so it is the
+                   same weight as the knot's ink at every size. -->
+              <svg class="u-ring" viewBox="0 0 100 100" aria-hidden="true"
+                :style="{ '--a0': ringA0(u.f) + 'deg', '--a1': ringA1(u.f) + 'deg' }">
+                <circle cx="50" cy="50" r="48" fill="none" :stroke="ink"
+                  :stroke-width="inkW" vector-effect="non-scaling-stroke" />
+              </svg>
+              <span class="u-num">{{ u.value }}</span>
+            </div>
             <span class="u-label">{{ u.label }}</span>
           </div>
-        </div>
-        <!-- The seconds, as a line that fills once a minute rather than a fourth number.
-             ⚠️ THE FADE GOES ON THE WRAPPER. The track used to carry `.fade` itself, and
-             the engine's inline `opacity` overrode the 0.14 that made it a track — so the
-             ink-coloured fill was sweeping across an ink-coloured bar, invisible. -->
-        <div class="sweep-wrap fade" data-window="0.47,0.53" aria-hidden="true">
-          <span class="sweep-track" />
-          <span class="sweep-fill" :style="{ transform: `scaleX(${secs / 60})` }" />
         </div>
       </section>
     </template>
@@ -147,7 +149,6 @@ defineProps({
 const ink = '#41492D'
 const rootEl = ref(null)
 let rafId = 0
-let clockId = 0
 
 // ── The month grid ──────────────────────────────────────────────────────────
 // Built from the ISO month so the weekday columns, the leading blanks and the day
@@ -166,96 +167,72 @@ const days = (iso) => {
   return new Date(Date.UTC(y, m, 0)).getUTCDate()
 }
 
-// ── The countdown ───────────────────────────────────────────────────────────
+// ── The countdown, and the three dials ──────────────────────────────────────
+// ⚠️ `now` is driven by the rAF loop, NOT a 1s interval. Each ring's fraction has to be
+// continuous or the minutes dial steps in sixtieths once a second; a CSS transition would
+// smooth that but would then smear the scroll reveal by a second as well.
 const now = ref(Date.now())
 const left = computed(() => Math.max(0, new Date(SITE.events[0].date).getTime() - now.value))
 const pad2 = (n) => String(n).padStart(2, '0')
-const units = computed(() => [
-  { label: 'days', value: String(Math.floor(left.value / 86400000)) },
-  { label: 'hours', value: pad2(Math.floor((left.value % 86400000) / 3600000)) },
-  { label: 'minutes', value: pad2(Math.floor((left.value % 3600000) / 60000)) },
-])
-const secs = computed(() => Math.floor((left.value % 60000) / 1000))
+// `f` is the fraction of THAT unit's own cycle still to run, so it reaches 0 and resets to
+// 1 at exactly the moment the numeral beside it changes.
+const units = computed(() => {
+  const L = left.value
+  return [
+    { label: 'days', value: String(Math.floor(L / 86400000)), f: (L % 86400000) / 86400000 },
+    { label: 'hours', value: pad2(Math.floor((L % 86400000) / 3600000)), f: (L % 3600000) / 3600000 },
+    { label: 'minutes', value: pad2(Math.floor((L % 3600000) / 60000)), f: (L % 60000) / 60000 },
+  ]
+})
 
-// ── The thread that becomes the clock ───────────────────────────────────────
-// Four paths in CSS pixels (the <svg> carries no viewBox, so its user units ARE the
-// section's pixels — no `preserveAspectRatio: none` stretching a hairline into a wedge).
-const thread = ref({ stem: '', armL: '', armR: '', tail: '' })
-let threadSig = ''
-const n1 = (v) => Math.round(v * 10) / 10
+// How much of each ring is drawn, multiplied by the scroll reveal so the dials draw
+// themselves in to their current reading rather than fading on as finished shapes.
+const RAMP = 26                    // degrees of soft tail
+const ringReveal = ref(0)
+const ringA1 = (f) => +(f * ringReveal.value * 360).toFixed(2)
+const ringA0 = (f) => +Math.max(0, ringA1(f) - RAMP).toFixed(2)
 
-function syncThread(root) {
+// ── Measured geometry ───────────────────────────────────────────────────────
+// The knot is drawn at 2.6 units in a 1000-unit viewBox, so its ink on screen is
+// 2.6 × width/1000. Every plain-pixel stroke on this page takes its weight from that.
+const inkW = ref(1.75)
+const stem = ref('')
+let sig = ''
+function syncFrame(root) {
+  const knot = root.querySelector('.knot')
   const sec = root.querySelector('.count-scene')
   if (!sec) return
-  const clockEl = sec.querySelector('.clock')
-  const sweepEl = sec.querySelector('.sweep-wrap')
-  const kickEl = sec.querySelector('.kicker')
-  if (!clockEl || !sweepEl) return
-
+  const kick = sec.querySelector('.kicker')
   const S = sec.getBoundingClientRect()
-  const C = clockEl.getBoundingClientRect()
-  const W = sweepEl.getBoundingClientRect()
-  const K = kickEl ? kickEl.getBoundingClientRect() : null
+  const K = kick ? kick.getBoundingClientRect() : null
+  const kw = knot ? knot.getBoundingClientRect().width : 0
+  // Offsets INSIDE the section, so the signature is stable while the page scrolls — this
+  // runs every frame and must be free when nothing has moved.
+  const next = [Math.round(kw), Math.round(S.width), K ? Math.round(K.top - S.top) : -1].join(',')
+  if (next === sig) return
+  sig = next
 
-  // Every term is an OFFSET INSIDE the section, so the signature doesn't change as the
-  // page scrolls — this runs on every frame and must be free when nothing has moved.
-  const sig = [S.width, S.height, C.left - S.left, C.top - S.top, C.width, C.height,
-    W.top - S.top, K ? K.top - S.top : 0, K ? K.height : 0].map((v) => Math.round(v)).join(',')
-  if (sig === threadSig) return
-  threadSig = sig
-
-  const w = S.width
-  const cx = Math.round(w / 2)
-  const clockTop = C.top - S.top
-  const clockBot = C.bottom - S.top
-  const kickTop = K ? K.top - S.top : clockTop - 40
-  const kickBot = K ? K.bottom - S.top : clockTop - 26
-
-  // `a` is the height of the S-curve that opens the thread into two, and it has to live
-  // in the gap the layout actually gives us between the kicker and the numbers.
-  const gapAbove = Math.max(24, clockTop - kickBot)
-  const br = Math.min(14, gapAbove * 0.22)          // the breath either side of the kicker
-  const a = Math.min(130, gapAbove - br)   // taller fan ⇒ the thread drapes instead of squaring off
-  const y0 = clockTop - a                            // where the thread parts
-  const pad = Math.max(10, Math.min(46, w * 0.045))  // clearance around the clock
-  const l = Math.max(6, C.left - S.left - pad)
-  const r = Math.min(w - 6, C.right - S.left + pad)
-  const yb = clockBot + Math.max(16, Math.min(46, a * 0.42))   // the line they stand on
-  const ys = W.top - S.top                                      // the seconds
-  const c = Math.max(12, Math.min(a * 0.8, (yb - clockTop) * 0.5, (cx - l) * 0.45))
-
-  const lowerStem = y0 - (kickBot + br)
-  thread.value = {
-    stem: K
-      ? `M ${cx} 0 V ${n1(kickTop - br)}` + (lowerStem > 2 ? ` M ${cx} ${n1(kickBot + br)} V ${n1(y0)}` : '')
-      : `M ${cx} 0 V ${n1(y0)}`,
-    armL: arm(cx, y0, a, l, yb, c, 1),
-    armR: arm(cx, y0, a, r, yb, c, -1),
-    tail: `M ${cx} ${n1(yb)} V ${n1(ys)}`,
-  }
-}
-
-// One arm: an S out of the stem (leaving vertical, arriving vertical at the clock's top
-// edge), straight down the outside, then a rounded corner into the baseline running back
-// to the centre — where the two arms meet.
-function arm(cx, y0, a, x, yb, c, sgn) {
-  return `M ${cx} ${n1(y0)}`
-    + ` C ${cx} ${n1(y0 + a * 0.55)}, ${n1(x)} ${n1(y0 + a * 0.45)}, ${n1(x)} ${n1(y0 + a)}`
-    + ` L ${n1(x)} ${n1(yb - c)}`
-    + ` C ${n1(x)} ${n1(yb - c * 0.45)}, ${n1(x + sgn * c * 0.45)} ${n1(yb)}, ${n1(x + sgn * c)} ${n1(yb)}`
-    + ` L ${cx} ${n1(yb)}`
+  if (kw) inkW.value = Math.max(0.5, Math.round(2.6 * kw / 1000 * 100) / 100)
+  const cx = Math.round(S.width / 2)
+  const stop = K ? (K.top - S.top) - Math.min(18, Math.max(8, S.height * 0.012)) : S.height * 0.4
+  stem.value = `M ${cx} 0 V ${Math.round(stop * 10) / 10}`
 }
 
 // ── The shared scrub engine ─────────────────────────────────────────────────
 const clamp01 = (v) => Math.min(1, Math.max(0, v))
+const RING_WIN = [0.36, 0.48]
 function tick() {
   const root = rootEl.value
   if (root) {
-    syncThread(root)
+    now.value = Date.now()
+    syncFrame(root)
     const vh = window.innerHeight
     for (const scene of root.querySelectorAll('.day-scene')) {
       const r = scene.getBoundingClientRect()
       const p = clamp01((vh - r.top) / (r.height + vh))
+      if (scene.classList.contains('count-scene')) {
+        ringReveal.value = clamp01((p - RING_WIN[0]) / (RING_WIN[1] - RING_WIN[0]))
+      }
       for (const el of scene.querySelectorAll('.scrub, .fade, .grow')) {
         const win = el.dataset.window
         if (!win) continue
@@ -270,14 +247,8 @@ function tick() {
   rafId = requestAnimationFrame(tick)
 }
 
-onMounted(() => {
-  rafId = requestAnimationFrame(tick)
-  clockId = setInterval(() => { now.value = Date.now() }, 1000)
-})
-onBeforeUnmount(() => {
-  cancelAnimationFrame(rafId)
-  clearInterval(clockId)
-})
+onMounted(() => { rafId = requestAnimationFrame(tick) })
+onBeforeUnmount(() => { cancelAnimationFrame(rafId) })
 </script>
 
 <style scoped>
@@ -391,13 +362,9 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 1.4rem;
 }
-.knot-stem { position: relative; width: 2.6px; }
-.stem-line {
-  position: absolute;
-  inset: 0;
-  background: currentColor;
-  border-radius: 1px;
-}
+/* width comes from `inkW` — see the template. */
+.knot-stem { position: relative; }
+.stem-line { position: absolute; inset: 0; background: currentColor; }
 .knot { width: min(62vw, 42rem); height: auto; overflow: visible; }
 .knot-word {
   font-family: 'Italiana', serif;
@@ -416,23 +383,40 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 .clock {
+  /* ⚠️ ONE SOURCE FOR THE SCALE. The dial is sized off the numeral, so the ring can never
+     end up too small to hold its own number at some in-between width. */
+  --num: clamp(2.6rem, 12vw, 8rem);
   display: flex;
   align-items: flex-start;
   gap: clamp(1.4rem, 6vw, 4.5rem);
-  /* ⚠️ THIS GAP IS THE FAN. `syncThread` sizes the S-curve that opens the thread into
-     two from the space between the kicker and the numbers — a shallow gap makes a wide,
-     flat canopy that reads as a box rather than a draped thread. */
-  margin-top: clamp(4rem, 13vh, 8rem);
+  margin-top: clamp(3rem, 9vh, 5.5rem);
 }
 .unit { position: relative; display: flex; flex-direction: column; align-items: center; }
+.u-dial {
+  position: relative;
+  width: calc(var(--num) * 1.62);
+  height: calc(var(--num) * 1.62);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.u-ring {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  /* The drain. Opaque to `--a0`, ramped out by `--a1`, gone after that — so the tail of
+     the circumference dissolves instead of stopping dead. Both angles are written from
+     the component; at `--a1: 0deg` the whole mask is transparent and the ring is gone. */
+  -webkit-mask-image: conic-gradient(from -90deg, #000 0deg, #000 var(--a0, 0deg), transparent var(--a1, 0deg));
+  mask-image: conic-gradient(from -90deg, #000 0deg, #000 var(--a0, 0deg), transparent var(--a1, 0deg));
+}
 .u-num {
   font-family: 'Italiana', serif;
-  font-size: clamp(3.2rem, 13vw, 8.5rem);
+  font-size: var(--num);
   line-height: 0.94;
+  /* The dial is a fixed width, so a digit change can no longer shunt the row — but tabular
+     figures keep the numeral itself from shifting inside its own ring. */
   font-variant-numeric: tabular-nums;
-  /* ⚠️ Tabular figures AND a floor on the width: without both, "09"→"10" and the
-     minute rolling over would shunt the whole row sideways every tick. */
-  min-width: 1.7em;
 }
 .u-label {
   font-family: 'Bague', sans-serif;
@@ -440,29 +424,13 @@ onBeforeUnmount(() => {
   letter-spacing: 0.28em;
   text-transform: uppercase;
   opacity: 0.55;
-  margin-top: 0.9rem;
-}
-.sweep-wrap {
-  position: relative;
-  width: min(70vw, 26rem);
-  height: 2px;
-  margin-top: clamp(3rem, 8vh, 5rem);
-}
-.sweep-track { position: absolute; inset: 0; background: currentColor; opacity: 0.16; }
-.sweep-fill {
-  position: absolute;
-  inset: 0;
-  background: currentColor;
-  transform-origin: left center;
-  /* One second at a time — no easing, so it reads as a clock and not as an animation. */
-  transition: transform 0.9s linear;
+  margin-top: 1rem;
 }
 
 @media (max-width: 767px) {
   .knot { width: 92vw; }
   .cal { width: 92vw; grid-auto-rows: clamp(1.8rem, 5.2vh, 2.6rem); }
-  .clock { gap: 1.2rem; }
-  .u-num { min-width: 1.5em; }
+  .clock { gap: 1.5rem; }
 }
 
 /* ⚠️ SHORT VIEWPORTS, NOT NARROW ONES. A landscape phone is 844px WIDE, so every width
@@ -476,8 +444,7 @@ onBeforeUnmount(() => {
   .knot-word { font-size: clamp(0.9rem, 2.4vw, 1.15rem); }
   .day-scene { padding-top: max(14vh, 5.5rem); }
   .cal { width: min(60vw, 32rem); margin-top: 0.7rem; grid-auto-rows: clamp(1.3rem, 6vh, 2rem); }
-  .u-num { font-size: clamp(2.4rem, 7vw, 4rem); }
-  .clock { margin-top: clamp(1.6rem, 7vh, 2.6rem); }
-  .sweep-wrap { margin-top: 1.6rem; }
+  .clock { --num: clamp(2rem, 6.2vw, 3.4rem); margin-top: clamp(1.4rem, 6vh, 2.4rem); }
+  .u-label { margin-top: 0.55rem; }
 }
 </style>

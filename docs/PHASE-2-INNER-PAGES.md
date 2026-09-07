@@ -14,7 +14,7 @@ state, everything below it is history — newest first.)
 > | chapter | what it is now | driven by |
 > |---|---|---|
 > | **US** | margin notes: the whole page in one hand, **nothing set in type**; taped polaroids | **written word by word** off each block's own rect |
-> | **THE BIG DAY** | **the invitation** — a ghost October with the 29th inked and ringed, the knot (two threads cross, loop and leave as one), then **one unbroken thread** out of "one special day." that opens around the clock and becomes the line the numerals stand on. Nothing else: the RSVP is the gate | scroll-scrubbed, with one sticky hold for the knot; the countdown's frame is measured from the live rects, so it survives the numbers changing |
+> | **THE BIG DAY** | **the invitation** — a ghost October with the 29th inked and ringed, the knot (two threads cross, loop and leave as one), then **one unbroken thread** out of "one special day." that comes down and stops at "until then". Under it, three dials: rings that drain over a day, an hour and a minute. Nothing else: the RSVP is the gate | scroll-scrubbed, with one sticky hold for the knot; ink weight and the thread's length are measured from the live DOM, so they hold at every size |
 > | **IN FRAMES** | **the archive** — one window in the room showing a path (`...\Media\`), the three events as folders inside; click one and it opens, then the window navigates into it | **no scroll**: folder-open, then a stacked-view swap; the room's film on a time loop |
 > | **WITH LOVE** | **the wall** — six bands of the gift list sliding across the screen at their own speeds, forever; point at a word and its band stops and the thing opens under it | one transform per band per frame; no artwork at all |
 >
@@ -106,7 +106,48 @@ above. Constant speed and a reversed exit are not in conflict.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
 
-**▶▶ STATE (2026-09-06, latest) — ONE THREAD FROM THE KNOT INTO THE CLOCK.**
+**▶▶ STATE (2026-09-07, latest) — THE THREAD STOPS, AND THE CLOCK BECOMES THREE DIALS.**
+User: *"1. The line that continues after one special day is thicker. Make it same thickness as the
+earlier one. 2. Don't encompass. just stop at until then. 3. For countdown let's have circles (same
+line thickness) wrapped around the day hours mins whose circumference slowly fades out relative to
+each read."*
+
+1. **`inkW` — the ink weight is measured, never typed.** The knot is drawn at `stroke-width: 2.6`
+   inside a **1000-unit viewBox**, so on screen its line is `2.6 × renderedWidth ÷ 1000`: **1.75px at
+   1440, 0.93px on a 390px phone.** The stem that continues it was a `2.6px` div and the countdown's
+   thread a `2.6` stroke in a viewBox-less SVG — i.e. 2.6 real pixels, half again as fat as the line
+   they continue, and *more* than twice as fat on a phone. `syncFrame()` now reads the knot's rendered
+   width and hands the real number to every plain-pixel stroke on the page. Verified identical at all
+   14 viewports. ⚠️ **A stroke-width means nothing without its viewBox scale** — the same number in
+   two SVGs is two different lines.
+2. **The thread stops at "until then".** The embrace is gone: one path, from the section's top edge
+   (the seam the knot's stem lands on) down to just above the kicker. The seam is still 0px.
+3. **Three dials.** Each unit is a ring whose circumference drains over that unit's *own* cycle and
+   snaps back full at the instant the numeral inside it changes — days over 24h, hours over 60
+   minutes, minutes over 60 seconds. `f = (left % period) / period`, so the reset and the digit
+   change are the same event by construction, not by tuning. Measured live: **6°/s, 0.1°/s and
+   0.004°/s** — exactly 360° per minute, per hour, per day.
+   - **The drain is a CONIC MASK, not a dash.** `conic-gradient(from -90deg, #000 0, #000 --a0,
+     transparent --a1)` ramps the tail out over 26° so the ring reads as *fading*, which is what was
+     asked for; a `stroke-dashoffset` gauge ends on a hard cut and reads as a progress bar.
+   - **`now` is driven by the rAF loop, not a 1s interval.** At one tick per second the minutes ring
+     steps in sixtieths; a CSS transition would smooth that but would then smear the scroll reveal by
+     a second too. The reveal multiplies the angle (`f × ringReveal × 360`), so the dials *draw
+     themselves in to their current reading* rather than fading on as finished shapes.
+   - **`vector-effect="non-scaling-stroke"`** puts the ring's stroke in real pixels inside a 0–100
+     viewBox — the only reason one `inkW` can serve both. It is safe here *because there is no dash*;
+     `pathLength` + dashes + a scaled stroke is the disagreement behind AUDIT #31.
+   - **The dial is sized off the numeral** (`--num` on `.clock`, `1.62em` for the dial), so a ring
+     can never come out too small to hold its own number at some in-between width.
+   - The seconds line is gone — the minutes ring is the seconds now.
+
+- **Verified at 14 viewports** (320×568 → 2560×1440, five phones, two landscape phones, two tablets,
+  short 1440×700): seam 0px and ink weight identical to the knot at every one, all three numerals
+  inside their dials, the clock inside the content box, the thread stopping short of the kicker, and
+  **every window still closing with its content on screen**. Full site re-swept at 5 routes × 6
+  sizes: 0 overflow, 0 errors, 0 failed requests, 0 dead links.
+
+**▶▶ STATE (2026-09-06) — ONE THREAD FROM THE KNOT INTO THE CLOCK.**
 User: *"The ink is just what I wanted, but it starts too late… Is it possible for a line starting
 from below 'one day' (rename to 'one special day') to extend and form or merge into some sort of
 countdown? We'd need it to be somewhat dynamic since the values would be ever-changing."*
