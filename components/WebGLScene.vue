@@ -37,13 +37,20 @@ function onWheel(e) {
   scene.onScroll(e.deltaY - e.deltaX)
 }
 
-// Touch → carousel scroll (mobile). The carousel used to be wheel-ONLY, so on a phone the
-// ring simply didn't respond. Mirrors the wheel mapping (deltaY - deltaX) using per-move
-// finger deltas, scaled up so a comfortable swipe turns a meaningful arc (cards sit 45°
-// apart; ~300px of swipe ≈ 34°). Listeners live on the hit layer, so they're inert while a
-// chapter page (z-10) covers it. `touch-action: none` on that layer stops the browser
-// hijacking the gesture for scroll/zoom, which is why these can stay passive.
-const TOUCH_SCALE = 2.5
+// Touch → carousel drag (mobile). The carousel used to be wheel-ONLY, so on a phone the ring
+// simply didn't respond. Listeners live on the hit layer, so they're inert while a chapter page
+// (z-10) covers it. `touch-action: none` on that layer stops the browser hijacking the gesture
+// for scroll/zoom, which is why these can stay passive.
+//
+// ⚠️ THIS IS A DRAG, NOT A SCROLL — it goes through `scene.onDrag(px)`, which converts finger
+// pixels to ring rotation 1:1 off the camera, NOT through `onScroll` with a tuned multiplier.
+// The old handler mirrored the wheel's `deltaY - deltaX` mapping, which put the horizontal axis
+// the wrong way round: the deck ran backwards under your thumb. A drag is direct manipulation
+// and its only correct mapping is "the card under the finger stays under the finger".
+//
+// ⚠️ VERTICAL still mirrors the WHEEL, deliberately: a flick up on a phone should do what a
+// wheel-down does on a laptop. Only the horizontal axis is direct manipulation, which is why
+// the two terms below have opposite signs — that is not a bug to tidy up.
 const TAP_SLOP = 12          // px of travel below which a touch still counts as a tap
 let touchLastX = 0
 let touchLastY = 0
@@ -61,19 +68,20 @@ function onTouchStart(e) {
   touchTravel = 0
   touchVel = 0
   touching = true
+  scene.setDragging?.(true)           // the gesture owns the ring from here until the coast dies
 }
 function onTouchMove(e) {
   if (!touching) return
   const t = e.touches[0]
   if (!t) return
-  const dy = touchLastY - t.clientY   // finger up ⇒ positive, same sense as wheel deltaY
-  const dx = touchLastX - t.clientX
+  const right = t.clientX - touchLastX   // finger to the RIGHT ⇒ positive
+  const up = touchLastY - t.clientY      // finger UP ⇒ positive, the sense of wheel deltaY
   touchLastX = t.clientX
   touchLastY = t.clientY
-  touchTravel += Math.abs(dy) + Math.abs(dx)
-  const delta = (dy - dx) * TOUCH_SCALE
-  touchVel = delta
-  scene.onScroll(delta)
+  touchTravel += Math.abs(right) + Math.abs(up)
+  const px = right - up
+  touchVel = px
+  scene.onDrag(px)
 }
 function onTouchEnd() {
   touching = false
@@ -82,15 +90,22 @@ function onTouchEnd() {
   if (touchTravel > TAP_SLOP) suppressClickUntil = performance.now() + 400
   // Momentum. Without this the ring stops dead the instant the finger lifts, which reads as
   // "stuck" next to the desktop wheel (where a stream of events keeps it gliding).
+  // ⚠️ The coast is also the DECELERATION. While the gesture owns the ring the render lerp is out
+  // of the way, so this 0.94 decay is the only thing slowing the deck down — release `setDragging`
+  // when it dies, not when the finger lifts, or the ring's speed drops off a cliff at touchend.
   cancelAnimationFrame(momentumRaf)
-  if (Math.abs(touchVel) < 0.6) return
+  if (Math.abs(touchVel) < 0.6) { scene.setDragging?.(false); return }
   const coast = () => {
     touchVel *= 0.94
-    if (Math.abs(touchVel) < 0.05) return
-    scene.onScroll(touchVel)
+    if (Math.abs(touchVel) < 0.05) { scene.setDragging?.(false); return }
+    scene.onDrag(touchVel)
     momentumRaf = requestAnimationFrame(coast)
   }
-  momentumRaf = requestAnimationFrame(coast)
+  // ⚠️ Run the first step NOW, not on the next frame. Scheduling it with rAF leaves the frame
+  // after touchend with no drag applied at all — measured as a single 0-rotation frame between a
+  // 0.021 rad drag step and a 0.020 rad coast step, i.e. a visible hitch exactly at the moment
+  // the finger lifts, which is the moment you are looking at the deck.
+  coast()
 }
 
 onMounted(async () => {
@@ -157,6 +172,7 @@ function handleResize() {
 
 onUnmounted(() => {
   cancelAnimationFrame(momentumRaf)
+  scene.setDragging?.(false)
   window.removeEventListener('mousemove', scene.onMouseMove)
   window.removeEventListener('wheel', onWheel)
   const hit = hitLayerRef.value

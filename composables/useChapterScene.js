@@ -364,6 +364,7 @@ export function useChapterScene() {
   const DEPTH_FADE_FLOOR = 0.2
 
   let scrollRotationY = 0
+  let dragTracking = false   // a touch gesture owns the ring (drag + coast) — see setDragging()
   let selectedHero = null   // the single poster scaled up as the full-screen hero (P1)
   let scrollOffsetPx = 0    // inner-page scroll position in px (from Lenis) — drives the hero up/away
   let exitStart = null      // captured transforms at the start of a forward scroll-exit (step E)
@@ -991,7 +992,12 @@ export function useChapterScene() {
     // Update carousel rotation — original uses lerp: f(current, target, 0.06)
     // B.rotation.y = f(B.rotation.y, (B.scrollRotationY??0) + parseFloat(B.animatedRotationY), .06)
     const targetRot = (scrollRotationY || 0) + (carousel.animatedRotationY || 0)
-    carousel.rotation.y += (targetRot - carousel.rotation.y) * 0.06
+    // ⚠️ THE 0.06 LERP IS A WHEEL SMOOTHER, NOT A DRAG SMOOTHER. Its time constant is ~0.27s, so
+    // under a finger the ring never catches up: measured across a 220px swipe the per-frame step
+    // was still ACCELERATING when the finger lifted, and the deck then coasted a further 56% of
+    // the distance on its own. Read as rubbery and detached. While a touch gesture owns the ring
+    // the rotation is the gesture — the deceleration comes from the coast's own decay instead.
+    carousel.rotation.y += (targetRot - carousel.rotation.y) * (dragTracking ? 1 : 0.06)
 
     // Update uniforms — original: angle = xe*10 - (-scrollDelta/10 - 10)
     // xe = x.x (NOT E.x) in original - uses direct mouse/intro value, no smooth lerp
@@ -1777,6 +1783,35 @@ export function useChapterScene() {
     hoveredIndex = -1   // stale hover would block the idle center-text sync (deselect resets it too)
   }
 
+  // ── Touch drag ─────────────────────────────────────────────────────────────
+  // ⚠️ SIGN, measured not reasoned: `carousel.rotation.y` DOWN moves a front card LEFT (verified by
+  // tracking one poster's world x across a known wheel delta). So a finger travelling right must
+  // raise it — the deck follows the finger. The old touch handler mapped the horizontal axis the
+  // other way and the carousel ran backwards under your thumb.
+  //
+  // ⚠️ 1:1, not a tuned constant. `radPerPx` is the ring rotation that moves a card at the FRONT of
+  // the ring by one screen pixel, derived from the camera the same way the hero's scroll coupling
+  // is — so the card under your finger stays under your finger, on any screen. The constant it
+  // replaces (2.5 × 0.0008 rad/px) ran about 36% ahead of the finger.
+  function dragRadPerPx() {
+    const dz = Math.max(1, camera.position.z - baseDistance)
+    return ((2 * dz * Math.tan(toRad(camera.fov / 2))) / height) / baseDistance
+  }
+  function onDrag(px) {
+    if (!introComplete || selectedIndex !== -1) return
+    scrollRotationY += px * dragRadPerPx()
+  }
+  // While a touch gesture owns the ring — finger down AND the coast after it — the render lerp
+  // steps aside and the rotation IS the gesture. See the note in animate().
+  function setDragging(on) {
+    if (on && !dragTracking) {
+      // ⚠️ Grab the ring WHERE IT IS. `rotation.y` trails its target by the idle lerp, so handing
+      // over to 1:1 tracking without re-basing snaps the deck by however far it was behind.
+      scrollRotationY = carousel.rotation.y - (carousel.animatedRotationY || 0)
+    }
+    dragTracking = !!on
+  }
+
   function onScroll(delta) {
     if (!introComplete) return
     // While a chapter is open, the inner page (Lenis) owns scrolling AND the exit
@@ -1944,6 +1979,8 @@ export function useChapterScene() {
     onMouseMove,
     onClick,
     onScroll,
+    onDrag,
+    setDragging,
     onResize,
     destroy,
     onSelect,

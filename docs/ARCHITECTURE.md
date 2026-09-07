@@ -819,6 +819,25 @@ The same build must work at `/` (Cloudflare, Vercel) and `/la-coco-vie/` (GitHub
 public-asset URLs go through one helper — `asset()` in [`utils/asset.js`](../utils/asset.js)** — and
 nothing else should build them by hand.
 
+⚠️ **A DRAG IS NOT A SCROLL, AND A SCROLL SMOOTHER IS NOT A DRAG SMOOTHER.** The phone carousel was
+built by mirroring the wheel handler — same `deltaY - deltaX` mapping, same `onScroll`, same 0.06
+render lerp — and got both halves wrong. A wheel is an *indirect* input where sign is a convention;
+a drag is direct manipulation whose only correct mapping is **the card under the finger stays under
+the finger**, which fixes the sign AND the rate. Touch now goes through `onDrag(px)`, which derives
+rotation-per-pixel from the camera (the same `worldPerPx` the hero's scroll coupling uses, over the
+ring radius) rather than a tuned multiplier. And the 0.06 lerp — a ~0.27s time constant, fine for
+discrete wheel notches — meant the ring never caught up with a finger at all: measured across a
+220px swipe the per-frame step was still *accelerating* at release. A touch gesture now owns the
+rotation outright (`setDragging`) from touchstart until the coast dies, so the deceleration is the
+coast's own decay. AUDIT #52.
+⚠️ **`setDragging(true)` re-bases `scrollRotationY` to where the ring actually IS.** `rotation.y`
+trails its target by the idle lerp, so handing over to 1:1 tracking without re-basing snaps the deck
+by however far it happened to be behind.
+⚠️ **START A MOMENTUM COAST ON THE RELEASE FRAME, NOT VIA `requestAnimationFrame`.** Scheduling the
+first step leaves the frame after `touchend` with no motion applied — measured as a single
+0-rotation frame between a 0.021 drag step and a 0.020 coast step, a hitch at exactly the moment the
+user is watching the deck.
+
 ⚠️ **THE CARD SHADER IS COLOUR-UNMANAGED, SO `texture.colorSpace` IS NOT A FREE CHOICE.** It is a
 hand-written `ShaderMaterial`: three injects no decode into it and appends no encode after it, so
 whatever `texture2D()` returns is what reaches the framebuffer. Tagging a texture `SRGBColorSpace`
