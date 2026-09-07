@@ -924,7 +924,7 @@ for any future CSS-var asset paths.
 | **God-module** | `useChapterScene.js` is ~1500 lines. Splitting it (shaders / intro / select-exit / hover) is the main open refactor; deferred (high-risk, low-urgency). |
 | ~~`onDeselect` / `useAudio.js` dead code~~ | Removed 2026-07-23. |
 | `#4` ring tilt | Parked — replica reads slightly more face-on than the original. Needs the original's exact group rotation (couldn't extract cleanly). See AUDIT #4. |
-| Hardcoded exit/deselect angles | `deselectChapter` and `setExitProgress`'s `homeTilt` both hardcode the homepage `(25°,70°,15°)` (desktop) / `(22°,0,0)` (mobile) group tilt; (`DROP_START` is also duplicated in `pages/[slug].vue`). If any changes, update every copy. |
+| Duplicated `DROP_START` | The exit's phase split is defined in **both** `useChapterScene.js` and `pages/[slug].vue`. If one changes, change the other. (The homepage group tilt used to be duplicated six ways beside it — init, resize, deselect, endExit, setExitProgress — and is now one `homeTilt()`: desktop `(25°, 70°, 8°)`, mobile `(22°, 0, 0)`. The 8° roll was 15° until 2026-09-07; see AUDIT #56.) |
 | Doc-drift risk | This file lagged the code badly before the 2026-06-12 reconcile. When you change the scene/exit model, update the affected section here in the same commit. |
 
 ---
