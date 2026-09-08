@@ -289,7 +289,7 @@ onBeforeUnmount(() => { cancelAnimationFrame(rafId) })
 }
 
 /* ── the month ── */
-.cal-scene { min-height: 132dvh; }
+.cal-scene { min-height: 112dvh; }
 .month {
   font-family: 'Italiana', serif;
   font-size: clamp(1.6rem, 4vw, 3rem);
@@ -385,7 +385,7 @@ onBeforeUnmount(() => { cancelAnimationFrame(rafId) })
 }
 
 /* ── the countdown ── */
-.count-scene { min-height: 130dvh; }
+.count-scene { min-height: 112dvh; }
 .thread {
   position: absolute;
   inset: 0;

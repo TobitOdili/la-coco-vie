@@ -376,6 +376,10 @@ export function useChapterScene() {
   const DEPTH_FADE_FLOOR = 0.2
 
   let scrollRotationY = 0
+  // ⚠️ Set by the chapter page while its own opaque background completely covers the canvas.
+  // See setCanvasHidden().
+  let canvasHidden = false
+  let renderCount = 0
   let dragTracking = false   // a touch gesture owns the ring (drag + coast) — see setDragging()
   let selectedHero = null   // the single poster scaled up as the full-screen hero (P1)
   let scrollOffsetPx = 0    // inner-page scroll position in px (from Lenis) — drives the hero up/away
@@ -697,6 +701,7 @@ export function useChapterScene() {
         carouselRotY: +carousel.rotation.y.toFixed(3), carouselPosY: +carousel.position.y.toFixed(1),
         scrollRotY: +scrollRotationY.toFixed(4), animRotY: +(carousel.animatedRotationY || 0).toFixed(4),
         leanDeg: +leanDeg.toFixed(2), rotVel: +rotVel.toFixed(5),
+        canvasHidden, renderCount,
       })
       // What does a click at screen (x,y) resolve to, vs the front-facing card?
       window.__probe = (x, y) => {
@@ -1121,7 +1126,15 @@ export function useChapterScene() {
     // Background: transparent on the homepage (shows the body), the chapter accent while a chapter is
     // open + during its exit (the ring spins on the accent), fading back out as the exit lands home.
     renderer.setClearColor(exitBg, exitBgAlpha)
-    renderer.render(scene, camera)
+    // ⚠️ DON'T DRAW WHAT NOTHING CAN SEE. A chapter page is `position: fixed; inset: 0` with its
+    // own opaque background, and between the transparent hero and the transparent outro it covers
+    // the canvas completely — yet the scene went on rendering eight shader-heavy cards at up to
+    // 2× DPR for every frame of a multi-screen article. Everything else in animate() still runs,
+    // so the hero's scroll coupling and the ring's pose are exactly right the moment the outro
+    // uncovers them; only the draw is skipped.
+    // ⚠️ `&& selectedIndex !== -1` is a safety catch: the homepage has no page to set this flag,
+    // so a stale `true` could only ever come from a leak — and would blank the site. It cannot.
+    if (!(canvasHidden && selectedIndex !== -1)) { renderer.render(scene, camera); renderCount++ }
   }
 
   // Returns the SLOT index (i, 1–8) of the specific poster hit — NOT chapterIdx.
@@ -1833,6 +1846,10 @@ export function useChapterScene() {
     dragTracking = !!on
   }
 
+  // The chapter page owns this: it is the only thing that knows whether its own DOM is over the
+  // canvas. Always reset to false on unmount — see pages/[slug].vue.
+  function setCanvasHidden(on) { canvasHidden = !!on }
+
   function onScroll(delta) {
     if (!introComplete) return
     // While a chapter is open, the inner page (Lenis) owns scrolling AND the exit
@@ -1998,6 +2015,7 @@ export function useChapterScene() {
     onScroll,
     onDrag,
     setDragging,
+    setCanvasHidden,
     onResize,
     destroy,
     onSelect,

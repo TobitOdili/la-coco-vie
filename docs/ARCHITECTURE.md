@@ -819,6 +819,28 @@ The same build must work at `/` (Cloudflare, Vercel) and `/la-coco-vie/` (GitHub
 public-asset URLs go through one helper — `asset()` in [`utils/asset.js`](../utils/asset.js)** — and
 nothing else should build them by hand.
 
+⚠️ **DON'T DRAW WHAT NOTHING CAN SEE.** A chapter page is `position: fixed; inset: 0` with an
+opaque background: between the transparent `.chapter-hero` and the transparent `.chapter-outro` it
+covers the canvas completely, which on these pages is most of the article. `setCanvasHidden` (set
+by the page, which is the only thing that knows) skips the `renderer.render` call and nothing else,
+so every other update still runs and nothing is out of place when the outro uncovers the scene.
+**91–93% of draws removed** on the long chapters. ⚠️ It carries a safety catch — `&& selectedIndex
+!== -1` — because the homepage has no page to clear the flag, and a leaked `true` would blank the
+site. AUDIT #57.
+⚠️ **MEASURE WHERE THE TIME GOES BEFORE OPTIMISING, AND DISTRUST FRAME TIMES.** With Love profiled
+as the heaviest page; the obvious fix (a read/write split to stop layout thrashing) changed nothing,
+because `Performance.getMetrics` showed **layout was 0.058s against 0.642s of script and 0.472s of
+style recalc**. The real costs were `window.matchMedia()` constructed inside the rAF loop, a
+per-frame eight-rect scan answering a question that cannot change in 16ms, and transform writes on
+bands that had not moved. ⚠️ **Frame-time percentiles under CPU throttling are far too noisy to
+attribute a change**: four identical runs of the same build gave 14, 15, 15 and 25 long frames. The
+Performance counters are stable; use those. AUDIT #58.
+⚠️ **A SCRUB SCENE'S SPARE HEIGHT IS ITS RUNWAY, NOT PADDING.** Shortening one is a legitimate way
+to cut dead scroll, but it re-maps every `data-window` on it to a different place on the screen —
+so **re-measure every window after the change** (scroll to `p = a`, read the element's own rect)
+rather than assuming the fractions still land. Trimming The Big Day and With Love this way in
+2026-09-07 left exactly one window finishing below the fold, which the measurement caught.
+
 ⚠️ **AN ANIMATION THAT LEAVES ITS "IS SOMETHING OPEN" FLAG SET UNTIL ITS `onComplete` WILL EAT
 INPUT FOR ITS WHOLE DURATION.** The 2.5s deselect held `selectedIndex`, and every click and hover
 gate on the homepage read that field — so coming back from a chapter froze the deck for two and a

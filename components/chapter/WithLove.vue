@@ -3,7 +3,7 @@
     <template v-for="(s, i) in sections" :key="i">
       <!-- ── Opening · the ink writes the thank-you, before anything is asked. ── -->
       <section v-if="s.kind === 'open'" class="chapter-section love-scene open-scene" :data-idx="i">
-        <div class="lead fade" data-window="0.02,0.14">{{ s.lead }}</div>
+        <div class="lead fade" data-window="0.13,0.25">{{ s.lead }}</div>
         <div class="big-thanks write" data-window="0.08,0.34">{{ s.big }}</div>
         <svg class="flourish" viewBox="0 0 600 60" preserveAspectRatio="none" aria-hidden="true">
           <path class="scrub" data-window="0.30,0.42" pathLength="1"
@@ -151,6 +151,9 @@ let trackEls = []
 let bandEls = []
 let revealEls = []
 let wordEls = []          // the live element under the pointer, per band
+let scrubScenes = []      // cached scroll-scrubbed elements, per scene — see measure()
+let panelBox = []         // per-band rects for the reveal panel, read in tick's READ phase
+let touchTick = 0         // syncTouch runs on every 5th frame — see tick()
 
 const itemAt = (i) => (i >= 0 ? items.value[i] : null)
 
@@ -222,6 +225,19 @@ function measure() {
   bandEls = [...scene.querySelectorAll('.band')]
   trackEls = bandEls.map((b) => b.querySelector('.track'))
   revealEls = bandEls.map((b) => b.querySelector('.reveal'))
+  // ⚠️ Cached here, not re-queried every frame. `querySelectorAll` allocates a fresh NodeList on
+  // each call and this loop ran four of them per frame; `measure()` already re-runs on resize and
+  // on `document.fonts.ready`, which is exactly when this set can change.
+  scrubScenes = [...(root?.querySelectorAll('.love-scene') || [])].map((el) => ({
+    el,
+    p: 0,
+    els: [...el.querySelectorAll('.scrub, .fade, .write')]
+      .filter((e) => e.dataset.window)
+      .map((e) => {
+        const [a, b] = e.dataset.window.split(',').map(Number)
+        return { el: e, a, b, last: '', kind: e.classList.contains('scrub') ? 'scrub' : e.classList.contains('write') ? 'write' : 'fade' }
+      }),
+  }))
   const vw = scene.clientWidth || window.innerWidth
   const next = []
   bandEls.forEach((b, r) => {
@@ -238,7 +254,14 @@ function measure() {
 
 // Touch has no hover: open whichever band is nearest the middle of the screen, on the
 // word nearest the middle of it. Pointer devices keep the hover, which feels better.
-const coarse = () => window.matchMedia('(hover: none)').matches
+// ⚠️ ONE MediaQueryList, made once. This was `window.matchMedia(…).matches` called from inside
+// the rAF loop — a fresh query object parsed and allocated on every frame, on the page that
+// profiled as the site's most script-heavy by a factor of 3.7.
+let coarseMQ = null
+const coarse = () => {
+  if (!coarseMQ && typeof window !== 'undefined') coarseMQ = window.matchMedia('(hover: none)')
+  return !!coarseMQ?.matches
+}
 // ⚠️ Six bands of type sliding across the screen forever is exactly what someone who has
 // asked their system for less motion does not want. For them the wall simply holds still;
 // everything else about the page — the reveal, the focus states — still works.
@@ -254,28 +277,55 @@ function rng(seed) {
   }
 }
 
+// ⚠️ READ EVERYTHING, THEN WRITE EVERYTHING. Reading a rect after writing a style forces the
+// browser to flush layout synchronously, and interleaved — read scene 1, write its elements, read
+// scene 2 — that happened several times a frame over the most expensive layout tree on the site:
+// eight bands of nowrap text, each far wider than the screen. Measured at 20× CPU throttling this
+// page was the ONLY one that broke (p90 36.6ms, 13 of 98 frames over 32ms) while the other three
+// held 60fps, which is what pointed here rather than at the scrub engine in general.
 function tick() {
   const root = rootEl.value
   if (root) {
     const vh = window.innerHeight
-    for (const scene of root.querySelectorAll('.love-scene')) {
-      const r = scene.getBoundingClientRect()
-      const p = clamp01((vh - r.top) / (r.height + vh))
-      for (const el of scene.querySelectorAll('.scrub, .fade, .write')) {
-        const win = el.dataset.window
-        if (!win) continue
-        const [a, b] = win.split(',').map(Number)
-        const lp = clamp01((p - a) / (b - a))
-        if (el.classList.contains('scrub')) el.style.strokeDashoffset = String(1 - lp)
-        else if (el.classList.contains('write')) el.style.clipPath = `inset(-0.3em ${((1 - lp) * 100).toFixed(1)}% -0.45em 0)`
-        else el.style.opacity = String(lp)
+
+    // ── READ ──
+    for (const s of scrubScenes) {
+      const r = s.el.getBoundingClientRect()
+      s.p = clamp01((vh - r.top) / (r.height + vh))
+    }
+    if (bandEls.length) {
+      const near = coarse()
+      if (touch.value !== near) touch.value = near
+      // ⚠️ NOT EVERY FRAME. syncTouch reads a rect for all eight bands and then scans the words of
+      // whichever one wins — to answer "which band is nearest the middle of the screen", which
+      // cannot meaningfully change in 16ms. Every 5th frame is still ~12 checks a second.
+      if (near && (touchTick = (touchTick + 1) % 5) === 0) syncTouch(vh)
+      for (let r = 0; r < bandEls.length; r++) {
+        const we = wordEls[r]
+        panelBox[r] = (revealEls[r] && active.value[r] >= 0 && we)
+          // ⚠️ `offsetWidth` belongs in here too — it is a layout read, and left in the write
+          // phase below it re-flushed layout right after the track transforms went out.
+          ? { bb: bandEls[r].getBoundingClientRect(), wb: we.getBoundingClientRect(), w: revealEls[r].offsetWidth || 220 }
+          : null
+      }
+    }
+
+    // ── WRITE ──
+    for (const s of scrubScenes) {
+      for (const it of s.els) {
+        const lp = clamp01((s.p - it.a) / (it.b - it.a))
+        // Most of these are parked at 0 or 1 on any given frame — only the few mid-stroke have
+        // actually changed. (UsStory has done this since 2026-09-02; the wall had not.)
+        const v = lp.toFixed(4)
+        if (it.last === v) continue
+        it.last = v
+        if (it.kind === 'scrub') it.el.style.strokeDashoffset = String(1 - lp)
+        else if (it.kind === 'write') it.el.style.clipPath = `inset(-0.3em ${((1 - lp) * 100).toFixed(1)}% -0.45em 0)`
+        else it.el.style.opacity = String(lp)
       }
     }
 
     if (bandEls.length) {
-      const near = coarse()
-      if (touch.value !== near) touch.value = near
-      if (near) syncTouch(vh)
       for (let r = 0; r < bandEls.length; r++) {
         const m = mo[r]
         const track = trackEls[r]
@@ -288,20 +338,25 @@ function tick() {
         // the sign of the translate differs. Running one of them backwards through the
         // wrap is how a marquee ends up with a seam.
         const x = m.dir > 0 ? -m.off : m.off - m.w
-        track.style.transform = `translate3d(${x.toFixed(2)}px,0,0)`
+        // ⚠️ Skip the write when the strip has not actually moved a visible amount. A held or
+        // calm band still creeps by fractions of a pixel as its velocity eases to zero, and each
+        // write dirties a track holding hundreds of words for style recalc — which is where this
+        // page's time went (0.472s of recalc against The Big Day's 0.078s over the same scroll).
+        const xs = x.toFixed(1)
+        if (m.lastX !== xs) { m.lastX = xs; track.style.transform = `translate3d(${xs}px,0,0)` }
 
-        // The panel follows its word while the band is still coasting.
+        // The panel follows its word while the band is still coasting — off rects taken above.
         const rev = revealEls[r]
-        const we = wordEls[r]
-        if (rev && held && we) {
-          const bb = bandEls[r].getBoundingClientRect()
-          const wb = we.getBoundingClientRect()
+        const box = panelBox[r]
+        if (rev && box) {
+          const bb = box.bb
+          const wb = box.wb
           // ⚠️ CLAMPED AGAINST THE VIEWPORT, not against the band. The word it follows is
           // on an endless strip and is very often half off one edge, so unclamped the panel
           // went with it — measured at left: -536 on a 390px screen. And the band is NOT a
           // reliable ruler: it is a flex item wrapping a track of nowrap content, so its own
           // border box is far wider than the screen. The viewport is the only honest bound.
-          const w = rev.offsetWidth || 220
+          const w = box.w
           const lo = 10 - bb.left
           const hi = window.innerWidth - w - 10 - bb.left
           rev.style.left = `${Math.max(lo, Math.min(hi, wb.left - bb.left)).toFixed(1)}px`
@@ -394,7 +449,7 @@ onBeforeUnmount(() => {
 .write { clip-path: inset(-0.3em 100% -0.45em 0); }
 
 /* ── opening ── */
-.open-scene { min-height: 116dvh; }
+.open-scene { min-height: 98dvh; }
 .lead {
   font-family: 'Bague', sans-serif;
   font-size: 0.8rem;
@@ -625,7 +680,7 @@ onBeforeUnmount(() => {
 .cash-cta.is-pending { border-bottom-style: dashed; opacity: 0.5; cursor: default; }
 
 /* ── signing ── */
-.sign-scene { min-height: 112dvh; }
+.sign-scene { min-height: 96dvh; }
 .closer { font-family: 'Italiana', serif; font-size: clamp(1.4rem, 3vw, 2.4rem); margin-bottom: 2rem; }
 .sign-block { width: min(82vw, 46rem); display: flex; flex-direction: column; align-items: stretch; }
 .fork { width: 100%; height: 6.5rem; pointer-events: none; }

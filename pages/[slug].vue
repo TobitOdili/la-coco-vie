@@ -224,6 +224,20 @@ function updateExit(scrollY) {
   scene.setExitProgress(de)
   if (de >= 0.999) commitExit()
 }
+
+// ⚠️ Is the article's own background over the canvas? `.chapter-hero` (100dvh) and
+// `.chapter-outro` are both TRANSPARENT — the scene shows through them — but everything between
+// is `.chapter-content`, which is opaque and fills the fixed page. Through that whole stretch,
+// which on these pages is several screens, the canvas is drawing for nobody. Telling the scene
+// lets it skip the draw and keep every other update, so nothing is out of place when the outro
+// uncovers it.
+function syncCanvasCover(scrollY) {
+  const outro = outroEl.value
+  const scene = webglSceneRef?.value?.scene
+  if (!scene?.setCanvasHidden) return
+  const vh = window.innerHeight
+  scene.setCanvasHidden(!!outro && scrollY >= vh + 2 && scrollY < outro.offsetTop - vh)
+}
 function commitExit() {
   if (exiting) return
   exiting = true
@@ -247,7 +261,7 @@ onMounted(() => {
     content: scrollEl.value,
     autoRaf: true,
   })
-  lenis.on('scroll', (e) => { scene?.setScroll(e.scroll); syncNavInk(); updateExit(e.scroll) })
+  lenis.on('scroll', (e) => { scene?.setScroll(e.scroll); syncNavInk(); updateExit(e.scroll); syncCanvasCover(e.scroll) })
   // ⚠️ Also on arrival: a chapter selected at scroll 0 already has the accent
   // painted behind the transparent hero, so the nav can be invisible before the
   // visitor has scrolled at all. And `updateExit` early-returns in several states,
@@ -321,6 +335,9 @@ onBeforeUnmount(() => {
   lenis?.destroy()
   lenis = null
   webglSceneRef?.value?.scene?.setScroll(0)
+  // ⚠️ ALWAYS. A `true` left behind here would follow the visitor to the homepage, which has no
+  // page to clear it, and blank the canvas.
+  webglSceneRef?.value?.scene?.setCanvasHidden?.(false)
 })
 </script>
 

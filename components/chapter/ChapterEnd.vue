@@ -44,13 +44,16 @@ onBeforeUnmount(() => observer?.disconnect())
 
 <style scoped>
 .chapter-end {
-  min-height: 100dvh;
+  /* ⚠️ NOT a full screen. It holds ~340px of content — a line, a button, a hashtag — and at
+     100dvh that was 500px of nothing wrapped round it on a phone, on every chapter. It is a
+     closing panel, not a scene: it needs air, not a viewport. */
+  min-height: 62dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2rem;
-  padding: 14vh 8vw;
+  padding: 9vh 8vw;
   box-sizing: border-box;
   text-align: center;
   color: var(--accent, #333);
