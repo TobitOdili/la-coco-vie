@@ -305,16 +305,11 @@ body.nav-on-dark .menu-item svg { color: var(--accentLight); fill: var(--accentL
   .display { font-size: 210px; }
 }
 
-.--us .display {
-  font-family: 'Over the Rainbow', cursive;
-}
-.--the-big-day .display {
-  font-family: 'Italiana', sans-serif;
-}
-.--in-frames .display {
-  font-family: 'Monoton', sans-serif;
-  text-transform: uppercase;
-}
+/* ⚠️ `.display` IS NOT RENDERED ANYWHERE — no template applies the class; the chapter titles
+   that a visitor actually sees are baked into `cu-p1..4.png` by scripts/gen-textures.mjs. The
+   four per-chapter FONT overrides that used to live here (Over the Rainbow / Italiana / Monoton
+   / Bague) were dead code saying the opposite of the truth, and as of 2026-09-11 the truth is
+   that all four titles are one face. Removed rather than updated. */
 /* IN FRAMES closes tighter than the other chapters: END OF REEL cuts straight to
    the RSVP, so the chapter-end drops its full-viewport height here only —
    otherwise there is a dead screen between them. */
@@ -322,12 +317,6 @@ body.nav-on-dark .menu-item svg { color: var(--accentLight); fill: var(--accentL
   min-height: auto;
   padding-top: 4vh;
   padding-bottom: 14vh;
-}
-
-.--with-love .display {
-  font-family: 'Bague', sans-serif;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
 }
 
 /* ===== Color Helpers ===== */

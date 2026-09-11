@@ -44,6 +44,14 @@
             <img v-if="itemAt(active[r])?.image" class="reveal-shot"
               :src="itemAt(active[r]).image" alt="" aria-hidden="true" decoding="async" />
             <p class="reveal-note">{{ itemAt(active[r])?.memory }}</p>
+            <!-- The specifics, under the memory: what it actually is, roughly what it costs,
+                 and where to get it. ⚠️ The link only renders when there IS one — three of the
+                 ten have no product page, and a dead "see it" is worse than none. -->
+            <p v-if="itemAt(active[r])?.product" class="reveal-spec">
+              {{ itemAt(active[r]).product }}<template v-if="itemAt(active[r])?.price"> · {{ itemAt(active[r]).price }}</template>
+            </p>
+            <a v-if="itemAt(active[r])?.url" class="reveal-link" :href="itemAt(active[r]).url"
+              target="_blank" rel="noopener noreferrer" @pointerdown.stop>see it ↗</a>
           </div>
         </div>
       </section>
@@ -585,7 +593,9 @@ onBeforeUnmount(() => {
   transition: opacity 0.4s ease, transform 0.55s cubic-bezier(0.2, 0.72, 0.24, 1);
   z-index: 3;
 }
-.reveal.open { opacity: 1; transform: translateY(0); }
+/* ⚠️ `pointer-events: auto` once open, so the "see it" link is reachable. The band keeps the
+   panel alive because the panel is INSIDE the band, so moving onto it is not a pointerleave. */
+.reveal.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
 .reveal-shot + .reveal-note { margin-top: 0.65rem; }
 .reveal-shot {
   display: block;
@@ -603,6 +613,30 @@ onBeforeUnmount(() => {
   color: #2E4A52;
   opacity: 0.88;
 }
+.reveal-spec {
+  margin: 0.55rem 0 0;
+  font-family: 'Bague', sans-serif;
+  font-size: clamp(0.52rem, 0.68vw, 0.6rem);
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+  color: #2E4A52;
+  opacity: 0.55;
+}
+.reveal-link {
+  display: inline-block;
+  margin-top: 0.6rem;
+  font-family: 'Bague', sans-serif;
+  font-size: clamp(0.52rem, 0.68vw, 0.6rem);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #2E4A52;
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 1px;
+  opacity: 0.8;
+  cursor: pointer;
+}
+.reveal-link:hover, .reveal-link:focus-visible { opacity: 1; outline: none; }
 
 /* ── even better — the on-page panel ── */
 .cash-layer {

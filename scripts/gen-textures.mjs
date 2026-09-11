@@ -18,6 +18,14 @@
 // css2 `text=` param so A–Z is present — the default css2 woff2 is latin-EXT only). Bague is
 // the repo's own public/fonts/Bague.woff. Colours here MUST match CHAPTERS in
 // composables/useChapterScene.js + the .--slug vars in assets/css/main.css.
+// ⚠️ ALL FOUR CARD TITLES ARE ONE FACE — Italiana (user, 2026-09-11: "use the same font type
+// for the page titles"). They used to be four different display faces (Over the Rainbow, Italiana,
+// Monoton, Bague), one per chapter. Italiana is the site's display voice already: the taglines'
+// `.xl` lines, the countdown numerals, the month, the knot's words, the nav ampersand.
+// ⚠️ SWITCHING A FACE MEANS RE-FITTING THE SIZE, not just the name — a title is `[text, baseline,
+// size]` and the sizes here were tuned to each old face's width. The BASELINES are deliberately
+// unchanged: they clear the shader's photo window, which slices a title that sits too low and only
+// shows it on the ring, never on the flat PNG. Measure the rendered PNG, don't eyeball the SVG.
 // ─────────────────────────────────────────────────────────────────────────────
 import { chromium } from 'playwright-core'
 import { readFileSync, writeFileSync } from 'node:fs'
@@ -51,12 +59,12 @@ const face = (f) => `@font-face{font-family:'${f.fam}';src:url(data:font/${f.fmt
 // amount of grepping the data would have found it — only opening the card art.
 const CH = [
   {
-    n: 1, bg: '#F2EEE8', ink: '#42221A', font: 'rainbow',
+    n: 1, bg: '#F2EEE8', ink: '#42221A', font: 'italiana',
     // ⚠️ THE LAST BASELINE MUST CLEAR ~385. The shader opens a photo window over the card's
     // lower two-thirds, and it is NOT in this art's coordinate space — the only reliable
     // ruler is the cards that already work: In Frames' lowest title baseline is 380 and is
     // clear, "Coco & Uvie" at 440 and "CHAPTER" at 500 were both sliced in half by it.
-    title: [['Coco', 215, 195], ['& Uvie', 380, 195]],   // [text, baseline-y, font-size]
+    title: [['COCO', 215, 190], ['& UVIE', 380, 190]],   // [text, baseline-y, font-size]
     sub: 'all the way to I do',
     tagline: [
       ['TWO STORIES,', 'xl'], ['ONE BEGINNING:', 'xl'],
@@ -67,18 +75,17 @@ const CH = [
     n: 2, bg: '#E9ECE2', ink: '#41492D', font: 'italiana',
     title: [['THE BIG', 200, 190], ['DAY', 390, 190]],
     sub: 'official countdown to our special day',
-    // ⚠️ "jé ká jó" carries accents, and the font subsets beside this script were fetched
-    // with the css2 `text=` param — a subset only contains the glyphs it was asked for.
-    // If é/á/ó are missing they render as .notdef boxes or silently swap face. CHECK THE
-    // PNG after regenerating; do not trust the source string.
+    // ⚠️ The font subsets beside this script were fetched with the css2 `text=` param, so they
+    // hold A–Z and the lower case but NOT arbitrary accents. "JÉ KÁ JÓ" lived here until
+    // 2026-09-11 and was exactly that risk; if you reintroduce an accented word, CHECK THE PNG.
     tagline: [
       ['SAVE the DATE —', 'xl'], ['CEREMONY,', 'xl'], ['RECEPTION,', 'xl'],
-      ['and', 'sm'], ['JÉ KÁ JÓ', 'xl'],
+      ['and a NIGHT of', 'sm'], ['DANCING', 'xl'],
     ],
   },
   {
-    n: 3, bg: '#EFE8F5', ink: '#453350', font: 'monoton',
-    title: [['IN', 200, 150], ['FRAMES', 380, 150]],
+    n: 3, bg: '#EFE8F5', ink: '#453350', font: 'italiana',
+    title: [['IN', 200, 200], ['FRAMES', 380, 200]],
     sub: 'Wedding Photos & Videos',
     tagline: [
       ['MAGICAL MOMENTS:', 'xl'], ['PICTURES & VIDEOS', 'xl'],
@@ -86,8 +93,8 @@ const CH = [
     ],
   },
   {
-    n: 4, bg: '#E8EDF2', ink: '#2E4A52', font: 'bague',
-    title: [['FOR OUR', 235, 112], ['NEXT CHAPTER', 378, 112]],
+    n: 4, bg: '#E8EDF2', ink: '#2E4A52', font: 'italiana',
+    title: [['FOR OUR', 235, 132], ['NEXT CHAPTER', 378, 132]],
     sub: 'Support Our Wedding in Cash or Kind',
     tagline: [
       ['YOUR PRESENCE', 'xl'], ['is the', 'sm'], ['GREATEST GIFT —', 'xl'],

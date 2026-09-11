@@ -81,7 +81,7 @@ export const POPUPS = {
     url: '#',
   },
 
-  // “With Love” — dummy registry items until the real list arrives.
+  // “With Love” — the real gift list now lives in `CHAPTER_PAGES['with-love']` below.
   // ⚠️ Was a bordered box mid-page on With Love ("or, simply —"). The user's note:
   // it read as out of character — a hard rectangle with a button, on a chapter that
   // is otherwise ink on paper. It is the floating dock card now, the same widget the
@@ -362,36 +362,98 @@ export const CHAPTER_PAGES = {
         // land, so shortening them all to the same length would flatter the curve
         // in a way the real copy would not. Real gifts land when the couple pick
         // them; `x` (0–100) is the horizontal position each one sits at.
+        // ⚠️ THE COUPLE'S REAL LIST (2026-09-11). `name` is the word that rides the wall and gets
+        // circled, so it stays to two or three SHORT words — a name that wraps makes the lasso
+        // sprawl across both lines. `product` and `price` are the specifics, shown only in the
+        // panel that opens under the word. `x` is legacy from the ink design and unused by the wall.
+        // ⚠️ PRICES ARE A SNAPSHOT, not a feed — they were the couple's own figures on 2026-09-11
+        // and Nigerian retail moves. They are deliberately prefixed "about".
+        // ⚠️ Three links are NOT the product page: see the notes on those items.
         items: [
           {
-            memory: 'lorem ipsum dolor sit amet, consectetur adipiscing.',
-            name: 'lorem ipsum dolor',
+            name: 'a pressure cooker',
+            memory: 'sunday stew, ready before the guests are.',
+            product: 'oraimo TenderPot 6L 1000W · 9 programs',
+            price: 'about ₦116,900',
+            url: 'https://ng.oraimo.com/product/oraimo-tenderpot-6l-1000w-fast-cooking-&-9-programs-electric-pressure-cooker',
             image: null, x: 34, claimed: false,
           },
           {
-            memory: 'sed do eiusmod tempor incididunt ut labore et dolore.',
-            name: 'dolor sit amet',
+            name: 'a bigger one',
+            memory: 'or the same thing, with more room in it.',
+            product: 'oraimo KitchNova 1200W 6L · 80kPa',
+            // ⚠️ The store's PRESSURE COOKER collection, not this product's own page — the
+            // KitchNova has no indexed product URL. Swap it the moment one exists.
+            price: 'about ₦115,900',
+            url: 'https://ng.oraimo.com/collections/pressure-cooker',
             image: null, x: 68, claimed: false,
           },
           {
-            memory: 'ut enim ad minim veniam, quis nostrud exercitation.',
-            name: 'sed do eiusmod',
+            name: 'a breakfast station',
+            memory: 'saturday eggs, both of us still half asleep.',
+            product: 'oraimo EasyBistro 2-in-1 Breakfast Station',
+            price: 'about ₦102,900',
+            url: 'https://ng.oraimo.com/product/oraimo-easybristo-2-in-1-grill-and-sandwich-maker-breakfast-station',
             image: null, x: 36, claimed: false,
           },
           {
-            memory: 'duis aute irure dolor in reprehenderit in voluptate velit.',
-            name: 'ut labore et dolore',
+            name: 'an air oven',
+            memory: 'the cake that comes out right the first time.',
+            product: 'oraimo BakeAir Pro 8-in-1 · 20L · 230°C',
+            price: 'about ₦165,900',
+            url: 'https://ng.oraimo.com/product/oraimo-bakeair-pro-versatile-20l-large-capacity-air-oven-oao-561a',
             image: null, x: 70, claimed: false,
           },
           {
-            memory: 'excepteur sint occaecat cupidatat non proident, sunt.',
-            name: 'minim veniam quis',
+            name: 'the big television',
+            memory: 'the match, the film, the falling asleep halfway through.',
+            product: 'LG NanoCell 65" NANO80 4K Smart · Fouani',
+            price: null,
+            url: 'https://fouanistore.com/product/726',
             image: null, x: 32, claimed: false,
           },
           {
-            memory: 'qui officia deserunt mollit anim.',
-            name: 'ex ea commodo',
+            name: 'a dehumidifier',
+            memory: 'harmattan outside, calm in here.',
+            product: 'Maxi Dehumidifier 30L (30DEN7) · Fouani',
+            // ⚠️ NO LINK — this one has no findable page on Fouani's store and no category page
+            // that reliably contains it. It renders without a link rather than with a guess.
+            price: null,
+            url: null,
             image: null, x: 66, claimed: false,
+          },
+          {
+            name: 'a refrigerator',
+            memory: 'room for everything, finally.',
+            product: 'Hisense SxS 541L (71WS-RC) · Fouani',
+            // ⚠️ Fouani's HISENSE brand page, not this model's own — the 71WS-RC is not indexed.
+            price: null,
+            url: 'https://fouanistore.com/search?brand=Hisense',
+            image: null, x: 38, claimed: false,
+          },
+          {
+            name: 'the corner sofa',
+            memory: 'the corner we never get up from.',
+            product: 'Taeillo ADA L-Shaped',
+            price: 'about ₦369,998',
+            url: 'https://taeillo.com/products/ada-l-shaped',
+            image: null, x: 64, claimed: false,
+          },
+          {
+            name: 'a stand mixer',
+            memory: 'flour on everything. worth it.',
+            product: 'oraimo OminiMix 1900W · 6 speeds',
+            price: null,
+            url: 'https://ng.oraimo.com/product/oraimo-ominimix-6-speeds-durable-all-metal-gears-stand-mixer-obl-551a-graphitegrey',
+            image: null, x: 30, claimed: false,
+          },
+          {
+            name: 'a chest freezer',
+            memory: 'a month of stew, cooked once.',
+            product: 'Hisense Chest Freezer 297L (390SH-FC) · Fouani',
+            price: null,
+            url: 'https://fouanistore.com/product/200',
+            image: null, x: 72, claimed: false,
           },
         ],
         popups: ['cashNote'],

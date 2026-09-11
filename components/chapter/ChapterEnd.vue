@@ -10,7 +10,7 @@
 
     <div class="socials">
       <!-- PLACEHOLDER — the couple's hashtag / Instagram when they have one. -->
-      <span class="hashtag">#CovenantAndUvie</span>
+      <span class="hashtag">#LaCocoVie26</span>
     </div>
 
     <p class="disclaimer">

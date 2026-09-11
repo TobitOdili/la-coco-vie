@@ -184,8 +184,14 @@ As of 2026-09-06:
   ring; the flat PNG looks fine either way.
 - ⚠️ **Escape `&` in titles as well as notes.** "Coco & Uvie" is a title now, and a bare `&` makes
   the SVG unparseable — the card renders as a blank rectangle.
+- ⚠️ **ALL FOUR CARD TITLES ARE ONE FACE — Italiana, in caps** (user, 2026-09-11). They were four
+  different display faces, one per chapter. ⚠️ Switching a face means **re-fitting the size**: a
+  title is `[text, baseline, size]` and the old sizes were tuned to the old faces. The BASELINES
+  are unchanged on purpose — they clear the shader's photo window, which slices a title that sits
+  too low and only shows it on the ring, never on the flat PNG. Measure the rendered PNG.
 - ⚠️ **Accented glyphs are not guaranteed.** The subsets in `scripts/fonts/` were fetched with the
-  css2 `text=` param, so they contain only what was asked for. "JÉ KÁ JÓ" happens to render; check
+  css2 `text=` param, so they contain only what was asked for. "JÉ KÁ JÓ" lived on card 2 until
+  2026-09-11 and was exactly that risk; check
   the PNG after any copy change rather than trusting the source string.
 
 ### Inner-page assets (Phase 2 — all 4 chapters built)
