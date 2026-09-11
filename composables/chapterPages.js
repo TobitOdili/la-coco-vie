@@ -86,13 +86,10 @@ export const POPUPS = {
   // it read as out of character — a hard rectangle with a button, on a chapter that
   // is otherwise ink on paper. It is the floating dock card now, the same widget the
   // other chapters use, so the offer is present without interrupting the writing.
-  cashNote: {
-    title: 'Even better,',
-    params: ['monetize your gift to us'],
-    // ⚠️ `action` (not `url`) — this opens the panel ON the page rather than
-    // jumping to another tab. WithLove renders it; PopupCard only raises the flag.
-    action: 'cash',
-  },
+  // ⚠️ REMOVED 2026-09-11 — `cashNote` was the dock card that raised the `chapterPanel` flag and
+  // opened a full-screen modal over With Love. The chapter has its own dock now, which expands in
+  // place instead of covering the page, so neither this nor the modal exists.
+
   regFund: {
     title: 'The Honeymoon Fund',
     params: ['contribute any amount', 'placeholder link'],
@@ -456,14 +453,23 @@ export const CHAPTER_PAGES = {
             image: null, x: 72, claimed: false,
           },
         ],
-        popups: ['cashNote'],
+        // ⚠️ NO dock popup here any more (2026-09-11). With Love owns its own dock now — it has to,
+        // because the dock EXPANDS INTO A SECTION on scroll and the generic PopupCard has no idea
+        // where the gift list ends. See `cashPanel` below and the `.cash-dock` block in WithLove.
+        popups: [],
       },
       // ⚠️ Not a section — the panel the `cashNote` dock card opens. It replaced a
       // bordered box that sat mid-page and read as out of character on a chapter
       // that is otherwise ink on paper.
       {
+        // ⚠️ NOT A SECTION IN THE PAGE FLOW — it is the fixed dock at the bottom of the screen,
+        // which starts as a card and blows itself out into a full panel once the gift list is
+        // behind you, then folds back down as the signature arrives. WithLove owns the whole
+        // thing; nothing here is rendered by the generic popup dock.
         kind: 'cashPanel',
         heading: 'even better —',
+        // The one line the card shows while it is still a card.
+        note: 'send cash instead',
         body: 'if you would rather send us cash, that is more than welcome.',
         cta: 'open the payment link',
         // ⚠️ PLACEHOLDER — the couple's payment destination goes here.

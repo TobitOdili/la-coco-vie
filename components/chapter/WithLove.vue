@@ -56,29 +56,33 @@
         </div>
       </section>
 
-      <!-- ── Even better · not a section. The dock card raises a flag and this
-           opens ON the page — sending money is a conversation, not a jump to
-           another tab. Ink on paper, like the rest of the chapter: no box. ── -->
+      <!-- ── Even better · the dock. NOT a section in the flow and NOT a modal: a fixed card at
+           the bottom of the screen that BLOWS ITSELF OUT into a full panel once the gift list is
+           behind you, and folds back down as the signature arrives. Tapping it does the same
+           thing by hand. It never covers the page — the old version was a full-screen overlay,
+           which is fine for a deliberate tap and completely wrong for something that opens
+           itself. ── -->
       <Teleport v-else-if="s.kind === 'cashPanel'" to="body">
-        <transition name="panel">
-          <div v-if="panel === 'cash'" class="cash-layer" @click.self="panel = null">
-            <div class="cash-panel" role="dialog" aria-modal="true" :aria-label="s.heading">
-              <button type="button" class="cash-x" aria-label="Close" @click="panel = null">
-                <svg viewBox="0 0 12 12" aria-hidden="true">
-                  <path d="M2 2 L10 10 M10 2 L2 10" stroke="currentColor" stroke-width="1.3" fill="none" />
-                </svg>
-              </button>
-              <h3 class="cash-heading">{{ s.heading }}</h3>
-              <p class="cash-body">{{ s.body }}</p>
-              <!-- ⚠️ A LINK ONLY IF IT GOES SOMEWHERE. `url` is still a placeholder `#`,
-                   and this is the page's one call to action: a guest who taps it and lands
-                   nowhere is worse off than one who reads that it is coming. -->
-              <a v-if="s.url && s.url !== '#'" class="cash-cta" :href="s.url"
+        <div class="cash-dock" :class="{ live: dockLive, open: dockOpen }">
+          <button type="button" class="dock-hit" :aria-expanded="dockOpen" @click="toggleDock">
+            <span class="dock-eyebrow">{{ s.heading }}</span>
+            <span class="dock-note">{{ s.note }}</span>
+          </button>
+          <!-- ⚠️ `grid-template-rows: 0fr → 1fr`. The panel's height is content-driven and unknown,
+               and `height: auto` cannot be transitioned; this is the one way to ease to an
+               intrinsic height without measuring it in JS every frame. -->
+          <div class="dock-body">
+            <div class="dock-inner">
+              <p class="dock-text">{{ s.body }}</p>
+              <!-- ⚠️ A LINK ONLY IF IT GOES SOMEWHERE. `url` is still a placeholder, and this is
+                   the page's one call to action: a guest who taps it and lands nowhere is worse
+                   off than one who reads that it is coming. -->
+              <a v-if="s.url && s.url !== '#'" class="dock-cta" :href="s.url"
                 target="_blank" rel="noopener noreferrer">{{ s.cta }}</a>
-              <span v-else class="cash-cta is-pending">the payment link is coming soon</span>
+              <span v-else class="dock-cta is-pending">the payment link is coming soon</span>
             </div>
           </div>
-        </transition>
+        </div>
       </Teleport>
 
       <!-- ── Signing · the ink splits in two and signs both names. ── -->
@@ -125,11 +129,13 @@ const props = defineProps({
 
 const ink = '#2E4A52'
 
-// Raised by the docked "Even better," card, which lives in `[slug].vue`.
-// ⚠️ Teleported to <body>: `.chapter-page` is `fixed; z-index: 10`, a stacking
-// context nothing inside can escape — the same trap In Frames' window hit.
-const panel = useState('chapterPanel', () => null)
-function onPanelKey(e) { if (e.key === 'Escape' && panel.value) panel.value = null }
+// ── the dock ───────────────────────────────────────────────────────────────
+// `live` is whether the card is on screen at all; `open` is whether it has blown out into a
+// panel. Both are driven from the scroll in tick()'s read phase, and a tap can override either —
+// see the note on `wasPast` there.
+const dockLive = ref(false)
+const dockOpen = ref(false)
+function toggleDock() { dockOpen.value = !dockOpen.value }
 
 const rootEl = ref(null)
 let rafId = 0
@@ -162,6 +168,9 @@ let wordEls = []          // the live element under the pointer, per band
 let scrubScenes = []      // cached scroll-scrubbed elements, per scene — see measure()
 let panelBox = []         // per-band rects for the reveal panel, read in tick's READ phase
 let touchTick = 0         // syncTouch runs on every 5th frame — see tick()
+let dockWall = null       // the gift list, and the signature after it — the dock's two cues
+let dockSign = null
+let dockWant = false      // last SCROLL-derived answer; see the note in tick()
 
 const itemAt = (i) => (i >= 0 ? items.value[i] : null)
 
@@ -236,6 +245,8 @@ function measure() {
   // ⚠️ Cached here, not re-queried every frame. `querySelectorAll` allocates a fresh NodeList on
   // each call and this loop ran four of them per frame; `measure()` already re-runs on resize and
   // on `document.fonts.ready`, which is exactly when this set can change.
+  dockWall = root?.querySelector('.wall') || null
+  dockSign = root?.querySelector('.sign-scene') || null
   scrubScenes = [...(root?.querySelectorAll('.love-scene') || [])].map((el) => ({
     el,
     p: 0,
@@ -301,6 +312,26 @@ function tick() {
       const r = s.el.getBoundingClientRect()
       s.p = clamp01((vh - r.top) / (r.height + vh))
     }
+    // ── the dock ── on screen from the gift list until the signature has gone; blown out into a
+    // panel for the stretch between the two.
+    // ⚠️ WRITTEN ONLY ON A TRANSITION. Assigning `dockOpen` every frame would mean a tap that
+    // folds it away is overruled on the very next frame; this way the scroll takes over again
+    // the next time its own answer actually changes.
+    if (dockWall && dockSign) {
+      const w = dockWall.getBoundingClientRect()
+      const g = dockSign.getBoundingClientRect()
+      const live = w.top < vh && g.bottom > vh * 0.2
+      if (dockLive.value !== live) dockLive.value = live
+      // ⚠️ ONE VALUE, NOT TWO. The wall and the signature are ADJACENT sections, so
+      // `wall.bottom` and `sign.top` are the same number at every scroll position — the first
+      // cut asked for it to be both below 0.62vh and above 0.46vh, which is a 0.16vh slot the
+      // whole effect could fall through. `edge` is that seam, and the dock is open for the
+      // stretch of scroll where it sits between the bottom of the screen and the top of it.
+      const edge = w.bottom / vh
+      const want = edge < 0.98 && edge > 0.10
+      if (want !== dockWant) { dockWant = want; dockOpen.value = want }
+    }
+
     if (bandEls.length) {
       const near = coarse()
       if (touch.value !== near) touch.value = near
@@ -414,7 +445,6 @@ const onResize = () => {
 }
 
 onMounted(async () => {
-  window.addEventListener('keydown', onPanelKey)
   calm = stillness()
   buildBands(props.sections.find((x) => x.kind === 'gifts')?.items || [])
   await nextTick()
@@ -427,8 +457,6 @@ onMounted(async () => {
   rafId = requestAnimationFrame(tick)
 })
 onBeforeUnmount(() => {
-  window.removeEventListener('keydown', onPanelKey)
-  panel.value = null
   cancelAnimationFrame(rafId)
   window.removeEventListener('resize', onResize)
   ro?.disconnect()
@@ -638,66 +666,109 @@ onBeforeUnmount(() => {
 }
 .reveal-link:hover, .reveal-link:focus-visible { opacity: 1; outline: none; }
 
-/* ── even better — the on-page panel ── */
-.cash-layer {
+/* ── even better — the dock ──────────────────────────────────────────────────
+   One element in two states. ⚠️ It is FIXED and it never covers the page: the version this
+   replaced was a full-screen overlay with a backdrop blur, which is fine for something you
+   deliberately tapped and completely wrong for something that opens itself as you scroll. */
+.cash-dock {
   position: fixed;
-  inset: 0;
-  /* Above the nav (20) and About (50); below the custom cursor (100). */
-  z-index: 70;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8vh 6vw;
-  background: color-mix(in srgb, #E8EDF2 88%, transparent);
-  backdrop-filter: blur(3px);
-  cursor: none;
-}
-.cash-panel {
-  position: relative;
-  width: min(30rem, 100%);
-  text-align: center;
+  left: 50%;
+  bottom: 1.75rem;
+  /* ⚠️ Above `.popup-stack` (15), below the nav (20). */
+  z-index: 16;
+  width: min(24rem, 88vw);
+  box-sizing: border-box;
+  background: #F6F3EC;
   color: #2E4A52;
+  border-radius: 0.95rem;
+  box-shadow: 0 16px 38px rgba(24, 34, 40, 0.18);
+  overflow: hidden;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(1.2rem);
+  transition:
+    width 0.78s cubic-bezier(0.2, 0.72, 0.24, 1),
+    border-radius 0.6s cubic-bezier(0.2, 0.72, 0.24, 1),
+    box-shadow 0.6s ease,
+    opacity 0.5s ease,
+    transform 0.6s cubic-bezier(0.2, 0.72, 0.24, 1);
 }
-.cash-x {
-  position: absolute;
-  top: -2.4rem;
-  inset-inline-end: 0;
-  width: 1.5rem;
-  height: 1.5rem;
+.cash-dock.live {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+.cash-dock.open {
+  width: min(46rem, 94vw);
+  border-radius: 1.25rem;
+  box-shadow: 0 22px 60px rgba(24, 34, 40, 0.24);
+}
+
+.dock-hit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  width: 100%;
   appearance: none;
   -webkit-appearance: none;
   border: 0;
   background: none;
-  padding: 0.25rem;
-  color: #2E4A52;
-  opacity: 0.5;
-  cursor: none;
-  transition: opacity 0.25s ease;
+  color: inherit;
+  padding: 1rem 1.4rem;
+  cursor: pointer;
+  transition: padding 0.7s cubic-bezier(0.2, 0.72, 0.24, 1);
 }
-.cash-x:hover, .cash-x:focus-visible { outline: none; opacity: 1; }
-.cash-x svg { width: 100%; height: 100%; display: block; }
-.panel-enter-active, .panel-leave-active { transition: opacity 0.3s ease; }
-.panel-enter-from, .panel-leave-to { opacity: 0; }
-
-/* ⚠️ These three had NO rules at all — the panel's own words rendered in the
-   browser default, on a chapter that is otherwise ink on paper. */
-.cash-heading {
+.cash-dock.open .dock-hit { padding: 2rem 2rem 0.6rem; }
+.dock-hit:focus-visible { outline: 1px solid currentColor; outline-offset: -4px; }
+.dock-eyebrow {
   font-family: 'Over the Rainbow', cursive;
-  font-size: clamp(2.1rem, 6vw, 3.2rem);
+  font-size: clamp(1.25rem, 2.4vw, 1.7rem);
   line-height: 1.1;
-  margin: 0 0 1.2rem;
-  font-weight: 400;
+  transition: font-size 0.7s cubic-bezier(0.2, 0.72, 0.24, 1);
 }
-.cash-body {
+.cash-dock.open .dock-eyebrow { font-size: clamp(2rem, 5vw, 3rem); }
+/* The one-line summary is the card's whole content while it is a card, and has nothing to say
+   once the panel below it is open — so it folds away rather than sitting above a repeat of itself. */
+.dock-note {
+  font-family: 'Bague', sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  opacity: 0.55;
+  max-height: 2rem;
+  transition: opacity 0.32s ease, max-height 0.6s cubic-bezier(0.2, 0.72, 0.24, 1);
+}
+.cash-dock.open .dock-note { opacity: 0; max-height: 0; }
+
+/* ⚠️ `grid-template-rows: 0fr → 1fr` — see the template. The panel's height is content-driven,
+   `height: auto` cannot be transitioned, and measuring it in JS every frame on this page in
+   particular is exactly the cost that made it the site's heaviest (AUDIT #58). */
+.dock-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.78s cubic-bezier(0.2, 0.72, 0.24, 1);
+}
+.cash-dock.open .dock-body { grid-template-rows: 1fr; }
+.dock-inner {
+  overflow: hidden;
+  min-height: 0;
+  padding: 0 1.6rem;
+}
+.dock-text {
   font-family: 'Italiana', serif;
   font-size: clamp(1.05rem, 2.2vw, 1.35rem);
   line-height: 1.6;
-  margin: 0 auto 2.4rem;
+  margin: 0.6rem auto 1.8rem;
   max-width: 26rem;
-  opacity: 0.85;
+  opacity: 0;
+  transition: opacity 0.4s ease 0.18s;
 }
-.cash-cta {
+.cash-dock.open .dock-text { opacity: 0.85; }
+.dock-cta {
   display: inline-block;
+  margin-bottom: 2rem;
   font-family: 'Bague', sans-serif;
   font-size: 0.78rem;
   letter-spacing: 0.22em;
@@ -706,12 +777,17 @@ onBeforeUnmount(() => {
   color: inherit;
   padding-bottom: 0.35rem;
   border-bottom: 1px solid currentColor;
-  opacity: 0.75;
-  cursor: none;
-  transition: opacity 0.25s ease;
+  opacity: 0;
+  transition: opacity 0.4s ease 0.26s;
 }
-.cash-cta:hover, .cash-cta:focus-visible { outline: none; opacity: 1; }
-.cash-cta.is-pending { border-bottom-style: dashed; opacity: 0.5; cursor: default; }
+.cash-dock.open .dock-cta { opacity: 0.78; }
+.dock-cta:hover, .dock-cta:focus-visible { outline: none; opacity: 1; }
+.dock-cta.is-pending { border-bottom-style: dashed; cursor: default; }
+.cash-dock.open .dock-cta.is-pending { opacity: 0.5; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cash-dock, .cash-dock *, .dock-body { transition-duration: 0.01ms !important; }
+}
 
 /* ── signing ── */
 .sign-scene { min-height: 96dvh; }
