@@ -19,7 +19,7 @@ opens into its own bespoke scroll page.
 > into Covenant &amp; Uvie's wedding site**: the four cards became the journey **US → THE BIG DAY →
 > IN FRAMES → WITH LOVE**, each with its own bespoke inner page. Full credit to the original
 > creators for the interaction design. The **card films are now the couple's own** (2026-08-10);
-> the remaining Milla Nova media in `public/` (gallery stills, the ambient audio, the favicon) are
+> the remaining Milla Nova media in `public/` (gallery stills, the favicon) are
 > **aspect-correct placeholders** awaiting their own, and are **not** for redistribution.
 >
 > ⚠️ **ALL copy, dates, venues, and the registry are PLACEHOLDERS** pending the couple's real
@@ -106,7 +106,7 @@ is that no two pages share a language. Breaking it is what made With Love fail i
 - ✅ **Asset URLs are base-path correct on both hosts** — everything goes through
   [`utils/asset.js`](utils/asset.js). ⚠️ `import.meta.env.BASE_URL` **cannot** be used for this in
   Nuxt; it silently broke every image on the GitHub Pages deploy. See ARCHITECTURE → Base URL.
-- 🔧 **Open** — the rest of the real content/media (copy, gallery stills, ambient audio, the
+- 🔧 **Open** — the rest of the real content/media (copy, gallery stills, the
   registry list + its item art); **eight dead links to fill — RSVP (the primary CTA, on every page),
   the With Love cash card, the In Frames Drive folder, all three maps (now inline links inside the
   calendar's day card), Add to Calendar (one `.ics` carrying both wedding days), and the footer

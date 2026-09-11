@@ -119,9 +119,12 @@ function onLoaded() { loaded.value = true }
 function onProgress(pct) { if (pct > loadProgress.value) loadProgress.value = pct }
 
 // ── Audio (lazily initialized on first user interaction) ─────────────────────
+// ⚠️ ONE TRACK, NOT ONE PER CHAPTER. It used to build four Howls and cross-fade their volumes on
+// hover and on every route change; the music is the SITE'S now, so it simply plays while sound is
+// on and the chapter you are reading makes no difference to it. (`tickSound` went with that: it was
+// constructed and unloaded and never once played.)
 let howlerModule = null
-let sounds = []
-let tickSound = null
+let theme = null
 let audioInitialized = false
 
 async function initAudio() {
@@ -130,8 +133,9 @@ async function initAudio() {
   try {
     const { Howl, Howler } = await import('howler')
     howlerModule = Howler
-    tickSound = new Howl({ src: [asset('/audio/tick.mp3')], volume: 0.4 })
-    sounds = CHAPTERS.map((ch) => new Howl({ src: [ch.audio], loop: true, volume: 0, html5: true }))
+    theme = new Howl({ src: [asset(SITE.themeAudio)], loop: true, volume: 0.5, html5: true })
+    Howler.mute(!soundOn.value)
+    theme.play()
   } catch (e) {
     console.warn('Audio init failed:', e)
   }
@@ -158,34 +162,23 @@ function onChapterSelect(idx) {
 // The nav logo / back button was used → go home.
 function goHome() { if (route.params.slug) router.push('/') }
 
-function onChapterHover(idx) {
+function onChapterHover() {
   cursorRef.value?.activate()
-  if (soundOn.value && sounds.length) {
-    sounds.forEach((s, i) => {
-      if (i === idx) { s.volume(0.12); if (!s.playing()) s.play() }
-      else s.volume(0)
-    })
-  }
 }
 function onChapterUnhover() {
   cursorRef.value?.deactivate()
-  if (sounds.length) sounds.forEach((s) => s.volume(0))
 }
 
 function toggleAbout() { aboutOpen.value = !aboutOpen.value }
-function toggleSound() {
+async function toggleSound() {
   soundOn.value = !soundOn.value
-  if (howlerModule) howlerModule.mute(!soundOn.value)
+  // ⚠️ `await initAudio()` first. The toggle IS the first interaction on plenty of visits, and the
+  // window-level `once` listener that normally builds the audio may not have run yet — without this
+  // the first tap on the speaker did nothing at all.
+  await initAudio()
+  howlerModule?.mute(!soundOn.value)
+  if (soundOn.value && theme && !theme.playing()) theme.play()
 }
-
-// React to chapter changes for ambient audio — driven by the route.
-watch(selectedChapterIdx, (idx) => {
-  if (!sounds.length) return
-  sounds.forEach((s, i) => {
-    if (idx !== null && i === idx && soundOn.value) { s.volume(0.5); if (!s.playing()) s.play() }
-    else s.volume(0)
-  })
-})
 
 // Drive the scene to match the URL. Handles browser back/forward and deep links;
 // for an in-app card click the scene is already animating (guarded by getState).
@@ -263,8 +256,7 @@ onMounted(() => {
 onUnmounted(() => {
   clearInterval(confirmTimer)
   if (resyncTimer) clearTimeout(resyncTimer)
-  sounds.forEach((s) => s.unload())
-  tickSound?.unload()
+  theme?.unload()
 })
 </script>
 

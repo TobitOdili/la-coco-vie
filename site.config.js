@@ -41,6 +41,15 @@ export const SITE = {
   // the day the save-the-dates went out — and the dial re-scales on its own.
   countdownFrom: '2026-09-07T00:00:00+01:00',
 
+  // ⚠️ ONE AMBIENT TRACK FOR THE WHOLE SITE (user, 2026-09-11: "use the same music for all the
+  // pages"). It replaces four per-chapter tracks that were the REFERENCE SITE'S, renamed and never
+  // licensed — a liability flagged here since 2026-09-04 and now gone.
+  // ⚠️ This file is GENERATED (`node scripts/gen-theme-audio.mjs`), so it is royalty-free by
+  // construction rather than by someone's claim. It has never been listened to by its author —
+  // audition it, and if it is not right, drop a licensed file in at this path and change nothing
+  // else. Sound is OFF by default.
+  themeAudio: '/audio/theme.m4a',
+
   // ⚠️ REMOVED from the nav on 2026-09-03 at the user's request — the homepage
   // wordmark now runs straight into the date and countdown. The string is kept
   // because `chapterPages`/docs still describe the site this way; nothing renders it.

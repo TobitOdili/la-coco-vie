@@ -33,10 +33,16 @@
 > ~1.4× the height of the old sans at the same measure, and every word costs scroll travel. `date`
 > is lower-case for the same reason — an upper-case, letter-spaced label has nothing to offer a
 > script hand. Whoever writes the couple's real words should stay inside that shape.
-> **Still Milla Nova PLACEHOLDERS, to swap for the couple's own:** the gallery **stills**, the
-> **favicon**, and the 4 ambient **audio** tracks (`public/audio/*.mp3` — Howler.js loops, one per
-> chapter, matching the reference; keep the wiring, replace the files + rename off the old slugs,
-> update `CHAPTERS[i].audio`).
+> **✅ THE AUDIO IS NO LONGER THE REFERENCE SITE'S (2026-09-11).** The four renamed tracks are
+> DELETED, along with the never-played `tick.mp3`. The site now plays **one** ambient loop,
+> `public/audio/theme.m4a`, set by `SITE.themeAudio` — user, "use the same music for all the pages".
+> ⚠️ It is **generated** by `node scripts/gen-theme-audio.mjs` (D major, ~66bpm, a music-box
+> arpeggio over a warm pad, 29s, 344 KB), so it is royalty-free by construction rather than by
+> someone's claim — but **nobody has heard it**: it was synthesised, measured and shipped without
+> ever being played back by its author. Audition it. If it is not right, drop a licensed file in at
+> that path and change nothing else. Sound is OFF by default.
+> **Still Milla Nova PLACEHOLDERS, to swap for the couple's own:** the gallery **stills** and the
+> **favicon**.
 > **📁 `new frames/` at the repo root is the media drop folder** — the couple's raw photos/films
 > land there (tracked in git); processed copies go into `public/`.
 > Descriptions below of the old dress/gallery model are historical.
@@ -61,7 +67,7 @@ Everything chapter-specific is driven by a single array, `CHAPTERS`, exported fr
 
 ```js
 export const CHAPTERS = [
-  { slug, title, accent, accentLight, accentLighter, audio, video, still, txt, svg, index },
+  { slug, title, accent, accentLight, accentLighter, video, still, txt, svg, index },
   …4 entries…
 ]
 ```
@@ -73,7 +79,6 @@ export const CHAPTERS = [
 | `accent` | hex | primary chapter color (logo tint, nav, shader `borderColor`) |
 | `accentLight` | hex | About panel background |
 | `accentLighter` | hex | (defined; available for tints) |
-| `audio` | url | Howler ambient loop (hover/select) |
 | `video` | url | `VideoTexture` film shown inside the poster on hover/select |
 | `still` | url | frame 0.04 of `video` — **what the poster's window shows before that film has played**. Without it the window is blank on arrival, and on touch (no hover) until a chapter is opened. `npm run gen:stills`. ⚠️ Loaded with `NoColorSpace` to match the film's texture — see AUDIT #51 before changing that |
 | `txt` | url | the floating center-text plane (`cu-txtN.png`) for this chapter |
@@ -84,19 +89,19 @@ export const CHAPTERS = [
 
 ### The four chapters (current)
 
-| idx | slug | title | accent | svg | txt | video | audio |
-|---|---|---|---|---|---|---|---|
-| 0 | `the-big-day` | The Big Day | `#41492D` | cu-p2.png | cu-txt2.png | the-big-day.mp4 | the-big-day.mp3 ⚠️ |
-| 1 | `us` | **Coco & Uvie** | `#42221A` | cu-p1.png | cu-txt1.png | us.mp4 | us.mp3 ⚠️ |
-| 2 | `in-frames` | In Frames | `#453350` | cu-p3.png | cu-txt3.png | in-frames.mp4 | in-frames.mp3 ⚠️ |
-| 3 | `with-love` | **For Our Next Chapter** | `#2E4A52` | cu-p4.png | cu-txt4.png | with-love.mp4 | with-love.mp3 ⚠️ |
+| idx | slug | title | accent | svg | txt | video |
+|---|---|---|---|---|---|---|
+| 0 | `the-big-day` | The Big Day | `#41492D` | cu-p2.png | cu-txt2.png | the-big-day.mp4 |
+| 1 | `us` | **Coco & Uvie** | `#42221A` | cu-p1.png | cu-txt1.png | us.mp4 |
+| 2 | `in-frames` | In Frames | `#453350` | cu-p3.png | cu-txt3.png | in-frames.mp4 |
+| 3 | `with-love` | **For Our Next Chapter** | `#2E4A52` | cu-p4.png | cu-txt4.png | with-love.mp4 |
 
-⚠️⚠️ **THE AUDIO IS STILL THE REFERENCE SITE'S — it was RENAMED, never replaced.** These files
-used to be `eat-merry-love.mp3`, `la-storia.mp3`, `wine-time.mp3` and `amour-getway.mp3`; on
-2026-09-04 only the PATHS changed, to the couple's chapter slugs. All four still carry a **May-24
-mtime**, from the replica era. ⚠️ The 2026-09-05 "the old site is gone" verification checked strings
-and images and **did not look at the audio files** — a rename is exactly what defeats a filename
-audit. Four tracks are still needed (or drop the sound feature).
+✅ **THE AUDIO IS NO LONGER THE REFERENCE SITE'S (2026-09-11).** The four files here used to be
+`eat-merry-love.mp3`, `la-storia.mp3`, `wine-time.mp3` and `amour-getway.mp3`; on 2026-09-04 only
+the PATHS changed, to the couple's chapter slugs, and all four still carried a May-24 mtime from the
+replica era. ⚠️ **A rename defeats a filename audit** — that is why the 2026-09-05 "the old site is
+gone" sweep, which checked strings and images, passed them. They are deleted. One generated loop
+(`SITE.themeAudio`) plays sitewide instead; see the banner at the top of this file. AUDIT #60.
 
 ⚠️ `idx` is the RING position and it is not the texture number — see ARCHITECTURE.md. The reorder on
 2026-09-06 (The Big Day first, Coco & Uvie second) means `cu-p1` is now the SECOND card.
