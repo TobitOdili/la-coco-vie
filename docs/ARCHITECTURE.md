@@ -847,6 +847,18 @@ gate on the homepage read that field — so coming back from a chapter froze the
 half seconds. Gate input on *both* "is something open" and "is it on its way out", and let the
 interrupt path that already exists actually be reachable. AUDIT #53.
 
+⚠️ **BOTH EDGES OF A CHAPTER LEAD HOME, AND NEITHER USED TO SAY SO.** The top takes a sustained
+pull (800px of wheel, 180px of finger) and the bottom commits at the end of the outro; `pullTop` and
+`pullBottom` (in `pages/[slug].vue`) now fill a hairline as either is approached, so the exit is
+something a visitor can see coming and stop. They are driven from the same accumulators the exits
+use, so they cannot disagree with the thing they describe. ⚠️ `--p` is 0 almost always and the rails
+are transparent and inert at 0 — which is why they need no `v-if`. ⚠️ **A value driven by a
+`touchmove` handler needs a `touchend` handler**: the else-branch reset only runs while a finger is
+still moving, so a pull that stops short froze the rail lit for the rest of the visit (AUDIT #62).
+⚠️ **The cues sit over the hero**, which is a photograph or a film, so the chapter's own ink is the
+right colour for the page and unreadable on the picture — they carry a halo in `--accentLight`
+rather than a box, which this design language does not have.
+
 ⚠️ **A DRAG IS NOT A SCROLL, AND A SCROLL SMOOTHER IS NOT A DRAG SMOOTHER.** The phone carousel was
 built by mirroring the wheel handler — same `deltaY - deltaX` mapping, same `onScroll`, same 0.06
 render lerp — and got both halves wrong. A wheel is an *indirect* input where sign is a convention;

@@ -39,6 +39,28 @@
       <section ref="outroEl" class="chapter-outro" aria-hidden="true" />
     </div>
 
+    <!-- ── The scroll cue. A hairline with a rising dot: the gesture that moves this page is a
+         swipe UP, and the dot goes the way the content does. It retires for good on the first
+         real scroll — a prompt that is still there after you have obeyed it is noise. ── -->
+    <div class="scroll-cue" :class="{ gone: cueSeen }" aria-hidden="true">
+      <span class="cue-rail"><i class="cue-dot" /></span>
+      <span class="cue-label">scroll</span>
+    </div>
+
+    <!-- ── "you are about to go back". Both edges of a chapter lead home, and until now neither
+         said so: the top takes a sustained pull (800px of wheel, 180px of finger) and the bottom
+         commits at the end of the outro. These fill as you approach, so the exit is something you
+         can see coming and stop. `--p` is 0 the rest of the time, which is why they need no
+         `v-if` — at 0 they are invisible and inert. ── -->
+    <div class="home-cue home-cue--top" :style="{ '--p': pullTop }" aria-hidden="true">
+      <span class="home-rail"><i class="home-fill" /></span>
+      <span class="home-label">back to the chapters</span>
+    </div>
+    <div class="home-cue home-cue--bottom" :style="{ '--p': pullBottom }" aria-hidden="true">
+      <span class="home-rail"><i class="home-fill" /></span>
+      <span class="home-label">back to the chapters</span>
+    </div>
+
     <!-- Floating popup cards — pinned to the viewport bottom-center; content is the in-view
          section's popups (moments / map + calendar / registry), gone at the chapter end. -->
     <transition name="popups">
@@ -81,6 +103,11 @@ const activePopups = computed(() => {
 // the hero-card coupling (P1). It's the same scene instance across all routes.
 const webglSceneRef = inject('webglSceneRef', null)
 
+// The cue retires on the first real scroll; the two pulls are 0→1 toward the homepage.
+const cueSeen = ref(false)
+const pullTop = ref(0)
+const pullBottom = ref(0)
+
 const pageEl = ref(null)
 const scrollEl = ref(null)
 const outroEl = ref(null)
@@ -115,13 +142,15 @@ function onWheel(e) {
   // against a pixel threshold made exits near-unreachable there. ~40px/line ≈ Chrome's ~120px notch.
   const dy = e.deltaY * (e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? window.innerHeight : 1)
   const now = performance.now()
-  if (now - lastWheelT > 400) topAccum = 0   // a pause = a new gesture
+  if (now - lastWheelT > 400) { topAccum = 0; pullTop.value = 0 }   // a pause = a new gesture
   lastWheelT = now
   if (lenis.scroll <= 2 && dy < 0) {          // top edge, pushing up → reverse rewind home
     topAccum += -dy
+    pullTop.value = Math.min(1, topAccum / EXIT_THRESHOLD)
     if (topAccum >= EXIT_THRESHOLD) doExit()
   } else {
     topAccum = 0
+    pullTop.value = 0
   }
 }
 
@@ -145,10 +174,20 @@ function onTouchMove(e) {
   touchLastY = t.clientY
   if (lenis.scroll <= 2 && dy < 0) {
     topAccum += -dy
+    pullTop.value = Math.min(1, topAccum / EXIT_THRESHOLD_TOUCH)
     if (topAccum >= EXIT_THRESHOLD_TOUCH) doExit()
   } else {
     topAccum = 0
+    pullTop.value = 0
   }
+}
+
+// ⚠️ The pull has to RELEASE. Without this the rail stayed lit at whatever the finger reached and
+// sat there for the rest of the visit — `onTouchMove`'s own reset only runs while a finger is still
+// moving, and a pull that stops short simply stops producing events.
+function onTouchEnd() {
+  topAccum = 0
+  pullTop.value = 0
 }
 
 // TOP edge / back button → navigate home; app.vue's route watcher runs deselectChapter() (reverse).
@@ -215,6 +254,7 @@ function updateExit(scrollY) {
   // The exit background is the chapter accent, so the nav must go light over it.
   if (de <= 0) {
     if (exitEngaged) { scene.cancelExit?.(); exitEngaged = false }  // scrolled back up into the article
+    pullBottom.value = 0
     return
   }
   if (!exitEngaged) {
@@ -222,6 +262,9 @@ function updateExit(scrollY) {
     exitEngaged = true
   }
   scene.setExitProgress(de)
+  // ⚠️ Only over the LAST stretch. `de` starts climbing the moment the article begins scrolling
+  // out, and a "you are leaving" line that appears a whole screen early is just a label.
+  pullBottom.value = Math.max(0, Math.min(1, (de - 0.62) / 0.34))
   if (de >= 0.999) commitExit()
 }
 
@@ -261,7 +304,12 @@ onMounted(() => {
     content: scrollEl.value,
     autoRaf: true,
   })
-  lenis.on('scroll', (e) => { scene?.setScroll(e.scroll); syncNavInk(); updateExit(e.scroll); syncCanvasCover(e.scroll) })
+  lenis.on('scroll', (e) => {
+    scene?.setScroll(e.scroll); syncNavInk(); updateExit(e.scroll); syncCanvasCover(e.scroll)
+    if (!cueSeen.value && e.scroll > 40) cueSeen.value = true
+    // Left the top edge — whatever the pull had reached is no longer true.
+    if (e.scroll > 2 && pullTop.value) pullTop.value = 0
+  })
   // ⚠️ Also on arrival: a chapter selected at scroll 0 already has the accent
   // painted behind the transparent hero, so the nav can be invisible before the
   // visitor has scrolled at all. And `updateExit` early-returns in several states,
@@ -301,6 +349,8 @@ onMounted(() => {
   pageEl.value?.addEventListener('wheel', onWheel, { passive: true })
   pageEl.value?.addEventListener('touchstart', onTouchStart, { passive: true })
   pageEl.value?.addEventListener('touchmove', onTouchMove, { passive: true })
+  pageEl.value?.addEventListener('touchend', onTouchEnd, { passive: true })
+  pageEl.value?.addEventListener('touchcancel', onTouchEnd, { passive: true })
 
   // Track the active section for the floating popup cards (the most in-view section wins).
   if (pageContent.value && pageEl.value) {
@@ -328,6 +378,8 @@ onBeforeUnmount(() => {
   pageEl.value?.removeEventListener('wheel', onWheel)
   pageEl.value?.removeEventListener('touchstart', onTouchStart)
   pageEl.value?.removeEventListener('touchmove', onTouchMove)
+  pageEl.value?.removeEventListener('touchend', onTouchEnd)
+  pageEl.value?.removeEventListener('touchcancel', onTouchEnd)
   sectionObserver?.disconnect()
   if (readyPoll) clearTimeout(readyPoll)
   // Leaving mid-exit (e.g. the back button while in the outro) → finalize to a clean homepage ring.
@@ -383,6 +435,100 @@ onBeforeUnmount(() => {
 /* Content scrolls up over the (fixed) WebGL hero on the chapter's light accent. */
 .chapter-content {
   background: var(--accentLight, #F2EEE8);
+}
+
+/* ── the scroll cue ──────────────────────────────────────────────────────────
+   Hairline + a rising dot, in the chapter's own ink. The gesture that moves this page is a
+   swipe UP, and the dot travels the way the content does. ⚠️ Below `.popup-stack` (15) and
+   clear of it: both live at the bottom centre. */
+.scroll-cue {
+  position: fixed;
+  left: 50%;
+  bottom: 1.3rem;
+  transform: translateX(-50%);
+  z-index: 14;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--accent, #333);
+  pointer-events: none;
+  opacity: 0.7;
+  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2, 0.72, 0.24, 1);
+}
+.scroll-cue.gone { opacity: 0; transform: translateX(-50%) translateY(0.7rem); }
+.cue-rail { position: relative; width: 1px; height: 2.6rem; background: currentColor; opacity: 0.22; }
+.cue-dot {
+  position: absolute;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: cue-rise 2.2s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+}
+@keyframes cue-rise {
+  0%   { top: 100%; opacity: 0; }
+  16%  { opacity: 1; }
+  78%  { opacity: 1; }
+  100% { top: -3px; opacity: 0; }
+}
+.cue-label {
+  font-family: 'Bague', sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+/* ⚠️ BOTH CUES SIT OVER THE HERO, which is a photograph or a film — the chapter's ink on the
+   chapter's paper is the right colour for the page and unreadable on top of a picture. A halo in
+   the page's own light accent holds the type against anything without introducing a box, which
+   this chapter's whole language is against. */
+.cue-label, .home-label {
+  text-shadow:
+    0 0 7px var(--accentLight, #F6F3EC),
+    0 0 3px var(--accentLight, #F6F3EC),
+    0 0 1px var(--accentLight, #F6F3EC);
+}
+.cue-rail, .home-rail { box-shadow: 0 0 6px var(--accentLight, #F6F3EC); }
+
+/* ── "you are about to go back" ───────────────────────────────────────────────
+   One rail per edge, filling as the exit is approached. ⚠️ `--p` is 0 almost always, and at 0
+   these are transparent and `pointer-events: none` — which is why they need no `v-if`. */
+.home-cue {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 14;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--accent, #333);
+  pointer-events: none;
+  opacity: calc(var(--p, 0) * 1.2);
+}
+.home-cue--top { top: 6.4rem; flex-direction: column; }
+.home-cue--bottom { bottom: 1.3rem; flex-direction: column-reverse; }
+.home-rail { position: relative; width: 6rem; height: 1px; background: currentColor; opacity: 0.2; }
+.home-fill {
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  transform: scaleX(var(--p, 0));
+  transform-origin: left center;
+}
+.home-label {
+  font-family: 'Bague', sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  opacity: 0.8;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cue-dot { animation: none; top: 40%; }
 }
 
 /* Floating popup cards — pinned to the VIEWPORT bottom-centre over the content.
