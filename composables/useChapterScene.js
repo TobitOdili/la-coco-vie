@@ -381,36 +381,72 @@ export function useChapterScene() {
   let selectedHero = null   // the single poster scaled up as the full-screen hero (P1)
   let scrollOffsetPx = 0    // inner-page scroll position in px (from Lenis) — drives the hero up/away
   let exitStart = null      // captured transforms at the start of a forward scroll-exit (step E)
-  // NEGATIVE = the same direction a homepage down-scroll turns the ring (onScroll does scrollRotationY -=
-  // delta*0.0008), so the exit flows into the homepage idle with NO spin reversal.
-  // ⚠️ ONE SLOT (cards sit 45° apart), not the -300° it used to be. The empty slot is the SELECTED
-  // chapter's, which starts front-and-centre — a three-quarter turn carried it round to the BACK of the
-  // ring, exactly where the depth falloff dims a card to 0.2 and the tilt pushes it off the top of the
-  // frame. The one moment the whole exit is built around was landing where it could not be seen.
-  // A single slot keeps it in the front arc and still turns the ring the way the homepage turns it.
-  const EXIT_SPIN = toRad(-45)
+  // ── The turn ────────────────────────────────────────────────────────────────
+  // ⚠️ IT SWINGS OUT AND BACK; THE NET TURN IS ZERO. That is not indecision — it is the only shape
+  // that gives both things the exit needs at once.
+  //   The empty slot is the SELECTED chapter's, and the select leaves it FRONT AND CENTRE. So every
+  // degree the ring nets moves the one moment this whole sequence is built around away from the
+  // middle of the screen. A three-quarter turn put it at the BACK of the ring, where the depth
+  // falloff dims a card to 0.2 — that was the −300° version. One slot (−45°) kept it in the front
+  // arc, which is fine on a desktop and USELESS ON A PHONE: measured at 390×844, the front card
+  // alone spans 90% of the frame, only about ±15° of the ring is on screen at all, and the card you
+  // had been reading came down somewhere off the side where you never saw it land.
+  //   So the deck turns OUT behind the article and turns BACK as it opens, arriving with the gap
+  // dead centre on any screen. `EXIT_TURN` is the part that is meant to be WATCHED and the swing is
+  // derived from it, so the same amount is seen whatever the net has to be. The return leg is the
+  // long, visible one, it runs in the same direction a homepage down-scroll turns the ring, and it
+  // decelerates into the catch.
+  //   ⚠️ AND THE NET IS NOT ZERO — IT IS `−homeTilt().y`. A select does not only centre the hero, it
+  // FLATTENS `groupG`, yaw included; restoring that yaw at the end of the exit turns the whole ring
+  // with it. So the carousel has to give back exactly what the group takes or the gap lands 70° off
+  // the front, which is where it had been all along: measured on With Love at 1440×900, the card came
+  // to rest at world x 38 with `normalDotCam` 0.07 — edge-on, in the wings. Mobile's `homeTilt.y` is
+  // 0, so there the net is 0, and the same expression covers both.
+  const EXIT_TURN = toRad(62) // how much turn is meant to be WATCHED; the swing is derived from it
+  const SPIN_HEAD_END = 0.08  // the swing OUT — behind the article, where the strip is 18% of the screen
+  const SPIN_FROM = 0.20      // …and the turn back starts here, so the bulk of it happens in view
+  const SPIN_TO = 0.90        // …still turning a little as the deck takes the card
   const DROP_START = 0.45    // de at which the page is fully out → the unfurl + the second wine's drop begin
   const exitBg = new THREE.Color('#ffffff')  // scene background during the exit (set to the chapter accent)
   let exitBgAlpha = 0        // 0 = transparent (homepage) … 1 = opaque accent (selected/exit)
   // How much of the dropping card is showing, 0→1 across the start of the drop. Read by animate(),
   // which MULTIPLIES it into the same depth falloff every other card gets — see the note there.
   let heroReveal = 0
-  // Bottom-exit timing (de = exit progress 0→1, driven by the page's OUTRO-section scroll). Phase A gathers
-  // the deck into a tight low cluster behind the still-scrolling-out article; phase B unfurls it into the
-  // homepage ring while the SECOND wine copy drops in from the top.
-  //  • HERO_FIT_END — the second wine copy un-frames + shrinks to ring size by this de (EARLY, while still
-  //    off-top + hidden) so its phase-B descent reads as a clean ring card, not a full-bleed morph.
+  // ── Bottom-exit timing ─────────────────────────────────────────────────────
+  // `de` = exit progress 0→1, driven by the page's OUTRO-section scroll. Phase A [0..DROP_START]
+  // is the article scrolling out, uncovering the scene from the bottom; phase B [DROP_START..1] is
+  // the open deck receiving the card you were reading.
+  //  • HERO_FIT_END — the second wine copy un-frames + shrinks to ring size by this de (EARLY, while
+  //    still off-top + hidden) so its phase-B descent reads as a clean ring card, not a full-bleed morph.
   const HERO_FIT_END = 0.25
-  // ⚠️ THE DECK IS NEVER SEEN ASSEMBLING. `.chapter-outro` is transparent, so the scene is on camera
-  // from the first pixel of scroll past the article's bottom edge — there is no "behind the page".
-  // So the deck goes from its selected pose to the FINISHED HOMEPAGE POSE inside this much `de`,
-  // which is over before the reveal is tall enough to contain any of the ring. What the visitor sees
-  // is the article sliding off an already-correct ring: right radius, right tilt, right height. The
-  // only thing left to happen is the one missing card dropping into its slot.
-  //   ⚠️ Two earlier cuts staged an ARRIVAL here instead — a tight low "bowl" cluster (radius 18,
-  //   58° look-down) that unfurled and rose. It read as a jumble of overlapping cards and, worse, it
-  //   finished arriving before the article had left, so the drop played twice. See AUDIT #47/#48.
-  const SETTLE_END = 0.03
+  // ⚠️ THE DECK IS ON CAMERA FROM THE FIRST PIXEL. `.chapter-outro` is transparent, so there is no
+  // "behind the page" to assemble in: at `de` the article has uncovered `de / DROP_START` of the
+  // screen from the bottom up. Anything that must not be seen happening has to be finished inside
+  // the first tenth or so of the exit, and anything meant to be WATCHED has to still be going after
+  // it. That is the whole shape of the numbers below.
+  //   ⚠️ An earlier cut answered this by finishing EVERYTHING in 3% of `de` — a deck already in its
+  //   final pose, motionless, with one card falling into it. That fixed the packing (AUDIT #47/#48:
+  //   a radius-18 "bowl" cluster, eight 24-wide cards on a ring whose adjacent slots were 13.8
+  //   apart) by removing the arrival altogether, which is not what was wrong with it.
+  const POSE_HEAD = 0.66     // how far the deck has opened before it can be seen…
+  const POSE_HEAD_END = 0.16 // …and the de by which it has got there (strip = 36% of the screen)
+  const POSE_END = 0.80      // the fan is open — and the card lands — here
+  const OTHERS_IN = 0.14     // the deck is WHOLE this early: cards rise into their slots unseen
+  const DROP_END_B = 0.64    // bLin at which the hero has landed (= de POSE_END)
+  // The catch. ⚠️ IT STARTS BEFORE THE LANDING, and that is what stops it reading as a kink: the
+  // card's descent eases OUT, so it arrives with no speed of its own, and a deck that only began to
+  // give on the frame it seated would be a second motion starting from a standstill. Opening the
+  // window early instead puts the ring at the bottom of its dip just as the card comes in — the deck
+  // sinks under it and the two come back up together.
+  const CATCH_FROM = 0.73
+  const CATCH_END = 0.96     // …and the give is spent by here, comfortably before the commit
+  const CATCH_RING = -3.8    // ×0.57 at the peak ⇒ the ring dips ~2.2 units, about 40px at the front
+  const CATCH_CARD = -2.2    // …and each other card, as the give travels round the ring
+  const CATCH_HERO = -1.4    // …and the card itself, pressing into its slot a beat later
+  const CATCH_HERO_LAG = 0.06
+  const CATCH_LAG = 0.30     // how much of the settle the wave takes to reach the far side
+  // Handed to the homepage as a bit of leftover momentum — see endExit(settle).
+  const EXIT_FOLLOW = toRad(-7)
   let preSelectRot = 0  // carousel.animatedRotationY before a select — restored on deselect (reverse spin)
   let deselectTl = null // live deselect timeline — killed if a new select starts mid-deselect
   let selectTl = null   // live select timeline — killed by deselect/re-select so its stale
@@ -1606,8 +1642,8 @@ export function useChapterScene() {
       tl.to(p.material.uniforms.blendFactor, { value: 0, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
       tl.to(p.material.uniforms.progress, { value: 0, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
       tl.to(p.mesh.scale, { x: 1, y: 1, z: 1, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
-      // Restore x/z too (the bottom exit moves cards onto the cluster radius); a deselect reached after a
-      // canceled exit would otherwise animate the ring home with cards still collapsed inward.
+      // x/z as well as y — cheap, and it means a deselect reached from any half-finished exit
+      // state animates the ring home from wherever the cards actually are.
       tl.to(p.mesh.position, { x: p.baseX, y: p.baseY, z: p.baseZ, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
     })
 
@@ -1664,8 +1700,12 @@ export function useChapterScene() {
       txtOpacity: groupG.userData.txtMat ? groupG.userData.txtMat.opacity : 1,
       others: posters.filter((p) => p !== hero).map((p) => {
         gsap.killTweensOf(p.mesh.position)   // select's drop tweens must not fight the lerp
+        // How far round the ring this card sits from the slot the hero will drop into, 0 (next
+        // door) → 1 (dead opposite). The catch travels outward along it, so the deck gives as a
+        // wave rather than as one block.
+        const d = (((p.intRotationY - hero.intRotationY) % 360) + 540) % 360 - 180
         return {
-          p, y: p.mesh.position.y,
+          p, y: p.mesh.position.y, phi: Math.abs(d) / 180,
           same: p.chapterIdx === hero.chapterIdx,   // the chapter's OTHER copy — hide it too (no wine duplicate)
           op: p.material.uniforms.uOpacity ? p.material.uniforms.uOpacity.value : 1,
         }
@@ -1681,61 +1721,89 @@ export function useChapterScene() {
   function setExitProgress(de) {
     if (!exitStart || !selectedHero) return
     const t = Math.min(1, Math.max(0, de))
+    const c01 = (k) => Math.min(1, Math.max(0, k))
     const lp = (a, b, k = t) => a + (b - a) * k
-    const ss = (k) => { const u = Math.min(1, Math.max(0, k)); return u * u * (3 - 2 * u) }
+    const ss = (k) => { const u = c01(k); return u * u * (3 - 2 * u) }
+    // smootherstep — zero velocity AND zero acceleration at both ends, so a motion that
+    // starts behind the article and finishes under a landing card has no visible edges.
+    const ss2 = (k) => { const u = c01(k); return u * u * u * (u * (u * 6 - 15) + 10) }
     const hero = selectedHero
-    // TWO PHASES. A [0..DROP_START]: behind the still-scrolling-out article, the deck GATHERS into a tight,
-    // low, steeply-tilted cluster (small radius) and starts spinning — ALL cards present incl. ONE wine copy
-    // (the mirror, "already there"); only the SECOND wine copy (the hero) waits off-top. B [DROP_START..1]:
-    // the article is gone → the cluster UNFURLS (radius grows) + rises + un-tilts to the homepage fan while
-    // it spins, and the second wine copy DROPS in from the top into its slot. Card faces stay visible the
-    // whole unfurl (no hide) and the accent background fades to the homepage over the late rise.
+    // TWO PHASES. A [0..DROP_START]: the article is still scrolling out, uncovering the scene from
+    // the bottom in a strip that grows as `t / DROP_START` of the screen. B [DROP_START..1]: the
+    // article is gone, the deck finishes opening, and the SECOND wine copy — the card you have been
+    // reading as a page — comes down from off-top into the slot it left empty.
     const bLin = Math.max(0, (t - DROP_START) / (1 - DROP_START))
-    const b = ss(bLin)                                // the drop
-    // The whole pose change happens inside SETTLE_END — see the constant. The reveal grows at
-    // `de / DROP_START` of the screen height, so at de = 0.03 the strip is under 7% tall and the
-    // ring's own lowest edge has not reached it. Nothing is ever seen moving into place.
-    const set = ss(Math.min(1, t / SETTLE_END))
 
-    // Spin the whole way, in the down-scroll direction (EXIT_SPIN negative) → flows into the homepage idle.
-    carousel.animatedRotationY = exitStart.rot + EXIT_SPIN * t
+    // ── the deck opens ────────────────────────────────────────────────────────
+    // ONE GAUGE for the ring's whole attitude: height, look-down, yaw, roll. 0 = the pose the
+    // select left behind (dropped to SELECTED_Y, groupG flattened to 0,0,0), 1 = the homepage fan.
+    //
+    // ⚠️ IT STARTS AT `POSE_HEAD`, NOT AT 0, AND THAT IS THE WHOLE FIX. The select FLATTENS
+    // groupG, and a ring with no look-down is seen edge-on — eight cards collapsed onto one
+    // line, overlapping into a packed band. THAT is what "too packed" was; it was never the
+    // radius (the radius does not change, here or anywhere). So two thirds of the opening
+    // happens behind the article, and what you actually watch is the last third: the fan
+    // tipping back, the deck rising and yawing into place, finishing exactly as the card lands.
+    const pose = POSE_HEAD * ss(t / POSE_HEAD_END) +
+                 (1 - POSE_HEAD) * ss2((t - POSE_HEAD_END) / (POSE_END - POSE_HEAD_END))
 
-    // Ring height + tilt: straight to the homepage values, inside the settle window.
-    // ⚠️ `idleCarouselY()`, NOT 0. The exit used to rise the ring to y=0 and then endExit() — one
-    // frame later, at the moment of commit — parked it at IDLE_Y_DESKTOP (-12). That 12-unit drop
-    // was the "jarring reset with a layout shift of the cards downward". Landing ON the homepage's
-    // resting height means endExit changes nothing visible.
+    // ── the deck turns ────────────────────────────────────────────────────────
+    // Out behind the article, back as it opens — see EXIT_TURN. ⚠️ EASED, NOT LINEAR, and that is
+    // not a polish detail: spread evenly over `de`, two fifths of a turn is spent behind the article
+    // and the rest is slow enough to be invisible against a flat background, which is exactly how
+    // the deck came to read as a photograph with one card falling into it. Concentrated between the
+    // uncovering and the landing it peaks at about twice the linear rate, and it decelerates into
+    // the catch: the deck slows to receive the card.
     const ht = homeTilt()
-    carousel.position.y = lp(exitStart.cy, idleCarouselY(), set)
-    groupG.rotation.set(lp(exitStart.gx, ht.x, set), lp(exitStart.gy, ht.y, set), lp(exitStart.gz, ht.z, set))
-    // ⚠️ NO RADIUS ANIMATION. Selecting a chapter never changed the ring's radius — it only pushed the
-    // other cards down — so there is nothing to unfurl. The "gather to CLUSTER_R and grow back" the exit
-    // used to do was an invention, and at radius 18 eight cards on a 40-unit ring overlap into a knot of
-    // white shapes. The slots are simply the homepage slots, the whole way.
+    const netTurn = -ht.y                         // undo the group yaw the select flattened
+    const swungTo = netTurn + EXIT_TURN           // where the deck sits while the article is still on it
+    carousel.animatedRotationY = exitStart.rot +
+      swungTo * ss(t / SPIN_HEAD_END) - EXIT_TURN * ss2((t - SPIN_FROM) / (SPIN_TO - SPIN_FROM))
+
+    // ── the catch ─────────────────────────────────────────────────────────────
+    // A deck does not receive a card without giving. Past the landing the ring dips and recovers
+    // once, damped, and the same give crosses the other cards as a wave travelling out from the
+    // slot that was filled. Small — a couple of world units, ~35px at the front of the ring — but
+    // it is the difference between a card landing IN the deck and a card landing in front of one.
+    const k = c01((t - CATCH_FROM) / (CATCH_END - CATCH_FROM))
+    const give = (u) => Math.sin(TWO_PI * u) * Math.exp(-2.6 * u)   // down, back, a smaller answer, spent
+    const ringGive = CATCH_RING * give(k)
+
+    carousel.position.y = lp(exitStart.cy, idleCarouselY(), pose) + ringGive
+    groupG.rotation.set(
+      lp(exitStart.gx, ht.x, pose),
+      lp(exitStart.gy, ht.y, pose),
+      lp(exitStart.gz, ht.z, pose)
+    )
 
     // Phase B sub-progresses for the second chapter copy: a beat, then the descent; fades in early.
-    // ⚠️ The beat matters — it is what lets the ring read as COMPLETE BUT FOR ONE SLOT before the card
-    // arrives. Without it the drop starts on the same frame the article clears and there is nothing to
-    // notice it against.
-    const drop = ss(Math.min(1, Math.max(0, (bLin - 0.06) / 0.79)))
-    const reveal = ss(Math.min(1, Math.max(0, (bLin - 0.06) / 0.30)))
+    // ⚠️ The beat matters — it is what lets the ring read as COMPLETE BUT FOR ONE SLOT before the
+    // card arrives. Without it the drop starts on the same frame the article clears and there is
+    // nothing to notice it against.
+    const drop = ss(c01((bLin - 0.06) / (DROP_END_B - 0.06)))
+    const reveal = ss(c01((bLin - 0.06) / 0.28))
     const fitT = Math.min(1, t / HERO_FIT_END)                      // shrink to ring size early (while off-top)
 
-    // EVERY other card (incl. the chapter's MIRROR copy = the one that's "already there") goes straight to
-    // its homepage slot inside the settle window and then does not move again.
-    // ⚠️ Their OPACITY is left to animate()'s depth fade — see the gate there. Pinning it at 1 here meant
-    // the far side of the ring was fully opaque all through the exit and then dimmed to the homepage
-    // falloff the instant it committed: with the ring otherwise motionless, that dim was the only thing
-    // that moved, and it read as a glitch at the handover.
+    // EVERY other card (incl. the chapter's MIRROR copy = the one that's "already there") comes up
+    // from under the fold into its homepage slot. ⚠️ EARLY — `OTHERS_IN` is a tenth of the exit,
+    // all of it behind the article. The deck must be WHOLE before it is uncovered; what opens in
+    // view is its attitude, not its membership. Cards still arriving in an uncovered ring is the
+    // "jumble" of AUDIT #47/#48.
+    // ⚠️ Their OPACITY is left to animate()'s depth fade — see the gate there. Pinning it at 1 here
+    // meant the far side of the ring was fully opaque all through the exit and then dimmed to the
+    // homepage falloff the instant it committed.
+    const inT = ss(t / OTHERS_IN)
     for (const o of exitStart.others) {
       o.p.mesh.position.x = o.p.baseX
       o.p.mesh.position.z = o.p.baseZ
-      o.p.mesh.position.y = lp(o.y, o.p.baseY, set)
+      // The wave reaches a card later the further round the ring it sits from the filled slot.
+      const kd = c01(k - o.phi * CATCH_LAG)
+      o.p.mesh.position.y = lp(o.y, o.p.baseY, inT) + CATCH_CARD * give(kd)
     }
 
-    // The SECOND copy of this chapter (the hero): off-top + hidden through phase A; once the article has
-    // gone it descends into its slot and fades in — "drops in from the top." Ring-sized the whole descent
-    // (no full-bleed morph).
+    // The SECOND copy of this chapter (the hero): off-top + hidden through phase A; once the article
+    // has gone it descends into its slot and fades in — "drops in from the top." Ring-sized the whole
+    // descent (no full-bleed morph), and it lands ON `POSE_END`, the frame the deck finishes opening.
     // ⚠️ THE DROP STARTS FROM A COMPUTED HEIGHT, NOT FROM WHERE THE CARD HAPPENS TO BE. It used to
     // start at the y the page's scroll-coupling had left it at, which is (a) proportional to how long
     // the chapter is — In Frames pushed it far higher than The Big Day, so the same scroll gave wildly
@@ -1748,7 +1816,7 @@ export function useChapterScene() {
     hero.mesh.scale.set(lp(exitStart.heroScale, 1, fitT), lp(exitStart.heroScale, 1, fitT), 1)
     hero.mesh.position.x = hero.baseX
     hero.mesh.position.z = hero.baseZ
-    hero.mesh.position.y = lp(hero.baseY + offTop, hero.baseY, drop)
+    hero.mesh.position.y = lp(hero.baseY + offTop, hero.baseY, drop) + CATCH_HERO * give(c01(k - CATCH_HERO_LAG))
     hero.material.uniforms.blendFactor.value = lp(exitStart.blend, 0, fitT)
     hero.material.uniforms.progress.value = lp(exitStart.prog, 0, fitT)
     // ⚠️ NOT set here. The dropping card has to arrive on the SAME depth falloff as the slot it lands in
@@ -1756,17 +1824,18 @@ export function useChapterScene() {
     // the route committed. animate() multiplies this factor into the falloff it computes for every card.
     heroReveal = t <= DROP_START ? 0 : reveal
 
-    // Center wordmark: stays out through the unfurl (the reference shows no floating wordmark mid-exit),
-    // fading in only as the homepage fan settles over the last ~40% of de.
-    // ⚠️ Swap it to the FRONT card's wordmark while it is still invisible. It was left on the
-    // chapter you were reading for the whole exit, so the word that faded in at the end was the
-    // wrong one — and the idle tracker then cross-faded it to the right one the instant the exit
-    // committed. Nothing visible changes here; the fade below still owns the opacity.
-    if (t < 0.55) setTxtChapter(frontChapterIdx(), true)
-    if (groupG.userData.txtMat) groupG.userData.txtMat.opacity = lp(exitStart.txtOpacity, 1, ss(Math.max(0, (t - 0.6) / 0.4)))
+    // Center wordmark: stays out through the opening (the reference shows no floating wordmark
+    // mid-exit), fading in only as the homepage fan settles over the last ~40% of de.
+    // ⚠️ Set to the chapter that will be FRONT AT THE END, which is this one: the swing nets zero,
+    // so the deck arrives with the gap where the select left it — centre — and the card that lands
+    // in it is the card you were reading. Reading `frontChapterIdx()` here instead asks which card
+    // is front DURING the turn, which is some other chapter mid-sweep; that word then faded in at
+    // the end and the idle tracker cross-faded it away the instant the route committed.
+    setTxtChapter(hero.chapterIdx, true)
+    if (groupG.userData.txtMat) groupG.userData.txtMat.opacity = lp(exitStart.txtOpacity, 1, ss((t - 0.6) / 0.34))
 
-    // Background: opaque chapter accent through the spin, fading to the homepage over the late rise.
-    exitBgAlpha = t < 0.7 ? 1 : 1 - ss((t - 0.7) / 0.3)
+    // Background: opaque chapter accent through the turn, fading to the homepage over the late rise.
+    exitBgAlpha = 1 - ss((t - 0.66) / 0.30)
   }
 
   // Abort an in-progress bottom exit (the user scrolled back up before committing). Restore
@@ -1776,42 +1845,79 @@ export function useChapterScene() {
   function cancelExit() {
     if (!exitStart) return
     setExitProgress(0)        // lerp every transform back to the captured start
-    // setExitProgress(0) parks the cards on the small cluster radius; the resumed selected state wants them
-    // back on their ring slots — the hero especially must return to baseX/baseZ so the scroll-coupling
-    // (which only moves .y) keeps it centred full-bleed.
+    // The hero especially must return to baseX/baseZ so the scroll-coupling (which only moves .y)
+    // keeps it centred full-bleed.
     for (const o of exitStart.others) { o.p.mesh.position.x = o.p.baseX; o.p.mesh.position.z = o.p.baseZ }
     if (selectedHero) { selectedHero.mesh.position.x = selectedHero.baseX; selectedHero.mesh.position.z = selectedHero.baseZ }
     isDeselecting = false     // re-enable animate() scroll-coupling + the route reverse path
     exitStart = null
   }
 
-  function endExit() {
-    // Finalize the homepage ring from ANY exit progress. commitExit calls setExitProgress(1) first (clean
-    // pose), but a Back pressed mid-scroll calls endExit ALONE — so snap the carousel pose + every poster
-    // back to its homepage slot here, else the ring is left low/tilted/collapsed-inward. (animatedRotationY
-    // is intentionally left at its spun value — EXIT_SPIN is negative so it flows into the idle, no reversal.)
-    carousel.position.y = idleCarouselY()
-    { const t = homeTilt(); groupG.rotation.set(t.x, t.y, t.z) }
-    // ⚠️ Only the HERO's opacity is forced. The rest are already sitting on the homepage depth falloff
-    // (animate() has owned them through the exit), and setting them all to 1 here made the far side
-    // flash bright at the commit and then dim again over the next ~20 frames.
+  // `settle` — the scroll exit committed, so hand the deck over MOVING (see the note inside).
+  // Called bare (snap) by the Back-button path and by a page unmounting mid-exit, where the ring
+  // simply has to be correct.
+  function endExit(settle = false) {
+    // Finalize the homepage ring from ANY exit progress: a Back pressed mid-scroll calls this
+    // alone, so the carousel pose and every poster have to come home here too, else the ring is
+    // left low and flat. (animatedRotationY is left wherever the swing put it; its net is zero by
+    // SPIN_TO, so on a committed exit it is back at the orientation the select gave it.)
+    const ht = homeTilt()
     const wasHero = selectedHero
-    posters.forEach((p) => {
-      p.mesh.position.set(p.baseX, p.baseY, p.baseZ)
-      p.mesh.scale.set(1, 1, 1)
-      if (p === wasHero && p.material.uniforms.uOpacity) p.material.uniforms.uOpacity.value = 1   // never leave it invisible
-      if (p.material.uniforms.blendFactor) p.material.uniforms.blendFactor.value = 0
-      if (p.material.uniforms.progress) p.material.uniforms.progress.value = 0
-    })
-    if (groupG.userData.txtMat) groupG.userData.txtMat.opacity = 1
-    exitBgAlpha = 0     // homepage background (transparent → the body shows through)
-    heroReveal = 0
+    // ⚠️ BOOKKEEPING FIRST, ALWAYS — before any tween. These four lines are what re-opens input,
+    // and a settle that owns them would put a ~0.5s dead zone back on the homepage (AUDIT #53).
     selectedIndex = -1
     isDeselecting = false
     selectedHero = null
     exitStart = null
     scrollOffsetPx = 0
     hoveredIndex = -1   // stale hover would block the idle center-text sync (deselect resets it too)
+    heroReveal = 0
+    exitBgAlpha = 0     // homepage background (transparent → the body shows through). At the commit
+                        // it is already down to ~0.05, so this is not a visible step.
+    if (groupG.userData.txtMat) groupG.userData.txtMat.opacity = 1
+
+    if (settle) {
+      // ⚠️ THE DECK MUST NOT ARRIVE AT A STANDSTILL. The page commits before its own last pixel —
+      // Lenis eases into the bottom, so the final stretch of scroll produces almost no `de`, and the
+      // deck was reaching the homepage already stopped. Then the very next wheel notch hit the
+      // homepage's own scroll-rotation, which is about three times faster per pixel than the exit's,
+      // and the ring leapt. That step from ~0 to full speed is the "momentary stutter" — not a
+      // dropped frame (measured: 16.7ms flat across the handover, even at 4× CPU throttle), a step
+      // change in velocity. So the last of the catch finishes on a tween, and the turn carries a
+      // little of its own momentum past the route change for whatever the visitor does next to
+      // land on top of.
+      gsap.to(carousel.position, { y: idleCarouselY(), duration: 0.55, ease: 'power2.out', overwrite: true })
+      gsap.to(groupG.rotation, { x: ht.x, y: ht.y, z: ht.z, duration: 0.55, ease: 'power2.out', overwrite: true })
+      gsap.to(carousel, {
+        animatedRotationY: (carousel.animatedRotationY || 0) + EXIT_FOLLOW,
+        duration: 0.9, ease: 'power2.out', overwrite: true,
+      })
+    } else {
+      carousel.position.y = idleCarouselY()
+      groupG.rotation.set(ht.x, ht.y, ht.z)
+    }
+
+    // ⚠️ Only the HERO's opacity is forced, and only on the snap path. The rest are already sitting
+    // on the homepage depth falloff (animate() has owned them through the exit), and setting them
+    // all to 1 here made the far side flash bright at the commit and then dim again over the next
+    // ~20 frames. On the settle path the hero needs no help either: it landed at its slot's own
+    // falloff, and animate() lerps it from there.
+    posters.forEach((p) => {
+      p.mesh.position.x = p.baseX
+      p.mesh.position.z = p.baseZ
+      p.mesh.scale.set(1, 1, 1)
+      if (p.material.uniforms.blendFactor) p.material.uniforms.blendFactor.value = 0
+      if (p.material.uniforms.progress) p.material.uniforms.progress.value = 0
+      if (settle) {
+        // Every card is somewhere inside the catch's give; ride it out rather than cutting it.
+        if (Math.abs(p.mesh.position.y - p.baseY) > 0.01) {
+          gsap.to(p.mesh.position, { y: p.baseY, duration: 0.55, ease: 'power2.out', overwrite: true })
+        }
+      } else {
+        p.mesh.position.y = p.baseY
+        if (p === wasHero && p.material.uniforms.uOpacity) p.material.uniforms.uOpacity.value = 1
+      }
+    })
   }
 
   // ── Touch drag ─────────────────────────────────────────────────────────────
@@ -1836,6 +1942,10 @@ export function useChapterScene() {
   // steps aside and the rotation IS the gesture. See the note in animate().
   function setDragging(on) {
     if (on && !dragTracking) {
+      // ⚠️ A finger arriving mid-follow-through owns the ring. `endExit(true)` hands the homepage a
+      // decaying turn on `animatedRotationY` (EXIT_FOLLOW); left running under a drag it would keep
+      // adding to the re-based value below and the deck would creep out from under the finger.
+      gsap.killTweensOf(carousel)
       // ⚠️ Grab the ring WHERE IT IS. `rotation.y` trails its target by the idle lerp, so handing
       // over to 1:1 tracking without re-basing snaps the deck by however far it was behind.
       scrollRotationY = carousel.rotation.y - (carousel.animatedRotationY || 0)
@@ -2034,7 +2144,7 @@ export function useChapterScene() {
     beginExit,        // capture the selected/scrolled state + hide the chapter's own cards
     setExitProgress,  // de 0→1 — ring rises from below, spins forward, un-tilts; hero returns from off-top
     cancelExit,       // abort → restore the selected/scrolled state
-    endExit,          // commit → finalize the homepage ring (selectedIndex = -1)
+    endExit,          // commit → finalize the homepage ring (selectedIndex = -1); `true` = hand it over moving
     getState: () => ({ selectedIndex, hoveredIndex, introComplete, isSelecting, isDeselecting }),
   }
 }

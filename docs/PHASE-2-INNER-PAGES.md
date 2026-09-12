@@ -106,7 +106,58 @@ above. Constant speed and a reversed exit are not in conflict.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
 
-**▶▶ STATE (2026-09-07, latest) — THE RING IS ALREADY THE RING WHEN THE PAGE COMES OFF.**
+**▶▶ STATE (2026-09-11, latest) — THE DECK IS STILL OPENING WHEN THE CARD ARRIVES.**
+User: *"You seem to have shortened the page exit animation… I still want to see some rotation and the
+page to be 'caught' in the deck of cards as we had before, not just drop in. The thing I asked you to
+fix was that the cards were packed too close together while they 'unfurled'."* And: *"There is still a
+momentary stutter after the 'page' card drops in and the homepage transition completes before the
+homepage cards start rotating."*
+
+Both fair. The 2026-09-07 pass removed the packing by removing the arrival (`SETTLE_END = 0.03`:
+everything finished inside 3% of `de`, before the strip could contain any of it), which left a deck
+that read as a photograph with one card falling into it. The packing had a different cause than the
+radius gather it was blamed on — **a select flattens `groupG` to (0,0,0), and a ring with no look-down
+is seen edge-on**, every card collapsed onto one line. That is what "too packed" was. So the arrival
+comes back, from a tilt that was never packed:
+
+1. **One `pose` gauge, 0→1, for the ring's whole attitude** — height, look-down, yaw, roll. It starts
+   at `POSE_HEAD` (0.66) by `POSE_HEAD_END` (0.16), all of it behind the article, and completes at
+   `POSE_END` (0.80). The visible third is the fan tipping back: measured, +10 units of rise, +8.5° of
+   look-down and +24° of group yaw across the reveal. **No radius animation, still and forever.**
+2. **The deck is WHOLE before it is opened** (`OTHERS_IN` 0.14). Membership is never watched; attitude
+   is. Cards still arriving into an uncovered ring is the "jumble" of AUDIT #47/#48.
+3. **The turn swings out and back, landing on a net of `−homeTilt().y`** (`EXIT_TURN` 62° of watched
+   turn, swung out by `SPIN_HEAD_END` 0.08 and brought back over [`SPIN_FROM` 0.20 … `SPIN_TO` 0.90]).
+   The net is the whole game, because it decides where the empty slot ends up — the one thing the exit
+   is about. −300° put it at the back of the ring; −45° — fine at 1440×900 — put it off the SIDE of a
+   phone, because at 390×844 the front card alone spans 90% of the frame and only about ±15° of the
+   ring is on screen (filmed before the change: the In Frames card never appeared at all); and **zero
+   was wrong too**, because a select flattens `groupG` yaw and all, so restoring the desktop's 70° yaw
+   turns the whole ring — measured on With Love, the card came to rest at world x 38, `normalDotCam`
+   0.07, edge-on in the wings. `−homeTilt().y` gives back exactly what the group takes: x 1.4, dot
+   −0.69, dead centre. Mobile's `homeTilt.y` is 0, so one expression covers both. The return leg is a
+   long, decelerating turn in the homepage's own direction; measured peak ~3× the old linear rate.
+4. **The catch** (`CATCH_FROM` 0.73 → `CATCH_END` 0.96): a damped `sin(2πu)·e^(−2.6u)` give on the
+   ring (~2.2 units ≈ 40px at the front), on the hero a beat later, and on every other card delayed by
+   its `phi` — how far round the ring it sits from the filled slot — so the give travels outward as a
+   wave. ⚠️ **It opens BEFORE the landing.** The descent eases out, so the card arrives with no speed
+   of its own; a deck that only began to give on the frame it seated was a second motion starting from
+   a standstill. Opening early puts the ring at the bottom of its dip as the card comes in.
+5. **The commit moved off the last pixel** (`COMMIT_AT` 0.955) and `endExit(true)` hands the deck over
+   **moving**. This is the "stutter", and it was never a dropped frame: measured 16.7ms flat across the
+   handover at 1× and at 4× CPU throttle, with no long tasks. Lenis eases into the bottom of a
+   scroller, so the last ~80px produce almost no `de` — the deck reached the homepage stopped, and the
+   next wheel notch hit the homepage's own scroll-rotation, ~3× faster per pixel. **Measured rotation
+   step at the seam: 0.002 → 0.022 rad/frame (11×) before; 0.010 → 0.011 (1.1×) after.**
+6. **The wordmark follows from (3).** With the swing netting zero, the chapter that ends up front is
+   the one you were reading, so the centre text is set to `hero.chapterIdx` rather than to whichever
+   card `frontChapterIdx()` happens to find mid-sweep.
+
+Verified: trajectory scrubbed at 50 steps via `__exitScrub`; filmed at 1440×900 and 390×844; cancel
+(scroll back up → `cy` −43, `gx` 0), Back mid-exit and a hard flick to the bottom all land a correct
+homepage ring; 0 console errors.
+
+**▶▶ STATE (2026-09-07) — THE RING IS ALREADY THE RING WHEN THE PAGE COMES OFF.**
 User: *"I think there's probably a grow/unfurl effect that causes them to look too packed like this.
 Let's make sure when the cards come into view, they're already unfurled the right amount, rotate the
 right amount, and have the [card] drop in after leaving viewport at the right moment."*
@@ -117,12 +168,14 @@ other cards down — so there was nothing to unfurl. The "gather to `CLUSTER_R` 
 was invented by the exit, and 18 against a 40-unit ring puts eight cards on top of one another: the
 knot of white shapes in the report. The low `BOWL_Y`/`BOWL_TILT` was the same kind of invention.
 
-1. **The whole pose change now happens inside `SETTLE_END` = 0.03 of `de`.** The reveal grows at
-   `de / DROP_START` of the screen height, so at 0.03 the strip is under 7% tall and the ring's own
-   lowest edge has not reached it — nothing is ever seen moving into place. What the visitor sees is
-   the article sliding off a ring that is already at the homepage radius, tilt and height, with one
-   slot empty. **`CLUSTER_R`, `BOWL_Y`, `BOWL_TILT` and the radius lerp are gone.**
-2. **`EXIT_SPIN` is one slot (−45°), not −300°.** The empty slot belongs to the chapter you were
+1. **The whole pose change happens inside `SETTLE_END` = 0.03 of `de`.** (⚠️ *Superseded 2026-09-11 —
+   see the entry above. This went too far: it removed the arrival rather than the packing, and the
+   packing was the flattened `groupG`, not the radius. `POSE_HEAD` replaced `SETTLE_END`.*) The reveal
+   grows at `de / DROP_START` of the screen height, so at 0.03 the strip is under 7% tall and the
+   ring's own lowest edge has not reached it. **`CLUSTER_R`, `BOWL_Y`, `BOWL_TILT` and the radius lerp
+   are gone** — and stay gone.
+2. **`EXIT_SPIN` is one slot (−45°), not −300°.** (⚠️ *Superseded 2026-09-11 — any NET turn moves the
+   empty slot; −45° is off the side of a phone. Replaced by `EXIT_TURN`, netting `−homeTilt().y`.*) The empty slot belongs to the chapter you were
    reading, which is front-and-centre when the exit starts; three quarters of a turn carried it to the
    BACK of the ring, where the depth falloff dims a card to 0.2 and the tilt lifts it off the top of
    the frame. Measured: at `de = 0.70` the dropping card was at distance 130 and opacity 0.2 — the one
