@@ -39,13 +39,26 @@
       <section ref="outroEl" class="chapter-outro" aria-hidden="true" />
     </div>
 
-    <!-- ── The scroll cue. A hairline with a dot rising up it: the gesture that moves this page
-         is a swipe UP, and the dot goes the way the content does. It retires for good on the first
-         real scroll — a prompt still there after you have obeyed it is noise — and stands down while
-         a pull is live, since by then the visitor plainly knows how to move the page. ── -->
-    <div class="scroll-cue" :class="{ gone: cueSeen || pullTop > 0 }" aria-hidden="true">
-      <span class="cue-rail"><i class="cue-dot" /></span>
-      <span class="cue-label">{{ coarse ? 'swipe up' : 'scroll' }}</span>
+    <!-- ── The scroll cue: the first inch of the thread ───────────────────────────────────────
+         Every chapter here is built on a line of ink that draws itself as you scroll — the knot on
+         The Big Day, the flourishes on With Love, the rules on US. So the prompt is that same pen,
+         starting the stroke and stopping: a hairline that draws downward and waits for you to pull
+         the rest of it. ⚠️ A rail with a bouncing dot is the one scroll hint every site on earth
+         has, which is exactly why it read as generic and stuck out — it belonged to no page.
+         ⚠️ NOT UNTIL THE CARD HAS BECOME THE PAGE (`cueReady`). It used to mount with the route, so
+         it was on screen through the whole ~1.5s select — telling you to scroll a card that was
+         still turning into a page. It retires for good on the first real scroll — a prompt still
+         there after you have obeyed it is noise — and stands down while a pull is live, since by
+         then the visitor plainly knows how to move the page. ── -->
+    <div class="scroll-cue" :class="{ ready: cueReady, gone: cueSeen || pullTop > 0 }" aria-hidden="true">
+      <svg class="cue-thread" viewBox="0 0 24 68" preserveAspectRatio="xMidYMin meet" focusable="false">
+        <!-- The thread is already there, faintly, the whole way down; the pen goes over it. Without
+             the ghost the stroke has nowhere visible to be going, and the cue was reported as
+             unnoticeable — which it was, at one hairline drawing into empty space. -->
+        <path class="cue-ghost" d="M 12 2 C 12 14, 8.5 23, 12 34 C 14.6 42, 11.6 53, 12 65" />
+        <path class="cue-ink" pathLength="1" d="M 12 2 C 12 14, 8.5 23, 12 34 C 14.6 42, 11.6 53, 12 65" />
+      </svg>
+      <span class="cue-label">read on</span>
     </div>
 
     <!-- ── "you are about to go back" ──────────────────────────────────────────────────────────
@@ -118,9 +131,10 @@ const activePopups = computed(() => {
 const webglSceneRef = inject('webglSceneRef', null)
 
 // The cue retires on the first real scroll; the two pulls are 0→1 toward the homepage.
-// `coarse` only picks the cue's verb (a finger swipes, a trackpad scrolls) — read once, because
-// nothing about it changes mid-visit and it was measured costing frames when read per-frame.
-const coarse = ref(false)
+// ⚠️ `cueReady` is the SETTLE, not the mount. The select takes ~1.5s to turn the card you clicked
+// into this page, and a "read on" sitting over the middle of that is telling you to scroll
+// something that has not arrived. Set from the same poll that opens scrolling.
+const cueReady = ref(false)
 const cueSeen = ref(false)
 const pullTop = ref(0)
 const pullBottom = ref(0)
@@ -250,10 +264,18 @@ function groundIsDark() {
   for (const el of els) {
     if (el.closest('.\\!fixed')) continue          // the nav's own fixed bars
     if (el === document.body || el === document.documentElement) break
-    const m = getComputedStyle(el).backgroundColor.match(/[\d.]+/g)
+    const bg = getComputedStyle(el).backgroundColor
+    const m = bg.match(/[\d.]+/g)
     if (!m) continue
     if (m.length > 3 && Number(m[3]) < 0.5) continue  // see-through, keep walking
-    const lum = (c) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }
+    // ⚠️ TWO COMPONENT SCALES. `rgb()/rgba()` computes to 0–255, but anything written with
+    // `color-mix()` — which is how the chapter tints are blended — computes to
+    // `color(srgb r g b / a)` with components in 0–1. Read as 0–255 those come out at a
+    // luminance of ~0.003, i.e. BLACK, so the nav flipped to its light ink over a pale panel
+    // and vanished. Measured on With Love's cash panel: wordmark rgb(232,237,242) on a
+    // rgb(232,237,242) ground.
+    const k = bg.startsWith('color(') ? 255 : 1
+    const lum = (c) => { const v = (c * k) / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }
     return 0.2126 * lum(+m[0]) + 0.7152 * lum(+m[1]) + 0.0722 * lum(+m[2]) < 0.35
   }
   // Nothing opaque in the DOM means we are looking straight at the canvas.
@@ -324,7 +346,6 @@ function commitExit() {
 
 onMounted(() => {
   if (!chapter.value) { navigateTo('/'); return }
-  coarse.value = !!window.matchMedia?.('(pointer: coarse)')?.matches
 
   const scene = webglSceneRef?.value?.scene
 
@@ -365,6 +386,8 @@ onMounted(() => {
     if (settled) {
       ready = true
       lenis?.start()
+      // A beat after the card lands, so the cue arrives rather than appears.
+      setTimeout(() => { cueReady.value = true }, 420)
     } else if (settleTries >= SETTLE_DEADLINE) {
       // Deadline fallback: if the scene never settles (e.g. WebGL init threw, so introComplete
       // never flips), don't leave the page frozen with Lenis stopped — enable scroll + the
@@ -372,6 +395,7 @@ onMounted(() => {
       console.warn('[chapter] scene did not settle in time — enabling scroll without the select-in handoff')
       ready = true
       lenis?.start()
+      cueReady.value = true
     } else {
       settleTries += 1
       readyPoll = setTimeout(waitSettled, 200)
@@ -471,42 +495,66 @@ onBeforeUnmount(() => {
 }
 
 /* ── the scroll cue ──────────────────────────────────────────────────────────
-   Hairline + a dot rising up it. The gesture that moves this page is a swipe UP, and the dot
-   travels the way the content does. ⚠️ Below `.popup-stack` (15) and clear of it: both live at
-   the bottom centre. */
+   The first inch of the thread: a hairline that draws itself down the page and waits. Same pen as
+   the knot on The Big Day and the flourishes on this chapter — which is the point, because the rail
+   and bouncing dot this replaces belonged to no page in particular. ⚠️ Below `.popup-stack` (15)
+   and clear of it: both live at the bottom centre. */
 .scroll-cue {
   position: fixed;
   left: 50%;
-  bottom: 2.6rem;
-  transform: translateX(-50%);
+  bottom: 2.4rem;
+  transform: translateX(-50%) translateY(0.9rem);
   z-index: 14;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.75rem;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.9s ease, transform 0.9s cubic-bezier(0.2, 0.72, 0.24, 1);
+}
+/* Arrives only once the card has finished becoming the page — see the template. */
+.scroll-cue.ready { opacity: 1; transform: translateX(-50%) translateY(0); }
+.scroll-cue.ready.gone { opacity: 0; transform: translateX(-50%) translateY(0.7rem); }
+.cue-thread { width: 1.6rem; height: 4.9rem; display: block; overflow: visible; }
+.cue-ghost {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  opacity: 0.24;
+}
+.cue-ink {
+  fill: none;
+  stroke: currentColor;
+  /* ⚠️ `non-scaling-stroke`: a stroke-width is meaningless without its viewBox scale, and 1.15
+     in a 24-unit box drawn at 1.5rem is not 1.15px. This pins it to the site's hairline. */
+  stroke-width: 1.15;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;           /* the round cap IS the nib — it draws its own pen tip */
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: cue-draw 3.4s cubic-bezier(0.38, 0.1, 0.26, 1) infinite;
+}
+/* Draw, hold, lift. ⚠️ Opacity is 0 at both ends of the cycle, which is what makes the
+   dashoffset snapping back to 1 invisible — there is no reset to see. */
+@keyframes cue-draw {
+  0%   { stroke-dashoffset: 1; opacity: 0; }
+  8%   { opacity: 0.95; }
+  48%  { stroke-dashoffset: 0; opacity: 0.95; }
+  84%  { stroke-dashoffset: 0; opacity: 0.95; }
+  100% { stroke-dashoffset: 0; opacity: 0; }
+}
+/* ⚠️ THE WORD DOES NOT BLINK. It was faded in and out on the stroke's cycle, which left the whole
+   cue reading as nothing at all for about a second in every three — the exact complaint the rail
+   and dot earned. The pen is the motion; the word is just there. */
+.cue-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;             /* tracking adds a trailing gap; this re-centres the word */
   opacity: 0.92;
-  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2, 0.72, 0.24, 1);
 }
-.scroll-cue.gone { opacity: 0; transform: translateX(-50%) translateY(0.7rem); }
-.cue-rail { position: relative; width: 1px; height: 3.1rem; background: currentColor; opacity: 0.5; }
-.cue-dot {
-  position: absolute;
-  left: 50%;
-  width: 5px;
-  height: 5px;
-  margin-left: -2.5px;
-  border-radius: 50%;
-  background: currentColor;
-  animation: cue-rise 2.2s cubic-bezier(0.45, 0, 0.25, 1) infinite;
-}
-@keyframes cue-rise {
-  0%   { top: 100%; opacity: 0; }
-  16%  { opacity: 1; }
-  78%  { opacity: 1; }
-  100% { top: -4px; opacity: 0; }
-}
-.cue-label { font-size: 0.68rem; letter-spacing: 0.3em; }
 
 /* ── "you are about to go back" ───────────────────────────────────────────────
    A ring that closes — the same drawn-circumference idea as The Big Day's countdown dials, so it
@@ -594,18 +642,21 @@ onBeforeUnmount(() => {
     0 0 3px rgba(16, 14, 11, 0.8),
     0 1px 8px rgba(16, 14, 11, 0.5);
 }
-.cue-rail, .home-ring, .ring-chev {
+.cue-thread, .home-ring, .ring-chev {
   filter: drop-shadow(0 0 1px rgba(16, 14, 11, 0.85)) drop-shadow(0 1px 5px rgba(16, 14, 11, 0.45));
 }
 
 @media (max-width: 640px) {
-  .scroll-cue { bottom: 2rem; }
+  .scroll-cue { bottom: 1.9rem; }
+  .cue-thread { height: 4.1rem; }
   .home-cue { bottom: 2rem; }
   .home-ring { width: 2.4rem; height: 2.4rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cue-dot { animation: none; top: 40%; }
+  /* The stroke is simply drawn, once, and stays. */
+  .cue-ink { animation: none; stroke-dashoffset: 0; opacity: 0.9; }
+  .cue-ghost { opacity: 0; }
   .home-ring { transition: none; }
 }
 

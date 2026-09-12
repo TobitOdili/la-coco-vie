@@ -29,61 +29,88 @@
                  whole repetition, because the wrap subtracts exactly one repetition's
                  width — anything less and a gap crosses the screen once per loop. -->
             <span v-for="c in (copies[r] || 3)" :key="c" class="grp">
-              <button v-for="(w, k) in band" :key="k" type="button" class="word"
-                :class="{ taken: w.claimed }" :data-i="w.i"
+              <!-- ⚠️ THE NAME IS THE LINK. It used to be a button whose panel carried a separate
+                   "see it ↗", which puts the thing you want two moves away from the thing you are
+                   already pointing at. `<a>` when the item has a page, `<button>` when it does not
+                   — three of the ten have no indexed product URL, and a link that goes nowhere is
+                   worse than no link. -->
+              <component :is="items[w.i]?.url ? 'a' : 'button'" v-for="(w, k) in band" :key="k"
+                class="word" :class="{ taken: w.claimed, link: !!items[w.i]?.url }" :data-i="w.i"
+                :href="items[w.i]?.url || undefined"
+                :target="items[w.i]?.url ? '_blank' : undefined"
+                :rel="items[w.i]?.url ? 'noopener noreferrer' : undefined"
+                :type="items[w.i]?.url ? undefined : 'button'"
                 @pointerenter="setBand(r, w.i, $event)" @focus="setBand(r, w.i, $event)">
                 {{ w.name }}<i class="sep" aria-hidden="true" />
-              </button>
+              </component>
             </span>
           </div>
-          <!-- Opens beneath whichever word you are on, and TRACKS it while the band
-               coasts to a halt, so it never appears to jump into place. -->
+          <!-- ── the annotation ──────────────────────────────────────────────────────────────
+               Opens beneath whichever word you are on and TRACKS it while the band coasts to a
+               halt, so it never appears to jump into place. ⚠️ NOT A CARD. This was a cream box
+               with a drop shadow — a UI popover on a chapter that is otherwise ink on paper, and
+               it read as something bolted on. It is a margin note now: a hairline drawn from the
+               word down to the couple's own hand, with the specifics under it in small caps.
+               The paper behind it just thickens (see `.reveal::before`) — no border, no corner,
+               no shadow. -->
           <div class="reveal" :class="{ open: active[r] >= 0 }">
+            <svg class="reveal-tie" viewBox="0 0 90 26" preserveAspectRatio="none" aria-hidden="true">
+              <path pathLength="1" d="M 3 1 C 3 12, 8 19, 24 23 C 42 26, 62 25, 86 22"
+                fill="none" :stroke="ink" stroke-width="1.2" stroke-linecap="round"
+                vector-effect="non-scaling-stroke" />
+            </svg>
             <!-- ⚠️ Only when there IS one. Bound to a null `src` the browser renders a
                  broken-image box, which is a worse placeholder than no placeholder. -->
             <img v-if="itemAt(active[r])?.image" class="reveal-shot"
               :src="itemAt(active[r]).image" alt="" aria-hidden="true" decoding="async" />
             <p class="reveal-note">{{ itemAt(active[r])?.memory }}</p>
-            <!-- The specifics, under the memory: what it actually is, roughly what it costs,
-                 and where to get it. ⚠️ The link only renders when there IS one — three of the
-                 ten have no product page, and a dead "see it" is worse than none. -->
             <p v-if="itemAt(active[r])?.product" class="reveal-spec">
-              {{ itemAt(active[r]).product }}<template v-if="itemAt(active[r])?.price"> · {{ itemAt(active[r]).price }}</template>
+              <span class="spec-what">{{ itemAt(active[r]).product }}</span>
+              <span v-if="itemAt(active[r])?.price" class="spec-price">{{ itemAt(active[r]).price }}</span>
             </p>
-            <a v-if="itemAt(active[r])?.url" class="reveal-link" :href="itemAt(active[r]).url"
-              target="_blank" rel="noopener noreferrer" @pointerdown.stop>see it ↗</a>
           </div>
         </div>
       </section>
 
-      <!-- ── Even better · the dock. NOT a section in the flow and NOT a modal: a fixed card at
-           the bottom of the screen that BLOWS ITSELF OUT into a full panel once the gift list is
-           behind you, and folds back down as the signature arrives. Tapping it does the same
-           thing by hand. It never covers the page — the old version was a full-screen overlay,
-           which is fine for a deliberate tap and completely wrong for something that opens
-           itself. ── -->
-      <Teleport v-else-if="s.kind === 'cashPanel'" to="body">
-        <div class="cash-dock" :class="{ live: dockLive, open: dockOpen }">
-          <button type="button" class="dock-hit" :aria-expanded="dockOpen" @click="toggleDock">
+      <!-- ── Even better · the card, and what it opens ───────────────────────────────────────
+           A small fixed card at the bottom of the screen, and a panel that covers the page. The
+           panel opens on a tap AND opens itself over the stretch of scroll between the end of the
+           gift list and the signature — "blow it out as if it were clicked", which is a popup, not
+           a bigger card. The card and the panel are never up at the same time.
+           ⚠️ NOT TELEPORTED TO <body>, and that is load-bearing. Lenis listens for wheel on
+           `.chapter-page`; a full-screen layer parented to the body sits OUTSIDE that element, so
+           every wheel event over it would die on the layer and the visitor would be stuck behind a
+           panel that opened itself. Rendered in place, the events bubble to the scroller and the
+           page keeps moving underneath — which is the whole point of a panel that comes and goes
+           with the scroll. It renders under the nav (z-20) rather than over it, which is right:
+           the way out stays reachable. ── -->
+      <template v-else-if="s.kind === 'cashPanel'">
+        <div class="cash-dock" :class="{ live: dockLive && !panelOpen }">
+          <button type="button" class="dock-hit" :aria-expanded="panelOpen" @click="openPanel">
             <span class="dock-eyebrow">{{ s.heading }}</span>
             <span class="dock-note">{{ s.note }}</span>
           </button>
-          <!-- ⚠️ `grid-template-rows: 0fr → 1fr`. The panel's height is content-driven and unknown,
-               and `height: auto` cannot be transitioned; this is the one way to ease to an
-               intrinsic height without measuring it in JS every frame. -->
-          <div class="dock-body">
-            <div class="dock-inner">
-              <p class="dock-text">{{ s.body }}</p>
-              <!-- ⚠️ A LINK ONLY IF IT GOES SOMEWHERE. `url` is still a placeholder, and this is
-                   the page's one call to action: a guest who taps it and lands nowhere is worse
-                   off than one who reads that it is coming. -->
-              <a v-if="s.url && s.url !== '#'" class="dock-cta" :href="s.url"
+        </div>
+        <transition name="panel">
+          <div v-if="panelOpen" class="cash-layer" @click.self="closePanel">
+            <div class="cash-panel" role="dialog" aria-modal="false" :aria-label="s.heading">
+              <button type="button" class="cash-x" aria-label="Close" @click="closePanel">
+                <svg viewBox="0 0 12 12" aria-hidden="true">
+                  <path d="M2 2 L10 10 M10 2 L2 10" stroke="currentColor" stroke-width="1.3" fill="none" />
+                </svg>
+              </button>
+              <h3 class="cash-heading">{{ s.heading }}</h3>
+              <p class="cash-body">{{ s.body }}</p>
+              <!-- ⚠️ A LINK ONLY IF IT GOES SOMEWHERE. `url` is still a placeholder `#`, and this is
+                   the page's one call to action: a guest who taps it and lands nowhere is worse off
+                   than one who reads that it is coming. -->
+              <a v-if="s.url && s.url !== '#'" class="cash-cta" :href="s.url"
                 target="_blank" rel="noopener noreferrer">{{ s.cta }}</a>
-              <span v-else class="dock-cta is-pending">the payment link is coming soon</span>
+              <span v-else class="cash-cta is-pending">the payment link is coming soon</span>
             </div>
           </div>
-        </div>
-      </Teleport>
+        </transition>
+      </template>
 
       <!-- ── Signing · the ink splits in two and signs both names. ── -->
       <section v-else-if="s.kind === 'sign'" class="chapter-section love-scene sign-scene" :data-idx="i">
@@ -129,13 +156,18 @@ const props = defineProps({
 
 const ink = '#2E4A52'
 
-// ── the dock ───────────────────────────────────────────────────────────────
-// `live` is whether the card is on screen at all; `open` is whether it has blown out into a
-// panel. Both are driven from the scroll in tick()'s read phase, and a tap can override either —
-// see the note on `wasPast` there.
+// ── the card, and the panel ────────────────────────────────────────────────
+// `dockLive` is whether the little card is on screen at all; `panelOpen` is whether the panel that
+// covers the page is up. Both are driven from the scroll in tick()'s read phase, and either can be
+// overridden by hand — see the note on `panelWant` there.
 const dockLive = ref(false)
-const dockOpen = ref(false)
-function toggleDock() { dockOpen.value = !dockOpen.value }
+const panelOpen = ref(false)
+function openPanel() { panelOpen.value = true }
+function closePanel() { panelOpen.value = false }
+// ⚠️ A panel that covers the page needs a way out that is not a mouse. It is dismissible with the
+// backdrop and the ×, but the keyboard has to work too — and this one can arrive without ever
+// having been asked for, which makes Escape the first thing a visitor will reach for.
+function onKey(e) { if (e.key === 'Escape' && panelOpen.value) closePanel() }
 
 const rootEl = ref(null)
 let rafId = 0
@@ -168,9 +200,9 @@ let wordEls = []          // the live element under the pointer, per band
 let scrubScenes = []      // cached scroll-scrubbed elements, per scene — see measure()
 let panelBox = []         // per-band rects for the reveal panel, read in tick's READ phase
 let touchTick = 0         // syncTouch runs on every 5th frame — see tick()
-let dockWall = null       // the gift list, and the signature after it — the dock's two cues
+let dockWall = null       // the gift list, and the signature after it — the card's two cues
 let dockSign = null
-let dockWant = false      // last SCROLL-derived answer; see the note in tick()
+let panelWant = false     // last SCROLL-derived answer; see the note in tick()
 
 const itemAt = (i) => (i >= 0 ? items.value[i] : null)
 
@@ -312,24 +344,26 @@ function tick() {
       const r = s.el.getBoundingClientRect()
       s.p = clamp01((vh - r.top) / (r.height + vh))
     }
-    // ── the dock ── on screen from the gift list until the signature has gone; blown out into a
-    // panel for the stretch between the two.
-    // ⚠️ WRITTEN ONLY ON A TRANSITION. Assigning `dockOpen` every frame would mean a tap that
-    // folds it away is overruled on the very next frame; this way the scroll takes over again
-    // the next time its own answer actually changes.
+    // ── the card, and the panel ── the card is on screen from the gift list until the signature
+    // has gone; the panel opens itself over the stretch between the two.
+    // ⚠️ WRITTEN ONLY ON A TRANSITION. Assigning `panelOpen` every frame would mean a dismissal is
+    // overruled on the very next frame; this way the scroll takes over again the next time its own
+    // answer actually changes — so closing it by hand keeps it closed for this pass, and it can
+    // still open itself again on the way back up.
     if (dockWall && dockSign) {
       const w = dockWall.getBoundingClientRect()
       const g = dockSign.getBoundingClientRect()
       const live = w.top < vh && g.bottom > vh * 0.2
       if (dockLive.value !== live) dockLive.value = live
       // ⚠️ ONE VALUE, NOT TWO. The wall and the signature are ADJACENT sections, so
-      // `wall.bottom` and `sign.top` are the same number at every scroll position — the first
-      // cut asked for it to be both below 0.62vh and above 0.46vh, which is a 0.16vh slot the
-      // whole effect could fall through. `edge` is that seam, and the dock is open for the
-      // stretch of scroll where it sits between the bottom of the screen and the top of it.
+      // `wall.bottom` and `sign.top` are the same number at every scroll position — an early cut
+      // asked for it to be both below 0.62vh and above 0.46vh, which is a 0.16vh slot the whole
+      // effect could fall through (AUDIT #61). `edge` is that seam: 1 = the gift list still fills
+      // the screen, 0 = it has gone entirely. The panel is up for the middle of that crossing —
+      // late enough that the list is genuinely behind you, gone before the signature arrives.
       const edge = w.bottom / vh
-      const want = edge < 0.98 && edge > 0.10
-      if (want !== dockWant) { dockWant = want; dockOpen.value = want }
+      const want = edge < 0.80 && edge > 0.15
+      if (want !== panelWant) { panelWant = want; panelOpen.value = want }
     }
 
     if (bandEls.length) {
@@ -454,11 +488,13 @@ onMounted(async () => {
   const scene = rootEl.value?.querySelector('.wall')
   if (scene && 'ResizeObserver' in window) { ro = new ResizeObserver(onResize); ro.observe(scene) }
   window.addEventListener('resize', onResize)
+  window.addEventListener('keydown', onKey)
   rafId = requestAnimationFrame(tick)
 })
 onBeforeUnmount(() => {
   cancelAnimationFrame(rafId)
   window.removeEventListener('resize', onResize)
+  window.removeEventListener('keydown', onKey)
   ro?.disconnect()
   clearTimeout(resizeT)
 })
@@ -607,76 +643,105 @@ onBeforeUnmount(() => {
   flex: none;
 }
 
+/* ── the annotation ──────────────────────────────────────────────────────────
+   ⚠️ NO CARD. This was a cream box with a 30px drop shadow: a UI popover dropped onto a chapter
+   that is ink on paper everywhere else, and it read exactly like that. A margin note instead — a
+   hairline drawn from the word, the couple's hand under it, the specifics in small caps. The only
+   help it gets with legibility is the paper thickening behind it (`::before`), which has no edge
+   anywhere and so is not a box. */
 .reveal {
   position: absolute;
-  top: calc(100% + 0.7rem);
+  top: calc(100% - 0.35rem);
   left: 0;
-  width: clamp(11rem, 17vw, 14rem);
-  padding: 0.9rem 0.9rem 1rem;
-  background: #F6F3EC;
-  box-shadow: 0 14px 30px rgba(24, 34, 40, 0.16);
+  width: clamp(12rem, 19vw, 16rem);
+  padding: 0 0.2rem 0.4rem;
+  /* ⚠️ The scene centres its text; a margin note has to hang off the left of the word it belongs
+     to, or the drawn tie points at nothing. */
+  text-align: left;
   opacity: 0;
-  transform: translateY(-0.55rem);
+  transform: translateY(-0.4rem);
   pointer-events: none;
-  transition: opacity 0.4s ease, transform 0.55s cubic-bezier(0.2, 0.72, 0.24, 1);
+  transition: opacity 0.38s ease, transform 0.55s cubic-bezier(0.2, 0.72, 0.24, 1);
   z-index: 3;
 }
-/* ⚠️ `pointer-events: auto` once open, so the "see it" link is reachable. The band keeps the
-   panel alive because the panel is INSIDE the band, so moving onto it is not a pointerleave. */
+/* The paper, a little heavier where the note sits. ⚠️ `z-index: -1` is safe inside `.reveal`'s own
+   stacking context (z-index: 3), so this cannot slide behind the band's words. */
+.reveal::before {
+  content: '';
+  position: absolute;
+  inset: -0.9rem -1.5rem -1.6rem -1.4rem;
+  background: radial-gradient(72% 64% at 26% 34%,
+    var(--accentLight, #E8EDF2) 0%,
+    color-mix(in srgb, var(--accentLight, #E8EDF2) 88%, transparent) 58%,
+    transparent 100%);
+  z-index: -1;
+  pointer-events: none;
+}
+/* ⚠️ `pointer-events: auto` once open. The band keeps the note alive because the note is INSIDE
+   the band, so moving onto it is not a pointerleave. */
 .reveal.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
-.reveal-shot + .reveal-note { margin-top: 0.65rem; }
+/* The tie: the same pen as the flourishes above, drawn on open rather than on scroll. */
+.reveal-tie {
+  display: block;
+  width: 5.2rem;
+  height: 1.15rem;
+  margin: 0 0 0.25rem 0.1rem;
+  overflow: visible;
+}
+.reveal-tie path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  opacity: 0.5;
+  transition: stroke-dashoffset 0.55s cubic-bezier(0.3, 0.7, 0.3, 1) 0.06s;
+}
+.reveal.open .reveal-tie path { stroke-dashoffset: 0; }
 .reveal-shot {
   display: block;
-  width: 100%;
-  aspect-ratio: 5 / 3;
+  width: 62%;
+  aspect-ratio: 5 / 4;
   object-fit: cover;
   filter: grayscale(1) contrast(1.04);
-  opacity: 0.86;
+  opacity: 0.8;
+  margin-bottom: 0.55rem;
 }
+/* The couple's own hand — the same face as the big thank-you and the two signatures. A memory is
+   not a product attribute and should not be set like one. */
 .reveal-note {
   margin: 0;
-  font-family: 'Bague', sans-serif;
-  font-size: clamp(0.6rem, 0.8vw, 0.7rem);
-  line-height: 1.55;
+  font-family: 'Over the Rainbow', cursive;
+  font-size: clamp(0.92rem, 1.15vw, 1.08rem);
+  line-height: 1.45;
   color: #2E4A52;
-  opacity: 0.88;
+  opacity: 0.92;
 }
 .reveal-spec {
-  margin: 0.55rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.16rem;
+  margin: 0.6rem 0 0;
   font-family: 'Bague', sans-serif;
-  font-size: clamp(0.52rem, 0.68vw, 0.6rem);
-  letter-spacing: 0.06em;
-  line-height: 1.5;
-  color: #2E4A52;
-  opacity: 0.55;
-}
-.reveal-link {
-  display: inline-block;
-  margin-top: 0.6rem;
-  font-family: 'Bague', sans-serif;
-  font-size: clamp(0.52rem, 0.68vw, 0.6rem);
-  letter-spacing: 0.14em;
+  font-size: clamp(0.5rem, 0.64vw, 0.58rem);
+  letter-spacing: 0.13em;
   text-transform: uppercase;
+  line-height: 1.45;
   color: #2E4A52;
-  text-decoration: none;
-  border-bottom: 1px solid currentColor;
-  padding-bottom: 1px;
-  opacity: 0.8;
-  cursor: pointer;
 }
-.reveal-link:hover, .reveal-link:focus-visible { opacity: 1; outline: none; }
+.spec-what { opacity: 0.5; }
+.spec-price { opacity: 0.75; letter-spacing: 0.18em; }
 
-/* ── even better — the dock ──────────────────────────────────────────────────
-   One element in two states. ⚠️ It is FIXED and it never covers the page: the version this
-   replaced was a full-screen overlay with a backdrop blur, which is fine for something you
-   deliberately tapped and completely wrong for something that opens itself as you scroll. */
+/* ── even better — the card, and what it opens ───────────────────────────────
+   ⚠️ THE CARD DOES NOT GROW. A previous cut had it blow itself out in place into a 46rem panel,
+   which is a bigger widget sitting on top of the page, not the thing that was asked for: "blow it
+   out almost like it was clicked… it had a pop up that didn't have the background of the widget."
+   So the card stays a card and the POPUP is what opens — on a tap, and by itself over the stretch
+   of scroll past the gift list. */
 .cash-dock {
   position: fixed;
   left: 50%;
   bottom: 1.75rem;
   /* ⚠️ Above `.popup-stack` (15), below the nav (20). */
   z-index: 16;
-  width: min(24rem, 88vw);
+  width: min(22rem, 86vw);
   box-sizing: border-box;
   background: #F6F3EC;
   color: #2E4A52;
@@ -687,24 +752,13 @@ onBeforeUnmount(() => {
   opacity: 0;
   pointer-events: none;
   transform: translateX(-50%) translateY(1.2rem);
-  transition:
-    width 0.78s cubic-bezier(0.2, 0.72, 0.24, 1),
-    border-radius 0.6s cubic-bezier(0.2, 0.72, 0.24, 1),
-    box-shadow 0.6s ease,
-    opacity 0.5s ease,
-    transform 0.6s cubic-bezier(0.2, 0.72, 0.24, 1);
+  transition: opacity 0.45s ease, transform 0.6s cubic-bezier(0.2, 0.72, 0.24, 1);
 }
 .cash-dock.live {
   opacity: 1;
   pointer-events: auto;
   transform: translateX(-50%) translateY(0);
 }
-.cash-dock.open {
-  width: min(46rem, 94vw);
-  border-radius: 1.25rem;
-  box-shadow: 0 22px 60px rgba(24, 34, 40, 0.24);
-}
-
 .dock-hit {
   display: flex;
   flex-direction: column;
@@ -717,58 +771,81 @@ onBeforeUnmount(() => {
   background: none;
   color: inherit;
   padding: 1rem 1.4rem;
-  cursor: pointer;
-  transition: padding 0.7s cubic-bezier(0.2, 0.72, 0.24, 1);
+  cursor: none;
 }
-.cash-dock.open .dock-hit { padding: 2rem 2rem 0.6rem; }
 .dock-hit:focus-visible { outline: 1px solid currentColor; outline-offset: -4px; }
 .dock-eyebrow {
   font-family: 'Over the Rainbow', cursive;
   font-size: clamp(1.25rem, 2.4vw, 1.7rem);
   line-height: 1.1;
-  transition: font-size 0.7s cubic-bezier(0.2, 0.72, 0.24, 1);
 }
-.cash-dock.open .dock-eyebrow { font-size: clamp(2rem, 5vw, 3rem); }
-/* The one-line summary is the card's whole content while it is a card, and has nothing to say
-   once the panel below it is open — so it folds away rather than sitting above a repeat of itself. */
 .dock-note {
   font-family: 'Bague', sans-serif;
   font-size: 0.68rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   opacity: 0.55;
-  max-height: 2rem;
-  transition: opacity 0.32s ease, max-height 0.6s cubic-bezier(0.2, 0.72, 0.24, 1);
 }
-.cash-dock.open .dock-note { opacity: 0; max-height: 0; }
 
-/* ⚠️ `grid-template-rows: 0fr → 1fr` — see the template. The panel's height is content-driven,
-   `height: auto` cannot be transitioned, and measuring it in JS every frame on this page in
-   particular is exactly the cost that made it the site's heaviest (AUDIT #58). */
-.dock-body {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.78s cubic-bezier(0.2, 0.72, 0.24, 1);
+/* The panel: ink on paper over a washed-out page, no box of its own. */
+.cash-layer {
+  position: fixed;
+  inset: 0;
+  /* ⚠️ Inside `.chapter-page`'s stacking context (z-10), which means UNDER the nav — deliberately.
+     This panel can arrive without being asked for, so the way out has to stay reachable. */
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8vh 6vw;
+  background: color-mix(in srgb, var(--accentLight, #E8EDF2) 88%, transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  cursor: none;
 }
-.cash-dock.open .dock-body { grid-template-rows: 1fr; }
-.dock-inner {
-  overflow: hidden;
-  min-height: 0;
-  padding: 0 1.6rem;
+.cash-panel {
+  position: relative;
+  width: min(30rem, 100%);
+  text-align: center;
+  color: #2E4A52;
 }
-.dock-text {
+.cash-x {
+  position: absolute;
+  top: -2.4rem;
+  inset-inline-end: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: none;
+  padding: 0.25rem;
+  color: #2E4A52;
+  opacity: 0.5;
+  cursor: none;
+  transition: opacity 0.25s ease;
+}
+.cash-x:hover, .cash-x:focus-visible { outline: none; opacity: 1; }
+.cash-x svg { width: 100%; height: 100%; display: block; }
+.panel-enter-active, .panel-leave-active { transition: opacity 0.42s ease; }
+.panel-enter-from, .panel-leave-to { opacity: 0; }
+.cash-heading {
+  font-family: 'Over the Rainbow', cursive;
+  font-size: clamp(2.1rem, 6vw, 3.2rem);
+  line-height: 1.1;
+  margin: 0 0 1.2rem;
+  font-weight: 400;
+}
+.cash-body {
   font-family: 'Italiana', serif;
   font-size: clamp(1.05rem, 2.2vw, 1.35rem);
   line-height: 1.6;
-  margin: 0.6rem auto 1.8rem;
+  margin: 0 auto 2.4rem;
   max-width: 26rem;
-  opacity: 0;
-  transition: opacity 0.4s ease 0.18s;
+  opacity: 0.85;
 }
-.cash-dock.open .dock-text { opacity: 0.85; }
-.dock-cta {
+.cash-cta {
   display: inline-block;
-  margin-bottom: 2rem;
   font-family: 'Bague', sans-serif;
   font-size: 0.78rem;
   letter-spacing: 0.22em;
@@ -777,16 +854,15 @@ onBeforeUnmount(() => {
   color: inherit;
   padding-bottom: 0.35rem;
   border-bottom: 1px solid currentColor;
-  opacity: 0;
-  transition: opacity 0.4s ease 0.26s;
+  opacity: 0.75;
+  cursor: none;
+  transition: opacity 0.25s ease;
 }
-.cash-dock.open .dock-cta { opacity: 0.78; }
-.dock-cta:hover, .dock-cta:focus-visible { outline: none; opacity: 1; }
-.dock-cta.is-pending { border-bottom-style: dashed; cursor: default; }
-.cash-dock.open .dock-cta.is-pending { opacity: 0.5; }
+.cash-cta:hover, .cash-cta:focus-visible { outline: none; opacity: 1; }
+.cash-cta.is-pending { border-bottom-style: dashed; opacity: 0.5; cursor: default; }
 
 @media (prefers-reduced-motion: reduce) {
-  .cash-dock, .cash-dock *, .dock-body { transition-duration: 0.01ms !important; }
+  .cash-dock, .cash-dock *, .reveal, .reveal-tie path { transition-duration: 0.01ms !important; }
 }
 
 /* ── signing ── */

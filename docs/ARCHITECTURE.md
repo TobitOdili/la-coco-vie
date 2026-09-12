@@ -894,6 +894,16 @@ describe. ⚠️ `--p` is 0 almost always and the ring is transparent and inert 
 needs no `v-if`. ⚠️ **A value driven by a `touchmove` handler needs a `touchend` handler**: the
 else-branch reset only runs while a finger is still moving, so a pull that stops short froze the cue
 lit for the rest of the visit (AUDIT #62).
+⚠️ **A PROMPT THAT ARRIVES BEFORE THE PAGE DOES IS PROMPTING THE WRONG THING.** The scroll cue
+mounted with the route, so it was on screen for the whole ~1.5s select — telling you to scroll a card
+that was still turning into a page. It waits on `cueReady`, set from the same settle poll that opens
+scrolling, plus a beat. ⚠️ **And it is the site's own pen, not a scroll indicator.** A rail with a
+bouncing dot is the one scroll hint every site on earth has, which is exactly why it read as generic
+and stuck out: it belonged to no page. Every chapter here is built on a line of ink that draws itself
+as you scroll — the knot, the flourishes, the rules — so the prompt is that same pen starting the
+stroke and stopping, over a faint ghost of where the line is going. ⚠️ The WORD does not blink with
+it: faded in and out on the stroke's cycle, the whole cue read as nothing at all for about a second
+in every three, which is the complaint the rail and dot earned in the first place.
 ⚠️ **THERE IS NO KNOWING WHAT IS BEHIND A CUE, AND BOTH GUESSES WERE WRONG.** Every hero is the
 chapter's CARD blown up to fill the frame, so what sits under a fixed overlay depends on the card, the
 orientation, and — once the film starts — the frame: measured, the top of the US hero is pale paper at
@@ -905,6 +915,12 @@ cues therefore use near-white with a **tight dark outline** (stacked short `text
 `-webkit-text-stroke`, which closes up the counters at 11px), and both sit at the BOTTOM — the top of
 the frame is where every hero puts its title, and nothing legible survives 12vh of Italiana caps.
 AUDIT #66.
+⚠️ **`getComputedStyle().backgroundColor` DOES NOT ALWAYS COME BACK IN 0–255.** `rgb()`/`rgba()` do,
+but anything written with `color-mix()` — which is how the chapter tints are blended — computes to
+`color(srgb r g b / a)` with components in **0–1**. The nav's ground probe read those as 0–255, got a
+luminance of ~0.003, decided the ground was black and flipped the nav to its light ink: measured on
+With Love's cash panel, wordmark `rgb(232,237,242)` on a `rgb(232,237,242)` ground, i.e. invisible.
+Parse the notation, not just the numbers.
 ⚠️ **A HANDOVER HAS A VELOCITY.** The return committed at the page's last pixel, where Lenis's easing
 had already slowed `de` to nothing — so the deck arrived at the homepage *stopped*, and the next wheel
 notch hit the homepage's own scroll-rotation, about three times faster per pixel. That step from ~0 to

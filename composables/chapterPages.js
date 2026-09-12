@@ -368,7 +368,7 @@ export const CHAPTER_PAGES = {
         // ⚠️ Three links are NOT the product page: see the notes on those items.
         items: [
           {
-            name: 'a pressure cooker',
+            name: 'pressure cooker',
             memory: 'sunday stew, ready before the guests are.',
             product: 'oraimo TenderPot 6L 1000W · 9 programs',
             price: 'about ₦116,900',
@@ -376,7 +376,7 @@ export const CHAPTER_PAGES = {
             image: null, x: 34, claimed: false,
           },
           {
-            name: 'a bigger one',
+            name: 'bigger pressure cooker',
             memory: 'or the same thing, with more room in it.',
             product: 'oraimo KitchNova 1200W 6L · 80kPa',
             // ⚠️ The store's PRESSURE COOKER collection, not this product's own page — the
@@ -386,7 +386,7 @@ export const CHAPTER_PAGES = {
             image: null, x: 68, claimed: false,
           },
           {
-            name: 'a breakfast station',
+            name: 'breakfast station',
             memory: 'saturday eggs, both of us still half asleep.',
             product: 'oraimo EasyBistro 2-in-1 Breakfast Station',
             price: 'about ₦102,900',
@@ -394,7 +394,7 @@ export const CHAPTER_PAGES = {
             image: null, x: 36, claimed: false,
           },
           {
-            name: 'an air oven',
+            name: 'air oven',
             memory: 'the cake that comes out right the first time.',
             product: 'oraimo BakeAir Pro 8-in-1 · 20L · 230°C',
             price: 'about ₦165,900',
@@ -402,7 +402,7 @@ export const CHAPTER_PAGES = {
             image: null, x: 70, claimed: false,
           },
           {
-            name: 'the big television',
+            name: 'big television',
             memory: 'the match, the film, the falling asleep halfway through.',
             product: 'LG NanoCell 65" NANO80 4K Smart · Fouani',
             price: null,
@@ -410,7 +410,7 @@ export const CHAPTER_PAGES = {
             image: null, x: 32, claimed: false,
           },
           {
-            name: 'a dehumidifier',
+            name: 'dehumidifier',
             memory: 'harmattan outside, calm in here.',
             product: 'Maxi Dehumidifier 30L (30DEN7) · Fouani',
             // ⚠️ NO LINK — this one has no findable page on Fouani's store and no category page
@@ -420,7 +420,7 @@ export const CHAPTER_PAGES = {
             image: null, x: 66, claimed: false,
           },
           {
-            name: 'a refrigerator',
+            name: 'refrigerator',
             memory: 'room for everything, finally.',
             product: 'Hisense SxS 541L (71WS-RC) · Fouani',
             // ⚠️ Fouani's HISENSE brand page, not this model's own — the 71WS-RC is not indexed.
@@ -429,7 +429,7 @@ export const CHAPTER_PAGES = {
             image: null, x: 38, claimed: false,
           },
           {
-            name: 'the corner sofa',
+            name: 'corner sofa',
             memory: 'the corner we never get up from.',
             product: 'Taeillo ADA L-Shaped',
             price: 'about ₦369,998',
@@ -437,7 +437,7 @@ export const CHAPTER_PAGES = {
             image: null, x: 64, claimed: false,
           },
           {
-            name: 'a stand mixer',
+            name: 'stand mixer',
             memory: 'flour on everything. worth it.',
             product: 'oraimo OminiMix 1900W · 6 speeds',
             price: null,
@@ -445,7 +445,7 @@ export const CHAPTER_PAGES = {
             image: null, x: 30, claimed: false,
           },
           {
-            name: 'a chest freezer',
+            name: 'chest freezer',
             memory: 'a month of stew, cooked once.',
             product: 'Hisense Chest Freezer 297L (390SH-FC) · Fouani',
             price: null,
@@ -453,19 +453,25 @@ export const CHAPTER_PAGES = {
             image: null, x: 72, claimed: false,
           },
         ],
-        // ⚠️ NO dock popup here any more (2026-09-11). With Love owns its own dock now — it has to,
-        // because the dock EXPANDS INTO A SECTION on scroll and the generic PopupCard has no idea
-        // where the gift list ends. See `cashPanel` below and the `.cash-dock` block in WithLove.
+        // ⚠️ NO ARTICLES ON THE NAMES. These are set as the page — six or eight bands of them
+        // running across the screen — and an "a"/"an"/"the" in front of each one is a column of
+        // filler words the eye has to step over on every pass. Bare nouns read as a list of things,
+        // which is what a registry is. (`bigger pressure cooker` was `a bigger one`, which only
+        // made sense read straight after the first cooker and never was, because the bands are
+        // shuffled independently.)
+        // ⚠️ NO dock popup here either (2026-09-11). With Love owns its own — it has to, because
+        // it opens itself where the gift list ends and the generic PopupCard has no idea where
+        // that is. See `cashPanel` below and the `.cash-dock` block in WithLove.
         popups: [],
       },
       // ⚠️ Not a section — the panel the `cashNote` dock card opens. It replaced a
       // bordered box that sat mid-page and read as out of character on a chapter
       // that is otherwise ink on paper.
       {
-        // ⚠️ NOT A SECTION IN THE PAGE FLOW — it is the fixed dock at the bottom of the screen,
-        // which starts as a card and blows itself out into a full panel once the gift list is
-        // behind you, then folds back down as the signature arrives. WithLove owns the whole
-        // thing; nothing here is rendered by the generic popup dock.
+        // ⚠️ NOT A SECTION IN THE PAGE FLOW. Two things render this: a small fixed card at the
+        // bottom of the screen, and the panel that card opens — which also opens ITSELF over the
+        // stretch of scroll between the end of the gift list and the signature. WithLove owns the
+        // whole thing; nothing here is rendered by the generic popup dock.
         kind: 'cashPanel',
         heading: 'even better —',
         // The one line the card shows while it is still a card.

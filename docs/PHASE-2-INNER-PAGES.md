@@ -106,6 +106,43 @@ above. Constant speed and a reversed exit are not in conflict.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
 
+**▶▶ STATE (2026-09-11, later) — WITH LOVE: THE POPUP IS A POPUP, AND THE NAMES ARE THE LINKS.**
+User: *"When I said to expand it on scroll, I didn't mean to make it a bigger widget — blow it out
+almost like it was clicked. Before, it had a pop up that didn't have the background of the widget…
+automatically pop it up as a section when I scroll past the gifts, but before the with love section."*
+And: *"we don't have to put 'A' or 'An' before the actual gifts"*; *"the very name should be linked,
+and the details should be shown in a creative way."*
+
+1. **The card stops growing; the popup comes back.** The previous cut morphed the fixed card in place
+   into a 46rem panel — a bigger widget sitting on top of the page, with its own background, covering
+   whatever was behind it. What was asked for was the thing a TAP already did: the washed, blurred,
+   boxless overlay. So the card stays a 22rem card, and `.cash-layer` is restored — and now opens
+   itself over the stretch of scroll between the gift list and the signature (`edge` 0.80 → 0.15, the
+   wall's own bottom edge as a fraction of the viewport; one value, not two — AUDIT #61).
+2. ⚠️ **NOT TELEPORTED TO `<body>` ANY MORE, and that is load-bearing.** Lenis listens for wheel on
+   `.chapter-page`. A full-screen layer parented to the body is OUTSIDE that element, so every wheel
+   event over it dies on the layer — and a panel that opens ITSELF would have trapped the visitor
+   behind it. Rendered in place the events bubble to the scroller: measured 3,932px of scroll with the
+   panel up. It therefore renders under the nav (z-20) rather than over it, which is right — the way
+   out stays reachable. Escape closes it too, for the same reason.
+3. **Dismissing it sticks.** `panelOpen` is only written on a TRANSITION of the scroll-derived answer,
+   so closing it by hand is not overruled on the next frame and it can still open itself next pass.
+4. **No articles on the gift names.** They are set as the page — six or eight bands of them — and an
+   "a"/"an"/"the" in front of each is a column of filler the eye steps over on every pass. (`a bigger
+   one` became `bigger pressure cooker`: it only parsed read straight after the first cooker, and the
+   bands are shuffled independently, so it never was.)
+5. **The name IS the link**, an `<a>` when the item has a product page and a `<button>` when it does
+   not (three of the ten have no indexed URL). The panel's separate "see it ↗" is gone — it put the
+   thing you want two moves from the thing you are already pointing at.
+6. **The detail is a margin note, not a card.** It was a cream box with a 30px drop shadow: a UI
+   popover on a chapter that is ink on paper everywhere else. Now a hairline is drawn from the word —
+   the same pen as the flourishes above — down to the memory in the couple's own hand, with the
+   specifics under it in small caps. No border, no corner, no shadow; the only help it gets is the
+   paper thickening behind it (a radial wash with no edge anywhere, so it is not a box).
+
+Verified at 1440×900 and 390×844: tap opens, scroll opens and closes on its own band, Escape closes,
+a dismissal survives the rest of the band, the bottom exit still commits, 0 console errors.
+
 **▶▶ STATE (2026-09-11, latest) — THE DECK IS STILL OPENING WHEN THE CARD ARRIVES.**
 User: *"You seem to have shortened the page exit animation… I still want to see some rotation and the
 page to be 'caught' in the deck of cards as we had before, not just drop in. The thing I asked you to
