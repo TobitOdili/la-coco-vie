@@ -1,5 +1,11 @@
 <template>
   <div>
+    <!-- ⚠️ FIRST, so both nav bars (later siblings at the same z-20) paint on top of it. Nested
+         inside one of them it washed out WELCOME and RSVP, which is not the nav stepping aside —
+         it is the nav looking broken. See `.back-veil`. -->
+    <div v-if="homePull > 0 || homeLeaving" class="back-veil" :class="{ leaving: homeLeaving }"
+      :style="{ '--p': homeLeaving ? 1 : homePull }" aria-hidden="true" />
+
     <!-- Top navigation bar -->
     <div class="!fixed z-20 top-0 w-full">
       <div class="container flex justify-between mt-2 md:mt-6">
@@ -59,12 +65,19 @@
           >
             COVENANT <span class="amp">&amp;</span> UVIE
           </div>
-          <!-- ── "back to the chapters", where the logo usually is ────────────────────────────
-               Only ever up while the TOP edge is being pulled. `--p` is the charge, 0→1: the ring
-               closes with it and the whole thing fades in with it, so at rest it is not rendered at
-               all. Its twin lives at the very END of the chapter's own content for the BOTTOM exit
-               — the two edges leave by different doors and the signpost belongs at each one. -->
-          <div v-if="homePull > 0" class="pull-cue" :style="{ '--p': homePull }" aria-hidden="true">
+          <!-- ── going back: the veil, and the loader that was the logo ──────────────────────
+               ⚠️ THIS IS A SCRUB, NOT A SPINNER. `--p` is how far the top-edge pull has been drawn,
+               0→1, and the whole return is scrubbed to the same number — so the veil coming down,
+               the ring closing and the chapter folding back into the deck are one motion the
+               visitor is driving, reversible at any point.
+               The veil washes DOWN FROM THE TOP (a gradient mask whose edge is `--p`), frosting the
+               page as it goes; the loader starts where the wordmark is, which fades out under it,
+               and travels to the middle of the frame as the veil reaches it. That is the "morph
+               from the logo": it begins as the thing it replaces.
+               Its twin for the BOTTOM exit lives at the very end of the chapter's own content —
+               the two edges leave by different doors and the signpost belongs at each one. -->
+          <div v-if="homePull > 0 || homeLeaving" class="pull-cue" :class="{ leaving: homeLeaving }"
+            :style="{ '--p': homeLeaving ? 1 : homePull }" aria-hidden="true">
             <span class="pull-ring">
               <svg viewBox="0 0 44 44" focusable="false">
                 <circle class="pull-track" cx="22" cy="22" r="20" />
@@ -134,7 +147,7 @@
 </template>
 
 <script setup>
-import { computed, watch } from 'vue'
+import { computed, watch, onBeforeUnmount } from 'vue'
 import { SITE } from '~/site.config'
 
 // Whole days until the next wedding (static per page load — day resolution needs no
@@ -186,6 +199,16 @@ const navInk = computed(() => (navOnDark.value ? 'var(--accentLight)' : props.ac
 // How far a top-edge pull has charged, 0→1. Written by the chapter page (which owns the gesture),
 // read here because the cue belongs where the wordmark is — see the template.
 const homePull = useState('homePull', () => 0)
+// Set by the page at the moment it commits, cleared here once the veil has played out — the page
+// unmounts on the next tick, so it cannot be the thing that fades its own overlay.
+const homeLeaving = useState('homeLeaving', () => false)
+let leaveT = null
+watch(homeLeaving, (on) => {
+  clearTimeout(leaveT)
+  if (!on) return
+  leaveT = setTimeout(() => { homeLeaving.value = false; homePull.value = 0 }, 620)
+})
+onBeforeUnmount(() => clearTimeout(leaveT))
 
 // `.menu-item` is coloured from main.css, so the flag has to reach CSS too.
 watch(navOnDark, (on) => {
@@ -196,30 +219,69 @@ defineEmits(['toggle-about', 'go-home', 'toggle-sound'])
 </script>
 
 <style scoped>
-/* ── the top-edge return cue ─────────────────────────────────────────────────
-   The same ring as the one at the foot of the chapter, laid out on one line so it fits inside the
-   band of accent the pull opens above the page card. */
+/* ── going back: the veil ────────────────────────────────────────────────────
+   Frosted paper washing down over the chapter as the pull is drawn. ⚠️ THE MASK IS THE ANIMATION:
+   the layer is full-screen and always the same colour, and `--p` moves the edge of a gradient that
+   reveals it downward — so "fades in down from the top across the page" is one interpolation with
+   nothing to keep in sync. Below the nav's own z-20 bars so WELCOME and RSVP stay legible on top of
+   it, and above everything else. */
+.back-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 19;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--accentLight, #F3F1EC) 88%, transparent);
+  /* ⚠️ THE WASH THICKENS, IT DOES NOT ARRIVE OPAQUE. The mask says how far down the page it has
+     reached; this says how much of the scene it is hiding, and the scene behind it is the thing
+     the visitor is actually driving — a veil that is already solid at half a pull turns the
+     return back into a loading screen with an animation somewhere underneath it. */
+  opacity: calc(0.22 + var(--p, 0) * 0.66);
+  backdrop-filter: blur(calc(var(--p, 0) * 7px)) saturate(0.9);
+  -webkit-backdrop-filter: blur(calc(var(--p, 0) * 7px)) saturate(0.9);
+  -webkit-mask-image: linear-gradient(to bottom,
+    #000 0%,
+    #000 calc(var(--p, 0) * 112%),
+    transparent calc(var(--p, 0) * 112% + 14%));
+  mask-image: linear-gradient(to bottom,
+    #000 0%,
+    #000 calc(var(--p, 0) * 112%),
+    transparent calc(var(--p, 0) * 112% + 14%));
+  transition: opacity 0.55s ease;
+}
+/* Committed: hold it whole for the route change, then let it go and reveal the deck. */
+.back-veil.leaving { opacity: 0 !important; }
+
+/* ── going back: the loader that was the logo ────────────────────────────────
+   Starts where the wordmark is and travels to the middle of the frame as the veil reaches it. */
 .pull-cue {
-  /* ⚠️ FIXED TO THE TOP OF THE FRAME, not laid out with the wordmark. The band this lives in is
-     opened by the pull itself and grows from the top edge downward, so the cue has to be anchored
-     to that edge — pinned to the wordmark's own box it started 36px down and spent the first half
-     of the charge hanging off the bottom of a band that had not reached it yet. */
   position: fixed;
   left: 50%;
-  top: 0.4rem;
+  /* ⚠️ INTERPOLATED FROM THE WORDMARK'S OWN LINE to the centre of the frame. Pinned to either end
+     it is a second element appearing beside the first; moving between them is what makes it read
+     as the mark becoming the loader. */
+  top: calc(0.9rem + var(--p, 0) * (50vh - 2.6rem));
   transform: translateX(-50%);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 0.62rem;
+  gap: calc(0.2rem + var(--p, 0) * 0.7rem);
   white-space: nowrap;
   pointer-events: none;
-  /* ⚠️ THE BAND IS ALWAYS THE CHAPTER'S ACCENT — it is the renderer's clear colour showing where the
-     hero card used to be — so this ink is not the nav's. The nav's flips with whatever is under it;
-     this one knows exactly what it is on. */
-  color: var(--accentLight, #F6F3EC);
-  opacity: calc(var(--p, 0) * 1.4);
+  z-index: 21;
+  /* The ink is the chapter's, because the veil under it is the chapter's paper. */
+  color: var(--accent, #333);
+  opacity: calc(var(--p, 0) * 1.5);
+  transition: opacity 0.45s ease;
 }
-.pull-ring { position: relative; display: block; width: 1.5rem; height: 1.5rem; }
+.pull-cue.leaving { opacity: 0; }
+.pull-ring {
+  position: relative;
+  display: block;
+  /* Grows with the pull, from a mark the size of the wordmark's cap-height to a loader. */
+  width: calc(1.15rem + var(--p, 0) * 1.75rem);
+  height: calc(1.15rem + var(--p, 0) * 1.75rem);
+  transition: none;
+}
 .pull-ring svg { width: 100%; height: 100%; display: block; overflow: visible; }
 .pull-track, .pull-draw { fill: none; stroke: currentColor; }
 /* ⚠️ `non-scaling-stroke`: a stroke-width is meaningless without its viewBox scale. This pins it
@@ -238,9 +300,9 @@ defineEmits(['toggle-about', 'go-home', 'toggle-sound'])
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 0.34rem;
-  height: 0.34rem;
-  margin: -0.22rem 0 0 -0.17rem;
+  width: calc(0.26rem + var(--p, 0) * 0.2rem);
+  height: calc(0.26rem + var(--p, 0) * 0.2rem);
+  margin: calc(-0.17rem - var(--p, 0) * 0.08rem) 0 0 calc(-0.13rem - var(--p, 0) * 0.1rem);
   border-left: 1px solid currentColor;
   border-top: 1px solid currentColor;
   transform: rotate(45deg);
@@ -248,10 +310,11 @@ defineEmits(['toggle-about', 'go-home', 'toggle-sound'])
 }
 .pull-label {
   font-family: 'Bague', ui-sans-serif, sans-serif;
-  font-size: 0.58rem;
-  letter-spacing: 0.24em;
+  font-size: 0.6rem;
+  letter-spacing: 0.26em;
   text-transform: uppercase;
-  opacity: 0.9;
+  /* Holds off until the mark has left the wordmark's line — two words in one place is a collision. */
+  opacity: calc(max(0, var(--p, 0) - 0.28) * 1.4);
 }
 
 .wordmark {

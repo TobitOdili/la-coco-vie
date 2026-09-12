@@ -127,13 +127,56 @@ const webglSceneRef = inject('webglSceneRef', null)
 // inside the band of accent the pull opens above the page card. (The BOTTOM edge's cue is in this
 // page's own content, at the end of it.)
 const navPull = useState('homePull', () => 0)
+// Set at the moment of commit and cleared by SiteNav once its veil has faded: the page itself
+// unmounts on the next tick, so it cannot be the thing that plays the veil out.
+const navLeaving = useState('homeLeaving', () => false)
 
-// ⚠️ Enough to open a band the cue can live in. At 0.055 the band was ~49px and the cue sat half on
-// the card; 0.085 gives ~76px at a full charge, which is the height of the ring plus its label.
-const HERO_PULL_PX = 0.085
-function pushHeroPull() {
-  webglSceneRef?.value?.scene?.setHeroPull?.(pullTop.value * window.innerHeight * HERO_PULL_PX)
+// ⚠️ THE PULL IS THE ANIMATION. It used to charge a threshold and then fire a 2.5s timeline —
+// "it seems to completely handoff to play the rest of the animation almost like a video". Every
+// pixel of the pull now scrubs `setBackProgress`, so the whole return is reversible at any point
+// and reaching 1 IS the arrival; there is nothing left to play afterwards.
+// (The old `setHeroPull` nudge is gone with it: the scrub shrinks the hero card itself, which
+// opens the accent around it far more plainly than pressing it down a few percent ever did.)
+let backEngaged = false
+function pushPull() {
+  const scene = webglSceneRef?.value?.scene
   navPull.value = pullTop.value
+  // ⚠️ RE-PROBE THE NAV'S GROUND. `syncNavInk` otherwise only runs on Lenis scroll events, and the
+  // pull STOPS Lenis — so the flag was whatever the last scroll left it as while the veil, which is
+  // the chapter's pale paper, washed in underneath the nav. Measured mid-pull: menu ink
+  // rgb(239,232,245) on a near-white veil.
+  syncNavInk()
+  if (!scene) return
+  if (pullTop.value > 0 && !backEngaged) {
+    backEngaged = !!scene.beginBack?.()
+    // ⚠️ THE SCROLLER STANDS DOWN WHILE THE PULL OWNS THE GESTURE. Without this a push back down
+    // unwound the pull AND scrolled the page in the same notches, so reversing a return left you a
+    // few hundred pixels into the chapter with no way to pull again. One gesture, one meaning.
+    if (backEngaged) lenis?.stop()
+  }
+  if (!backEngaged) return
+  if (pullTop.value <= 0) {
+    scene.cancelBack?.()
+    backEngaged = false
+    if (!exiting) lenis?.start()
+    return
+  }
+  scene.setBackProgress(pullTop.value)
+}
+
+// Released short of the threshold: the pull springs back rather than snapping, and the scene
+// scrubs back with it — the same function, run the other way.
+let releaseRaf = 0
+function releasePull() {
+  cancelAnimationFrame(releaseRaf)
+  if (!pullTop.value) { pushPull(); return }
+  const step = () => {
+    pullTop.value = Math.max(0, pullTop.value - 0.055)
+    topAccum = pullTop.value * threshold()
+    pushPull()
+    if (pullTop.value > 0) releaseRaf = requestAnimationFrame(step)
+  }
+  releaseRaf = requestAnimationFrame(step)
 }
 
 // The cue retires on the first real scroll; the two pulls are 0→1 toward the homepage.
@@ -155,12 +198,16 @@ let lenis = null
 // BOTTOM exit is being REBUILT scroll-driven (per the reference: the page scrolls fully out and a ring
 // "outro" section scrolls in) — see docs/PHASE-2-INNER-PAGES.md. Until then the bottom edge is inert
 // (use the top edge, the back button, or the nav logo to leave).
-// ⚠️ 420, not 800. Eight hundred pixels of wheel is more than a trackpad flick produces, so the
-// ring charged to about half, the 400ms gesture gap reset it, and the top edge read as doing
-// nothing at all. A deliberate pull is still deliberate at 420 — it is roughly three notches.
-const EXIT_THRESHOLD = 420  // px of overscroll past the TOP edge to trigger the (reverse) exit
-let topAccum = 0             // top overscroll accumulator
+// ⚠️ A LONG PULL, DELIBERATELY. This is no longer a trigger — it is the LENGTH OF THE ANIMATION.
+// Every pixel scrubs the whole return (see `pushPull`), so the threshold is how much gesture the
+// visitor gets to spend watching the chapter fold back into the deck, and how much room they have
+// to change their mind. 420px was right for a charge-and-fire; it is over in a blink as a scrub.
+const EXIT_THRESHOLD = 1150 // px of overscroll past the TOP edge — the full length of the return
+let topAccum = 0             // top overscroll accumulator — the scrub's position, in px
+let touching = false         // a finger is down, so the touch threshold is the one in play
+const threshold = () => (touching ? EXIT_THRESHOLD_TOUCH : EXIT_THRESHOLD)
 let lastWheelT = 0           // last wheel-event time — a gap means a new gesture
+let wheelIdle = null         // …and the timer that notices the gap when no further event comes
 let exiting = false          // an exit committed (navigating home) — lock out further input
 let ready = false            // select-in settled — scroll + exit gestures enabled
 let readyPoll = null
@@ -189,31 +236,41 @@ function onWheel(e) {
   const now = performance.now()
   // ⚠️ 700ms, not 400: a trackpad pauses mid-gesture more than that and the charge was being
   // thrown away under a finger that had not left the pad.
-  if (now - lastWheelT > 700) { topAccum = 0; pullTop.value = 0; pushHeroPull() }   // a pause = a new gesture
+  // ⚠️ A GESTURE GAP RELEASES THE PULL, IT DOES NOT ERASE IT. Zeroing the accumulator snapped the
+  // whole scene home in one frame; the release springs it back instead, through the same function.
+  if (now - lastWheelT > 700 && topAccum > 0) releasePull()
   lastWheelT = now
-  if (lenis.scroll <= 2 && dy < 0) {          // top edge, pushing up → reverse rewind home
-    topAccum += -dy
+  // ⚠️ AND IT NEEDS A TIMER, not just the next event's timestamp. A wheel has no "end": stop
+  // scrolling and no further events arrive, so a check that lives inside the handler never runs and
+  // a half-drawn return sat there indefinitely — the same shape as AUDIT #62 on touch.
+  clearTimeout(wheelIdle)
+  wheelIdle = setTimeout(() => { if (topAccum > 0) releasePull() }, 700)
+  if (lenis.scroll <= 2) {
+    // ⚠️ SIGNED, NOT ONE-WAY. `-dy` is positive pulling up and negative pushing back down, so the
+    // scrub runs both ways under the same gesture — which is the whole of "I can actually reverse
+    // it". Clamped at 0, where `pushPull` hands the page back to the scroll coupling.
+    cancelAnimationFrame(releaseRaf)
+    topAccum = Math.max(0, topAccum - dy)
     pullTop.value = Math.min(1, topAccum / EXIT_THRESHOLD)
-    pushHeroPull()
+    pushPull()
     if (topAccum >= EXIT_THRESHOLD) doExit()
-  } else {
-    topAccum = 0
-    pullTop.value = 0
-    pushHeroPull()
+  } else if (topAccum > 0) {
+    releasePull()
   }
 }
 
-// Touch equivalent of the TOP-edge exit (mobile) — without this the only way off a chapter
-// on a phone was the nav logo. A finger-pull needs a much smaller threshold than a wheel's
-// 800px to feel deliberate. (The BOTTOM exit needs nothing extra: it's driven by Lenis
-// scroll position, which native touch scrolling already produces.)
-const EXIT_THRESHOLD_TOUCH = 140
+// Touch equivalent of the TOP-edge exit (mobile) — without this the only way off a chapter on a
+// phone was the nav logo. A finger covers ground faster than a wheel, so the same journey is a
+// shorter number. (The BOTTOM exit needs nothing extra: it's driven by Lenis scroll position,
+// which native touch scrolling already produces.)
+const EXIT_THRESHOLD_TOUCH = 340
 let touchLastY = 0
 function onTouchStart(e) {
   const t = e.touches[0]
   if (!t) return
+  touching = true
   touchLastY = t.clientY
-  topAccum = 0                                // each touch is a fresh gesture
+  cancelAnimationFrame(releaseRaf)            // a new finger takes over from a spring-back
 }
 function onTouchMove(e) {
   if (!ready || !lenis || exiting) return
@@ -221,32 +278,36 @@ function onTouchMove(e) {
   if (!t) return
   const dy = touchLastY - t.clientY           // negative ⇒ dragging the page DOWN (scrolling up)
   touchLastY = t.clientY
-  if (lenis.scroll <= 2 && dy < 0) {
-    topAccum += -dy
+  if (lenis.scroll <= 2) {
+    topAccum = Math.max(0, topAccum - dy)     // signed — see the note in onWheel
     pullTop.value = Math.min(1, topAccum / EXIT_THRESHOLD_TOUCH)
-    pushHeroPull()
+    pushPull()
     if (topAccum >= EXIT_THRESHOLD_TOUCH) doExit()
-  } else {
-    topAccum = 0
-    pullTop.value = 0
-    pushHeroPull()
+  } else if (topAccum > 0) {
+    releasePull()
   }
 }
 
-// ⚠️ The pull has to RELEASE. Without this the rail stayed lit at whatever the finger reached and
-// sat there for the rest of the visit — `onTouchMove`'s own reset only runs while a finger is still
-// moving, and a pull that stops short simply stops producing events.
+// ⚠️ The pull has to RELEASE — a value driven by a move handler needs an end handler, or it is only
+// ever correct mid-gesture (AUDIT #62). It springs back now rather than snapping: the scene is
+// scrubbed to wherever the pull is, so zeroing it in one frame would teleport the whole chapter home.
 function onTouchEnd() {
-  topAccum = 0
-  pullTop.value = 0
-  pushHeroPull()
+  touching = false
+  releasePull()
 }
 
-// TOP edge / back button → navigate home; app.vue's route watcher runs deselectChapter() (reverse).
+// TOP edge → the scrub has already reached 1, so the scene is home; this only finalizes the flags
+// and navigates. ⚠️ `endBack()` BEFORE the push, exactly as the bottom exit does: it clears
+// `selectedIndex`, which is what stops app.vue's route watcher firing a second, animated deselect
+// over the top of a return that has already happened.
 function doExit() {
   if (exiting) return
   exiting = true
   lenis?.stop()
+  cancelAnimationFrame(releaseRaf)
+  webglSceneRef?.value?.scene?.endBack?.()
+  backEngaged = false
+  navLeaving.value = true   // hold the veil across the route change — SiteNav fades it and clears this
   router.push('/')
 }
 
@@ -377,7 +438,7 @@ onMounted(() => {
     scene?.setScroll(e.scroll); syncNavInk(); updateExit(e.scroll); syncCanvasCover(e.scroll)
     if (!cueSeen.value && e.scroll > 40) cueSeen.value = true
     // Left the top edge — whatever the pull had reached is no longer true.
-    if (e.scroll > 2 && pullTop.value) { pullTop.value = 0; pushHeroPull() }
+    if (e.scroll > 2 && topAccum > 0) releasePull()   // scrolled away from the top edge
   })
   // ⚠️ Also on arrival: a chapter selected at scroll 0 already has the accent
   // painted behind the transparent hero, so the nav can be invisible before the
@@ -447,7 +508,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   navOnDark.value = false   // the homepage has no dark ground
-  navPull.value = 0         // …and no pull in progress
+  if (!navLeaving.value) navPull.value = 0   // …and no pull in progress (unless one is landing)
   pageEl.value?.removeEventListener('wheel', onWheel)
   pageEl.value?.removeEventListener('touchstart', onTouchStart)
   pageEl.value?.removeEventListener('touchmove', onTouchMove)
@@ -455,6 +516,8 @@ onBeforeUnmount(() => {
   pageEl.value?.removeEventListener('touchcancel', onTouchEnd)
   sectionObserver?.disconnect()
   if (readyPoll) clearTimeout(readyPoll)
+  clearTimeout(wheelIdle)
+  cancelAnimationFrame(releaseRaf)
   // Leaving mid-exit (e.g. the back button while in the outro) → finalize to a clean homepage ring.
   if (exitEngaged && !exiting) webglSceneRef?.value?.scene?.endExit?.()
   lenis?.destroy()

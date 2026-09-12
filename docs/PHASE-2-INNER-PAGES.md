@@ -106,6 +106,49 @@ above. Constant speed and a reversed exit are not in conflict.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
 
+**▶▶ STATE (2026-09-12, later) — THE RETURN IS A SCRUB, AND THE HERO GIVES THE FILM ITS ROOM.**
+User: *"On desktop, instead of repeating the site title and making the page name that big, let's
+make the hero section taller to show more of the video."* And: *"on returning to homepage on reverse
+scroll, let it be obvious the loading is taking place… when the circle completes, it seems to
+completely handoff to play the rest of the animation almost like a video — that shouldn't be. As
+with the bottom every step must be locked into scroll so I can actually reverse it."*
+
+1. **The hero, three shader numbers.** The small "COVENANT & UVIE" above the page title is the card's
+   own imprint (`logoTexture`, punched into the poster in the border colour) and `logoWidth` grows
+   TENFOLD with `progress` — so becoming the hero turned it into a second, larger wordmark directly
+   under the nav's. It is now multiplied out at `progress` 1: the mark stays on the ring card, where
+   it belongs, and leaves the page. Then `posterSize` 1000 → **620** magnifies the art less, so the
+   title comes out ~38% smaller, and `ofY` .1 → **.038** lifts the photo window: the title band went
+   from **55% of the frame to 37%**, all of it film below.
+   ⚠️ The three are COUPLED and cannot be reasoned about apart. Less magnification shows MORE of the
+   art in the band, so the window cannot rise as far before it slices the title — the first cut
+   (1340 / .02) cut "NEXT CHAPTER" off entirely. And the art leaves only 60px of paper above the
+   title, which is right on a ring card and nothing once the hero band is a third of the frame, so
+   the hero needs its own top margin: `ppUv.y += 0.02` → **0.06**, which applies at `progress` 1 only.
+   ⚠️ **NO BACKTICKS IN THE SHADER.** It is a JS template literal; one in a comment ends the string
+   and the build fails on the GLSL after it. Cost two builds to learn twice.
+   ⚠️ The portrait branch (`condition`) is untouched — that framing was already right.
+2. **The top-edge return is scrubbable**, the way the bottom exit has been since 2026-09-11:
+   `beginBack / setBackProgress / cancelBack / endBack`. Every property is a function of one 0→1
+   number, the pull drives it directly, and `deselectChapter()` is the same scrub driven by a tween —
+   one description of going home, two ways of moving through it. Measured pulling at 1440×900:
+   `cy` −43 → −36.8 → −24.1 → −13.6 → −12 and hero scale 3.31 → 2.23 → 1.01 → 1, tracking the pull;
+   pushing back down runs every one of them in reverse under the same gesture; releasing springs
+   back to exactly the captured state; and the page scrolls normally afterwards.
+   ⚠️ The threshold is the LENGTH of the animation now (1150px of wheel, 340px of finger), not a
+   trigger distance. ⚠️ **Lenis stands down while the pull owns the gesture** — without it a push
+   back down unwound the pull AND scrolled the page in the same notches, leaving you a few hundred
+   pixels in with no way to pull again. ⚠️ **A wheel has no "end"**: the release needs a timer, not a
+   gap check inside the handler, which never runs once the events stop.
+3. **The veil.** A frosted wash comes down over the page as the pull is drawn — the mask's edge is
+   `--p` — with the loader starting where the wordmark is (which fades out under it) and travelling
+   to the centre of the frame. ⚠️ Its opacity ramps as well as its coverage: a wash already solid at
+   half a pull turns the return into a loading screen with the animation hidden underneath, and the
+   animation is the thing the visitor is driving. ⚠️ It is `SiteNav`'s FIRST child at z-19 — nested
+   inside one of the nav's own z-20 bars it painted over WELCOME and RSVP — and the page has to call
+   `syncNavInk()` from the pull handler, because that probe otherwise only runs on Lenis scroll
+   events and the pull stops Lenis.
+
 **▶▶ STATE (2026-09-12, latest) — THE REGISTRY BY ITS REAL NAMES, AND A SECTION INSTEAD OF A LAYER.**
 User, on For Our Next Chapter: *"Remove the notes from the item detail. Make the name of each item
 their actual product/brand name… the hover should be 'or send the cash instead' — we'll create

@@ -642,9 +642,16 @@ beginExit, setExitProgress, cancelExit, endExit, getState }`. It closes over all
 introComplete, isSelecting, isDeselecting }`. (There is no `exitChapterDrop` / page-card /
 snapshot export anymore — that machinery was removed.)
 
-- `selectChapter(chIdx)` / `deselectChapter()` — entry + the **top/back-button** exit. `deselectChapter`
-  snaps the hero to `baseY`, **reverse**-spins `animatedRotationY → preSelectRot`, re-tilts the group,
-  restores carousel-Y + all poster uniforms/scale/position. (Driven by the route watcher.)
+- `selectChapter(chIdx)` / `deselectChapter()` — entry + the **top/back-button** exit.
+  `deselectChapter` is now `beginBack()` plus a 2.5s tween through `setBackProgress`, so the route
+  watcher's return and the gesture-driven one are the same code.
+- `beginBack()` / `setBackProgress(0→1)` / `cancelBack()` / `endBack()` — the **top-edge return**, a
+  scrub. 0 is the chapter as selected, 1 the homepage ring; the hero un-frames and shrinks back to
+  its slot, the deck comes up, the group re-tilts, the accent background fades out. Sub-ranges are
+  the old timeline's durations over its 2.5s span (posters ⇒ [0, 0.60], background ⇒ [0, 0.64],
+  centre text ⇒ [0, 0.40], carousel pose ⇒ [0, 1]) so the shape is the one that was signed off.
+  ⚠️ The hero's captured Y is its RING position, not where the page scroll left it — a return that
+  started from there flew the card down from off-screen.
 - `setScroll(px)` — inner-page scroll position → 1:1 hero coupling (P1).
 - `beginExit()` / `setExitProgress(0→1)` / `cancelExit()` / `endExit(settle?)` — the scrubbable
   **bottom-exit primitives** that reassemble the ring (mirror the reference's scroll-driven "outro",
@@ -884,8 +891,20 @@ gate on the homepage read that field — so coming back from a chapter froze the
 half seconds. Gate input on *both* "is something open" and "is it on its way out", and let the
 interrupt path that already exists actually be reachable. AUDIT #53.
 
+⚠️ **THE TOP EDGE IS A SCRUB, NOT A TRIGGER.** It used to charge a threshold and then fire a 2.5s
+GSAP timeline — "it seems to completely handoff to play the rest of the animation almost like a
+video". `beginBack / setBackProgress / cancelBack / endBack` mirror the bottom exit's primitives:
+every property of the return is a function of one 0→1 number, so the pull IS the animation, it
+reverses under the same gesture, and reaching 1 is the arrival with nothing left to play.
+`deselectChapter()` — the route watcher's path for the Back button and the nav logo — is the same
+scrub driven by a tween, so there is exactly one description of what going home looks like. ⚠️ Two
+things the scrub needs that a threshold did not: **the scroller stands down while the pull owns the
+gesture** (`lenis.stop()`), or a push back down unwinds the pull AND scrolls the page in the same
+notches; and **a wheel has no "end"**, so the release needs a TIMER, not a check inside the handler
+that never runs once the events stop (the same shape as AUDIT #62 on touch).
 ⚠️ **BOTH EDGES OF A CHAPTER LEAD HOME, AND THE SIGNPOST BELONGS AT EACH DOOR.** The top takes a
-sustained pull (420px of wheel, 140px of finger); the bottom commits at the end of the outro. Both
+sustained pull (1150px of wheel, 340px of finger — that is the LENGTH OF THE ANIMATION now, not a
+trigger distance); the bottom commits at the end of the outro. Both
 fill the same ring — drawn by `stroke-dashoffset` the way The Big Day's countdown dials are, with a
 chevron for the direction — but they are **two elements in two places**, because the two exits are
 not the same kind of leaving.
@@ -894,13 +913,17 @@ not the same kind of leaving.
     A fixed one hung over the deck arriving behind it and read as a loading spinner laid on the
     animation. At rest, while you are still reading the footer, it is just the chapter's closing
     line with an open circle under it; `--p` only draws the ring.
-  - **The top** opens a band of the chapter's accent above the page card (`setHeroPull`), and its cue
-    lives in that band — in `SiteNav`, WHERE THE WORDMARK IS, which steps aside for it. ⚠️ It is
-    `position: fixed` to the top of the frame rather than laid out with the wordmark: the band grows
-    from the top edge downward, and pinned to the wordmark's own box the cue started 36px down and
-    spent the first half of the charge hanging off a band that had not reached it. ⚠️ Its ink is
-    `--accentLight`, NOT the nav's: the nav's flips with whatever is under it, and this one always
-    knows — the band is the renderer's clear colour, which is the chapter accent, always dark.
+  - **The top** washes a frosted veil down over the page (`.back-veil` in `SiteNav`) as the pull is
+    drawn, with the loader starting WHERE THE WORDMARK IS — which fades out under it — and travelling
+    to the middle of the frame: it begins as the thing it replaces. ⚠️ The veil's mask edge is `--p`,
+    so "fades in down from the top" is one interpolation with nothing to keep in sync; and its
+    opacity ramps too, because a wash that is already solid at half a pull turns the return back into
+    a loading screen with the animation hidden underneath it. ⚠️ It renders as `SiteNav`'s FIRST
+    child at z-19: nested inside one of the nav's own z-20 bars it painted over WELCOME and RSVP.
+    ⚠️ And the page must call `syncNavInk()` from the pull handler — that probe otherwise only runs
+    on Lenis scroll events, and the pull stops Lenis, so the nav kept whatever ink the last scroll
+    left it while the veil washed in underneath (measured: menu ink rgb(239,232,245) on a near-white
+    veil).
 
   Both are driven from the same accumulators the exits use, so they cannot disagree with the thing
   they describe. ⚠️ **A value driven by a `touchmove` handler needs a `touchend` handler**: the

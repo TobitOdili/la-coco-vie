@@ -178,6 +178,14 @@ void main() {
     logoUv.x = (logoUv.x - xCenter) / logoSize.x + xCenter;
     logoUv.y = (logoUv.y - yCenter) / logoSize.y + yCenter;
     vec4 logo = texture2D(logoTexture, logoUv);
+    // ⚠️ THE COUPLE'S NAMES BELONG ON THE CARD, NOT ON THE PAGE. This mark is punched into the
+    // poster in the border colour, and logoWidth grows tenfold with progress — so as a card
+    // becomes the hero it turned into a second, larger COVENANT & UVIE sitting directly under
+    // the one the nav is already showing. On the ring it is the card's own imprint and it stays;
+    // on the page it is a repeat, so it goes.
+    // ⚠️ NO BACKTICKS ANYWHERE IN THIS SHADER. It is a JS template literal: one backtick in a
+    // comment ends the string and the build fails on the GLSL that follows.
+    logo.a *= 1.0 - progress;
     vec2 ppUv = uv;
     if (condition) {
         ppUv.x = (ppUv.x - 0.5) / textureScaleFactor*.75 + 0.5;
@@ -185,10 +193,27 @@ void main() {
         ppUv.y = (ppUv.y - pY2) / textureScaleFactor*.75 + pY2;
         ppUv.y += 40./ (windowWidth*posterAspectRatio);
     } else {
-        float posterSize = posterWidth > md ? 1000. : 500.;
+        // ⚠️ THE HERO'S TYPE IS THIS NUMBER. ppUv divides by posterSize / posterWidth, so a
+        // SMALLER value magnifies the card art LESS, so the page title comes out smaller — which is
+        // what leaves room for a taller photo window below it. The card art itself is unchanged:
+        // ring cards draw at progress 0 and never see this branch.
+        // ⚠️ IT IS COUPLED TO ofY BELOW and the two pull against each other. Less magnification
+        // shows MORE of the art in the band above the window, so the window cannot rise as far
+        // before it starts slicing the title. 700 with ofY 0.04 puts the title band at ~37% of the
+        // frame (it was 50%) with the type ~31% smaller, and the lowest baseline still clears.
+        // Measure it — render all four chapters and look — do not reason about it alone.
+        float posterSize = posterWidth > md ? 620. : 310.;
         ppUv.x = (ppUv.x - xCenter) / (posterSize / posterWidth) + xCenter;
         ppUv.y = (ppUv.y - 1.) / (posterSize / posterWidth) + 1.;
-        ppUv.y += 0.02;
+        // ⚠️ THE HERO'S TOP MARGIN, and it has to be its own. The card art leaves 60px of paper
+        // above the title — right on a ring card, and far too little once the hero band is cut to a
+        // third of the frame: The Big Day's title came out level with the nav wordmark. Raising this
+        // samples higher in the art, which moves the content DOWN, and it only applies at progress 1,
+        // so the ring cards keep the margin their layout was drawn for.
+        // ⚠️ It is bounded by the title's own depth: the band shows the art down to
+        // (f/k - this) of the texture, and the lowest baseline sits at about 0.32. Past ~0.042 the
+        // titles start being sliced from below.
+        ppUv.y += 0.06;
     }
     ppUv.x = mix(uv.x, ppUv.x, progress);
     ppUv.y = mix(uv.y, ppUv.y, progress);
@@ -220,7 +245,10 @@ void main() {
     pUv.y += mix(0.2, 0.0, progress);
     vec4 photo = texture2D(photoTexture, pUv);
     float a = 0.0;
-    float ofY = condition ? 0.0 : .1;
+    // ⚠️ The window's TOP edge on the hero — a tenth of the plane of dead poster between the title
+    // and the picture. Closing it is the other half of showing more of the film; the portrait
+    // branch (condition) is untouched, because that framing was already right.
+    float ofY = condition ? 0.0 : .038;
     if (pUv.x > edge && pUv.x < 1.-edge && pUv.y > (edge*1.4 + mix(.18, 0., progress)) && pUv.y < (1.-edge - mix(.025, ofY, progress))) {
         a = 1.0;
     }
@@ -1479,7 +1507,9 @@ export function useChapterScene() {
     // carousel is mid-flight; the existing preSelectRot still holds the true resting
     // rotation (otherwise each interrupted cycle drifts the idle carousel a bit more).
     const interruptedDeselect = !!deselectTl
-    if (deselectTl) { deselectTl.kill(); deselectTl = null; isDeselecting = false }
+    // ⚠️ `backStart` too. The return is a scrub now, and a capture left behind would let a later
+    // `setBackProgress` drag the ring back toward a pose that belongs to an abandoned exit.
+    if (deselectTl) { deselectTl.kill(); deselectTl = null; isDeselecting = false; backStart = null }
     // Likewise kill a stale select-in (rapid re-select) so ITS onComplete can't fire.
     if (selectTl) { selectTl.kill(); selectTl = null }
     // Clear hover BEFORE selecting: hover is gated while selected, so unhover would
@@ -1623,57 +1653,124 @@ export function useChapterScene() {
     })
   }
 
-  function deselectChapter() {
-    if (selectedIndex === -1 || isDeselecting) return
+  // ── The return (top edge / Back) ────────────────────────────────────────────
+  // ⚠️ ONE SCRUBBABLE FUNCTION, NOT A TIMELINE. This used to be a 2.5s GSAP timeline fired by a
+  // threshold: you pulled a ring to full and then a canned animation played, which is what came
+  // back as "it seems to completely handoff to play the rest of the animation almost like a video —
+  // that shouldn't be." Every property below is now a function of one 0→1 number, exactly like the
+  // bottom exit, so the top edge is reversible at any point and the pull IS the animation.
+  // `deselectChapter()` — the route watcher's path, for the Back button and the nav logo — is the
+  // same scrub driven by a tween instead of by a gesture, so there is only one description of what
+  // going home looks like.
+  //
+  // The sub-ranges are the old timeline's durations over its 2.5s span, kept so the shape is the
+  // one that was signed off: posters 1.5s ⇒ [0, 0.60], background 1.6s ⇒ [0, 0.64], centre text
+  // 1.0s ⇒ [0, 0.40], and the carousel's own pose the full 2.5s ⇒ [0, 1].
+  const BACK_POSTERS = 0.60
+  const BACK_BG = 0.64
+  const BACK_TXT = 0.40
+  let backStart = null
+
+  function beginBack() {
+    if (selectedIndex === -1 || isDeselecting || !selectedHero) return false
     isDeselecting = true
-    scrollOffsetPx = 0   // stop coupling; GSAP restores the hero's Y below (P1)
-    heroPullPx = 0       // …and the pull that very likely triggered this
+    scrollOffsetPx = 0   // stop the coupling; the scrub owns the hero's Y from here
+    heroPullPx = 0
     // Kill a still-running select-in: its onComplete would otherwise clear isSelecting
-    // early and start the video mid-deselect (back-pressed during the 3s entry).
+    // early and start the video mid-return (Back pressed during the 3s entry).
     if (selectTl) { selectTl.kill(); selectTl = null; isSelecting = false }
-    videoElements[selectedIndex]?.pause()   // reference pauses the film at exit start
-    // Snap the hero back to its ring-centre pose FIRST so the reverse-spin always starts
-    // from the hero position, regardless of how far the inner page had scrolled (the P1
-    // coupling moves the card off-screen as you read). Without this, exiting from the
-    // bottom — or hitting Back after scrolling — flew the card down from off-screen. With
-    // it, the bottom exit is identical to the (correct) top-edge exit.
-    if (selectedHero) selectedHero.mesh.position.y = selectedHero.baseY
+    videoElements[selectedIndex]?.pause()   // the reference pauses the film at exit start
     gsap.killTweensOf(carousel)
-    const tl = gsap.timeline({
-      onComplete: () => { selectedIndex = -1; isDeselecting = false; selectedHero = null; deselectTl = null }
-    })
-    deselectTl = tl
-
-    // Fade the accent background back out to the homepage (top-edge / back-button reverse exit).
-    const bgP = { a: exitBgAlpha }
-    tl.to(bgP, { a: 0, duration: 1.6, ease: 'power2.inOut', onUpdate: () => { exitBgAlpha = bgP.a } }, 0)
-
-    // Restore txt mesh
-    if (groupG.userData.txtMat) {
-      tl.to(groupG.userData.txtMat, { opacity: 1, duration: 1, ease: 'power2.inOut', overwrite: true }, 0)
+    gsap.killTweensOf(carousel.position)
+    gsap.killTweensOf(groupG.rotation)
+    backStart = {
+      rot: carousel.animatedRotationY,
+      cy: carousel.position.y,
+      gx: groupG.rotation.x, gy: groupG.rotation.y, gz: groupG.rotation.z,
+      bg: exitBgAlpha,
+      txt: groupG.userData.txtMat ? groupG.userData.txtMat.opacity : 1,
+      all: posters.map((p) => {
+        gsap.killTweensOf(p.mesh.position)
+        gsap.killTweensOf(p.mesh.scale)
+        gsap.killTweensOf(p.material.uniforms.blendFactor)
+        gsap.killTweensOf(p.material.uniforms.progress)
+        return {
+          p,
+          // ⚠️ The hero's captured Y is its RING position, not where the page scroll left it. The
+          // coupling carries the card off the top as you read, and a return that started from there
+          // flew it down from off-screen. Every other card keeps where it actually is, so a return
+          // reached from a half-finished bottom exit still lands correctly.
+          x: p.mesh.position.x, y: p === selectedHero ? p.baseY : p.mesh.position.y, z: p.mesh.position.z,
+          s: p.mesh.scale.x,
+          blend: p.material.uniforms.blendFactor.value,
+          prog: p.material.uniforms.progress.value,
+        }
+      }),
     }
-
-    // Reverse-spin the carousel back to where it was before the select (matches the
-    // reference) — and resets animatedRotationY so the NEXT select spins again.
-    tl.to(carousel, { animatedRotationY: preSelectRot, duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
-
-    // Restore groupG
-    tl.to(groupG.rotation, { ...homeTilt(), duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
-
-    // Restore carousel
-    tl.to(carousel.position, { y: idleCarouselY(), duration: 2.5, ease: 'power3.inOut', overwrite: true }, 0)
-
-    // Reset all posters
-    posters.forEach((p) => {
-      tl.to(p.material.uniforms.blendFactor, { value: 0, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
-      tl.to(p.material.uniforms.progress, { value: 0, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
-      tl.to(p.mesh.scale, { x: 1, y: 1, z: 1, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
-      // x/z as well as y — cheap, and it means a deselect reached from any half-finished exit
-      // state animates the ring home from wherever the cards actually are.
-      tl.to(p.mesh.position, { x: p.baseX, y: p.baseY, z: p.baseZ, duration: 1.5, ease: 'power3.inOut', overwrite: true }, 0)
-    })
-
     hoveredIndex = -1
+    return true
+  }
+
+  // k: 0 (the chapter, as selected) → 1 (the homepage ring). Safe to call repeatedly in either
+  // direction — that is the whole point of it.
+  function setBackProgress(k) {
+    if (!backStart) return
+    const t = Math.min(1, Math.max(0, k))
+    const ease = (u) => { const v = Math.min(1, Math.max(0, u)); return v * v * (3 - 2 * v) }
+    const lp = (a, b, u) => a + (b - a) * u
+    const e = ease(t)
+    const eP = ease(t / BACK_POSTERS)
+    const ht = homeTilt()
+
+    carousel.animatedRotationY = lp(backStart.rot, preSelectRot, e)
+    carousel.position.y = lp(backStart.cy, idleCarouselY(), e)
+    groupG.rotation.set(lp(backStart.gx, ht.x, e), lp(backStart.gy, ht.y, e), lp(backStart.gz, ht.z, e))
+    exitBgAlpha = lp(backStart.bg, 0, ease(t / BACK_BG))
+    if (groupG.userData.txtMat) groupG.userData.txtMat.opacity = lp(backStart.txt, 1, ease(t / BACK_TXT))
+
+    for (const o of backStart.all) {
+      const m = o.p.mesh
+      m.position.set(lp(o.x, o.p.baseX, eP), lp(o.y, o.p.baseY, eP), lp(o.z, o.p.baseZ, eP))
+      const sc = lp(o.s, 1, eP)
+      m.scale.set(sc, sc, 1)
+      o.p.material.uniforms.blendFactor.value = lp(o.blend, 0, eP)
+      o.p.material.uniforms.progress.value = lp(o.prog, 0, eP)
+    }
+  }
+
+  // The pull was released short of the threshold — put everything back exactly as captured.
+  function cancelBack() {
+    if (!backStart) return
+    setBackProgress(0)
+    isDeselecting = false   // re-enable animate()'s scroll coupling
+    backStart = null
+  }
+
+  // Committed: finalize the homepage ring from wherever the scrub got to.
+  function endBack() {
+    setBackProgress(1)
+    backStart = null
+    selectedIndex = -1
+    isDeselecting = false
+    selectedHero = null
+    scrollOffsetPx = 0
+    heroPullPx = 0
+    hoveredIndex = -1
+    exitBgAlpha = 0
+    if (groupG.userData.txtMat) groupG.userData.txtMat.opacity = 1
+  }
+
+  // The route watcher's path (Back button, nav logo): the same scrub, driven by a tween.
+  function deselectChapter() {
+    if (!beginBack()) return
+    const k = { v: 0 }
+    deselectTl = gsap.to(k, {
+      v: 1,
+      duration: 2.5,
+      ease: 'power3.inOut',
+      onUpdate: () => setBackProgress(k.v),
+      onComplete: () => { endBack(); deselectTl = null },
+    })
   }
 
   // ── Forward scroll-end exit (step E) ────────────────────────────────────────
@@ -2186,6 +2283,10 @@ export function useChapterScene() {
     deselectChapter,  // TOP-edge / back-button exit: reverse-spin rewind into the ring
     setScroll,        // inner-page scroll → hero card coupling (P1)
     setHeroPull,      // top-edge pull px → the hero presses back the way you are pulling
+    beginBack,        // top-edge return: capture the selected state
+    setBackProgress,  // …scrub it home, 0→1, reversible
+    cancelBack,       // …released short of the threshold
+    endBack,          // …committed
     // Forward ring-reassembly primitives (de 0→1), reserved for the scroll-driven BOTTOM exit rebuild
     // (page scrolls out → ring "outro" section; see docs/PHASE-2-INNER-PAGES.md). Currently driven only
     // by the ?debug __exit* hooks.
