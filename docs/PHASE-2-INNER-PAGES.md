@@ -126,17 +126,26 @@ comes back, from a tilt that was never packed:
    look-down and +24° of group yaw across the reveal. **No radius animation, still and forever.**
 2. **The deck is WHOLE before it is opened** (`OTHERS_IN` 0.14). Membership is never watched; attitude
    is. Cards still arriving into an uncovered ring is the "jumble" of AUDIT #47/#48.
-3. **The turn swings out and back, landing on a net of `−homeTilt().y`** (`EXIT_TURN` 62° of watched
-   turn, swung out by `SPIN_HEAD_END` 0.08 and brought back over [`SPIN_FROM` 0.20 … `SPIN_TO` 0.90]).
-   The net is the whole game, because it decides where the empty slot ends up — the one thing the exit
-   is about. −300° put it at the back of the ring; −45° — fine at 1440×900 — put it off the SIDE of a
-   phone, because at 390×844 the front card alone spans 90% of the frame and only about ±15° of the
-   ring is on screen (filmed before the change: the In Frames card never appeared at all); and **zero
-   was wrong too**, because a select flattens `groupG` yaw and all, so restoring the desktop's 70° yaw
-   turns the whole ring — measured on With Love, the card came to rest at world x 38, `normalDotCam`
-   0.07, edge-on in the wings. `−homeTilt().y` gives back exactly what the group takes: x 1.4, dot
-   −0.69, dead centre. Mobile's `homeTilt.y` is 0, so one expression covers both. The return leg is a
-   long, decelerating turn in the homepage's own direction; measured peak ~3× the old linear rate.
+3. **The turn is a WHOLE REVOLUTION** — `EXIT_TURNS` × 360° plus `−homeTilt().y`, i.e. −430° on a
+   desktop and −360° on a phone, run at a **constant rate from the first pixel** (`SPIN_FROM` 0.0) and
+   decelerating onto `SPIN_TO` 0.90. ⚠️ *Revised 2026-09-11 (same day, second pass): the first cut of
+   this was a 62° swing out and back, and it came back as* **"there is no pre-rotation… revert to how
+   it was when it would fully rotate"** *— correctly. Two things have to be true at once:*
+   - *The deck must be TURNING, the way it was when this was `EXIT_SPIN * t` at −300° flat. The article
+     lifts off a deck already mid-spin and it carries on spinning while the card comes down. Measured:
+     253° of the 430 is spent behind the article, 177° is watched, at about the same degrees-per-pixel
+     as the original −300°.*
+   - *It must STOP with the gap in the middle of the screen. −300° left it at the BACK of the ring;
+     −45° was fine at 1440×900 and off the SIDE of a phone (filmed at 390×844: the In Frames card never
+     appeared at all); and zero left the desktop's 70° group yaw uncancelled — a select flattens
+     `groupG` yaw and all, so restoring it turns the whole ring, and the card came to rest at world x
+     38, `normalDotCam` 0.07, edge-on in the wings.*
+
+   *A full turn satisfies both, because a revolution changes nothing about where anything ends up.
+   Verified landing after the change: x 2.4 / dot −0.70 at 1440×900, x 1.5 / dot −0.83 at 390×844.*
+   The rate is constant for the first 70% of the turn window and then decelerates from exactly the
+   velocity the constant part ended on (`SPIN_E0 = 2U/(1+U)` is derived, not tuned) — flat through the
+   reveal so it reads as already going, easing out so the deck settles to receive the card.
 4. **The catch** (`CATCH_FROM` 0.73 → `CATCH_END` 0.96): a damped `sin(2πu)·e^(−2.6u)` give on the
    ring (~2.2 units ≈ 40px at the front), on the hero a beat later, and on every other card delayed by
    its `phi` — how far round the ring it sits from the filled slot — so the give travels outward as a
@@ -175,7 +184,7 @@ knot of white shapes in the report. The low `BOWL_Y`/`BOWL_TILT` was the same ki
    ring's own lowest edge has not reached it. **`CLUSTER_R`, `BOWL_Y`, `BOWL_TILT` and the radius lerp
    are gone** — and stay gone.
 2. **`EXIT_SPIN` is one slot (−45°), not −300°.** (⚠️ *Superseded 2026-09-11 — any NET turn moves the
-   empty slot; −45° is off the side of a phone. Replaced by `EXIT_TURN`, netting `−homeTilt().y`.*) The empty slot belongs to the chapter you were
+   empty slot; −45° is off the side of a phone. Replaced by a full revolution netting `−homeTilt().y`.*) The empty slot belongs to the chapter you were
    reading, which is front-and-centre when the exit starts; three quarters of a turn carried it to the
    BACK of the ring, where the depth falloff dims a card to 0.2 and the tilt lifts it off the top of
    the frame. Measured: at `de = 0.70` the dropping card was at distance 130 and opacity 0.2 — the one

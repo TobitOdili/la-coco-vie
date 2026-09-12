@@ -382,30 +382,42 @@ export function useChapterScene() {
   let scrollOffsetPx = 0    // inner-page scroll position in px (from Lenis) — drives the hero up/away
   let exitStart = null      // captured transforms at the start of a forward scroll-exit (step E)
   // ── The turn ────────────────────────────────────────────────────────────────
-  // ⚠️ IT SWINGS OUT AND BACK; THE NET TURN IS ZERO. That is not indecision — it is the only shape
-  // that gives both things the exit needs at once.
-  //   The empty slot is the SELECTED chapter's, and the select leaves it FRONT AND CENTRE. So every
-  // degree the ring nets moves the one moment this whole sequence is built around away from the
-  // middle of the screen. A three-quarter turn put it at the BACK of the ring, where the depth
-  // falloff dims a card to 0.2 — that was the −300° version. One slot (−45°) kept it in the front
-  // arc, which is fine on a desktop and USELESS ON A PHONE: measured at 390×844, the front card
-  // alone spans 90% of the frame, only about ±15° of the ring is on screen at all, and the card you
-  // had been reading came down somewhere off the side where you never saw it land.
-  //   So the deck turns OUT behind the article and turns BACK as it opens, arriving with the gap
-  // dead centre on any screen. `EXIT_TURN` is the part that is meant to be WATCHED and the swing is
-  // derived from it, so the same amount is seen whatever the net has to be. The return leg is the
-  // long, visible one, it runs in the same direction a homepage down-scroll turns the ring, and it
-  // decelerates into the catch.
-  //   ⚠️ AND THE NET IS NOT ZERO — IT IS `−homeTilt().y`. A select does not only centre the hero, it
-  // FLATTENS `groupG`, yaw included; restoring that yaw at the end of the exit turns the whole ring
-  // with it. So the carousel has to give back exactly what the group takes or the gap lands 70° off
-  // the front, which is where it had been all along: measured on With Love at 1440×900, the card came
-  // to rest at world x 38 with `normalDotCam` 0.07 — edge-on, in the wings. Mobile's `homeTilt.y` is
-  // 0, so there the net is 0, and the same expression covers both.
-  const EXIT_TURN = toRad(62) // how much turn is meant to be WATCHED; the swing is derived from it
-  const SPIN_HEAD_END = 0.08  // the swing OUT — behind the article, where the strip is 18% of the screen
-  const SPIN_FROM = 0.20      // …and the turn back starts here, so the bulk of it happens in view
+  // A WHOLE REVOLUTION, and it is already well under way by the time you can see any of it.
+  //   ⚠️ TWO THINGS HAVE TO BE TRUE AT ONCE, and three earlier cuts each got one of them. (a) The
+  // deck has to be TURNING — properly, the way it did when this was `EXIT_SPIN * t` at −300° flat
+  // across the exit: the article lifts off a deck that is already mid-spin, and it carries on
+  // spinning while the card comes down. Anything smaller reads as a photograph with one card
+  // falling into it. (b) It has to STOP with the empty slot — the selected chapter's, which the
+  // select leaves front and centre — back in the middle of the screen, because that gap is where
+  // the card you were reading lands and it is the one moment the whole sequence is built around.
+  //   −300° satisfied (a) and failed (b): it left the gap at the BACK of the ring, where the depth
+  // falloff dims a card to 0.2. −45° satisfied (b) on a desktop only — at 390×844 the front card
+  // alone spans 90% of the frame, barely ±15° of the ring is on screen, and the card landed off the
+  // side where it was never seen. A net of zero failed (b) too, less obviously: a select does not
+  // only centre the hero, it FLATTENS `groupG`, yaw included, so restoring that 70° group yaw at the
+  // end turns the whole ring with it (measured: the card came to rest at world x 38, `normalDotCam`
+  // 0.07 — edge-on, in the wings).
+  //   A FULL TURN satisfies both, because a revolution changes nothing about where anything ends up.
+  // `EXIT_TURNS` revolutions, plus `−homeTilt().y` to give back exactly what the group takes: −430°
+  // on a desktop, −360° on a phone, and the gap lands dead centre on either.
+  const EXIT_TURNS = 1        // complete revolutions the deck makes on its way out
+  const SPIN_FROM = 0.0       // ⚠️ FROM THE FIRST PIXEL. The deck must already be turning when the
+                              // article uncovers it — a turn that starts on the reveal has no
+                              // pre-rotation, and the arrival reads as a standing start.
   const SPIN_TO = 0.90        // …still turning a little as the deck takes the card
+  // How much of the turn window runs at a CONSTANT rate before the deceleration. The old flat spin
+  // was constant the whole way; keeping most of it flat is what makes the reveal feel like the deck
+  // was already going, and the matched ease-out over the rest is what lets it settle to receive the
+  // card instead of stopping dead under it. `SPIN_E0` is not a taste value — it is the only split
+  // that makes the two segments meet at the same angular velocity (2·U/(1+U); see `spinEase`).
+  const SPIN_LINEAR_TO = 0.70
+  const SPIN_E0 = (2 * SPIN_LINEAR_TO) / (1 + SPIN_LINEAR_TO)
+  // Constant rate, then a deceleration that starts at exactly the rate the constant part ended on.
+  const spinEase = (u) => {
+    if (u <= SPIN_LINEAR_TO) return (SPIN_E0 / SPIN_LINEAR_TO) * u
+    const v = (u - SPIN_LINEAR_TO) / (1 - SPIN_LINEAR_TO)
+    return SPIN_E0 + (1 - SPIN_E0) * (2 * v - v * v)
+  }
   const DROP_START = 0.45    // de at which the page is fully out → the unfurl + the second wine's drop begin
   const exitBg = new THREE.Color('#ffffff')  // scene background during the exit (set to the chapter accent)
   let exitBgAlpha = 0        // 0 = transparent (homepage) … 1 = opaque accent (selected/exit)
@@ -1748,17 +1760,14 @@ export function useChapterScene() {
                  (1 - POSE_HEAD) * ss2((t - POSE_HEAD_END) / (POSE_END - POSE_HEAD_END))
 
     // ── the deck turns ────────────────────────────────────────────────────────
-    // Out behind the article, back as it opens — see EXIT_TURN. ⚠️ EASED, NOT LINEAR, and that is
-    // not a polish detail: spread evenly over `de`, two fifths of a turn is spent behind the article
-    // and the rest is slow enough to be invisible against a flat background, which is exactly how
-    // the deck came to read as a photograph with one card falling into it. Concentrated between the
-    // uncovering and the landing it peaks at about twice the linear rate, and it decelerates into
-    // the catch: the deck slows to receive the card.
+    // One full revolution plus `−homeTilt().y` — see EXIT_TURNS. Constant rate through the reveal
+    // (so the article comes off a deck already mid-spin), decelerating into the catch. Measured at
+    // 1440×900: 253° of the 430 is spent behind the article and 177° of it is watched, at about the
+    // same degrees-per-pixel as the old flat −300° spin.
     const ht = homeTilt()
-    const netTurn = -ht.y                         // undo the group yaw the select flattened
-    const swungTo = netTurn + EXIT_TURN           // where the deck sits while the article is still on it
+    const totalTurn = -(TWO_PI * EXIT_TURNS) - ht.y   // revolutions + what the group yaw takes back
     carousel.animatedRotationY = exitStart.rot +
-      swungTo * ss(t / SPIN_HEAD_END) - EXIT_TURN * ss2((t - SPIN_FROM) / (SPIN_TO - SPIN_FROM))
+      totalTurn * spinEase(c01((t - SPIN_FROM) / (SPIN_TO - SPIN_FROM)))
 
     // ── the catch ─────────────────────────────────────────────────────────────
     // A deck does not receive a card without giving. Past the landing the ring dips and recovers

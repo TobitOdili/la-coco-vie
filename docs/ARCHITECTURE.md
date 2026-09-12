@@ -362,14 +362,17 @@ one moment it is built around away from the middle of the screen. −300° put i
 depth falloff dims a card to 0.2. −45° (one slot) kept it in the front arc, which is fine on a desktop
 and useless on a phone: at 390×844 the front card alone spans 90% of the frame and only ~±15° of the
 ring is on screen, so the card landed off the side where nobody saw it. The turn therefore **swings
-out and back** — `EXIT_TURN` (62°) of watched turn, swung the other way behind the article first — so
-it is a long visible turn in the homepage's own direction that arrives with the gap dead centre.
-⚠️ And the net it lands on is **`−homeTilt().y`, not zero**: a select does not only centre the hero, it
-FLATTENS `groupG`, yaw included, so restoring that 70° yaw at the end turns the whole ring with it. The
-carousel has to give back exactly what the group takes. Measured on With Love at 1440×900 with a net of
-zero, the card came to rest at world x 38 with `normalDotCam` 0.07 — edge-on, in the wings; with
-`−homeTilt().y` it lands at x 1.4, dot −0.69. Mobile's `homeTilt.y` is 0, so one expression covers both.
-**A transition can turn as much as you like; what it may not do is net somewhere arbitrary.** AUDIT #64.
+a WHOLE REVOLUTION** — `EXIT_TURNS` × 360° plus `−homeTilt().y`, at a constant rate from the first
+pixel so the article lifts off a deck that is already mid-spin, decelerating into the catch. Two things
+have to be true at once and three cuts each got one of them: the deck must be TURNING (−300° flat was,
+and read right; 62° of swing did not, and came back as *"there is no pre-rotation"*), and it must STOP
+with the gap in the middle of the screen (−300° left it at the back, dimmed to 0.2 by the depth falloff;
+−45° was fine at 1440×900 and off the side of a phone). ⚠️ And the net it lands on is **`−homeTilt().y`,
+not zero**: a select does not only centre the hero, it FLATTENS `groupG`, yaw included, so restoring that
+70° yaw at the end turns the whole ring with it — measured with a net of zero, the card came to rest at
+world x 38 with `normalDotCam` 0.07, edge-on in the wings. A full turn satisfies both at once, because a
+revolution changes nothing about where anything ends up. **The size of a turn and the end of a turn are
+two separate decisions; do not let one of them settle the other.** AUDIT #64.
 ⚠️ **A DROP MUST START FROM A COMPUTED HEIGHT, NOT FROM WHERE THE THING HAPPENS TO BE.** The card's
 start used to be `hero.mesh.position.y` at capture — the scroll-coupled position, so proportional to
 how LONG the chapter is, and only correct if `animate()` had run since the last `setScroll`. A flick
@@ -652,9 +655,9 @@ snapshot export anymore — that machinery was removed.)
   the screen **from the bottom up**. Anything that must not be seen has to finish in the first tenth;
   anything meant to be watched has to still be going after it.
   - **Phase A [0..0.45]** — the article scrolls out. The deck is WHOLE by `OTHERS_IN` (0.14) and two
-    thirds open by `POSE_HEAD_END` (0.16); the turn swings OUT by `EXIT_TURN` (62°) by 0.08.
+    thirds open by `POSE_HEAD_END` (0.16), and the turn has already run 253° of its 430.
   - **Phase B [0.45..1]** — the deck finishes opening (`pose` → 1 at `POSE_END` 0.80: height, look-down,
-    yaw and roll together) while the turn comes back to a net of **`−homeTilt().y`**, and the chapter's **second** card
+    yaw and roll together) while the turn runs out its last 177° onto **`−homeTilt().y`**, and the chapter's **second** card
     copy descends from off-top into its slot, landing on `POSE_END`. **All 8 cards stay present** — one
     copy of the chapter's card rides in the deck the whole time; only the second drops in.
   - **The catch [0.73..0.96]** — a damped `sin(2πu)·e^(−2.6u)` give, opened BEFORE the landing so the
@@ -695,7 +698,8 @@ scene
 | `introDistance` | 75 | start radius for the fly-in |
 | `SELECTED_Y` | **-43** | carousel Y when a chapter is selected (top-anchors the full-bleed hero) |
 | hero scale | `aspectRatio * 2.07` | reference-tuned full-bleed scale at `progress=1` |
-| `EXIT_TURN` | **`62°`** | how much of the bottom-exit's turn is meant to be WATCHED. The deck swings out by this much behind the article (by `SPIN_HEAD_END` 0.08) and turns back over [`SPIN_FROM` 0.20 … `SPIN_TO` 0.90], landing on a net of **`−homeTilt().y`** — desktop −70°, mobile 0 — because the select flattened the group's yaw and restoring it turns the ring. The return leg is the long visible one and runs the same way a homepage down-scroll turns the ring. ⚠️ The net was −300° once (empty slot → the back of the ring, dimmed to 0.2 by the depth falloff), then −45° (fine at 1440×900; off the SIDE of a phone, where the front card spans 90% of the frame and only ~±15° of the ring is on screen), then 0 (which leaves the group's own 70° yaw uncancelled — edge-on, in the wings). |
+| `EXIT_TURNS` | **`1`** | complete revolutions the deck makes across the bottom exit. Total turn = `−(2π × EXIT_TURNS) − homeTilt().y` → **−430° desktop, −360° mobile**, over [`SPIN_FROM` 0.0 … `SPIN_TO` 0.90]: 253° behind the article, 177° watched, at about the degrees-per-pixel of the original flat −300° spin. The `−homeTilt().y` term is there because the select flattened the group's yaw and restoring it turns the ring; without it the gap lands 70° off the front. ⚠️ Earlier nets: −300° (gap → the BACK of the ring, dimmed to 0.2 by the depth falloff), −45° (fine at 1440×900; off the SIDE of a phone, where the front card spans 90% of the frame and only ~±15° of the ring is on screen), 0 (group yaw uncancelled — edge-on, in the wings). A whole revolution is what lets the turn be big AND land where it must. |
+| `SPIN_LINEAR_TO` / `SPIN_E0` | `0.70` / `2U/(1+U)` | the turn runs at a CONSTANT rate for this much of its window and then decelerates. `SPIN_E0` is derived, not tuned: it is the only split at which the two segments meet at the same angular velocity. Constant-through-the-reveal is what makes the deck read as already going; the ease-out is what lets it settle to receive the card instead of stopping dead under it. |
 | `DROP_START` | `0.45` | `de` split between phase A (the article scrolling out) and phase B (the deck finishing + the card drop). **Must match the copy in `pages/[slug].vue`.** |
 | `POSE_HEAD` / `POSE_HEAD_END` | `0.66` / `0.16` | how far the deck has opened before it can be seen, and the `de` by which it got there. A select flattens `groupG` to (0,0,0) and a ring with no look-down is seen edge-on — the head start is what keeps the visible part of the arrival out of the "packed" range. |
 | `POSE_END` | `0.80` | the fan is open — and the card lands — here. |
@@ -814,9 +818,9 @@ drives two exits — a top-edge reverse rewind and a scroll-driven bottom "outro
   reversible (scroll back up → `cancelExit()` restores the article), no page morph or snapshot. It runs
   in **two phases** around `DROP_START` (0.45, present in *both* this file and `useChapterScene.js`):
   phase A [0..0.45] the article scrolls fully out over a deck that is already WHOLE (`OTHERS_IN` 0.14)
-  and two thirds OPEN (`POSE_HEAD` 0.66), with the turn swung out by `EXIT_TURN`; phase B [0.45..1] the
-  deck finishes opening — height, look-down, yaw and roll on one `pose` gauge — and the turn comes back
-  to `−homeTilt().y`, while the chapter's **second** card copy descends from off-top into its slot (the first
+  and two thirds OPEN (`POSE_HEAD` 0.66), and the turn is already 253° through its 430; phase B [0.45..1] the
+  deck finishes opening — height, look-down, yaw and roll on one `pose` gauge — and the turn completes on
+  `−homeTilt().y`, while the chapter's **second** card copy descends from off-top into its slot (the first
   already rides in the deck), landing on `POSE_END` (0.80) into a give the deck opened at `CATCH_FROM`.
   The turn's return leg matches a homepage down-scroll → no reversal at `/`. Throughout,
   the scene background is the **chapter accent** (`renderer.setClearColor(exitBg, exitBgAlpha)` in
@@ -826,7 +830,7 @@ drives two exits — a top-edge reverse rewind and a scroll-driven bottom "outro
   `router.push('/')` — where `de`→1 is really `COMMIT_AT` (0.955), because Lenis eases into the bottom
   of a scroller and the last ~80px produce almost no `de`. See
   [PHASE-2-INNER-PAGES.md](PHASE-2-INNER-PAGES.md) for the tunables (`POSE_HEAD`, `DROP_START`,
-  `EXIT_TURN`, `CATCH_*`, `HERO_FIT_END`).
+  `EXIT_TURNS`, `CATCH_*`, `HERO_FIT_END`).
 - The select-in's idle depth-fade `uOpacity` lerp in `animate()` is gated on `!isDeselecting` so
   `setExitProgress` owns the chapter cards' opacity during the bottom exit.
 - Mid-page scrolling is **free**; the bottom exit only engages once you scroll into `.chapter-outro`.
