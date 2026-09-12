@@ -25,6 +25,24 @@
           />
         </template>
         <ChapterEnd :chapter="chapter" />
+        <!-- ── "back to the chapters", the last thing on the page ──────────────────────────────
+             ⚠️ IN THE FLOW, NOT FIXED. The bottom exit is the page scrolling off the top of the
+             frame, so the signpost for it belongs to the PAGE: it rides up and leaves with
+             everything else instead of hanging over the deck that is arriving behind it, which is
+             what made it read as a loading spinner laid on the animation. `--p` is the exit's own
+             progress, so the ring closes exactly as the page clears — and at rest, while you are
+             still reading the footer, it is simply the last line of the chapter with an open
+             circle under it. (Its twin for the TOP edge lives in `SiteNav`, where the wordmark is.) -->
+        <div class="leave-cue" :style="{ '--p': pullBottom }">
+          <span class="leave-label">back to the chapters</span>
+          <span class="leave-ring">
+            <svg viewBox="0 0 44 44" focusable="false" aria-hidden="true">
+              <circle class="leave-track" cx="22" cy="22" r="20" />
+              <circle class="leave-draw" cx="22" cy="22" r="20" />
+            </svg>
+            <i class="leave-chev" aria-hidden="true" />
+          </span>
+        </div>
       </div>
 
       <!-- …otherwise the scaffold (safety net — all four chapters have content). -->
@@ -59,33 +77,6 @@
         <path class="cue-ink" pathLength="1" d="M 12 2 C 12 14, 8.5 23, 12 34 C 14.6 42, 11.6 53, 12 65" />
       </svg>
       <span class="cue-label">read on</span>
-    </div>
-
-    <!-- ── "you are about to go back" ──────────────────────────────────────────────────────────
-         Both edges of a chapter lead home, and neither said so. A ring closes as you approach: the
-         top edge fills it with a sustained pull (800px of wheel, 180px of finger), the bottom fills
-         it as the article scrolls away. Same hairline, same drawn-circumference idea as The Big Day's
-         countdown dials, so it arrives already belonging to the site. When it closes, you go.
-         ⚠️ ONE RING, AT THE BOTTOM, FOR BOTH EDGES. The top edge had its own copy under the nav,
-         which is exactly where every hero puts its title — 12vh of Italiana caps — and no ink wins
-         an argument with that. The two pulls can never be live at once (one needs scroll 0, the
-         other the outro), so they share an indicator, and the chevron carries the direction.
-         `--p` is 0 the rest of the time, which is why it needs no `v-if`: at 0 it is transparent
-         and inert. ── -->
-    <div
-      class="home-cue"
-      :class="{ up: pullTop > 0, full: homePull >= 0.999 }"
-      :style="{ '--p': homePull }"
-      aria-hidden="true"
-    >
-      <span class="home-label">back to the chapters</span>
-      <span class="home-ring">
-        <svg viewBox="0 0 44 44" focusable="false">
-          <circle class="ring-track" cx="22" cy="22" r="20" />
-          <circle class="ring-draw" cx="22" cy="22" r="20" />
-        </svg>
-        <i class="ring-chev" />
-      </span>
     </div>
 
     <!-- Floating popup cards — pinned to the viewport bottom-center; content is the in-view
@@ -132,9 +123,17 @@ const webglSceneRef = inject('webglSceneRef', null)
 
 // The hero card presses back the way you are pulling it — the only thing that CAN answer at scroll
 // 0, where the whole screen is that card. A few percent of the viewport at a full charge.
-const HERO_PULL_PX = 0.055
+// The TOP edge's charge, shared with SiteNav — the cue for that edge belongs where the wordmark is,
+// inside the band of accent the pull opens above the page card. (The BOTTOM edge's cue is in this
+// page's own content, at the end of it.)
+const navPull = useState('homePull', () => 0)
+
+// ⚠️ Enough to open a band the cue can live in. At 0.055 the band was ~49px and the cue sat half on
+// the card; 0.085 gives ~76px at a full charge, which is the height of the ring plus its label.
+const HERO_PULL_PX = 0.085
 function pushHeroPull() {
   webglSceneRef?.value?.scene?.setHeroPull?.(pullTop.value * window.innerHeight * HERO_PULL_PX)
+  navPull.value = pullTop.value
 }
 
 // The cue retires on the first real scroll; the two pulls are 0→1 toward the homepage.
@@ -145,9 +144,6 @@ const cueReady = ref(false)
 const cueSeen = ref(false)
 const pullTop = ref(0)
 const pullBottom = ref(0)
-// One indicator, either edge — they cannot both be live (one needs scroll 0, the other the outro).
-const homePull = computed(() => Math.max(pullTop.value, pullBottom.value))
-
 const pageEl = ref(null)
 const scrollEl = ref(null)
 const outroEl = ref(null)
@@ -331,9 +327,10 @@ function updateExit(scrollY) {
   // it completes — not 0.50, and not still filling over the deck afterwards. It then gets out of
   // the way inside a tenth of `de`: past that point the deck coming up to meet you says it better
   // than a progress ring can, and a ring left over the spinning deck reads as a loading spinner.
-  const fill = Math.max(0, Math.min(1, (de - 0.03) / (DROP_START - 0.03)))
-  const fade = 1 - Math.max(0, Math.min(1, (de - DROP_START) / 0.09))
-  pullBottom.value = fill * fade
+  // ⚠️ NO FADE-OUT any more. The cue is part of the page now, so it leaves the frame by scrolling
+  // off the top with everything else; fading it as well would only mean the ring un-drew itself in
+  // the instant before it went, and un-drew visibly on the way back up.
+  pullBottom.value = Math.max(0, Math.min(1, (de - 0.03) / (DROP_START - 0.03)))
   if (de >= COMMIT_AT) commitExit()
 }
 
@@ -450,6 +447,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   navOnDark.value = false   // the homepage has no dark ground
+  navPull.value = 0         // …and no pull in progress
   pageEl.value?.removeEventListener('wheel', onWheel)
   pageEl.value?.removeEventListener('touchstart', onTouchStart)
   pageEl.value?.removeEventListener('touchmove', onTouchMove)
@@ -575,41 +573,36 @@ onBeforeUnmount(() => {
   opacity: 0.92;
 }
 
-/* ── "you are about to go back" ───────────────────────────────────────────────
-   A ring that closes — the same drawn-circumference idea as The Big Day's countdown dials, so it
-   reads as this site's own language rather than a widget. ⚠️ `--p` is 0 almost always, and at 0
-   this is transparent and `pointer-events: none` — which is why it needs no `v-if`. */
-.home-cue {
-  position: fixed;
-  left: 50%;
-  bottom: 2.6rem;
-  transform: translateX(-50%);
-  z-index: 14;
+/* ── "back to the chapters" — the last thing on the page ─────────────────────
+   In the flow, on the page's own paper, in the page's own ink. It is the chapter's closing line
+   with a ring under it; the ring closes as the page leaves. ⚠️ NOT `fixed` and NOT tied to `--p`
+   for its visibility: at rest, halfway down the footer, it is simply there. Only the ring's
+   circumference reads the exit. */
+.leave-cue {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.7rem;
-  pointer-events: none;
-  opacity: calc(var(--p, 0) * 1.35);
+  gap: 0.9rem;
+  padding: 0 8vw 9vh;
+  background: var(--accentLight, #F2EEE8);
+  color: var(--accent, #333);
+  text-align: center;
 }
-.home-ring {
-  position: relative;
-  display: block;
-  width: 2.75rem;
-  height: 2.75rem;
-  /* Closing the ring is arriving: it takes the last step itself, so the commit is not the first
-     thing that confirms it. */
-  transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.3, 1);
+.leave-label {
+  font-family: 'Bague', sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  opacity: 0.5;
 }
-.home-cue.full .home-ring { transform: scale(1.12); }
-.home-ring svg { width: 100%; height: 100%; display: block; overflow: visible; }
-.ring-track, .ring-draw { fill: none; stroke: currentColor; }
+.leave-ring { position: relative; display: block; width: 2.75rem; height: 2.75rem; }
+.leave-ring svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.leave-track, .leave-draw { fill: none; stroke: currentColor; }
 /* ⚠️ `non-scaling-stroke`, NOT a tuned number. A stroke-width is meaningless without its viewBox
-   scale — 1.2 in a 44-unit box drawn at 2.75rem is 1.2px on a 16px root and something else the
-   moment the root size or the box changes. This pins it to one device pixel, everywhere, which is
-   what makes it the same hairline as the rest of the site's ink. */
-.ring-track { stroke-width: 1; vector-effect: non-scaling-stroke; opacity: 0.3; }
-.ring-draw {
+   scale — 1.15 in a 44-unit box drawn at 2.75rem is not 1.15px, and changes again with the root
+   size. This pins it to the hairline the rest of the site's ink is drawn at. */
+.leave-track { stroke-width: 1; vector-effect: non-scaling-stroke; opacity: 0.28; }
+.leave-draw {
   stroke-width: 1.15;
   vector-effect: non-scaling-stroke;
   stroke-linecap: round;
@@ -617,10 +610,9 @@ onBeforeUnmount(() => {
   stroke-dashoffset: calc(125.664 * (1 - var(--p, 0)));
   transform: rotate(-90deg);                 /* start at 12 o'clock */
   transform-origin: 50% 50%;
+  opacity: 0.8;
 }
-/* The way out: up for the top edge's pull, down for the end of the outro. Drawn from two borders,
-   so it costs no markup and inherits the ink. */
-.ring-chev {
+.leave-chev {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -630,10 +622,8 @@ onBeforeUnmount(() => {
   border-left: 1px solid currentColor;
   border-top: 1px solid currentColor;
   transform: rotate(225deg);
-  opacity: 0.85;
+  opacity: 0.5;
 }
-.home-cue.up .ring-chev { transform: rotate(45deg); margin-top: -0.28rem; }
-.home-label { font-size: 0.68rem; letter-spacing: 0.26em; white-space: nowrap; }
 
 /* ── the ink ──────────────────────────────────────────────────────────────────
    ⚠️ THERE IS NO KNOWING WHAT IS BEHIND THESE, and that is why the first pass was invisible. Every
@@ -648,8 +638,8 @@ onBeforeUnmount(() => {
    deck — and it introduces no box, which this chapter's whole language is against.
    ⚠️ The cues also sit at the BOTTOM for this reason, both of them: the top of the frame is where
    every hero puts its title, and nothing legible survives being set on top of 12vh of Italiana. */
-.scroll-cue, .home-cue { color: var(--accentLight, #F6F3EC); }
-.cue-label, .home-label {
+.scroll-cue { color: var(--accentLight, #F6F3EC); }
+.cue-label {
   font-family: 'Bague', sans-serif;
   text-transform: uppercase;
   /* ⚠️ The outline can only do so much for the glyph it is drawn around: at 9px with 0.3em of
@@ -661,22 +651,20 @@ onBeforeUnmount(() => {
     0 0 3px rgba(16, 14, 11, 0.8),
     0 1px 8px rgba(16, 14, 11, 0.5);
 }
-.cue-thread, .home-ring, .ring-chev {
+.cue-thread {
   filter: drop-shadow(0 0 1px rgba(16, 14, 11, 0.85)) drop-shadow(0 1px 5px rgba(16, 14, 11, 0.45));
 }
 
 @media (max-width: 640px) {
   .scroll-cue { bottom: 1.9rem; }
   .cue-thread { height: 4.1rem; }
-  .home-cue { bottom: 2rem; }
-  .home-ring { width: 2.4rem; height: 2.4rem; }
+  .leave-ring { width: 2.4rem; height: 2.4rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   /* The stroke is simply drawn, once, and stays. */
   .cue-ink { animation: none; stroke-dashoffset: 0; opacity: 0.9; }
   .cue-ghost { opacity: 0; }
-  .home-ring { transition: none; }
 }
 
 /* Floating popup cards — pinned to the VIEWPORT bottom-centre over the content.

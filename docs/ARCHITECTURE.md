@@ -884,16 +884,28 @@ gate on the homepage read that field — so coming back from a chapter froze the
 half seconds. Gate input on *both* "is something open" and "is it on its way out", and let the
 interrupt path that already exists actually be reachable. AUDIT #53.
 
-⚠️ **BOTH EDGES OF A CHAPTER LEAD HOME, AND NEITHER USED TO SAY SO.** The top takes a sustained
-pull (800px of wheel, 180px of finger) and the bottom commits at the end of the outro; `pullTop` and
-`pullBottom` (in `pages/[slug].vue`) fill **one ring** — `homePull = max(pullTop, pullBottom)`, since
-one needs scroll 0 and the other the outro, so they can never be live at once — drawn by
-`stroke-dashoffset` the way The Big Day's countdown dials are, with a chevron for the direction. They
-are driven from the same accumulators the exits use, so they cannot disagree with the thing they
-describe. ⚠️ `--p` is 0 almost always and the ring is transparent and inert at 0 — which is why it
-needs no `v-if`. ⚠️ **A value driven by a `touchmove` handler needs a `touchend` handler**: the
-else-branch reset only runs while a finger is still moving, so a pull that stops short froze the cue
-lit for the rest of the visit (AUDIT #62).
+⚠️ **BOTH EDGES OF A CHAPTER LEAD HOME, AND THE SIGNPOST BELONGS AT EACH DOOR.** The top takes a
+sustained pull (420px of wheel, 140px of finger); the bottom commits at the end of the outro. Both
+fill the same ring — drawn by `stroke-dashoffset` the way The Big Day's countdown dials are, with a
+chevron for the direction — but they are **two elements in two places**, because the two exits are
+not the same kind of leaving.
+  - **The bottom** is the page scrolling off the top of the frame, so its cue is the LAST THING IN
+    `.chapter-content` — in the flow, below the footer, riding up and leaving with everything else.
+    A fixed one hung over the deck arriving behind it and read as a loading spinner laid on the
+    animation. At rest, while you are still reading the footer, it is just the chapter's closing
+    line with an open circle under it; `--p` only draws the ring.
+  - **The top** opens a band of the chapter's accent above the page card (`setHeroPull`), and its cue
+    lives in that band — in `SiteNav`, WHERE THE WORDMARK IS, which steps aside for it. ⚠️ It is
+    `position: fixed` to the top of the frame rather than laid out with the wordmark: the band grows
+    from the top edge downward, and pinned to the wordmark's own box the cue started 36px down and
+    spent the first half of the charge hanging off a band that had not reached it. ⚠️ Its ink is
+    `--accentLight`, NOT the nav's: the nav's flips with whatever is under it, and this one always
+    knows — the band is the renderer's clear colour, which is the chapter accent, always dark.
+
+  Both are driven from the same accumulators the exits use, so they cannot disagree with the thing
+  they describe. ⚠️ **A value driven by a `touchmove` handler needs a `touchend` handler**: the
+  else-branch reset only runs while a finger is still moving, so a pull that stops short froze the cue
+  lit for the rest of the visit (AUDIT #62).
 ⚠️ **A PROMPT THAT ARRIVES BEFORE THE PAGE DOES IS PROMPTING THE WRONG THING.** The scroll cue
 mounted with the route, so it was on screen for the whole ~1.5s select — telling you to scroll a card
 that was still turning into a page. It waits on `cueReady`, set from the same settle poll that opens

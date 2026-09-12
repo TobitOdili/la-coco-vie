@@ -106,6 +106,40 @@ above. Constant speed and a reversed exit are not in conflict.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
 
+**▶▶ STATE (2026-09-12, latest) — THE REGISTRY BY ITS REAL NAMES, AND A SECTION INSTEAD OF A LAYER.**
+User, on For Our Next Chapter: *"Remove the notes from the item detail. Make the name of each item
+their actual product/brand name… the hover should be 'or send the cash instead' — we'll create
+individual payment links for each item… the even better section should be an actual section (in the
+style of the popup); the widget should transition out on that section and back in afterwards… title
+the gift list section 'Gift Registry' in the site's handwritten font."* Plus the return cue's two
+homes.
+
+1. **The names are the products.** "PRESSURE COOKER" is a description; "ORAIMO TENDERPOT" is what a
+   guest will be looking at on the shop page. ⚠️ Brand + PRODUCT, not brand + SKU: where the thing has
+   a real product name it is used (TenderPot, EasyBistro, NanoCell, ADA, OminiMix), and where the
+   "name" is only a model code it read as a part number on a wall of display type —
+   "HISENSE 390SH-FC" — so those say what the thing is and the code moved down into `product`.
+2. **The annotation drops the memory and offers the money.** It is the spec, the price, and *"or send
+   the cash instead"* in the couple's hand — the second way to give that particular gift. Each item
+   gets its own `cashUrl` (the couple are making one per item); all ten are null for now and render
+   as the offer written down rather than as a link that lands nowhere.
+3. **"Even better" is a SECTION**, set the way the popup is set — ink on paper, centred, no box. It
+   was a fixed card that grew into a bigger card, then a popup that opened itself past the gift list;
+   both were an overlay arriving uninvited over a page someone was reading. The little card survives
+   as a shortcut from elsewhere (it still opens the popup on a tap) and stands down while its own
+   section is on screen — generously, half a viewport either side, so it does not blink at the edges.
+   ⚠️ Nothing opens itself any more: `panelOpen` has no scroll input at all.
+4. **"Gift Registry"**, in the couple's hand, above the bands rather than over them — a title laid on
+   top of a wall of moving type is competing with it for the same pixels.
+5. **The return cue split in two, because the two exits are different kinds of leaving.** The bottom
+   one is now the LAST ITEM IN THE PAGE'S OWN CONTENT, below the footer: it rides up and leaves with
+   the page instead of hanging over the deck arriving behind it. The top one lives in `SiteNav`,
+   where the wordmark is, inside the band of accent the pull opens above the card — the wordmark
+   fades out as the ring fades in, on the same `--p`. ⚠️ Fixed to the top of the FRAME, not laid out
+   with the wordmark (the band grows from the edge down, and anchored to the wordmark's box the cue
+   spent half the charge below a band that had not reached it), and in `--accentLight`, because that
+   band is always the chapter's accent.
+
 **▶▶ STATE (2026-09-11, latest) — NOTHING IN THE EXIT CHANGES SPEED ABRUPTLY.**
 User: *"At the end of the inner page scroll, I can see the cards rapidly shift up before they start
 to rotate. Every motion should be locked into scroll at that exit animation."* Plus: the return ring

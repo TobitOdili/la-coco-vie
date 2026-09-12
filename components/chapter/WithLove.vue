@@ -21,6 +21,11 @@
       <section v-else-if="s.kind === 'gifts'" class="chapter-section love-scene wall"
         :class="{ busy: active.some((a) => a >= 0), touch }"
         :data-idx="i" :style="{ '--rows': bands.length }">
+        <!-- ⚠️ ABOVE the bands, not over them. The wall runs edge to edge and a title laid on top of
+             it would be competing with moving type for the same pixels; on its own line it reads as
+             what it is — the heading of a list. In the couple's hand, like the thank-you and the
+             two signatures. -->
+        <h2 v-if="s.title" class="wall-title fade" data-window="0.02,0.16">{{ s.title }}</h2>
         <div v-for="(band, r) in bands" :key="r" class="band"
           :class="{ solid: r % 2 === 1, on: active[r] >= 0 }"
           :style="{ '--fs': mo[r]?.fs || 1 }" @pointerleave="clearBand(r)">
@@ -63,34 +68,55 @@
                  broken-image box, which is a worse placeholder than no placeholder. -->
             <img v-if="itemAt(active[r])?.image" class="reveal-shot"
               :src="itemAt(active[r]).image" alt="" aria-hidden="true" decoding="async" />
-            <p class="reveal-note">{{ itemAt(active[r])?.memory }}</p>
             <p v-if="itemAt(active[r])?.product" class="reveal-spec">
               <span class="spec-what">{{ itemAt(active[r]).product }}</span>
               <span v-if="itemAt(active[r])?.price" class="spec-price">{{ itemAt(active[r]).price }}</span>
             </p>
+            <!-- The second way to give this particular gift. ⚠️ A LINK ONLY IF IT GOES SOMEWHERE:
+                 the per-item payment links do not exist yet, so until one does this is the offer
+                 written down, not a button that lands nowhere. -->
+            <a v-if="itemAt(active[r])?.cashUrl" class="reveal-cash" :href="itemAt(active[r]).cashUrl"
+              target="_blank" rel="noopener noreferrer" @pointerdown.stop>or send the cash instead ↗</a>
+            <span v-else class="reveal-cash is-pending">or send the cash instead</span>
           </div>
         </div>
       </section>
 
-      <!-- ── Even better · the card, and what it opens ───────────────────────────────────────
-           A small fixed card at the bottom of the screen, and a panel that covers the page. The
-           panel opens on a tap AND opens itself over the stretch of scroll between the end of the
-           gift list and the signature — "blow it out as if it were clicked", which is a popup, not
-           a bigger card. The card and the panel are never up at the same time.
-           ⚠️ NOT TELEPORTED TO <body>, and that is load-bearing. Lenis listens for wheel on
-           `.chapter-page`; a full-screen layer parented to the body sits OUTSIDE that element, so
-           every wheel event over it would die on the layer and the visitor would be stuck behind a
-           panel that opened itself. Rendered in place, the events bubble to the scroller and the
-           page keeps moving underneath — which is the whole point of a panel that comes and goes
-           with the scroll. It renders under the nav (z-20) rather than over it, which is right:
-           the way out stays reachable. ── -->
+      <!-- ── Even better · a section, and a shortcut to it ──────────────────────────────────────
+           ⚠️ A SECTION IN THE FLOW, set the way the popup is set — ink on paper, centred, no box of
+           its own. It was a fixed card that grew into a bigger card, and then a popup that opened
+           ITSELF as you scrolled past the gifts; both were an overlay arriving uninvited over a page
+           the reader was in the middle of. You scroll into this one and out of it like everything
+           else on the chapter, and nothing is ever covered.
+           The little fixed card survives as a shortcut from anywhere else on the page — it opens the
+           same words as a popup on a tap — and stands down while its own section is on screen, which
+           is the one place it would be repeating itself. ── -->
       <template v-else-if="s.kind === 'cashPanel'">
+        <section class="chapter-section love-scene cash-scene" :data-idx="i">
+          <h3 class="cash-heading write" data-window="0.16,0.34">{{ s.heading }}</h3>
+          <p class="cash-body fade" data-window="0.28,0.44">{{ s.body }}</p>
+          <!-- ⚠️ A LINK ONLY IF IT GOES SOMEWHERE. `url` is still a placeholder `#`, and this is
+               the page's one call to action: a guest who taps it and lands nowhere is worse off
+               than one who reads that it is coming. -->
+          <div class="cash-act fade" data-window="0.40,0.56">
+            <a v-if="s.url && s.url !== '#'" class="cash-cta" :href="s.url"
+              target="_blank" rel="noopener noreferrer">{{ s.cta }}</a>
+            <span v-else class="cash-cta is-pending">the payment link is coming soon</span>
+          </div>
+        </section>
+
         <div class="cash-dock" :class="{ live: dockLive && !panelOpen }">
           <button type="button" class="dock-hit" :aria-expanded="panelOpen" @click="openPanel">
             <span class="dock-eyebrow">{{ s.heading }}</span>
             <span class="dock-note">{{ s.note }}</span>
           </button>
         </div>
+        <!-- ⚠️ NOT TELEPORTED TO <body>, and that is load-bearing. Lenis listens for wheel on
+             `.chapter-page`; a full-screen layer parented to the body sits OUTSIDE that element, so
+             every wheel event over it would die on the layer and the reader would be stuck behind
+             it. Rendered in place the events bubble to the scroller and the page keeps moving
+             underneath. It sits under the nav (z-20) rather than over it, which is right: the way
+             out stays reachable. -->
         <transition name="panel">
           <div v-if="panelOpen" class="cash-layer" @click.self="closePanel">
             <div class="cash-panel" role="dialog" aria-modal="false" :aria-label="s.heading">
@@ -101,9 +127,6 @@
               </button>
               <h3 class="cash-heading">{{ s.heading }}</h3>
               <p class="cash-body">{{ s.body }}</p>
-              <!-- ⚠️ A LINK ONLY IF IT GOES SOMEWHERE. `url` is still a placeholder `#`, and this is
-                   the page's one call to action: a guest who taps it and lands nowhere is worse off
-                   than one who reads that it is coming. -->
               <a v-if="s.url && s.url !== '#'" class="cash-cta" :href="s.url"
                 target="_blank" rel="noopener noreferrer">{{ s.cta }}</a>
               <span v-else class="cash-cta is-pending">the payment link is coming soon</span>
@@ -157,9 +180,10 @@ const props = defineProps({
 const ink = '#2E4A52'
 
 // ── the card, and the panel ────────────────────────────────────────────────
-// `dockLive` is whether the little card is on screen at all; `panelOpen` is whether the panel that
-// covers the page is up. Both are driven from the scroll in tick()'s read phase, and either can be
-// overridden by hand — see the note on `panelWant` there.
+// `dockLive` is whether the little card is on screen at all; `panelOpen` is whether the popup it
+// opens is up. ⚠️ ONLY `dockLive` COMES FROM THE SCROLL NOW. The popup used to open itself past the
+// gift list, which is an overlay arriving uninvited over a page someone is reading — that content
+// is a section of its own now, and the popup is only ever something you asked for.
 const dockLive = ref(false)
 const panelOpen = ref(false)
 function openPanel() { panelOpen.value = true }
@@ -200,9 +224,9 @@ let wordEls = []          // the live element under the pointer, per band
 let scrubScenes = []      // cached scroll-scrubbed elements, per scene — see measure()
 let panelBox = []         // per-band rects for the reveal panel, read in tick's READ phase
 let touchTick = 0         // syncTouch runs on every 5th frame — see tick()
-let dockWall = null       // the gift list, and the signature after it — the card's two cues
+let dockWall = null       // the gift list, the cash section, and the signature — the card's cues
+let dockCash = null
 let dockSign = null
-let panelWant = false     // last SCROLL-derived answer; see the note in tick()
 
 const itemAt = (i) => (i >= 0 ? items.value[i] : null)
 
@@ -278,6 +302,7 @@ function measure() {
   // each call and this loop ran four of them per frame; `measure()` already re-runs on resize and
   // on `document.fonts.ready`, which is exactly when this set can change.
   dockWall = root?.querySelector('.wall') || null
+  dockCash = root?.querySelector('.cash-scene') || null
   dockSign = root?.querySelector('.sign-scene') || null
   scrubScenes = [...(root?.querySelectorAll('.love-scene') || [])].map((el) => ({
     el,
@@ -344,26 +369,19 @@ function tick() {
       const r = s.el.getBoundingClientRect()
       s.p = clamp01((vh - r.top) / (r.height + vh))
     }
-    // ── the card, and the panel ── the card is on screen from the gift list until the signature
-    // has gone; the panel opens itself over the stretch between the two.
-    // ⚠️ WRITTEN ONLY ON A TRANSITION. Assigning `panelOpen` every frame would mean a dismissal is
-    // overruled on the very next frame; this way the scroll takes over again the next time its own
-    // answer actually changes — so closing it by hand keeps it closed for this pass, and it can
-    // still open itself again on the way back up.
+    // ── the card ── on screen from the gift list until the signature has gone, and NOT over its
+    // own section: there it would be a shortcut to the thing you are already reading.
+    // ⚠️ Written only when the answer changes, so this is a comparison per frame, not a write.
     if (dockWall && dockSign) {
       const w = dockWall.getBoundingClientRect()
       const g = dockSign.getBoundingClientRect()
-      const live = w.top < vh && g.bottom > vh * 0.2
+      const c = dockCash?.getBoundingClientRect()
+      // The cash section counts as "on screen" generously — half a viewport either side — so the
+      // card is gone well before you reach it and back only once it is properly behind you, rather
+      // than blinking in and out at the section's own edges.
+      const onCash = !!c && c.top < vh * 0.72 && c.bottom > vh * 0.28
+      const live = w.top < vh && g.bottom > vh * 0.2 && !onCash
       if (dockLive.value !== live) dockLive.value = live
-      // ⚠️ ONE VALUE, NOT TWO. The wall and the signature are ADJACENT sections, so
-      // `wall.bottom` and `sign.top` are the same number at every scroll position — an early cut
-      // asked for it to be both below 0.62vh and above 0.46vh, which is a 0.16vh slot the whole
-      // effect could fall through (AUDIT #61). `edge` is that seam: 1 = the gift list still fills
-      // the screen, 0 = it has gone entirely. The panel is up for the middle of that crossing —
-      // late enough that the list is genuinely behind you, gone before the signature arrives.
-      const edge = w.bottom / vh
-      const want = edge < 0.80 && edge > 0.15
-      if (want !== panelWant) { panelWant = want; panelOpen.value = want }
     }
 
     if (bandEls.length) {
@@ -558,6 +576,20 @@ onBeforeUnmount(() => {
      seamless — so the section has to keep it. */
   overflow: hidden;
 }
+/* The list's own heading, in the couple's hand. ⚠️ `flex: none` — the wall is a centred column and
+   a heading that can be squeezed is a heading that moves as the band count changes with the screen. */
+.wall-title {
+  flex: none;
+  margin: 0 0 4vh;
+  font-family: 'Over the Rainbow', cursive;
+  font-weight: 400;
+  font-size: clamp(2rem, 5.5vw, 3.6rem);
+  line-height: 1.05;
+  text-align: center;
+  color: var(--accent, #2E4A52);
+  opacity: 0;
+}
+
 .band {
   position: relative;
   margin-bottom: 2.2vh;
@@ -704,30 +736,52 @@ onBeforeUnmount(() => {
   opacity: 0.8;
   margin-bottom: 0.55rem;
 }
-/* The couple's own hand — the same face as the big thank-you and the two signatures. A memory is
-   not a product attribute and should not be set like one. */
-.reveal-note {
-  margin: 0;
-  font-family: 'Over the Rainbow', cursive;
-  font-size: clamp(0.92rem, 1.15vw, 1.08rem);
-  line-height: 1.45;
-  color: #2E4A52;
-  opacity: 0.92;
-}
 .reveal-spec {
   display: flex;
   flex-direction: column;
-  gap: 0.16rem;
-  margin: 0.6rem 0 0;
+  gap: 0.18rem;
+  margin: 0;
   font-family: 'Bague', sans-serif;
-  font-size: clamp(0.5rem, 0.64vw, 0.58rem);
+  font-size: clamp(0.54rem, 0.7vw, 0.64rem);
   letter-spacing: 0.13em;
   text-transform: uppercase;
-  line-height: 1.45;
+  line-height: 1.5;
   color: #2E4A52;
 }
-.spec-what { opacity: 0.5; }
-.spec-price { opacity: 0.75; letter-spacing: 0.18em; }
+.spec-what { opacity: 0.55; }
+.spec-price { opacity: 0.8; letter-spacing: 0.18em; }
+/* The other way to give this one — in the couple's hand, because it is them asking rather than the
+   shop describing. ⚠️ `pointer-events: auto` comes from `.reveal.open`; the band keeps the note
+   alive because the note is inside the band. */
+.reveal-cash {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-family: 'Over the Rainbow', cursive;
+  font-size: clamp(0.92rem, 1.18vw, 1.1rem);
+  line-height: 1.3;
+  color: #2E4A52;
+  text-decoration: none;
+  opacity: 0.9;
+  cursor: none;
+  transition: opacity 0.25s ease;
+}
+a.reveal-cash { border-bottom: 1px solid currentColor; padding-bottom: 1px; }
+a.reveal-cash:hover, a.reveal-cash:focus-visible { opacity: 1; outline: none; }
+/* No link yet — the offer, written down, with nothing to press. */
+.reveal-cash.is-pending { opacity: 0.6; }
+
+/* ── even better — the section ───────────────────────────────────────────────
+   Set exactly the way the popup is set: ink on paper, centred, nothing around it. It is a section
+   of the chapter now rather than a layer over one. */
+.cash-scene {
+  min-height: 96dvh;
+  text-align: center;
+  padding: 10vh 8vw;
+  box-sizing: border-box;
+}
+.cash-scene .cash-heading { margin: 0 0 1.4rem; }
+.cash-scene .cash-body { margin: 0 auto 2.8rem; }
+.cash-act { display: block; }
 
 /* ── even better — the card, and what it opens ───────────────────────────────
    ⚠️ THE CARD DOES NOT GROW. A previous cut had it blow itself out in place into a 46rem panel,

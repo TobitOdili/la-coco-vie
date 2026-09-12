@@ -350,128 +350,125 @@ export const CHAPTER_PAGES = {
       },
       {
         kind: 'gifts',
-        // ⚠️ LOREM IPSUM (user, 2026-09-03) — the page is being reviewed for the
-        // line and the layout, not for words. ⚠️ Keep `name` to SHORT words: it is
-        // circled by a lasso sized from its own box, and a name that wraps to two
-        // lines makes the loop sprawl across both. Three or four short words, like
-        // the real gifts had. `memory` lengths are kept roughly as
-        // they were on purpose: the trace is MEASURED from where these actually
-        // land, so shortening them all to the same length would flatter the curve
-        // in a way the real copy would not. Real gifts land when the couple pick
-        // them; `x` (0–100) is the horizontal position each one sits at.
-        // ⚠️ THE COUPLE'S REAL LIST (2026-09-11). `name` is the word that rides the wall and gets
-        // circled, so it stays to two or three SHORT words — a name that wraps makes the lasso
-        // sprawl across both lines. `product` and `price` are the specifics, shown only in the
-        // panel that opens under the word. `x` is legacy from the ink design and unused by the wall.
-        // ⚠️ PRICES ARE A SNAPSHOT, not a feed — they were the couple's own figures on 2026-09-11
-        // and Nigerian retail moves. They are deliberately prefixed "about".
-        // ⚠️ Three links are NOT the product page: see the notes on those items.
+        // The section's own title, in the couple's hand — see `.wall-title` in WithLove.
+        title: 'Gift Registry',
+        // ⚠️ THE COUPLE'S REAL LIST (2026-09-11), by its REAL NAMES (2026-09-12). `name` is the word
+        // that rides the wall, and it is now the product's own brand-and-model rather than a
+        // description of it: a registry is a list of THINGS, and "oraimo TenderPot" is what a guest
+        // will be looking at on the shop page. Kept to two or three short words all the same — a
+        // name that wraps makes the annotation under it sprawl across both lines.
+        // ⚠️ BRAND + PRODUCT, NOT BRAND + SKU. Where the thing has a real product name it is used
+        // (TenderPot, EasyBistro, NanoCell, ADA); where the "name" is only a model code it reads as
+        // a part number on a wall of display type — "HISENSE 390SH-FC" — so those say what the
+        // thing IS and the code moves down into `product`, where someone checking a listing wants it.
+        // ⚠️ `product` is the spec line, `price` the figure, `url` the product page, and `cashUrl`
+        // the item's OWN payment link — the couple are creating one per item so a guest can send the
+        // money for that gift instead of buying it. All ten are placeholders for now and render as
+        // text rather than as links until they exist (a dead call to action is worse than none).
+        // ⚠️ PRICES ARE A SNAPSHOT, not a feed — the couple's own figures on 2026-09-11, and Nigerian
+        // retail moves. They are deliberately prefixed "about".
+        // ⚠️ Three `url`s are NOT the product page: see the notes on those items.
+        // ⚠️ `x` (0–100) is legacy from the ink design and unused by the wall.
         items: [
           {
-            name: 'pressure cooker',
-            memory: 'sunday stew, ready before the guests are.',
-            product: 'oraimo TenderPot 6L 1000W · 9 programs',
+            name: 'oraimo TenderPot',
+            product: 'pressure cooker · 6L · 1000W · 9 programs',
             price: 'about ₦116,900',
             url: 'https://ng.oraimo.com/product/oraimo-tenderpot-6l-1000w-fast-cooking-&-9-programs-electric-pressure-cooker',
-            image: null, x: 34, claimed: false,
+            cashUrl: null,
+            image: null, x: 18, claimed: false,
           },
           {
-            name: 'bigger pressure cooker',
-            memory: 'or the same thing, with more room in it.',
-            product: 'oraimo KitchNova 1200W 6L · 80kPa',
-            // ⚠️ The store's PRESSURE COOKER collection, not this product's own page — the
-            // KitchNova has no indexed product URL. Swap it the moment one exists.
+            name: 'oraimo KitchNova',
+            product: 'pressure cooker · 6L · 1200W · 80kPa',
+            // ⚠️ NOT the product page — oraimo NG has no indexed URL for this model, so this is
+            // the pressure-cooker collection. Swap it the moment one exists.
             price: 'about ₦115,900',
             url: 'https://ng.oraimo.com/collections/pressure-cooker',
-            image: null, x: 68, claimed: false,
+            cashUrl: null,
+            image: null, x: 63, claimed: false,
           },
           {
-            name: 'breakfast station',
-            memory: 'saturday eggs, both of us still half asleep.',
-            product: 'oraimo EasyBistro 2-in-1 Breakfast Station',
+            name: 'oraimo EasyBistro',
+            product: '2-in-1 grill and sandwich breakfast station',
             price: 'about ₦102,900',
             url: 'https://ng.oraimo.com/product/oraimo-easybristo-2-in-1-grill-and-sandwich-maker-breakfast-station',
-            image: null, x: 36, claimed: false,
+            cashUrl: null,
+            image: null, x: 24, claimed: false,
           },
           {
-            name: 'air oven',
-            memory: 'the cake that comes out right the first time.',
-            product: 'oraimo BakeAir Pro 8-in-1 · 20L · 230°C',
+            name: 'oraimo BakeAir Pro',
+            product: 'air oven · 8-in-1 · 20L · 230°C',
             price: 'about ₦165,900',
             url: 'https://ng.oraimo.com/product/oraimo-bakeair-pro-versatile-20l-large-capacity-air-oven-oao-561a',
+            cashUrl: null,
             image: null, x: 70, claimed: false,
           },
           {
-            name: 'big television',
-            memory: 'the match, the film, the falling asleep halfway through.',
-            product: 'LG NanoCell 65" NANO80 4K Smart · Fouani',
+            name: 'LG NanoCell',
+            product: 'NANO80 4K smart television · 65" · Fouani',
             price: null,
             url: 'https://fouanistore.com/product/726',
-            image: null, x: 32, claimed: false,
+            cashUrl: null,
+            image: null, x: 40, claimed: false,
           },
           {
-            name: 'dehumidifier',
-            memory: 'harmattan outside, calm in here.',
-            product: 'Maxi Dehumidifier 30L (30DEN7) · Fouani',
-            // ⚠️ NO LINK — this one has no findable page on Fouani's store and no category page
-            // that reliably contains it. It renders without a link rather than with a guess.
+            name: 'Maxi Dehumidifier',
+            product: '30L · model 30DEN7 · Fouani',
+            // ⚠️ NO product page and NO price found on Fouani — the name renders without a link
+            // rather than pointing at a guess.
             price: null,
             url: null,
-            image: null, x: 66, claimed: false,
+            cashUrl: null,
+            image: null, x: 55, claimed: false,
           },
           {
-            name: 'refrigerator',
-            memory: 'room for everything, finally.',
-            product: 'Hisense SxS 541L (71WS-RC) · Fouani',
-            // ⚠️ Fouani's HISENSE brand page, not this model's own — the 71WS-RC is not indexed.
+            name: 'Hisense Refrigerator',
+            product: 'side-by-side · 541L · model 71WS-RC · Fouani',
+            // ⚠️ NOT the product page — this model is not indexed; it is Fouani's Hisense listing.
             price: null,
             url: 'https://fouanistore.com/search?brand=Hisense',
-            image: null, x: 38, claimed: false,
+            cashUrl: null,
+            image: null, x: 12, claimed: false,
           },
           {
-            name: 'corner sofa',
-            memory: 'the corner we never get up from.',
-            product: 'Taeillo ADA L-Shaped',
+            name: 'Taeillo ADA',
+            product: 'L-shaped corner sofa',
             price: 'about ₦369,998',
             url: 'https://taeillo.com/products/ada-l-shaped',
-            image: null, x: 64, claimed: false,
+            cashUrl: null,
+            image: null, x: 86, claimed: false,
           },
           {
-            name: 'stand mixer',
-            memory: 'flour on everything. worth it.',
-            product: 'oraimo OminiMix 1900W · 6 speeds',
+            name: 'oraimo OminiMix',
+            product: 'stand mixer · 1900W · 6 speeds · all-metal gears',
             price: null,
             url: 'https://ng.oraimo.com/product/oraimo-ominimix-6-speeds-durable-all-metal-gears-stand-mixer-obl-551a-graphitegrey',
+            cashUrl: null,
             image: null, x: 30, claimed: false,
           },
           {
-            name: 'chest freezer',
-            memory: 'a month of stew, cooked once.',
-            product: 'Hisense Chest Freezer 297L (390SH-FC) · Fouani',
+            name: 'Hisense Chest Freezer',
+            product: '297L · model 390SH-FC · Fouani',
             price: null,
             url: 'https://fouanistore.com/product/200',
+            cashUrl: null,
             image: null, x: 72, claimed: false,
           },
         ],
-        // ⚠️ NO ARTICLES ON THE NAMES. These are set as the page — six or eight bands of them
-        // running across the screen — and an "a"/"an"/"the" in front of each one is a column of
-        // filler words the eye has to step over on every pass. Bare nouns read as a list of things,
-        // which is what a registry is. (`bigger pressure cooker` was `a bigger one`, which only
-        // made sense read straight after the first cooker and never was, because the bands are
-        // shuffled independently.)
-        // ⚠️ NO dock popup here either (2026-09-11). With Love owns its own — it has to, because
-        // it opens itself where the gift list ends and the generic PopupCard has no idea where
-        // that is. See `cashPanel` below and the `.cash-dock` block in WithLove.
+        // ⚠️ NO dock popup here (2026-09-11). With Love owns its own — see `cashPanel` below.
         popups: [],
       },
       // ⚠️ Not a section — the panel the `cashNote` dock card opens. It replaced a
       // bordered box that sat mid-page and read as out of character on a chapter
       // that is otherwise ink on paper.
       {
-        // ⚠️ NOT A SECTION IN THE PAGE FLOW. Two things render this: a small fixed card at the
-        // bottom of the screen, and the panel that card opens — which also opens ITSELF over the
-        // stretch of scroll between the end of the gift list and the signature. WithLove owns the
-        // whole thing; nothing here is rendered by the generic popup dock.
+        // ⚠️ A REAL SECTION IN THE PAGE FLOW (2026-09-12), set the way the popup was set — ink on
+        // paper, centred, no box. It used to be a fixed card that grew, and then a popup that opened
+        // itself on scroll; both were an overlay arriving uninvited over the page. A section is the
+        // honest version: you scroll into it and out of it like everything else on the chapter.
+        // The little fixed card survives as a shortcut from anywhere on the page (it still opens the
+        // popup on a tap) and stands down while its own section is on screen.
         kind: 'cashPanel',
         heading: 'even better —',
         // The one line the card shows while it is still a card.

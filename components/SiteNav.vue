@@ -48,13 +48,31 @@
              there was no way into the welcome panel at all. Measured —
              `elementFromPoint` over WELCOME returned this div, not the nav. -->
         <div class="text-center">
-          <!-- BRAND WORDMARK — the couple's names. -->
+          <!-- BRAND WORDMARK — the couple's names. ⚠️ It GIVES WAY to the return cue while a
+               top-edge pull is charging (see `.pull-cue` below): the pull opens a band of the
+               chapter's accent at the top of the frame, and this is the space inside it. Two things
+               in one place is a collision; a handover is not. -->
           <div
             class="wordmark whitespace-nowrap text-[17px] lg:text-[26px] pointer-events-auto"
-            :style="{ color: navInk }"
+            :style="{ color: navInk, opacity: 1 - homePull }"
             @click="$emit('go-home')"
           >
             COVENANT <span class="amp">&amp;</span> UVIE
+          </div>
+          <!-- ── "back to the chapters", where the logo usually is ────────────────────────────
+               Only ever up while the TOP edge is being pulled. `--p` is the charge, 0→1: the ring
+               closes with it and the whole thing fades in with it, so at rest it is not rendered at
+               all. Its twin lives at the very END of the chapter's own content for the BOTTOM exit
+               — the two edges leave by different doors and the signpost belongs at each one. -->
+          <div v-if="homePull > 0" class="pull-cue" :style="{ '--p': homePull }" aria-hidden="true">
+            <span class="pull-ring">
+              <svg viewBox="0 0 44 44" focusable="false">
+                <circle class="pull-track" cx="22" cy="22" r="20" />
+                <circle class="pull-draw" cx="22" cy="22" r="20" />
+              </svg>
+              <i class="pull-chev" />
+            </span>
+            <span class="pull-label">back to the chapters</span>
           </div>
           <!-- Countdown (homepage only). ONE wedding as of 2026-09-06 — it counts to the
                white wedding. The rollover logic is kept (see site.config) so a second day
@@ -165,6 +183,10 @@ const props = defineProps({
 // The wordmark, and every `.menu-item` via the CSS below, flip together.
 const navInk = computed(() => (navOnDark.value ? 'var(--accentLight)' : props.accentColor))
 
+// How far a top-edge pull has charged, 0→1. Written by the chapter page (which owns the gesture),
+// read here because the cue belongs where the wordmark is — see the template.
+const homePull = useState('homePull', () => 0)
+
 // `.menu-item` is coloured from main.css, so the flag has to reach CSS too.
 watch(navOnDark, (on) => {
   if (import.meta.client) document.body.classList.toggle('nav-on-dark', !!on)
@@ -174,6 +196,64 @@ defineEmits(['toggle-about', 'go-home', 'toggle-sound'])
 </script>
 
 <style scoped>
+/* ── the top-edge return cue ─────────────────────────────────────────────────
+   The same ring as the one at the foot of the chapter, laid out on one line so it fits inside the
+   band of accent the pull opens above the page card. */
+.pull-cue {
+  /* ⚠️ FIXED TO THE TOP OF THE FRAME, not laid out with the wordmark. The band this lives in is
+     opened by the pull itself and grows from the top edge downward, so the cue has to be anchored
+     to that edge — pinned to the wordmark's own box it started 36px down and spent the first half
+     of the charge hanging off the bottom of a band that had not reached it yet. */
+  position: fixed;
+  left: 50%;
+  top: 0.4rem;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.62rem;
+  white-space: nowrap;
+  pointer-events: none;
+  /* ⚠️ THE BAND IS ALWAYS THE CHAPTER'S ACCENT — it is the renderer's clear colour showing where the
+     hero card used to be — so this ink is not the nav's. The nav's flips with whatever is under it;
+     this one knows exactly what it is on. */
+  color: var(--accentLight, #F6F3EC);
+  opacity: calc(var(--p, 0) * 1.4);
+}
+.pull-ring { position: relative; display: block; width: 1.5rem; height: 1.5rem; }
+.pull-ring svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.pull-track, .pull-draw { fill: none; stroke: currentColor; }
+/* ⚠️ `non-scaling-stroke`: a stroke-width is meaningless without its viewBox scale. This pins it
+   to the site's hairline whatever the rem size works out to. */
+.pull-track { stroke-width: 1; vector-effect: non-scaling-stroke; opacity: 0.3; }
+.pull-draw {
+  stroke-width: 1.15;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-dasharray: 125.664;                 /* 2πr, r = 20 */
+  stroke-dashoffset: calc(125.664 * (1 - var(--p, 0)));
+  transform: rotate(-90deg);                 /* start at 12 o'clock */
+  transform-origin: 50% 50%;
+}
+.pull-chev {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.34rem;
+  height: 0.34rem;
+  margin: -0.22rem 0 0 -0.17rem;
+  border-left: 1px solid currentColor;
+  border-top: 1px solid currentColor;
+  transform: rotate(45deg);
+  opacity: 0.85;
+}
+.pull-label {
+  font-family: 'Bague', ui-sans-serif, sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
 .wordmark {
   font-family: 'Bague', ui-sans-serif, sans-serif;
   letter-spacing: 0.14em;
