@@ -380,6 +380,7 @@ export function useChapterScene() {
   let dragTracking = false   // a touch gesture owns the ring (drag + coast) — see setDragging()
   let selectedHero = null   // the single poster scaled up as the full-screen hero (P1)
   let scrollOffsetPx = 0    // inner-page scroll position in px (from Lenis) — drives the hero up/away
+  let heroPullPx = 0        // top-edge pull in px — drives the hero the other way (see setHeroPull)
   let exitStart = null      // captured transforms at the start of a forward scroll-exit (step E)
   // ── The turn ────────────────────────────────────────────────────────────────
   // A WHOLE REVOLUTION, and it is already well under way by the time you can see any of it.
@@ -404,7 +405,13 @@ export function useChapterScene() {
   const SPIN_FROM = 0.0       // ⚠️ FROM THE FIRST PIXEL. The deck must already be turning when the
                               // article uncovers it — a turn that starts on the reveal has no
                               // pre-rotation, and the arrival reads as a standing start.
-  const SPIN_TO = 0.90        // …still turning a little as the deck takes the card
+  // ⚠️ THE TURN OUTLASTS THE DROP, and that is the fix for "a tiny pause before horizontal scroll
+  // resumes". Ending it with the landing left a stretch of scroll — and then the route change —
+  // with the deck perfectly still, which reads as the deck stopping and then being started again.
+  // Running to 0.98 means it is still turning at 140°/de when the card seats and 44°/de at the
+  // commit, where `EXIT_FOLLOW` picks it up: the horizontal never actually stops. It costs nothing
+  // in landing accuracy — at POSE_END the turn is 98.7% done, so the gap is 5.6° off centre.
+  const SPIN_TO = 0.98
   // How much of the turn window runs at a CONSTANT rate before the deceleration. The old flat spin
   // was constant the whole way; keeping most of it flat is what makes the reveal feel like the deck
   // was already going, and the matched ease-out over the rest is what lets it settle to receive the
@@ -440,21 +447,26 @@ export function useChapterScene() {
   //   final pose, motionless, with one card falling into it. That fixed the packing (AUDIT #47/#48:
   //   a radius-18 "bowl" cluster, eight 24-wide cards on a ring whose adjacent slots were 13.8
   //   apart) by removing the arrival altogether, which is not what was wrong with it.
-  const POSE_HEAD = 0.66     // how far the deck has opened before it can be seen…
-  const POSE_HEAD_END = 0.16 // …and the de by which it has got there (strip = 36% of the screen)
-  const POSE_END = 0.80      // the fan is open — and the card lands — here
-  const OTHERS_IN = 0.14     // the deck is WHOLE this early: cards rise into their slots unseen
-  const DROP_END_B = 0.64    // bLin at which the hero has landed (= de POSE_END)
+  // ⚠️ `POSE_HEAD` IS A PLACEMENT, NOT A RAMP. It used to be ANIMATED over the first 0.16 of `de`
+  // — twenty world units of rise in a sixth of the exit, eight times the rate of everything after
+  // it, and then a dead stop until 0.22. By 0.16 the article has already uncovered 36% of the
+  // screen, so that burst and that plateau were both on camera: "the cards rapidly shift up before
+  // they start to rotate." The deck is now simply PLACED here on the first scrubbed frame, which
+  // is `de` ≈ 0.001, where the article still covers the whole screen — and from there one even
+  // curve carries it the rest of the way. Nothing in this exit changes speed abruptly again.
+  const POSE_HEAD = 0.66     // how far open the deck already is when the exit begins
+  const POSE_END = 0.90      // the fan is open — and the card lands — here
+  const DROP_END_B = 0.818   // bLin at which the hero has landed (= de POSE_END)
   // The catch. ⚠️ IT STARTS BEFORE THE LANDING, and that is what stops it reading as a kink: the
   // card's descent eases OUT, so it arrives with no speed of its own, and a deck that only began to
   // give on the frame it seated would be a second motion starting from a standstill. Opening the
   // window early instead puts the ring at the bottom of its dip just as the card comes in — the deck
   // sinks under it and the two come back up together.
-  const CATCH_FROM = 0.73
-  const CATCH_END = 0.96     // …and the give is spent by here, comfortably before the commit
-  const CATCH_RING = -3.8    // ×0.57 at the peak ⇒ the ring dips ~2.2 units, about 40px at the front
-  const CATCH_CARD = -2.2    // …and each other card, as the give travels round the ring
-  const CATCH_HERO = -1.4    // …and the card itself, pressing into its slot a beat later
+  const CATCH_FROM = 0.83
+  const CATCH_END = 0.99     // …and the give is all but spent by the commit; endExit rides out the rest
+  const CATCH_RING = -3.0    // ×0.57 at the peak ⇒ the ring dips ~1.7 units, about 31px at the front
+  const CATCH_CARD = -1.7    // …and each other card, as the give travels round the ring
+  const CATCH_HERO = -1.1    // …and the card itself, pressing into its slot a beat later
   const CATCH_HERO_LAG = 0.06
   const CATCH_LAG = 0.30     // how much of the settle the wave takes to reach the far side
   // Handed to the homepage as a bit of leftover momentum — see endExit(settle).
@@ -1164,7 +1176,8 @@ export function useChapterScene() {
       selectedHero.mesh.getWorldPosition(_frontVec)
       const dz = Math.max(1, camera.position.z - _frontVec.z)
       const worldPerPx = (2 * dz * Math.tan(toRad(camera.fov / 2))) / height
-      const eff = Math.min(scrollOffsetPx, height * 1.3)  // clamp once it's fully gone
+      // `heroPullPx` is the top-edge pull, and it goes the other way — see setHeroPull.
+      const eff = Math.min(scrollOffsetPx, height * 1.3) - heroPullPx
       selectedHero.mesh.position.y = selectedHero.baseY + eff * worldPerPx * HERO_SCROLL_FACTOR
     }
 
@@ -1614,6 +1627,7 @@ export function useChapterScene() {
     if (selectedIndex === -1 || isDeselecting) return
     isDeselecting = true
     scrollOffsetPx = 0   // stop coupling; GSAP restores the hero's Y below (P1)
+    heroPullPx = 0       // …and the pull that very likely triggered this
     // Kill a still-running select-in: its onComplete would otherwise clear isSelecting
     // early and start the video mid-deselect (back-pressed during the 3s entry).
     if (selectTl) { selectTl.kill(); selectTl = null; isSelecting = false }
@@ -1756,8 +1770,7 @@ export function useChapterScene() {
     // radius (the radius does not change, here or anywhere). So two thirds of the opening
     // happens behind the article, and what you actually watch is the last third: the fan
     // tipping back, the deck rising and yawing into place, finishing exactly as the card lands.
-    const pose = POSE_HEAD * ss(t / POSE_HEAD_END) +
-                 (1 - POSE_HEAD) * ss2((t - POSE_HEAD_END) / (POSE_END - POSE_HEAD_END))
+    const pose = POSE_HEAD + (1 - POSE_HEAD) * ss(t / POSE_END)
 
     // ── the deck turns ────────────────────────────────────────────────────────
     // One full revolution plus `−homeTilt().y` — see EXIT_TURNS. Constant rate through the reveal
@@ -1793,21 +1806,21 @@ export function useChapterScene() {
     const reveal = ss(c01((bLin - 0.06) / 0.28))
     const fitT = Math.min(1, t / HERO_FIT_END)                      // shrink to ring size early (while off-top)
 
-    // EVERY other card (incl. the chapter's MIRROR copy = the one that's "already there") comes up
-    // from under the fold into its homepage slot. ⚠️ EARLY — `OTHERS_IN` is a tenth of the exit,
-    // all of it behind the article. The deck must be WHOLE before it is uncovered; what opens in
-    // view is its attitude, not its membership. Cards still arriving in an uncovered ring is the
-    // "jumble" of AUDIT #47/#48.
+    // EVERY other card (incl. the chapter's MIRROR copy = the one that's "already there") is simply
+    // PUT in its homepage slot, on the first scrubbed frame. ⚠️ NOT RISEN INTO IT. The select drops
+    // them 30–86 units below the frame to hide them behind the hero, and animating that back — even
+    // over a tenth of `de` — is sixty units of travel happening while the article has already
+    // uncovered a third of the screen. That was the "rapid shift up". At `de` ≈ 0.001 the article
+    // covers everything, so placing them there is seen by nobody; `cancelExit` puts them back.
     // ⚠️ Their OPACITY is left to animate()'s depth fade — see the gate there. Pinning it at 1 here
     // meant the far side of the ring was fully opaque all through the exit and then dimmed to the
     // homepage falloff the instant it committed.
-    const inT = ss(t / OTHERS_IN)
     for (const o of exitStart.others) {
       o.p.mesh.position.x = o.p.baseX
       o.p.mesh.position.z = o.p.baseZ
       // The wave reaches a card later the further round the ring it sits from the filled slot.
       const kd = c01(k - o.phi * CATCH_LAG)
-      o.p.mesh.position.y = lp(o.y, o.p.baseY, inT) + CATCH_CARD * give(kd)
+      o.p.mesh.position.y = o.p.baseY + CATCH_CARD * give(kd)
     }
 
     // The SECOND copy of this chapter (the hero): off-top + hidden through phase A; once the article
@@ -1853,11 +1866,32 @@ export function useChapterScene() {
   // resumes the hero exactly where it was (no snap).
   function cancelExit() {
     if (!exitStart) return
-    setExitProgress(0)        // lerp every transform back to the captured start
-    // The hero especially must return to baseX/baseZ so the scroll-coupling (which only moves .y)
-    // keeps it centred full-bleed.
-    for (const o of exitStart.others) { o.p.mesh.position.x = o.p.baseX; o.p.mesh.position.z = o.p.baseZ }
-    if (selectedHero) { selectedHero.mesh.position.x = selectedHero.baseX; selectedHero.mesh.position.z = selectedHero.baseZ }
+    // ⚠️ RESTORED FROM THE CAPTURE, not by scrubbing to 0. `setExitProgress(0)` no longer means "the
+    // selected pose" — the deck is PLACED two thirds open on the first scrubbed frame and the scrub
+    // starts from there, which is what stopped the arrival being a burst of motion on camera. So the
+    // undo has to be explicit. It happens at `de` ≤ 0, where the article covers the whole screen, so
+    // it is a snap nobody sees — the same window the placement used on the way in.
+    carousel.position.y = exitStart.cy
+    carousel.animatedRotationY = exitStart.rot
+    groupG.rotation.set(exitStart.gx, exitStart.gy, exitStart.gz)
+    for (const o of exitStart.others) o.p.mesh.position.set(o.p.baseX, o.y, o.p.baseZ)
+    const hero = selectedHero
+    if (hero) {
+      // The hero especially must return to baseX/baseZ so the scroll-coupling (which only moves .y)
+      // keeps it centred full-bleed; its Y is re-derived from `scrollOffsetPx` on the next frame.
+      hero.mesh.position.x = hero.baseX
+      hero.mesh.position.z = hero.baseZ
+      hero.mesh.scale.set(exitStart.heroScale, exitStart.heroScale, 1)
+      hero.material.uniforms.blendFactor.value = exitStart.blend
+      hero.material.uniforms.progress.value = exitStart.prog
+      // ⚠️ Straight back to 1, not lerped. Phase A hides this card (`heroReveal` 0) because it is the
+      // one that drops in later; on a cancel it is the PAGE again on the very next frame, and the
+      // idle fade would have spent ~0.4s bringing the article's own hero back from invisible.
+      if (hero.material.uniforms.uOpacity) hero.material.uniforms.uOpacity.value = 1
+    }
+    if (groupG.userData.txtMat) groupG.userData.txtMat.opacity = exitStart.txtOpacity
+    exitBgAlpha = 1
+    heroReveal = 0
     isDeselecting = false     // re-enable animate() scroll-coupling + the route reverse path
     exitStart = null
   }
@@ -1879,6 +1913,7 @@ export function useChapterScene() {
     selectedHero = null
     exitStart = null
     scrollOffsetPx = 0
+    heroPullPx = 0
     hoveredIndex = -1   // stale hover would block the idle center-text sync (deselect resets it too)
     heroReveal = 0
     exitBgAlpha = 0     // homepage background (transparent → the body shows through). At the commit
@@ -1982,6 +2017,14 @@ export function useChapterScene() {
   function setScroll(px) {
     scrollOffsetPx = Math.max(0, px || 0)
   }
+
+  // ⚠️ The TOP-edge exit had NOTHING to look at. Pulling up at the top of a chapter charges a
+  // threshold and then leaves — and the only feedback was a ring at the far end of the screen from
+  // where the gesture is happening, so it read as nothing at all: "I can't see any animation when
+  // I'm reverse scrolling to return to homepage." At scroll 0 the whole screen IS the hero card, so
+  // the card is the only thing that CAN answer: the page presses back the way you are pulling it.
+  // Fed `pullTop` × a few percent of the viewport, and cleared with the pull.
+  function setHeroPull(px) { heroPullPx = Math.max(0, px || 0) }
 
   // Scale the centre wordmark plane so it always fits the viewport WIDTH. The visible width at
   // the plane's depth is 2·d·tan(fov/2)·aspect; on a portrait phone that's far less than the
@@ -2142,6 +2185,7 @@ export function useChapterScene() {
     selectChapter,    // exposed so the route watcher can drive selection (Phase 2)
     deselectChapter,  // TOP-edge / back-button exit: reverse-spin rewind into the ring
     setScroll,        // inner-page scroll → hero card coupling (P1)
+    setHeroPull,      // top-edge pull px → the hero presses back the way you are pulling
     // Forward ring-reassembly primitives (de 0→1), reserved for the scroll-driven BOTTOM exit rebuild
     // (page scrolls out → ring "outro" section; see docs/PHASE-2-INNER-PAGES.md). Currently driven only
     // by the ?debug __exit* hooks.

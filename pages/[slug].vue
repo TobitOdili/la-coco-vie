@@ -130,6 +130,13 @@ const activePopups = computed(() => {
 // the hero-card coupling (P1). It's the same scene instance across all routes.
 const webglSceneRef = inject('webglSceneRef', null)
 
+// The hero card presses back the way you are pulling it — the only thing that CAN answer at scroll
+// 0, where the whole screen is that card. A few percent of the viewport at a full charge.
+const HERO_PULL_PX = 0.055
+function pushHeroPull() {
+  webglSceneRef?.value?.scene?.setHeroPull?.(pullTop.value * window.innerHeight * HERO_PULL_PX)
+}
+
 // The cue retires on the first real scroll; the two pulls are 0→1 toward the homepage.
 // ⚠️ `cueReady` is the SETTLE, not the mount. The select takes ~1.5s to turn the card you clicked
 // into this page, and a "read on" sitting over the middle of that is telling you to scroll
@@ -152,7 +159,10 @@ let lenis = null
 // BOTTOM exit is being REBUILT scroll-driven (per the reference: the page scrolls fully out and a ring
 // "outro" section scrolls in) — see docs/PHASE-2-INNER-PAGES.md. Until then the bottom edge is inert
 // (use the top edge, the back button, or the nav logo to leave).
-const EXIT_THRESHOLD = 800   // px of overscroll past the TOP edge to trigger the (reverse) exit
+// ⚠️ 420, not 800. Eight hundred pixels of wheel is more than a trackpad flick produces, so the
+// ring charged to about half, the 400ms gesture gap reset it, and the top edge read as doing
+// nothing at all. A deliberate pull is still deliberate at 420 — it is roughly three notches.
+const EXIT_THRESHOLD = 420  // px of overscroll past the TOP edge to trigger the (reverse) exit
 let topAccum = 0             // top overscroll accumulator
 let lastWheelT = 0           // last wheel-event time — a gap means a new gesture
 let exiting = false          // an exit committed (navigating home) — lock out further input
@@ -181,15 +191,19 @@ function onWheel(e) {
   // against a pixel threshold made exits near-unreachable there. ~40px/line ≈ Chrome's ~120px notch.
   const dy = e.deltaY * (e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? window.innerHeight : 1)
   const now = performance.now()
-  if (now - lastWheelT > 400) { topAccum = 0; pullTop.value = 0 }   // a pause = a new gesture
+  // ⚠️ 700ms, not 400: a trackpad pauses mid-gesture more than that and the charge was being
+  // thrown away under a finger that had not left the pad.
+  if (now - lastWheelT > 700) { topAccum = 0; pullTop.value = 0; pushHeroPull() }   // a pause = a new gesture
   lastWheelT = now
   if (lenis.scroll <= 2 && dy < 0) {          // top edge, pushing up → reverse rewind home
     topAccum += -dy
     pullTop.value = Math.min(1, topAccum / EXIT_THRESHOLD)
+    pushHeroPull()
     if (topAccum >= EXIT_THRESHOLD) doExit()
   } else {
     topAccum = 0
     pullTop.value = 0
+    pushHeroPull()
   }
 }
 
@@ -197,7 +211,7 @@ function onWheel(e) {
 // on a phone was the nav logo. A finger-pull needs a much smaller threshold than a wheel's
 // 800px to feel deliberate. (The BOTTOM exit needs nothing extra: it's driven by Lenis
 // scroll position, which native touch scrolling already produces.)
-const EXIT_THRESHOLD_TOUCH = 180
+const EXIT_THRESHOLD_TOUCH = 140
 let touchLastY = 0
 function onTouchStart(e) {
   const t = e.touches[0]
@@ -214,10 +228,12 @@ function onTouchMove(e) {
   if (lenis.scroll <= 2 && dy < 0) {
     topAccum += -dy
     pullTop.value = Math.min(1, topAccum / EXIT_THRESHOLD_TOUCH)
+    pushHeroPull()
     if (topAccum >= EXIT_THRESHOLD_TOUCH) doExit()
   } else {
     topAccum = 0
     pullTop.value = 0
+    pushHeroPull()
   }
 }
 
@@ -227,6 +243,7 @@ function onTouchMove(e) {
 function onTouchEnd() {
   topAccum = 0
   pullTop.value = 0
+  pushHeroPull()
 }
 
 // TOP edge / back button → navigate home; app.vue's route watcher runs deselectChapter() (reverse).
@@ -309,12 +326,13 @@ function updateExit(scrollY) {
     exitEngaged = true
   }
   scene.setExitProgress(de)
-  // The ring closes as the article leaves and is full the moment the last of it clears — then it
-  // bows out, because from there the deck coming up to meet you says it better than a label can.
-  // ⚠️ It has to be SPENT before the end, not racing the commit: `de` past ~0.8 is the card landing,
-  // and a progress ring still filling over that is describing something already finished.
-  const fill = Math.max(0, Math.min(1, (de - 0.10) / 0.40))
-  const fade = 1 - Math.max(0, Math.min(1, (de - 0.56) / 0.16))
+  // ⚠️ THE RING CLOSES EXACTLY AS THE PAGE LEAVES THE FRAME. `DROP_START` is the `de` at which the
+  // article has fully scrolled out, so that is the moment the ring is describing and that is where
+  // it completes — not 0.50, and not still filling over the deck afterwards. It then gets out of
+  // the way inside a tenth of `de`: past that point the deck coming up to meet you says it better
+  // than a progress ring can, and a ring left over the spinning deck reads as a loading spinner.
+  const fill = Math.max(0, Math.min(1, (de - 0.03) / (DROP_START - 0.03)))
+  const fade = 1 - Math.max(0, Math.min(1, (de - DROP_START) / 0.09))
   pullBottom.value = fill * fade
   if (de >= COMMIT_AT) commitExit()
 }
@@ -362,7 +380,7 @@ onMounted(() => {
     scene?.setScroll(e.scroll); syncNavInk(); updateExit(e.scroll); syncCanvasCover(e.scroll)
     if (!cueSeen.value && e.scroll > 40) cueSeen.value = true
     // Left the top edge — whatever the pull had reached is no longer true.
-    if (e.scroll > 2 && pullTop.value) pullTop.value = 0
+    if (e.scroll > 2 && pullTop.value) { pullTop.value = 0; pushHeroPull() }
   })
   // ⚠️ Also on arrival: a chapter selected at scroll 0 already has the accent
   // painted behind the transparent hero, so the nav can be invisible before the
@@ -444,6 +462,7 @@ onBeforeUnmount(() => {
   lenis?.destroy()
   lenis = null
   webglSceneRef?.value?.scene?.setScroll(0)
+  webglSceneRef?.value?.scene?.setHeroPull?.(0)
   // ⚠️ ALWAYS. A `true` left behind here would follow the visitor to the homepage, which has no
   // page to clear it, and blank the canvas.
   webglSceneRef?.value?.scene?.setCanvasHidden?.(false)

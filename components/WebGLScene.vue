@@ -52,10 +52,21 @@ function onWheel(e) {
 // wheel-down does on a laptop. Only the horizontal axis is direct manipulation, which is why
 // the two terms below have opposite signs — that is not a bug to tidy up.
 const TAP_SLOP = 12          // px of travel below which a touch still counts as a tap
+// ⚠️ THE RELEASE SPEED IS MEASURED OVER A WINDOW, NOT TAKEN FROM THE LAST EVENT. Seeding the coast
+// with the final `touchmove` delta is why a flick had no inertia: a finger decelerates before it
+// lifts and the last event of a gesture is routinely the smallest one in it, so the fastest swipe
+// on the page handed the coast a value near zero and the deck stopped dead. Summing the travel over
+// the last `VEL_WINDOW` ms and dividing by the elapsed time gives the speed the FINGER actually
+// had. (Samples are trimmed on the way in, so this is a handful of numbers, not a log.)
+const VEL_WINDOW = 90        // ms of gesture the release speed is read from
+const FLICK_BOOST = 1.25     // a flick should outrun the finger a little, the way native lists do
+const FLICK_MAX = 46         // px/frame — a cap, so a frantic swipe cannot spin the deck to a blur
+const COAST_DECAY = 0.955    // ~370ms time constant (was 0.94 ≈ 280ms, which died too soon)
 let touchLastX = 0
 let touchLastY = 0
 let touchTravel = 0          // accumulated travel this gesture — distinguishes swipe from tap
-let touchVel = 0             // last per-move delta — seeds the release momentum
+let velSamples = []          // [t, px] over the last VEL_WINDOW ms — see above
+let touchVel = 0             // live coast velocity, px/frame
 let momentumRaf = null
 let suppressClickUntil = 0
 let touching = false
@@ -67,6 +78,7 @@ function onTouchStart(e) {
   touchLastY = t.clientY
   touchTravel = 0
   touchVel = 0
+  velSamples = []
   touching = true
   scene.setDragging?.(true)           // the gesture owns the ring from here until the coast dies
 }
@@ -80,8 +92,23 @@ function onTouchMove(e) {
   touchLastY = t.clientY
   touchTravel += Math.abs(right) + Math.abs(up)
   const px = right - up
-  touchVel = px
+  const now = performance.now()
+  velSamples.push([now, px])
+  while (velSamples.length > 1 && now - velSamples[0][0] > VEL_WINDOW) velSamples.shift()
   scene.onDrag(px)
+}
+
+// px/frame the finger was moving at over the last VEL_WINDOW ms. ⚠️ Dividing by the SPAN of the
+// samples, not by the window: a gesture shorter than the window, or one whose events arrive at
+// 120Hz, would otherwise report a fraction of its real speed.
+function releaseVelocity() {
+  if (velSamples.length < 2) return 0
+  const span = velSamples[velSamples.length - 1][0] - velSamples[0][0]
+  if (span < 8) return 0
+  let sum = 0
+  for (let i = 1; i < velSamples.length; i++) sum += velSamples[i][1]
+  const perFrame = (sum / span) * (1000 / 60) * FLICK_BOOST
+  return Math.max(-FLICK_MAX, Math.min(FLICK_MAX, perFrame))
 }
 function onTouchEnd() {
   touching = false
@@ -94,9 +121,11 @@ function onTouchEnd() {
   // of the way, so this 0.94 decay is the only thing slowing the deck down — release `setDragging`
   // when it dies, not when the finger lifts, or the ring's speed drops off a cliff at touchend.
   cancelAnimationFrame(momentumRaf)
-  if (Math.abs(touchVel) < 0.6) { scene.setDragging?.(false); return }
+  touchVel = releaseVelocity()
+  velSamples = []
+  if (Math.abs(touchVel) < 0.4) { scene.setDragging?.(false); return }
   const coast = () => {
-    touchVel *= 0.94
+    touchVel *= COAST_DECAY
     if (Math.abs(touchVel) < 0.05) { scene.setDragging?.(false); return }
     scene.onDrag(touchVel)
     momentumRaf = requestAnimationFrame(coast)

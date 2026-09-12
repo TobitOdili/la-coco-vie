@@ -654,8 +654,9 @@ snapshot export anymore — that machinery was removed.)
   one fact: `.chapter-outro` is transparent, so at `de` the article has uncovered `de / DROP_START` of
   the screen **from the bottom up**. Anything that must not be seen has to finish in the first tenth;
   anything meant to be watched has to still be going after it.
-  - **Phase A [0..0.45]** — the article scrolls out. The deck is WHOLE by `OTHERS_IN` (0.14) and two
-    thirds open by `POSE_HEAD_END` (0.16), and the turn has already run 253° of its 430.
+  - **Phase A [0..0.45]** — the article scrolls out. The deck is WHOLE and two thirds OPEN from the
+    first scrubbed frame — **placed, not animated** (see the ⚠️ below) — and the turn has already run
+    a good part of its 430°.
   - **Phase B [0.45..1]** — the deck finishes opening (`pose` → 1 at `POSE_END` 0.80: height, look-down,
     yaw and roll together) while the turn runs out its last 177° onto **`−homeTilt().y`**, and the chapter's **second** card
     copy descends from off-top into its slot, landing on `POSE_END`. **All 8 cards stay present** — one
@@ -698,13 +699,12 @@ scene
 | `introDistance` | 75 | start radius for the fly-in |
 | `SELECTED_Y` | **-43** | carousel Y when a chapter is selected (top-anchors the full-bleed hero) |
 | hero scale | `aspectRatio * 2.07` | reference-tuned full-bleed scale at `progress=1` |
-| `EXIT_TURNS` | **`1`** | complete revolutions the deck makes across the bottom exit. Total turn = `−(2π × EXIT_TURNS) − homeTilt().y` → **−430° desktop, −360° mobile**, over [`SPIN_FROM` 0.0 … `SPIN_TO` 0.90]: 253° behind the article, 177° watched, at about the degrees-per-pixel of the original flat −300° spin. The `−homeTilt().y` term is there because the select flattened the group's yaw and restoring it turns the ring; without it the gap lands 70° off the front. ⚠️ Earlier nets: −300° (gap → the BACK of the ring, dimmed to 0.2 by the depth falloff), −45° (fine at 1440×900; off the SIDE of a phone, where the front card spans 90% of the frame and only ~±15° of the ring is on screen), 0 (group yaw uncancelled — edge-on, in the wings). A whole revolution is what lets the turn be big AND land where it must. |
+| `EXIT_TURNS` | **`1`** | complete revolutions the deck makes across the bottom exit. Total turn = `−(2π × EXIT_TURNS) − homeTilt().y` → **−430° desktop, −360° mobile**, over [`SPIN_FROM` 0.0 … `SPIN_TO` 0.98] at about the degrees-per-pixel of the original flat −300° spin. ⚠️ `SPIN_TO` **outlasts the drop** (0.98 against a 0.90 landing): still 140°/de when the card seats and 44°/de at the commit, where `EXIT_FOLLOW` picks it up. Ending the turn with the landing left a stretch of scroll and then the route change with the deck perfectly still — "a tiny pause before horizontal scroll resumes". It costs nothing in accuracy: at the landing the turn is 98.7% done, so the gap is 5.6° off centre. The `−homeTilt().y` term is there because the select flattened the group's yaw and restoring it turns the ring; without it the gap lands 70° off the front. ⚠️ Earlier nets: −300° (gap → the BACK of the ring, dimmed to 0.2 by the depth falloff), −45° (fine at 1440×900; off the SIDE of a phone, where the front card spans 90% of the frame and only ~±15° of the ring is on screen), 0 (group yaw uncancelled — edge-on, in the wings). A whole revolution is what lets the turn be big AND land where it must. |
 | `SPIN_LINEAR_TO` / `SPIN_E0` | `0.70` / `2U/(1+U)` | the turn runs at a CONSTANT rate for this much of its window and then decelerates. `SPIN_E0` is derived, not tuned: it is the only split at which the two segments meet at the same angular velocity. Constant-through-the-reveal is what makes the deck read as already going; the ease-out is what lets it settle to receive the card instead of stopping dead under it. |
 | `DROP_START` | `0.45` | `de` split between phase A (the article scrolling out) and phase B (the deck finishing + the card drop). **Must match the copy in `pages/[slug].vue`.** |
-| `POSE_HEAD` / `POSE_HEAD_END` | `0.66` / `0.16` | how far the deck has opened before it can be seen, and the `de` by which it got there. A select flattens `groupG` to (0,0,0) and a ring with no look-down is seen edge-on — the head start is what keeps the visible part of the arrival out of the "packed" range. |
-| `POSE_END` | `0.80` | the fan is open — and the card lands — here. |
-| `OTHERS_IN` | `0.14` | the deck is WHOLE this early: cards rise into their slots behind the article. Membership is never watched; attitude is. |
-| `CATCH_FROM` / `CATCH_END` | `0.73` / `0.96` | the give the landing puts through the deck. Opens BEFORE the landing so the ring is at the bottom of its dip as the card seats — a give that started on the frame it landed was a second motion from a standstill. |
+| `POSE_HEAD` | `0.66` | how far open the deck already is when the exit begins. ⚠️ **A PLACEMENT, NOT A RAMP** — applied on the first scrubbed frame (`de` ≈ 0.001, where the article still covers the whole screen), then one even `ss` curve carries the rest. It used to be ANIMATED over the first 0.16 of `de`: twenty world units of rise at eight times the rate of everything after it, then a dead stop until 0.22 — and by 0.16 the article has uncovered 36% of the screen, so both the burst and the plateau were on camera ("the cards rapidly shift up before they start to rotate"). The other cards are placed the same way rather than rising 60 units from under the fold. `cancelExit` undoes both explicitly, in the same covered window. |
+| `POSE_END` | `0.90` | the fan is open — and the card lands — here. |
+| `CATCH_FROM` / `CATCH_END` | `0.83` / `0.99` | the give the landing puts through the deck. Opens BEFORE the landing so the ring is at the bottom of its dip as the card seats — a give that started on the frame it landed was a second motion from a standstill. |
 | `EXIT_FOLLOW` | `−7°` | leftover turn handed to the homepage by `endExit(true)`, over 0.9s. |
 | `DEPTH_FADE_NEAR / FAR` | 95 / 125 | distance range for far-card opacity fade (#6) |
 | `DEPTH_FADE_FLOOR` | 0.2 | far cards fade to faint, not invisible |
@@ -817,8 +817,8 @@ drives two exits — a top-edge reverse rewind and a scroll-driven bottom "outro
   which maps scroll position → `de` 0→1 → `scene.setExitProgress(de)` — fully scroll-coupled and
   reversible (scroll back up → `cancelExit()` restores the article), no page morph or snapshot. It runs
   in **two phases** around `DROP_START` (0.45, present in *both* this file and `useChapterScene.js`):
-  phase A [0..0.45] the article scrolls fully out over a deck that is already WHOLE (`OTHERS_IN` 0.14)
-  and two thirds OPEN (`POSE_HEAD` 0.66), and the turn is already 253° through its 430; phase B [0.45..1] the
+  phase A [0..0.45] the article scrolls fully out over a deck that is already WHOLE
+  and two thirds OPEN (`POSE_HEAD` 0.66) — PLACED at `de` ≈ 0.001, not animated into it; phase B [0.45..1] the
   deck finishes opening — height, look-down, yaw and roll on one `pose` gauge — and the turn completes on
   `−homeTilt().y`, while the chapter's **second** card copy descends from off-top into its slot (the first
   already rides in the deck), landing on `POSE_END` (0.80) into a give the deck opened at `CATCH_FROM`.

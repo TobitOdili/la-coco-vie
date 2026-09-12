@@ -106,6 +106,44 @@ above. Constant speed and a reversed exit are not in conflict.
 As children on a strip this long they rasterise as their own layers and visibly settle a beat after
 the film stops — the edges appear to "catch up".
 
+**▶▶ STATE (2026-09-11, latest) — NOTHING IN THE EXIT CHANGES SPEED ABRUPTLY.**
+User: *"At the end of the inner page scroll, I can see the cards rapidly shift up before they start
+to rotate. Every motion should be locked into scroll at that exit animation."* Plus: the return ring
+mistimed and left over the spinning deck; nothing to see when pulling up at the TOP edge; a pause
+before the ring resumes turning after the card lands; and no inertia on the phone carousel.
+
+1. **`POSE_HEAD` is a PLACEMENT now, not a ramp** — and so are the other cards' positions. It used to
+   animate two thirds of the pose over the first 0.16 of `de`: twenty world units of rise at **eight
+   times** the rate of everything after it, followed by a dead stop until 0.22 — and by `de` 0.16 the
+   article has uncovered 36% of the screen, so the burst AND the plateau were both on camera. The
+   other cards were worse: the select drops them 30–86 units below the frame, and that whole travel
+   was replayed inside 0.14. Both are now applied on the first scrubbed frame, `de` ≈ 0.001, where the
+   article still covers everything, and one even `ss` curve carries the rest. Measured per 0.04 of
+   `de`: the ring's rise went from 0.00 → 0.70 units and back, a smooth bell, against 3.8 before.
+   ⚠️ `cancelExit` can no longer scrub to 0 to undo it — it restores the capture explicitly, in the
+   same covered window.
+2. **The return ring completes exactly as the page clears** (`DROP_START`), and is gone a tenth of
+   `de` later. It used to fill to 1 at 0.50 and linger to 0.72, i.e. over the deck — where a
+   progress ring reads as a loading spinner sitting on the animation.
+3. **The top edge answers now.** 800px of wheel is more than a trackpad flick produces, so the ring
+   charged halfway, the gesture gap reset it, and pulling up at the top read as nothing happening —
+   420px (and 140px of finger), with a 700ms gap. And the hero card **presses back the way you pull
+   it** (`setHeroPull`): at scroll 0 the whole screen IS that card, so it is the only thing that can
+   answer at the point of the gesture. Measured, a band of the chapter's accent opens at the top of
+   the frame as you pull.
+4. **The turn outlasts the drop** (`SPIN_TO` 0.98 against a 0.90 landing): 140°/de when the card
+   seats, 44°/de at the commit, where `EXIT_FOLLOW` picks it up. Ending the turn with the landing
+   left a stretch of scroll and then the route change with the deck perfectly still — "a tiny pause
+   before horizontal scroll resumes". Measured across the handover: Δrot −0.158 → −0.100 → −0.093 →
+   −0.089 rad/frame, monotone, no flat spot.
+5. **The phone carousel has inertia.** The coast was seeded from the LAST `touchmove` delta — and a
+   finger decelerates before it lifts, so the final event of a gesture is routinely the smallest in
+   it and the fastest swipe on the page handed the coast a value near zero. The release speed is now
+   read over a 90ms window (summed travel ÷ elapsed), boosted 1.25×, capped, and decayed at 0.955
+   (≈370ms) instead of 0.94. Measured on a synthetic flick: the deck now coasts further than the
+   finger dragged it. Frame times on the phone viewport are 16.7ms at p50 and p90 even at 6× CPU
+   throttle, so "not fluid" was the missing inertia, not the render.
+
 **▶▶ STATE (2026-09-11, later) — WITH LOVE: THE POPUP IS A POPUP, AND THE NAMES ARE THE LINKS.**
 User: *"When I said to expand it on scroll, I didn't mean to make it a bigger widget — blow it out
 almost like it was clicked. Before, it had a pop up that didn't have the background of the widget…
@@ -158,11 +196,12 @@ is seen edge-on**, every card collapsed onto one line. That is what "too packed"
 comes back, from a tilt that was never packed:
 
 1. **One `pose` gauge, 0→1, for the ring's whole attitude** — height, look-down, yaw, roll. It starts
-   at `POSE_HEAD` (0.66) by `POSE_HEAD_END` (0.16), all of it behind the article, and completes at
-   `POSE_END` (0.80). The visible third is the fan tipping back: measured, +10 units of rise, +8.5° of
+   at `POSE_HEAD` (0.66) — ⚠️ *superseded the same day: that head is now PLACED, not animated; see the
+   entry above* — and completes at `POSE_END`. The visible third is the fan tipping back: measured, +10 units of rise, +8.5° of
    look-down and +24° of group yaw across the reveal. **No radius animation, still and forever.**
-2. **The deck is WHOLE before it is opened** (`OTHERS_IN` 0.14). Membership is never watched; attitude
-   is. Cards still arriving into an uncovered ring is the "jumble" of AUDIT #47/#48.
+2. **The deck is WHOLE before it is opened.** Membership is never watched; attitude is. Cards still
+   arriving into an uncovered ring is the "jumble" of AUDIT #47/#48. (⚠️ *`OTHERS_IN` is gone — they
+   are placed, not risen; see the entry above.*)
 3. **The turn is a WHOLE REVOLUTION** — `EXIT_TURNS` × 360° plus `−homeTilt().y`, i.e. −430° on a
    desktop and −360° on a phone, run at a **constant rate from the first pixel** (`SPIN_FROM` 0.0) and
    decelerating onto `SPIN_TO` 0.90. ⚠️ *Revised 2026-09-11 (same day, second pass): the first cut of
