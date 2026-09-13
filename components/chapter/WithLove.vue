@@ -72,12 +72,15 @@
               <span class="spec-what">{{ itemAt(active[r]).product }}</span>
               <span v-if="itemAt(active[r])?.price" class="spec-price">{{ itemAt(active[r]).price }}</span>
             </p>
-            <!-- The second way to give this particular gift. ⚠️ A LINK ONLY IF IT GOES SOMEWHERE:
-                 the per-item payment links do not exist yet, so until one does this is the offer
-                 written down, not a button that lands nowhere. -->
-            <a v-if="itemAt(active[r])?.cashUrl" class="reveal-cash" :href="itemAt(active[r]).cashUrl"
-              target="_blank" rel="noopener noreferrer" @pointerdown.stop>or send the cash instead ↗</a>
-            <span v-else class="reveal-cash is-pending">or send the cash instead</span>
+            <!-- The second way to give this particular gift. ⚠️ IT GOES SOMEWHERE NOW. This was
+                 a per-item payment link the couple were going to create, and until they did it
+                 rendered as a sentence with nothing to press; there are no per-item links — there
+                 are two accounts, in a section of this same page — so the offer takes you to them
+                 instead of describing them. ⚠️ `@pointerdown.stop` stays: the band underneath
+                 reads pointer events to decide what to slow down. -->
+            <button type="button" class="reveal-cash" @pointerdown.stop @click="goCash">
+              or send the cash instead ↓
+            </button>
           </div>
         </div>
       </section>
@@ -95,13 +98,12 @@
         <section class="chapter-section love-scene cash-scene" :data-idx="i">
           <h3 class="cash-heading write" data-window="0.16,0.34">{{ s.heading }}</h3>
           <p class="cash-body fade" data-window="0.28,0.44">{{ s.body }}</p>
-          <!-- ⚠️ A LINK ONLY IF IT GOES SOMEWHERE. `url` is still a placeholder `#`, and this is
-               the page's one call to action: a guest who taps it and lands nowhere is worse off
-               than one who reads that it is coming. -->
-          <div class="cash-act fade" data-window="0.40,0.56">
-            <a v-if="s.url && s.url !== '#'" class="cash-cta" :href="s.url"
-              target="_blank" rel="noopener noreferrer">{{ s.cta }}</a>
-            <span v-else class="cash-cta is-pending">the payment link is coming soon</span>
+          <!-- ⚠️ THE ACCOUNTS ARE THE CALL TO ACTION. There is no payment link and there never
+               was one — this was a `url: '#'` that rendered as "the payment link is coming soon",
+               a promise standing in for the page's one useful fact. `note=""` because the line
+               above it already asks; the component's own note would be the same sentence twice. -->
+          <div class="cash-act fade" data-window="0.40,0.60">
+            <GiftAccounts tone="page" note="" />
           </div>
         </section>
 
@@ -127,9 +129,7 @@
               </button>
               <h3 class="cash-heading">{{ s.heading }}</h3>
               <p class="cash-body">{{ s.body }}</p>
-              <a v-if="s.url && s.url !== '#'" class="cash-cta" :href="s.url"
-                target="_blank" rel="noopener noreferrer">{{ s.cta }}</a>
-              <span v-else class="cash-cta is-pending">the payment link is coming soon</span>
+              <GiftAccounts tone="page" note="" />
             </div>
           </div>
         </transition>
@@ -172,6 +172,7 @@
 
 <script setup>
 import { ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import GiftAccounts from '~/components/GiftAccounts.vue'
 
 const props = defineProps({
   sections: { type: Array, required: true },
@@ -186,6 +187,19 @@ const ink = '#2E4A52'
 // is a section of its own now, and the popup is only ever something you asked for.
 const dockLive = ref(false)
 const panelOpen = ref(false)
+// ⚠️ ASKS THE PAGE TO SCROLL, rather than scrolling it. Lenis owns this scroller (it is created
+// in pages/[slug].vue, on .chapter-page), and anything that writes scrollTop behind its back is
+// undone on its next frame — a native anchor jump included. The event carries the element and a
+// `handled` flag the page sets; if nobody is listening, the fallback is the native behaviour,
+// which is correct on any page that is NOT running Lenis.
+function goCash() {
+  const el = dockCash || rootEl.value?.querySelector('.cash-scene')
+  if (!el) return
+  const detail = { el, handled: false }
+  el.dispatchEvent(new CustomEvent('chapter:scrollto', { detail, bubbles: true }))
+  if (!detail.handled) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 function openPanel() { panelOpen.value = true }
 function closePanel() { panelOpen.value = false }
 // ⚠️ A panel that covers the page needs a way out that is not a mouse. It is dismissible with the
@@ -756,6 +770,13 @@ onBeforeUnmount(() => {
 .reveal-cash {
   display: inline-block;
   margin-top: 0.5rem;
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  padding: 0 0 1px;
+  text-align: start;
   font-family: 'Over the Rainbow', cursive;
   font-size: clamp(0.92rem, 1.18vw, 1.1rem);
   line-height: 1.3;
@@ -765,10 +786,7 @@ onBeforeUnmount(() => {
   cursor: none;
   transition: opacity 0.25s ease;
 }
-a.reveal-cash { border-bottom: 1px solid currentColor; padding-bottom: 1px; }
-a.reveal-cash:hover, a.reveal-cash:focus-visible { opacity: 1; outline: none; }
-/* No link yet — the offer, written down, with nothing to press. */
-.reveal-cash.is-pending { opacity: 0.6; }
+.reveal-cash:hover, .reveal-cash:focus-visible { opacity: 1; outline: none; }
 
 /* ── even better — the section ───────────────────────────────────────────────
    Set exactly the way the popup is set: ink on paper, centred, nothing around it. It is a section
@@ -898,6 +916,10 @@ a.reveal-cash:hover, a.reveal-cash:focus-visible { opacity: 1; outline: none; }
   max-width: 26rem;
   opacity: 0.85;
 }
+/* ⚠️ ORPHANED 2026-09-13, kept deliberately. `.cash-cta` was the payment-link button in both
+   the section and the popup; both render <GiftAccounts> now and nothing on this page carries the
+   class. It stays because a single link (a registry that moves to a real payment page, say) would
+   want exactly this treatment again — delete it if that never happens. */
 .cash-cta {
   display: inline-block;
   font-family: 'Bague', sans-serif;

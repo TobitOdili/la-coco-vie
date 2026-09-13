@@ -92,9 +92,9 @@ export const CHAPTERS = [
 | idx | slug | title | accent | svg | txt | video |
 |---|---|---|---|---|---|---|
 | 0 | `the-big-day` | The Big Day | `#41492D` | cu-p2.png | cu-txt2.png | the-big-day.mp4 |
-| 1 | `us` | **Coco & Uvie** | `#42221A` | cu-p1.png | cu-txt1.png | us.mp4 |
+| 1 | `us` | **Coco & Uvie** | `#42221A` | cu-p1.png | cu-txt1.png | us.mp4 (9:16, `focus: 1`) |
 | 2 | `in-frames` | In Frames | `#453350` | cu-p3.png | cu-txt3.png | in-frames.mp4 |
-| 3 | `with-love` | **For Our Next Chapter** | `#2E4A52` | cu-p4.png | cu-txt4.png | with-love.mp4 |
+| 3 | `with-love` | **For Our Next Chapter** | `#2E4A52` | cu-p4.png | cu-txt4.png | with-love.mp4 (9:16, `focus: 0.48`) |
 
 ✅ **THE AUDIO IS NO LONGER THE REFERENCE SITE'S (2026-09-11).** The four files here used to be
 `eat-merry-love.mp3`, `la-storia.mp3`, `wine-time.mp3` and `amour-getway.mp3`; on 2026-09-04 only
@@ -137,7 +137,8 @@ public/
 │   ├── cu-favicon.png           Browser-tab mark — the ampersand (replaced the reference's star)
 ├── video/
 │   ├── us.mp4                   Chapter films — the couple's own, played as VideoTexture
-│   ├── the-big-day.mp4          on hover/select. 900×1200, silent, H.264. ~0.6–3.2 MB each.
+│   ├── the-big-day.mp4          on hover/select. Silent, H.264, ~0.6–3.7 MB each. 900×1200
+│                                except us + with-love, which are 9:16 phone video (AUDIT #82).
 │   ├── in-frames.mp4
 │   └── with-love.mp4
 ⚠️ `{wine,eat,la,amour}-intro.jpg` — the REFERENCE SITE's own editorial wedding stills (models, not
@@ -214,7 +215,9 @@ stale one keeps serving files that no longer exist in `public/`.
 
 ```
 public/images/us/
-  tower-bridge.jpg  brunch-day.jpg  trad-portrait.jpg   US polaroids (900×1200/1266)  ── the couple's
+  tower-bridge.jpg  the-question.jpg  trad-portrait.jpg US polaroids (900×1125/1200/1266) ── the couple's
+  ⚠️ 2026-09-13: the-question.jpg (their own proposal photograph) replaced brunch-day.jpg, and
+  neon-restaurant.jpg + love-big-ben.jpg were deleted with the two US popup cards they belonged to.
 public/images/gallery/
   wine-the-bride-01.jpg  wine-the-bride-02.jpg     THE BRIDE  (900×1200 / 1400×900)  ── from the reference
   wine-the-wine-01.jpg   …-02.jpg  …-03.jpg        THE WINE   (900×1200)             ── from the reference
@@ -223,7 +226,11 @@ public/images/gallery/
   la-storia-01..06.jpg                             (900×1200)   ── PLACEHOLDER film stills
   amour-getaway-01..04.jpg                         (900×1200)   ── PLACEHOLDER film stills
 public/video/
-  us · the-big-day · in-frames · with-love (.mp4)  chapter films (900×1200, 3.4–13.9s) ── the couple's
+  the-big-day · in-frames (.mp4)                   chapter films (900×1200, 3:4)  ── the couple's
+  us · with-love (.mp4)                            chapter films (1080×1920 / 720×1280, 9:16) ── ditto
+  ⚠️ MIXED ASPECTS since 2026-09-13. The card window is drawn for 3:4; the shader re-cuts the
+  sampled rectangle to the film's real shape (`photoAspect`, read off the still) and `focus` on
+  the chapter says which part of a taller film survives the crop. See AUDIT #82/#83.
 public/images/dresses/
   dress-01.jpg  dress-02.jpg                        Yaroslava / Malva (200×300, generic names)
   aggie · alaia · aldrans · aminata · andalusia ·
@@ -251,9 +258,10 @@ Items live in `CHAPTER_PAGES['with-love'].sections[].items[]`:
 { memory, name, image, x /* % across the page */, claimed }
 ```
 
-- **No prices and no per-item links** (user decision) — the items say what the couple would love, and
-  the single call to action is the `kind: 'cash'` card, which shows **no account details**
-  (a payment link or a get-in-touch destination; `url` is still `'#'`).
+- ⚠️ **SUPERSEDED.** This once read "no prices and no per-item links… and no account details".
+  Prices and product URLs landed 2026-09-11; the couple's two real **account details** landed
+  2026-09-13 in `SITE.gifts`, rendered by `components/GiftAccounts.vue` in With Love's cash section
+  and in every other chapter's footer. There are no payment links and no `cashUrl` field.
 - `x` is **dead** — it positioned words for the ink line and nothing reads it now. The wall places
   everything itself: each band is a seeded shuffle of the whole list, repeated until it is wider than
   the viewport plus one repetition.

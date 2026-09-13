@@ -187,6 +187,16 @@ const cueReady = ref(false)
 const cueSeen = ref(false)
 const pullTop = ref(0)
 const pullBottom = ref(0)
+// A section asking to be scrolled to (see the listener registered in onMounted).
+// ⚠️ Ignored while the page is leaving: a jump during the outro would fight the exit,
+// which is itself a scroll position.
+function onScrollTo(e) {
+  const el = e.detail?.el
+  if (!el || !lenis || exiting) return
+  lenis.scrollTo(el, { duration: 1.1 })
+  e.detail.handled = true
+}
+
 const pageEl = ref(null)
 const scrollEl = ref(null)
 const outroEl = ref(null)
@@ -352,7 +362,19 @@ function groundIsDark() {
     const lum = (c) => { const v = (c * k) / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }
     return 0.2126 * lum(+m[0]) + 0.7152 * lum(+m[1]) + 0.0722 * lum(+m[2]) < 0.35
   }
-  // Nothing opaque in the DOM means we are looking straight at the canvas.
+  // Nothing opaque in the DOM means we are looking straight at the canvas — and WHICH canvas
+  // matters.
+  // ⚠️ INSIDE THE HERO THE CANVAS IS THE CARD, NOT THE CLEAR COLOUR. A selected chapter's clear
+  // colour is its ACCENT (it is what fills beneath the card on a phone), and the select fades it
+  // in over 1.4s — so this fallback was answering "dark" for a nav sitting on the card's own PALE
+  // title band, and answering it DIFFERENTLY from run to run depending where in that 1.4s the
+  // 400ms probe happened to land. Measured on one build, one route, two frame sizes: dark ink at
+  // 1440x900 and light ink, invisible on pale green, at 1920x1080.
+  // Inside the hero the answer is known without probing anything — every chapter's card is printed
+  // on that chapter's light tone — and past the hero the article's own opaque background is under
+  // the nav, so the walk above returns before it ever reaches this line. What is left is the exit,
+  // where the card has gone and the accent really is the ground: the case this was written for.
+  if (!exitEngaged && lenis && lenis.scroll < window.innerHeight * 0.9) return false
   return !!webglSceneRef?.value?.scene?.clearIsDark?.()
 }
 
@@ -448,6 +470,13 @@ onMounted(() => {
   setTimeout(syncNavInk, 400)
   scene?.setScroll(0)
 
+  // ⚠️ THE ONE WAY A SECTION MOVES THIS PAGE. Lenis owns the scroller, and anything that sets
+  // scrollTop behind it — a native in-page anchor, scrollIntoView, window.scrollTo — is reverted
+  // on Lenis's next frame. A section that wants to jump somewhere (With Love's registry sends you
+  // down to the accounts) dispatches this instead of scrolling, and sets `handled` so the sender
+  // knows not to fall back to the native behaviour it would otherwise need off this page.
+  pageEl.value?.addEventListener('chapter:scrollto', onScrollTo)
+
   // Hold scrolling until the select-in animation settles. Scrolling mid-select used
   // to (a) bank scrollOffsetPx that snapped the hero the moment isSelecting cleared
   // (teleport), and (b) let an accidental up-wheel trigger the top exit during entry.
@@ -512,6 +541,7 @@ onBeforeUnmount(() => {
   pageEl.value?.removeEventListener('wheel', onWheel)
   pageEl.value?.removeEventListener('touchstart', onTouchStart)
   pageEl.value?.removeEventListener('touchmove', onTouchMove)
+  pageEl.value?.removeEventListener('chapter:scrollto', onScrollTo)
   pageEl.value?.removeEventListener('touchend', onTouchEnd)
   pageEl.value?.removeEventListener('touchcancel', onTouchEnd)
   sectionObserver?.disconnect()

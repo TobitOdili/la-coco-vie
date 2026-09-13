@@ -52,8 +52,14 @@ export const CHAPTERS = [
     accent: '#42221A',
     accentLight: '#F2EEE8',
     accentLighter: '#D2C3AE',
+    // ⚠️ A 9:16 PHONE VIDEO (2026-09-13), where every other chapter's film is 3:4. The card's
+    // photo window is square and the hero's is a wide letterbox, so a film this tall is cropped
+    // hard in both — and `focus` is which part survives. 1 keeps the BOTTOM of the frame: the
+    // couple stand low in this one, below the London Eye, and a centre crop leaves the card
+    // showing sky. See the note on photoFocus in the fragment shader.
     video: asset('/video/us.mp4'),
     still: asset('/images/still-us.jpg'),
+    focus: 1,
     txt: asset('/images/cu-txt1.png'),
     svg: asset('/images/cu-p1.png'),
     index: 1,
@@ -81,8 +87,11 @@ export const CHAPTERS = [
     accent: '#2E4A52',
     accentLight: '#E8EDF2',
     accentLighter: '#9FB4C8',
+    // ⚠️ Also 9:16 (2026-09-13) — see `focus` on `us` above. Just under a centre crop, because
+    // the couple sit a little high in this frame and the bottom third is floor.
     video: asset('/video/with-love.mp4'),
     still: asset('/images/still-with-love.jpg'),
+    focus: 0.48,
     txt: asset('/images/cu-txt4.png'),
     svg: asset('/images/cu-p4.png'),
     index: 3,
@@ -142,6 +151,8 @@ uniform bool showBorder;
 uniform vec3 borderColor;
 uniform float windowWidth;
 uniform float aspectRatio;
+uniform float photoAspect;
+uniform float photoFocus;
 uniform float blendFactor;
 uniform float uOpacity;
 
@@ -193,27 +204,41 @@ void main() {
         ppUv.y = (ppUv.y - pY2) / textureScaleFactor*.75 + pY2;
         ppUv.y += 40./ (windowWidth*posterAspectRatio);
     } else {
-        // ⚠️ THE HERO'S TYPE IS THIS NUMBER. ppUv divides by posterSize / posterWidth, so a
-        // SMALLER value magnifies the card art LESS, so the page title comes out smaller — which is
-        // what leaves room for a taller photo window below it. The card art itself is unchanged:
-        // ring cards draw at progress 0 and never see this branch.
-        // ⚠️ IT IS COUPLED TO ofY BELOW and the two pull against each other. Less magnification
-        // shows MORE of the art in the band above the window, so the window cannot rise as far
-        // before it starts slicing the title. 700 with ofY 0.04 puts the title band at ~37% of the
-        // frame (it was 50%) with the type ~31% smaller, and the lowest baseline still clears.
-        // Measure it — render all four chapters and look — do not reason about it alone.
-        float posterSize = posterWidth > md ? 620. : 310.;
+        // ⚠️ THE HERO'S TYPE IS THIS NUMBER, and everything about the hero's layout is a fraction
+        // of it. ppUv divides by posterSize / posterWidth, so a SMALLER fraction magnifies the card
+        // art less and the page title comes out smaller — which is what leaves room for a taller
+        // photo window below it. The card art itself is untouched: ring cards draw at progress 0
+        // and never reach this branch.
+        // ⚠️ IT USED TO BE A FIXED NUMBER WITH A STEP AT md (620 wide, 310 narrow), and a fixed
+        // posterSize means a fixed PIXEL title — the plane is fitted to the viewport's width, so
+        // posterSize/posterWidth shrinks exactly as fast as the plane grows. Two consequences,
+        // both of them bugs: the title stayed 148px whether the frame was 1024 or 2560 wide (so it
+        // read as enormous on a laptop and small on a monitor), and the band above the window was
+        // 137px at 1023 and 364px at 1025 — a 227px jump across two pixels of window width.
+        // As a FRACTION the whole hero is proportional: the same layout at every width, and on any
+        // 16:9 frame the same share of the height. 0.20 cuts the title by a third against the old
+        // 1440 rendering (The Big Day, 117px of type down to 96px, and it starts 17px lower) and
+        // hands the rest of the band to the film.
+        // ⚠️ Measure it — render all four chapters at several widths and look. The numbers here,
+        // the top margin below, and ofY further down are one layout, not three settings.
+        float posterSize = posterWidth * 0.20;
         ppUv.x = (ppUv.x - xCenter) / (posterSize / posterWidth) + xCenter;
         ppUv.y = (ppUv.y - 1.) / (posterSize / posterWidth) + 1.;
-        // ⚠️ THE HERO'S TOP MARGIN, and it has to be its own. The card art leaves 60px of paper
-        // above the title — right on a ring card, and far too little once the hero band is cut to a
-        // third of the frame: The Big Day's title came out level with the nav wordmark. Raising this
-        // samples higher in the art, which moves the content DOWN, and it only applies at progress 1,
-        // so the ring cards keep the margin their layout was drawn for.
-        // ⚠️ It is bounded by the title's own depth: the band shows the art down to
-        // (f/k - this) of the texture, and the lowest baseline sits at about 0.32. Past ~0.042 the
-        // titles start being sliced from below.
-        ppUv.y += 0.06;
+        // ⚠️ THE HERO'S TOP MARGIN, and it has to be its own. The card art leaves ~0.10 of the
+        // texture as paper above the title — right on a ring card, nothing like enough once the
+        // band is a fifth of the frame, and it is measured in TEXTURE units, so halving posterSize
+        // above halves it on screen as well. Raising this samples higher in the art, which moves the
+        // title DOWN; it only applies at progress 1, so ring cards keep the margin they were drawn
+        // for. ⚠️ THE FOUR TITLES DO NOT START AT THE SAME PLACE: each chapter's art carries its own
+        // paper above the type (0.053 of the texture on The Big Day against 0.100 on For Our Next
+        // Chapter), so this has to clear the nav for the SHALLOWEST of them. At 0.189 The Big Day
+        // starts 90px down a 1440x900 frame, 28px below the nav wordmark, and For Our Next Chapter
+        // starts at 108.
+        // ⚠️ It is bounded from below by the deepest title's own depth: measured in texture units,
+        // the lowest ink on the four (The Big Day's descender) sits 0.311 below the top of the art,
+        // so the band has to reach (this + 0.311) and it reaches (this + 0.351) — 15px of clearance
+        // at 1440. Raise this without raising the band and the titles are sliced from underneath.
+        ppUv.y += 0.189;
     }
     ppUv.x = mix(uv.x, ppUv.x, progress);
     ppUv.y = mix(uv.y, ppUv.y, progress);
@@ -237,21 +262,61 @@ void main() {
         _pUvY += .25;
         _pUvY /= 1.333;
         _pUvY -= .25;
-        _pUvY += (posterWidth > md ? 350. : 175.) / (posterWidth);
+        // ⚠️ THE DEPTH OF THE TITLE BAND — how far down the plane the film's top edge sits, and
+        // therefore how much of the hero is film. It was (350 or 175)/posterWidth, which carried
+        // the same step at md as posterSize did and, worse, made the band SHRINK as the frame got
+        // wider (the 0.1062 of plane-unit offset baked into pUv.y above does not scale, so it ate a
+        // growing share of a growing plane): 327px of band at 1440, 285px at 1920, and at 2560 the
+        // titles would have been cut off from below. Flat, it is a constant fraction of the plane.
+        // 0.176 puts the band at 0.108 of the plane — 201px of a 1440x900 frame, so the film has
+        // 78% of the hero against the 64% it had.
+        _pUvY += 0.176;
         pUv.y = mix(pUv.y/1.333, _pUvY - .1, progress);
     }
     pUv.x -= 0.5;
     pUv.x += 0.5;
     pUv.y += mix(0.2, 0.0, progress);
-    vec4 photo = texture2D(photoTexture, pUv);
-    float a = 0.0;
     // ⚠️ The window's TOP edge on the hero — a tenth of the plane of dead poster between the title
     // and the picture. Closing it is the other half of showing more of the film; the portrait
     // branch (condition) is untouched, because that framing was already right.
     float ofY = condition ? 0.0 : .038;
-    if (pUv.x > edge && pUv.x < 1.-edge && pUv.y > (edge*1.4 + mix(.18, 0., progress)) && pUv.y < (1.-edge - mix(.025, ofY, progress))) {
+    float wL = edge;
+    float wR = 1. - edge;
+    float wB = edge*1.4 + mix(.18, 0., progress);
+    float wT = 1.-edge - mix(.025, ofY, progress);
+    float a = 0.0;
+    if (pUv.x > wL && pUv.x < wR && pUv.y > wB && pUv.y < wT) {
         a = 1.0;
     }
+    // ⚠️ COVER, NOT STRETCH — and the whole layout above is written for a 3:4 film.
+    // The window is SQUARE on a ring card (0.81 of the plane's width by 0.6075 of its height),
+    // and it gets its square by sampling 0.9 of the source's width against 0.675 of its height:
+    // that is only square in pixels when the source is 0.75. Hand it a 9:16 phone video and the
+    // same rectangle is a 3:4 crop squeezed into a square — everyone in it a third too wide.
+    // So the sampled rectangle is re-cut here to whatever the film actually is, which is a crop,
+    // never a scale: the window's geometry does not move, only how much of the film lands in it.
+    // ⚠️ WHICH PART OF THE FILM SURVIVES THE CROP IS A PER-CHAPTER DECISION, not a rule. It is
+    // photoFocus, and it is the fixed point of the squeeze: 0 keeps the top of the frame and
+    // discards the bottom, 1 keeps the bottom, 0.5 is a plain centre crop. It cannot be guessed
+    // globally, because it depends entirely on where the people are standing — the couple are low
+    // in the Coco and Uvie film (focus 1) and high in the For Our Next Chapter one (focus 0.48),
+    // and the same setting flatters one and shows the other a ceiling. Look at the still and pick.
+    // ⚠️ IT IS INERT FOR A 3:4 FILM. ar is exactly 1 there, the scale is the identity, and the
+    // anchor it is taken about makes no difference — so the two chapters shot at 3:4 need no value
+    // and cannot be broken by one.
+    // ⚠️ NO BACKTICKS ANYWHERE IN THIS SHADER (see the note above logo.a).
+    float ar = photoAspect / 0.75;
+    vec2 sUv = pUv;
+    if (ar < 1.0) {
+        float anchorY = mix(wT, wB, photoFocus);
+        sUv.y = anchorY + (sUv.y - anchorY) * ar;
+    } else if (ar > 1.0) {
+        // Sideways there is no equivalent question: a face is off-centre vertically far more
+        // often than horizontally, so a wider-than-3:4 film is simply centred.
+        float midX = (wL + wR) * 0.5;
+        sUv.x = midX + (sUv.x - midX) / ar;
+    }
+    vec4 photo = texture2D(photoTexture, sUv);
     poster = mix(poster, photo, a);
     vec4 fin = vec4(poster.r, poster.g, poster.b, poster.a);
     vec4 outColor;
@@ -366,19 +431,32 @@ export function useChapterScene() {
   // Shrink the wordmark a touch AND drop the whole idle ring so the front card clears the text.
   // Both are DESKTOP-ONLY (mobile keeps its own fitTxtMesh scale + 0 idle Y, tuned separately).
   const TXT_SCALE_DESKTOP = 0.82
-  const IDLE_Y_DESKTOP = -12   // idle carousel Y on desktop (was 0); select still uses SELECTED_Y
-  // Selected card resting Y. The shader's progress=1 layout frames the content into
-  // a sub-region of the plane, so scale/position are hand-tuned (not camera-derived):
-  // scale = aspectRatio*2.07, this Y top-anchors the content band as the hero.
-  // (Step A of the card-becomes-the-page rework — see docs/PHASE-2-INNER-PAGES.md.)
-  const SELECTED_Y = -43
-  // PORTRAIT needs its own value. The card is scaled to fill the viewport WIDTH, but a 24×32
-  // card filling a narrow width is far shorter than a tall screen — so at -43 it landed at
-  // world y −60.9…−25.1 against a visible band of −29…+29, i.e. almost entirely BELOW the
-  // screen (you saw only its top edge peeking up). This sits its top edge at the viewport top,
-  // with the accent clear-colour filling beneath — which is what the reference shows on a phone.
-  const SELECTED_Y_MOBILE = 11
-  const selectedCarouselY = () => (isMobile ? SELECTED_Y_MOBILE : SELECTED_Y)
+  const IDLE_Y_DESKTOP = -12   // idle carousel Y on desktop (was 0); select uses selectedCarouselY()
+  // ── Selected card resting Y ──────────────────────────────────────────────────
+  // The hero card is scaled to fill the viewport's WIDTH (see heroFillScale), and this puts its
+  // TOP EDGE on the viewport's top edge — which is the whole contract of the hero: the page's
+  // title band starts at the top of the frame and the film runs from under it to the bottom.
+  //
+  // ⚠️ IT WAS TWO HAND-TUNED CONSTANTS, -43 on desktop and 11 in portrait, and this expression
+  // reproduces BOTH to within a tenth of a unit — which is the point: they were correct, but
+  // only at the aspect ratio each was tuned at. The card's height on screen scales with the
+  // viewport's WIDTH while a fixed world Y scales with its HEIGHT, so the top edge drifted with
+  // the aspect ratio: measured at the same build, the plane's top edge sat 133px BELOW the frame
+  // at 1024x768 (a dark band of clear-colour above the hero, with the nav invisible on it) and
+  // 132px ABOVE it at 1920x1080 — where the title was sliced off by the top of the screen on the
+  // most common desktop resolution there is. Derived, the framing is the same at every aspect.
+  //
+  // visH is the world height the camera sees at the card's depth; basePosition.y is where the
+  // camera is looking (-15 on desktop, scaled by applyFit on a short frame), and the card's own
+  // half-height in world units is CARD_H/2 times the fill scale.
+  // ⚠️ Read `camera` at CALL TIME. It is rebuilt by applyFit on every resize, and this has to
+  // move with it — which is also why the resize path calls this rather than caching it.
+  const selectedCarouselY = () => {
+    if (!camera) return isMobile ? 11 : -43
+    const d = Math.max(1, camera.position.z - baseDistance)
+    const visH = 2 * d * Math.tan(toRad(camera.fov / 2))
+    return camera.basePosition.y + visH / 2 - (CARD_H / 2) * heroFillScale()
+  }
   // Hero "fill the width" scale. The old hard-coded `aspectRatio * 2.07` is exactly
   // (2·60·tan(fov/2))/24 — derived for the DESKTOP camera distance (100 − baseDistance = 60).
   // The mobile camera sits further back (110 − 40 = 70), where the constant is 2.42, so the
@@ -851,6 +929,13 @@ export function useChapterScene() {
     stillTex.generateMipmaps = false
     stillTextures[chapterIdx] = stillTex
     const photoTex = stillTex
+    // ⚠️ THE FILM'S OWN SHAPE, read off the still rather than declared in CHAPTERS. The still IS
+    // frame 0.04 of the film (scripts/gen-stills.mjs), so it cannot disagree with it, and a chapter
+    // whose film is swapped for one shot on a phone re-frames itself the next time the stills are
+    // generated instead of waiting for someone to remember a number. Falls back to 0.75 — the shape
+    // the card layout was drawn for — if the image has not reported a size.
+    const stillImg = stillTex.image
+    const photoAspect = stillImg && stillImg.height ? stillImg.width / stillImg.height : 0.75
 
     // Create geometry: 24x32 plane, 40x40 segments
     const geometry = new THREE.PlaneGeometry(CARD_W, CARD_H, 40, 40)
@@ -871,6 +956,8 @@ export function useChapterScene() {
         showBorder: { value: false },
         borderColor: { value: hexToVec3(chapter.accent) },
         windowWidth: { value: width },
+        photoAspect: { value: photoAspect },
+        photoFocus: { value: typeof chapter.focus === 'number' ? chapter.focus : 0.5 },
       },
       side: THREE.DoubleSide,
       transparent: true,
@@ -1088,6 +1175,10 @@ export function useChapterScene() {
       for (const p of posters) {
         if (p.chapterIdx === i && p.material.uniforms.photoTexture.value !== vt) {
           p.material.uniforms.photoTexture.value = vt
+          // The still is generated FROM this film, so these agree by construction — unless a film
+          // was swapped and `node scripts/gen-stills.mjs` was not re-run. Taking the real number
+          // at the handover means that mistake costs a wrong FIRST frame, not a squashed chapter.
+          if (vid.videoHeight) p.material.uniforms.photoAspect.value = vid.videoWidth / vid.videoHeight
         }
       }
     })
@@ -1859,7 +1950,7 @@ export function useChapterScene() {
 
     // ── the deck opens ────────────────────────────────────────────────────────
     // ONE GAUGE for the ring's whole attitude: height, look-down, yaw, roll. 0 = the pose the
-    // select left behind (dropped to SELECTED_Y, groupG flattened to 0,0,0), 1 = the homepage fan.
+    // select left behind (dropped to selectedCarouselY(), groupG flattened to 0,0,0), 1 = the homepage fan.
     //
     // ⚠️ IT STARTS AT `POSE_HEAD`, NOT AT 0, AND THAT IS THE WHOLE FIX. The select FLATTENS
     // groupG, and a ring with no look-down is seen edge-on — eight cards collapsed onto one
@@ -2180,7 +2271,7 @@ export function useChapterScene() {
     if (selectedIndex !== -1 && selectedHero && !isDeselecting && !isSelecting) {
       const s = heroFillScale()
       selectedHero.mesh.scale.set(s, s, 1)
-      // The hero's resting height is orientation-dependent too (see SELECTED_Y_MOBILE), so a
+      // The hero's resting height is orientation- and aspect-dependent too (selectedCarouselY), so a
       // rotate — or an iOS URL-bar resize that flips the aspect — has to re-anchor it as well,
       // otherwise the card slides off the bottom of a portrait viewport.
       carousel.position.y = selectedCarouselY()

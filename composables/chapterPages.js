@@ -36,19 +36,12 @@ import { asset } from '~/utils/asset'
 
 // ── The floating popup cards ─────────────────────────────────────────────────
 export const POPUPS = {
-  // “Us” — captioned moments (polaroids that follow the story).
-  // ⚠️ 2026-08-31 — the couple’s own photos, and LOREM IPSUM copy to match the US page
-  // (see the `us` chapter below). Real words + card titles land with the real content.
-  momentHello: {
-    title: 'Lorem Ipsum',
-    params: ['dolor sit amet · adipiscing', 'consectetur elit'],
-    photo: asset('/images/us/neon-restaurant.jpg'),
-  },
-  momentYes: {
-    title: 'Dolor Sit Amet',
-    params: ['sed do eiusmod · tempor'],
-    photo: asset('/images/us/love-big-ben.jpg'),
-  },
+  // ⚠️ THE “US” POPUPS ARE GONE (2026-09-13, user: “remove the widgets on that coco & uvie
+  // page. we won’t need them”). They were two captioned polaroids that docked while their scene
+  // was in view — the page already tapes a polaroid into every scene, so the dock was showing a
+  // second photograph beside the first. The two images they pointed at (neon-restaurant,
+  // love-big-ben) were deleted with them; the originals are in `new frames/` and in git at 6297b0a5.
+  // Nothing else on the US page uses `popups`, and every section there now carries an empty array.
 
   // “The Big Day” — utility cards (maps / calendar / dress code). Two weddings, so
   // each day carries its own map(s); ONE calendar card on the cover covers both days
@@ -117,71 +110,94 @@ export const POPUPS = {
 
 // ── The four chapters ────────────────────────────────────────────────────────
 export const CHAPTER_PAGES = {
-  // “Us” renders through the bespoke UsStory component (the margin-notes scrapbook),
-  // which reads the extra per-scene fields: date (the stitch line), notes[] (the
-  // two-voice handwritten margin notes; voice 'c' = Covenant, 'u' = Uvie), caption
-  // (under the taped polaroid — images[0] only; this page is deliberately media-light).
+  // “Us” renders through the bespoke UsStory component (the margin-notes scrapbook).
+  // Per-scene fields: num (the faint watermark numeral), title, body[] (the paragraphs),
+  // images[0] (the taped polaroid — one per scene; this page is deliberately media-light),
+  // align, and the two optional ones below.
   //
-  // ⚠️ 2026-08-31 — the POLAROIDS are now the couple’s OWN photos (from `new frames/`,
-  // resized to 900px into `/images/us/`), and every string except the section HEADINGS
-  // is deliberate LOREM IPSUM at the user’s request — the page is being reviewed for
-  // layout/typography, not for copy. Real words land when the couple write them.
+  // ⚠️ 2026-09-13 — THE COPY IS THE COUPLE’S OWN, and it arrived without two things the
+  // component still supports, so both are now optional and neither is rendered here:
+  //   • `date` — the stitch line’s label. There are no dates in what they wrote, and this page
+  //     will not invent one. The stitch still DRAWS (it is the rule that opens a scene); it just
+  //     carries no words. Give a scene a `date` and the label comes back.
+  //   • `notes[]` — the two-voice margin notes (voice 'c' = Covenant, 'u' = Uvie), and `caption`
+  //     under the polaroid. Same reasoning: they are the couple’s voices, so the couple write
+  //     them. The margin notes are the page’s best trick and it is worth asking for one per
+  //     scene — two short lines, one each.
   //
-  // ⚠️ 2026-09-02 — the page is now WRITTEN, not set: every string here is rendered in
-  // the hand (Over the Rainbow) and revealed WORD BY WORD off the scroll position. Two
-  // consequences for whoever writes the real copy:
-  //   • `body` is capped at ~3 SHORT sentences per scene on purpose. Handwriting is
-  //     roughly 1.4× the height of the old sans at the same measure, and every word
-  //     costs scroll travel — a long paragraph turns the section into a marathon.
-  //   • `date` is lower-case now. It used to be an upper-case, letter-spaced label;
-  //     neither survives a script hand, which has no capitals worth spacing out.
+  // ⚠️ 2026-09-02 — the page is WRITTEN, not set: every string here is rendered in the hand
+  // (Over the Rainbow) and revealed WORD BY WORD off the scroll position. Consequences for
+  // whoever edits the copy:
+  //   • Every word costs scroll travel. The bodies below run 50–80 words against the ~30 the
+  //     lorem had, which is roughly where a scene stops reading as a note and starts reading as
+  //     a page — treat that as the ceiling, not the target.
+  //   • `body` IS AN ARRAY. The writing runs continuously across the paragraphs, so splitting a
+  //     block costs nothing in pacing; a '\n' inside one is a hard line break within a paragraph.
+  //   • A paragraph may be { t, ask: true } — one size up, for the line a scene is built around.
+  //     There is exactly one on the page (“Will you do life with me?”) and it should stay that way.
+  //   • Lower case is the house style here. It used to be upper-case letter-spaced labels;
+  //     neither survives a script hand, which has no capitals worth spacing out. (The couple’s
+  //     own sentence case in the bodies is theirs and is kept verbatim.)
   us: {
     sections: [
       {
         num: 'I',
-        title: 'The Meeting',
-        date: 'lorem ipsum',
-        body:
-          'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor ' +
-          'incididunt ut labore et dolore magna. Ut enim ad minim veniam, quis nostrud.',
-        notes: [
-          { voice: 'c', text: 'lorem ipsum dolor sit amet' },
-          { voice: 'u', text: 'consectetur adipiscing elit' },
+        // ⚠️ THE COUPLE’S OWN WORDS (2026-09-13), verbatim — the first real copy on this page,
+        // replacing the lorem that stood in while the typography was reviewed. Two things about it
+        // that are deliberate and must survive an edit: it opens in the THIRD person (“neither of
+        // them knew”) and lands in the FIRST (“we think that’s a pretty good story”), and the
+        // British spelling is theirs. “The Meeting” became “Boy Meets Girl” in the same pass.
+        title: 'Boy Meets Girl',
+        // `body` IS AN ARRAY OF PARAGRAPHS, and the writing runs continuously across all of them
+        // — one pen, not one per block (see `paras()` in UsStory). A newline inside a string is a
+        // hard line break WITHIN a paragraph, for lines that belong together and must not close up:
+        // the two “Not …” questions below are one thought in two lines, not two paragraphs.
+        body: [
+          'Neither of them knew they were meeting someone who would eventually become their ' +
+            'favourite person. There was no dramatic soundtrack or perfectly timed slow-motion ' +
+            'moment, just two people crossing paths and, without really knowing it, starting ' +
+            'something that would become quite special.',
+          'Somewhere along the way, they went from “you and me” to us.',
+          'And honestly, we think that’s a pretty good story.',
         ],
         images: [asset('/images/us/tower-bridge.jpg')],
-        caption: 'lorem ipsum dolor',
-        popups: ['momentHello'],
+        popups: [],
         align: 'left',
       },
       {
         num: 'II',
         title: 'The Question',
-        date: 'dolor sit amet',
-        body:
-          'Duis aute irure dolor in reprehenderit in voluptate velit. Esse cillum dolore ' +
-          'eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident.',
-        notes: [
-          { voice: 'c', text: 'sed do eiusmod tempor incididunt' },
-          { voice: 'u', text: 'ut labore et dolore magna' },
+        body: [
+          'Eventually, there was a question that needed answering.',
+          'Not “What are we having for dinner?”\nNot “Did you take the last snack?”',
+          'A slightly more important one:',
+          // `ask` is the one emphasis this page has: the line the whole scene is built around,
+          // written larger in the same hand. Use it once per page at most — a second one is just
+          // a bigger font size.
+          { t: '“Will you do life with me?”', ask: true },
+          'There were probably a few nerves, a lot of excitement, and one answer that mattered most.',
+          'Thankfully, it was yes.',
         ],
-        images: [asset('/images/us/brunch-day.jpg')],
-        caption: 'consectetur adipiscing',
-        popups: ['momentYes'],
+        // ⚠️ The couple’s own photograph of the proposal (2026-09-13, from `new frames/The
+        // Question.JPG`), which replaced a reused shot of a brunch. 1638×2048 down to 900×1125 —
+        // the polaroid draws at 4/5, so the source crops by nothing.
+        images: [asset('/images/us/the-question.jpg')],
+        popups: [],
         align: 'right',
       },
       {
         num: 'III',
         title: 'The Yes',
-        date: 'consectetur elit',
-        body:
-          'Sed ut perspiciatis unde omnis iste natus error sit. Voluptatem accusantium ' +
-          'doloremque laudantium, totam rem aperiam. Eaque ipsa quae ab illo inventore.',
-        notes: [
-          { voice: 'c', text: 'quis nostrud exercitation' },
-          { voice: 'u', text: 'ullamco laboris nisi ut aliquip' },
+        body: [
+          'And now, here we are.',
+          'Still best friends, still figuring things out, still making each other laugh, and now ' +
+            'officially signing up to do all of life together.',
+          'There will be adventures, inside jokes, the occasional “what do you mean?”, lots of ' +
+            'food, and hopefully a lifetime of choosing each other through it all.',
+          'So, this is the beginning of our next chapter.',
+          'We’re so happy you’re here to celebrate it with us. 🤍',
         ],
         images: [asset('/images/us/trad-portrait.jpg')],
-        caption: 'sed do eiusmod',
         popups: [],
         align: 'left',
       },
@@ -361,10 +377,12 @@ export const CHAPTER_PAGES = {
         // (TenderPot, EasyBistro, NanoCell, ADA); where the "name" is only a model code it reads as
         // a part number on a wall of display type — "HISENSE 390SH-FC" — so those say what the
         // thing IS and the code moves down into `product`, where someone checking a listing wants it.
-        // ⚠️ `product` is the spec line, `price` the figure, `url` the product page, and `cashUrl`
-        // the item's OWN payment link — the couple are creating one per item so a guest can send the
-        // money for that gift instead of buying it. All ten are placeholders for now and render as
-        // text rather than as links until they exist (a dead call to action is worse than none).
+        // ⚠️ `product` is the spec line, `price` the figure, `url` the product page. There is NO
+        // per-item payment link and there is no longer a field for one: `cashUrl` was on all ten
+        // items, was null on all ten, and rendered on every reveal as an offer with nothing behind
+        // it. The couple's answer (2026-09-13) was that there are two accounts, not ten links — so
+        // the reveal's "or send the cash instead" now walks the reader down to `SITE.gifts` in the
+        // section below, and the same two accounts sit in every other chapter's footer.
         // ⚠️ PRICES ARE A SNAPSHOT, not a feed — the couple's own figures on 2026-09-11, and Nigerian
         // retail moves. They are deliberately prefixed "about".
         // ⚠️ Three `url`s are NOT the product page: see the notes on those items.
@@ -375,7 +393,6 @@ export const CHAPTER_PAGES = {
             product: 'pressure cooker · 6L · 1000W · 9 programs',
             price: 'about ₦116,900',
             url: 'https://ng.oraimo.com/product/oraimo-tenderpot-6l-1000w-fast-cooking-&-9-programs-electric-pressure-cooker',
-            cashUrl: null,
             image: null, x: 18, claimed: false,
           },
           {
@@ -385,7 +402,6 @@ export const CHAPTER_PAGES = {
             // the pressure-cooker collection. Swap it the moment one exists.
             price: 'about ₦115,900',
             url: 'https://ng.oraimo.com/collections/pressure-cooker',
-            cashUrl: null,
             image: null, x: 63, claimed: false,
           },
           {
@@ -393,7 +409,6 @@ export const CHAPTER_PAGES = {
             product: '2-in-1 grill and sandwich breakfast station',
             price: 'about ₦102,900',
             url: 'https://ng.oraimo.com/product/oraimo-easybristo-2-in-1-grill-and-sandwich-maker-breakfast-station',
-            cashUrl: null,
             image: null, x: 24, claimed: false,
           },
           {
@@ -401,7 +416,6 @@ export const CHAPTER_PAGES = {
             product: 'air oven · 8-in-1 · 20L · 230°C',
             price: 'about ₦165,900',
             url: 'https://ng.oraimo.com/product/oraimo-bakeair-pro-versatile-20l-large-capacity-air-oven-oao-561a',
-            cashUrl: null,
             image: null, x: 70, claimed: false,
           },
           {
@@ -409,7 +423,6 @@ export const CHAPTER_PAGES = {
             product: 'NANO80 4K smart television · 65" · Fouani',
             price: null,
             url: 'https://fouanistore.com/product/726',
-            cashUrl: null,
             image: null, x: 40, claimed: false,
           },
           {
@@ -419,7 +432,6 @@ export const CHAPTER_PAGES = {
             // rather than pointing at a guess.
             price: null,
             url: null,
-            cashUrl: null,
             image: null, x: 55, claimed: false,
           },
           {
@@ -428,7 +440,6 @@ export const CHAPTER_PAGES = {
             // ⚠️ NOT the product page — this model is not indexed; it is Fouani's Hisense listing.
             price: null,
             url: 'https://fouanistore.com/search?brand=Hisense',
-            cashUrl: null,
             image: null, x: 12, claimed: false,
           },
           {
@@ -436,7 +447,6 @@ export const CHAPTER_PAGES = {
             product: 'L-shaped corner sofa',
             price: 'about ₦369,998',
             url: 'https://taeillo.com/products/ada-l-shaped',
-            cashUrl: null,
             image: null, x: 86, claimed: false,
           },
           {
@@ -444,7 +454,6 @@ export const CHAPTER_PAGES = {
             product: 'stand mixer · 1900W · 6 speeds · all-metal gears',
             price: null,
             url: 'https://ng.oraimo.com/product/oraimo-ominimix-6-speeds-durable-all-metal-gears-stand-mixer-obl-551a-graphitegrey',
-            cashUrl: null,
             image: null, x: 30, claimed: false,
           },
           {
@@ -452,7 +461,6 @@ export const CHAPTER_PAGES = {
             product: '297L · model 390SH-FC · Fouani',
             price: null,
             url: 'https://fouanistore.com/product/200',
-            cashUrl: null,
             image: null, x: 72, claimed: false,
           },
         ],
@@ -474,9 +482,10 @@ export const CHAPTER_PAGES = {
         // The one line the card shows while it is still a card.
         note: 'send cash instead',
         body: 'if you would rather send us cash, that is more than welcome.',
-        cta: 'open the payment link',
-        // ⚠️ PLACEHOLDER — the couple's payment destination goes here.
-        url: '#',
+        // ⚠️ NO `cta` AND NO `url`. This section carried 'open the payment link' pointing at '#',
+        // which the component drew as "the payment link is coming soon" — the page's one call to
+        // action, permanently pending. It renders <GiftAccounts> instead: the couple's two real
+        // accounts, out of site.config.js, which is also what the footers show.
         popups: [],
       },
       {

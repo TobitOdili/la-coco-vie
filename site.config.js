@@ -4,9 +4,11 @@
 // COVENANT & UVIE — the wedding site. Everything chrome-level lives here so a
 // content pass is data-only. Consumed by: nuxt.config.ts (title + Google fonts),
 // app.vue (document titles), SiteNav.vue (wordmark, subtitle, countdown, nav,
-// credit), AboutPanel.vue (welcome-note copy).
+// credit), AboutPanel.vue (welcome-note copy), ChapterEnd.vue (the footer's date +
+// gift accounts), GiftAccounts.vue (`gifts`, the ONLY renderer of the account numbers).
 //
 // ⚠️ PLACEHOLDERS (2026-07-23, awaiting the couple's real details):
+//   ⚠️ `gifts` below is NOT a placeholder — those are the couple's real account numbers.
 //   • events / dateLabel — ONE wedding: the white wedding + reception, Thu 29 Oct 2026.
 //     ⚠️ The traditional marriage (23 Oct) was on the site until 2026-09-06 and was
 //     removed at the couple's request. The Big Day's inner page still carries both
@@ -70,6 +72,30 @@ export const SITE = {
     // The real RSVP destination (user, 2026-09-03). This is the site's primary
     // call to action — it appears in the nav AND at the end of all four chapters.
     collectionUrl: 'https://lal.so/e/9j09CHqj2sn',
+  },
+
+  // ── Where a gift goes ───────────────────────────────────────────────────────
+  // ⚠️ ACCOUNTS, NOT PAYMENT LINKS (user, 2026-09-13: "rather than payment links, just add
+  // their account details across the site"). Until now the site carried THREE kinds of
+  // payment placeholder — a per-item `cashUrl` on all ten registry items, a site-wide link
+  // on With Love's cash panel, and a note promising both were coming — and not one of them
+  // resolved anywhere. These two accounts are real, they are the same two wherever they
+  // appear, and they are the reason `cashUrl` is gone from the registry data.
+  //
+  // ⚠️ REAL ACCOUNT NUMBERS, PUBLISHED DELIBERATELY. A Nigerian wedding site is expected to
+  // carry them and the couple asked for them by name. They are still bank details: this file
+  // and the two components that render it are the only places they belong — not in a commit
+  // message, an issue, a screenshot in a PR, or a probe script's output.
+  //
+  // `accounts[]` renders in order, so the first is the one a guest reads first. `note` is the
+  // line above them; it is set in the chrome's own voice (small caps) in the footer and in the
+  // chapter's hand on With Love, so keep it short enough to work as either.
+  gifts: {
+    note: 'a gift, if you would rather send one',
+    accounts: [
+      { bank: 'PocketApp', number: '7861462222', name: 'Dan-Egua Uvie' },
+      { bank: 'Access Bank', number: '0736579207', name: 'Covenant Odili' },
+    ],
   },
 
   // Bottom-left credit.

@@ -128,6 +128,26 @@ with the bottom every step must be locked into scroll so I can actually reverse 
    ⚠️ **NO BACKTICKS IN THE SHADER.** It is a JS template literal; one in a comment ends the string
    and the build fails on the GLSL after it. Cost two builds to learn twice.
    ⚠️ The portrait branch (`condition`) is untouched — that framing was already right.
+
+   **↪ 2026-09-13 — the same three numbers again, as FRACTIONS this time.** User: *"the hero section
+   on desktop still has the huge title and only half the hero is the video."* They were right, and
+   the reason was that 620 / 350 / 0.06 are only correct at one frame size. `posterSize` was a fixed
+   pixel number with a step at `md`, and the plane is fitted to the viewport's WIDTH — so the title
+   stayed 148px whether the frame was 1024 or 2560 wide, and the band was 137px at 1023 against
+   364px at 1025. Worse, `SELECTED_Y` put the plane's top edge 133px BELOW the frame at 1024×768 and
+   132px ABOVE it at 1920×1080, where the title was cut off by the top of the screen.
+   Now: `posterSize = posterWidth * 0.20`, the band's depth is a flat `0.18` (was
+   `(350 or 175)/posterWidth`), the top margin is `ppUv.y += 0.189`, and `selectedCarouselY()` is
+   derived from the camera. One layout at every width, and the hero's top edge on the frame's top
+   edge at every aspect. Measured at 1440×900: title band 36% → **22%**, type a third smaller,
+   film 64% → **78%**. At 1920×1080 the title is on screen for the first time.
+   ⚠️ THE FOUR TITLES DO NOT START AT THE SAME PLACE — each chapter's art carries its own paper
+   above the type (0.053 of the texture on The Big Day against 0.100 on For Our Next Chapter), so
+   the top margin has to clear the nav for the SHALLOWEST of them, and the band has to reach below
+   the DEEPEST descender (0.311). Render all four and measure; do not tune on one.
+   ⚠️ THE FILMS ARE NO LONGER ALL 3:4. Two are 9:16 phone video, the window is drawn for 3:4, and
+   the shader crops rather than stretches (`photoAspect`) with a per-chapter `focus` saying which
+   part of a taller film survives. See AUDIT #82/#83 — and pick `focus` by looking at the still.
 2. **The top-edge return is scrubbable**, the way the bottom exit has been since 2026-09-11:
    `beginBack / setBackProgress / cancelBack / endBack`. Every property is a function of one 0→1
    number, the pull drives it directly, and `deselectChapter()` is the same scrub driven by a tween —
@@ -149,7 +169,50 @@ with the bottom every step must be locked into scroll so I can actually reverse 
    `syncNavInk()` from the pull handler, because that probe otherwise only runs on Lenis scroll
    events and the pull stops Lenis.
 
-**▶▶ STATE (2026-09-12, latest) — THE REGISTRY BY ITS REAL NAMES, AND A SECTION INSTEAD OF A LAYER.**
+**▶▶ STATE (2026-09-13, latest) — THE COUPLE'S OWN WORDS, THEIR OWN FILMS, AND TWO ACCOUNTS.**
+User: *"You should have enough details to fill in the footer placeholder information. Rather than
+payment links, just add their account details across the site… the background video on For Our Next
+Chapter should be updated… swap out the main card video in the Coco & Uvie page… remove the widgets
+on that Coco & Uvie page… replace the picture attached to 'The Question' section"* — plus the
+chapter's real copy and the desktop hero (documented above).
+
+1. **Accounts, not payment links.** The site carried THREE kinds of payment placeholder and not one
+   of them resolved anywhere: a `cashUrl` on all ten registry items (null on all ten), a `url: '#'`
+   on With Love's cash section, and copy on both promising they were coming. `SITE.gifts` now holds
+   the couple's two real accounts and ONE component renders them in two voices — `<GiftAccounts>`,
+   `tone="footer"` for the chapter footers and `tone="page"` for With Love's own section. The number
+   is a button: an account number is not something anyone wants to READ, it is something they want
+   in their banking app, so it copies to the clipboard.
+   ⚠️ The footer block is suppressed on With Love, where the same two accounts already have a
+   section of their own a screen and a half above it — printing them again reads as asking twice.
+   ⚠️ The registry reveal's *"or send the cash instead"* is a BUTTON that scrolls to that section.
+   It cannot scroll the page itself: **Lenis owns this scroller**, and a native anchor jump (or
+   `scrollIntoView`, or `window.scrollTo`) is undone on its next frame. It dispatches
+   `chapter:scrollto`, which `pages/[slug].vue` answers with `lenis.scrollTo` — the one way a
+   section moves this page, with the native behaviour as the fallback off it.
+2. **The films are the couple's, and two of them are 9:16.** Coco & Uvie and For Our Next Chapter got
+   new phone video where all four chapters had been 3:4. That is not a content swap — the card
+   window is DRAWN for 3:4 and stretched them a third too wide. See AUDIT #82/#83 and the hero notes
+   above: the shader crops, `photoAspect` comes off the still, and `focus` per chapter says which
+   part of a taller film survives. Re-run `node scripts/gen-stills.mjs` after ANY film swap.
+3. **The US page is written.** The first real copy on it, verbatim from the couple, replacing the
+   lorem the typography was reviewed against. Two consequences for the component: `body` is an ARRAY
+   of paragraphs (the pen runs continuously across them — the windows are solved over every word on
+   the scene, so splitting a block costs nothing in pacing), a `'\n'` inside one is a hard line
+   break, and a paragraph may be `{ t, ask: true }` for the one line a scene is built around.
+   ⚠️ `date`, `caption` and `notes[]` are OPTIONAL now and none of the three is used: they are the
+   couple's voice and the couple did not write them. The two-voice margin notes are this page's best
+   trick and are worth asking for — two short lines per scene, one each.
+   ⚠️ The two US popup cards are gone at the user's request, and the two images they pointed at with
+   them. The page tapes a polaroid into every scene already; the dock was a second photograph beside
+   the first.
+4. **The footer says something true.** It carried a disclaimer apologising for placeholder dates,
+   times, venues and links, and told the reader to keep scrolling to get back to the chapters. The
+   details are real now, and the way back is `.leave-cue` below the footer — which draws a closing
+   ring as the page leaves rather than describing the gesture in a sentence. It is the date (and
+   only the date — same rule as The Big Day), the RSVP, the accounts, and the hashtag.
+
+**▶▶ STATE (2026-09-12) — THE REGISTRY BY ITS REAL NAMES, AND A SECTION INSTEAD OF A LAYER.**
 User, on For Our Next Chapter: *"Remove the notes from the item detail. Make the name of each item
 their actual product/brand name… the hover should be 'or send the cash instead' — we'll create
 individual payment links for each item… the even better section should be an actual section (in the
@@ -163,7 +226,9 @@ homes.
    "name" is only a model code it read as a part number on a wall of display type —
    "HISENSE 390SH-FC" — so those say what the thing is and the code moved down into `product`.
 2. **The annotation drops the memory and offers the money.** It is the spec, the price, and *"or send
-   the cash instead"* in the couple's hand — the second way to give that particular gift. Each item
+   the cash instead"* in the couple's hand — the second way to give that particular gift. ⚠️ **The
+   per-item payment links never happened** (2026-09-13): see the accounts section below — the field
+   is gone and the line walks the reader down to the two accounts instead. Each item
    gets its own `cashUrl` (the couple are making one per item); all ten are null for now and render
    as the offer written down rather than as a link that lands nowhere.
 3. **"Even better" is a SECTION**, set the way the popup is set — ink on paper, centred, no box. It
@@ -687,8 +752,8 @@ screens; removing references or links to old site."*
   - ⚠️ The clean rebuild mattered. `.output/public` is NOT wiped between builds, so it was still
     serving `wine-intro.jpg` and other files that no longer exist in `public/` — a local probe would
     have shown a page that CI could never produce.
-- **A placeholder URL is not a destination.** `cashPanel.url` and `SITE.credit.url` are both still
-  `#`. The cash CTA — this page's one call to action — rendered as an `<a target="_blank">` that
+- **A placeholder URL is not a destination.** ⚠️ `cashPanel.url` is GONE (2026-09-13 — the section
+  renders `<GiftAccounts>`); `SITE.credit.url` is still `#`. Historically: The cash CTA — this page's one call to action — rendered as an `<a target="_blank">` that
   opened a blank tab on nothing; it reads *"the payment link is coming soon"* as plain text until
   there is a real one. The bottom-left credit does the same.
 - ⚠️ **THE NAV WORDMARK SAT ON TOP OF "WELCOME" ON EVERY COMMON PHONE.** Measured overlap: **35px at
@@ -1662,8 +1727,9 @@ under one strip of tape); items sit at different depths and drift apart as the p
 type only** — letterspaced caps, set captions, never script; that single rule is what keeps this
 page and US distinct. The thread's last form here is the **stitch binding the spine**, drawn
 top→bottom per spread (`.drawdown`).
-**User decisions (2026-08-10):** NO prices, NO per-item links — the cash card is the only CTA, and
-it shows **no account details** (payment link or get-in-touch; `url` still `'#'` — needs deciding).
+**User decisions (2026-08-10, SUPERSEDED):** NO prices, NO per-item links, and the cash card shows
+no account details. ⚠️ All three were reversed later: prices and product URLs landed 2026-09-11, and
+the account details landed 2026-09-13 (`SITE.gifts`) — see the 2026-09-13 state note above.
 `claimed: true` support (greyscale + struck label + stamp + aria) is built and **shipped unused**.
 ⚠️ **Perf rule learned:** the frame loop touches **only transform/opacity**. Shadows are static CSS
 with a hover transition — a per-frame `drop-shadow` recompute on full-size PNGs is what makes a

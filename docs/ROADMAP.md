@@ -76,8 +76,10 @@ marriage is **In Frames' `traditional` folder** — the only place a second day 
   2026-09-05. **Verified on a clean build: every shipped image, film and font is the couple's or
   generated; zero old-site strings in `.output/public`.** What is still outstanding is *content*,
   not provenance: the real gift list, and the wedding photos In Frames says are coming.
-- **Two destinations left to fill** (was seven, counted 2026-08-31): the **With Love payment link**
-  and In Frames' **"Add Your Photos" Drive folder**. RSVP is live, both maps are real keyless Google
+- **One destination left to fill** (was seven, counted 2026-08-31; two until 2026-09-13): In Frames'
+  **"Add Your Photos" Drive folder**. ⚠️ The With Love payment link is no longer outstanding — it was
+  ANSWERED rather than filled: the couple's two account numbers are in `SITE.gifts` and there is no
+  payment link to wire up. RSVP is live, both maps are real keyless Google
   Maps URLs, and Add to Calendar builds a real `.ics` in the browser. The footer credit may never
   need one.
   - ⚠️ **None of them is a dead LINK any more.** A placeholder `#` used to render as

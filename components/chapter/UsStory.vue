@@ -13,7 +13,9 @@
 
       <!-- The "stitch": a date-line that draws itself across as the scene arrives. -->
       <div class="stitch">
-        <span class="stitch-label" data-unit>
+        <!-- ⚠️ Only when a scene HAS a date. Without the guard an empty label still takes the
+             flex gap, and the rule starts a centimetre in from nothing. -->
+        <span v-if="scene.dateW.length" class="stitch-label" data-unit>
           <template v-for="(w, k) in scene.dateW" :key="k"
             ><span class="w write" :data-window="w.win">{{ w.t }}</span>{{ ' ' }}</template
           >
@@ -27,7 +29,7 @@
         <figure v-if="scene.images?.[0]" class="polaroid">
           <span class="tape" aria-hidden="true" />
           <img :src="scene.images[0]" :alt="scene.caption || scene.title" loading="lazy" />
-          <figcaption data-unit>
+          <figcaption v-if="scene.capW.length" data-unit>
             <template v-for="(w, k) in scene.capW" :key="k"
               ><span class="w write" :data-window="w.win">{{ w.t }}</span>{{ ' ' }}</template
             >
@@ -40,14 +42,20 @@
               ><span class="w write" :data-window="w.win">{{ w.t }}</span>{{ ' ' }}</template
             >
           </h2>
-          <p class="body">
-            <template v-for="(w, k) in scene.bodyW" :key="k"
-              ><span class="w write" :data-window="w.win">{{ w.t }}</span>{{ ' ' }}</template
+          <!-- The body is paragraphs, and the pen runs straight through them: the windows are
+               solved across EVERY word on the scene, so the last word of one block and the first
+               of the next are consecutive strokes rather than two sequences that each restart.
+               A '\n' inside a paragraph is a hard break — lines that belong together. -->
+          <p v-for="(para, pi) in scene.bodyW" :key="pi" class="body" :class="{ ask: para.ask }">
+            <template v-for="(line, li) in para.lines" :key="li"
+              ><br v-if="li" /><template v-for="(w, k) in line" :key="k"
+                ><span class="w write" :data-window="w.win">{{ w.t }}</span>{{ ' ' }}</template
+              ></template
             >
           </p>
 
           <!-- The two voices, arguing in the margins. -->
-          <div class="notes">
+          <div v-if="scene.notesW.length" class="notes">
             <div
               v-for="(n, j) in scene.notesW"
               :key="j"
@@ -131,13 +139,45 @@ function unitProgress(r, vh) {
   return Math.min(1, Math.max(0, (startY - r.top) / Math.max(1, startY - endY)))
 }
 
+// The body, as paragraphs — but solved as ONE sequence. A paragraph is a string, or
+// { t, ask } for the one line a scene is built around; a '\n' inside it is a hard line
+// break within that paragraph. Splitting the copy into blocks therefore costs nothing in
+// pacing: `k` counts words across the whole scene, so the slot is the same width whether
+// the copy is one paragraph or six, and the pen never restarts at a paragraph mark.
+// ⚠️ A plain string still works — it comes out as one paragraph of one line.
+function paras(body, a, b) {
+  const blocks = (Array.isArray(body) ? body : [body])
+    .map((p) => (typeof p === 'string' ? { t: p } : p || {}))
+    .map((p) => ({
+      ask: !!p.ask,
+      lines: String(p.t || '')
+        .split('\n')
+        .map((l) => l.split(/\s+/).filter(Boolean))
+        .filter((l) => l.length),
+    }))
+    .filter((p) => p.lines.length)
+  const n = blocks.reduce((m, p) => m + p.lines.reduce((q, l) => q + l.length, 0), 0)
+  if (!n) return []
+  const slot = (b - a) / (n - 1 + OVER)
+  let k = 0
+  return blocks.map((p) => ({
+    ask: p.ask,
+    lines: p.lines.map((l) =>
+      l.map((t) => {
+        const st = a + k++ * slot
+        return { t, win: `${st.toFixed(4)},${(st + OVER * slot).toFixed(4)}` }
+      })
+    ),
+  }))
+}
+
 const scenes = computed(() =>
   props.sections.map((s) => ({
     ...s,
     dateW: words(s.date, ...W.full),
     capW: words(s.caption, ...W.full),
     headW: words(s.title, ...W.head),
-    bodyW: words(s.body, ...W.body),
+    bodyW: paras(s.body, ...W.body),
     notesW: (s.notes || []).map((n, j) => ({
       ...n,
       w: words(n.text, W.note[0] + j * 0.09, W.note[1] + j * 0.09),
@@ -343,6 +383,22 @@ onBeforeUnmount(() => {
   opacity: 0.9;
   margin: 0;
 }
+/* Paragraph spacing is a BLANK LINE in a letter, not a typographic indent — about
+   three-quarters of the leading, so the blocks read as pauses in one hand rather than
+   as separate items in a list. */
+.body + .body { margin-top: 1.3rem; }
+
+/* ── the one line a scene is built around ──
+   Same pen, one size up and at full strength. It is deliberately NOT centred, NOT
+   indented and NOT given a rule: this page is someone's handwriting, and a pull-quote
+   treatment would make it a design element on a page that has none. */
+.body.ask {
+  font-size: clamp(1.55rem, 2.45vw, 2.1rem);
+  line-height: 1.5;
+  opacity: 1;
+}
+.body.ask,
+.body.ask + .body { margin-top: 1.7rem; }
 
 .notes {
   margin-top: 2.75rem;
@@ -377,5 +433,6 @@ onBeforeUnmount(() => {
   .stitch { margin-bottom: 5vh; }
   .heading { font-size: clamp(2.1rem, 11vw, 3.4rem); }
   .body { font-size: 1.25rem; line-height: 1.8; }
+  .body.ask { font-size: 1.6rem; line-height: 1.45; }
 }
 </style>

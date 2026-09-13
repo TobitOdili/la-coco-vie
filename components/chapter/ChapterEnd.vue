@@ -2,32 +2,38 @@
   <footer ref="root" class="chapter-end" :class="{ 'in-view': visible }">
     <h3 class="end-title">See you there.</h3>
 
+    <!-- ⚠️ THE DATE, AND NOTHING ELSE ABOUT THE DAY. Same rule as The Big Day's page: a guest
+         who has not RSVP'd gets the date and the form, never the time, the venue or the
+         programme. `dateLabel` is the one string every surface on the site reads. -->
+    <p class="end-date">{{ SITE.dateLabel }}</p>
+
     <div class="pills">
       <a class="pill" :href="SITE.nav.collectionUrl" target="_blank" rel="noopener noreferrer">
         RSVP <span class="arrow">↗</span>
       </a>
     </div>
 
+    <!-- ⚠️ NOT ON WITH LOVE. That chapter IS the gift list and gives these same two accounts a
+         section of their own a screen and a half above this one; printing them again under it
+         reads as asking twice. Every other chapter ends here, so this is where they go. -->
+    <GiftAccounts v-if="showGifts" tone="footer" />
+
     <div class="socials">
-      <!-- PLACEHOLDER — the couple's hashtag / Instagram when they have one. -->
       <span class="hashtag">#LaCocoVie26</span>
     </div>
-
-    <p class="disclaimer">
-      Placeholder details — dates, times, venues and links on this page are stand-ins
-      until Covenant &amp; Uvie confirm the real ones. Keep scrolling to return to the
-      chapters.
-    </p>
   </footer>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { SITE } from '~/site.config'
+import GiftAccounts from '~/components/GiftAccounts.vue'
 
 const props = defineProps({
   chapter: { type: Object, required: true }, // { slug, title, … }
 })
+
+const showGifts = computed(() => props.chapter?.slug !== 'with-love')
 
 const root = ref(null)
 const visible = ref(false)
@@ -65,9 +71,10 @@ onBeforeUnmount(() => observer?.disconnect())
   transition: opacity 0.9s ease, transform 0.9s ease;
 }
 .in-view > * { opacity: 1; transform: none; }
-.in-view .pills { transition-delay: 0.1s; }
-.in-view .socials { transition-delay: 0.2s; }
-.in-view .disclaimer { transition-delay: 0.3s; }
+.in-view .end-date { transition-delay: 0.08s; }
+.in-view .pills { transition-delay: 0.16s; }
+.in-view .accounts { transition-delay: 0.26s; }
+.in-view .socials { transition-delay: 0.34s; }
 
 .end-title {
   font-family: 'Bague', sans-serif;
@@ -113,14 +120,17 @@ onBeforeUnmount(() => observer?.disconnect())
   opacity: 0.7;
 }
 
-.disclaimer {
-  max-width: 40rem;
-  margin: 0;
+/* ⚠️ The old PLACEHOLDER DISCLAIMER lived here — "dates, times, venues and links on this page
+   are stand-ins" — and it also told the reader to keep scrolling to get back to the chapters.
+   Both are gone: the details it apologised for are the couple's real ones now, and the way back
+   is a cue of its own below this footer (`.leave-cue` in pages/[slug].vue), which draws a closing
+   ring as the page leaves rather than describing the gesture in a sentence. */
+.end-date {
+  margin: -1rem 0 0;
   font-family: 'Bague', sans-serif;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.85rem;
-  line-height: 1.9;
-  opacity: 0.45;
+  letter-spacing: 0.22em;
+  font-size: 0.8rem;
+  opacity: 0.55;
 }
 </style>
