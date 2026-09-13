@@ -231,13 +231,15 @@ defineEmits(['toggle-about', 'go-home', 'toggle-sound'])
   z-index: 19;
   pointer-events: none;
   background: color-mix(in srgb, var(--accentLight, #F3F1EC) 88%, transparent);
-  /* ⚠️ THE WASH THICKENS, IT DOES NOT ARRIVE OPAQUE. The mask says how far down the page it has
-     reached; this says how much of the scene it is hiding, and the scene behind it is the thing
-     the visitor is actually driving — a veil that is already solid at half a pull turns the
-     return back into a loading screen with an animation somewhere underneath it. */
-  opacity: calc(0.22 + var(--p, 0) * 0.66);
-  backdrop-filter: blur(calc(var(--p, 0) * 7px)) saturate(0.9);
-  -webkit-backdrop-filter: blur(calc(var(--p, 0) * 7px)) saturate(0.9);
+  /* ⚠️ THE WASH THICKENS, IT DOES NOT ARRIVE OPAQUE — and the ceiling is the whole point. It was
+     `0.22 + p*0.66`, which is 0.85 of an 88%-opaque paper by the end: the deck reassembling behind
+     it came out as a white-out, and the return read as a loading screen with an animation somewhere
+     underneath. Rendered and compared frame by frame — the ring, the four cards and their films all
+     have to stay READABLE through this the whole way down, because they are the thing the visitor
+     is driving. 0.44 frosts the page; anything near 0.7 hides it. */
+  opacity: calc(0.08 + var(--p, 0) * 0.36);
+  backdrop-filter: blur(calc(var(--p, 0) * 3.5px)) saturate(0.95);
+  -webkit-backdrop-filter: blur(calc(var(--p, 0) * 3.5px)) saturate(0.95);
   -webkit-mask-image: linear-gradient(to bottom,
     #000 0%,
     #000 calc(var(--p, 0) * 112%),
@@ -278,8 +280,10 @@ defineEmits(['toggle-about', 'go-home', 'toggle-sound'])
   position: relative;
   display: block;
   /* Grows with the pull, from a mark the size of the wordmark's cap-height to a loader. */
-  width: calc(1.15rem + var(--p, 0) * 1.75rem);
-  height: calc(1.15rem + var(--p, 0) * 1.75rem);
+  /* ⚠️ It ends at the CENTRE OF THE FRAME, where 2.9rem read as a stray dot. This is the one
+     thing on screen saying what is happening; it is allowed to be seen. */
+  width: calc(1.15rem + var(--p, 0) * 2.85rem);
+  height: calc(1.15rem + var(--p, 0) * 2.85rem);
   transition: none;
 }
 .pull-ring svg { width: 100%; height: 100%; display: block; overflow: visible; }
@@ -310,7 +314,7 @@ defineEmits(['toggle-about', 'go-home', 'toggle-sound'])
 }
 .pull-label {
   font-family: 'Bague', ui-sans-serif, sans-serif;
-  font-size: 0.6rem;
+  font-size: 0.68rem;
   letter-spacing: 0.26em;
   text-transform: uppercase;
   /* Holds off until the mark has left the wordmark's line — two words in one place is a collision. */

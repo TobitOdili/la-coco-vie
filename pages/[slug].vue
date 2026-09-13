@@ -152,7 +152,10 @@ function pushPull() {
     // ⚠️ THE SCROLLER STANDS DOWN WHILE THE PULL OWNS THE GESTURE. Without this a push back down
     // unwound the pull AND scrolled the page in the same notches, so reversing a return left you a
     // few hundred pixels into the chapter with no way to pull again. One gesture, one meaning.
-    if (backEngaged) lenis?.stop()
+    // ⚠️ AND IT LANDS ON THE TOP as it does. The pull engages anywhere inside TOP_EDGE, so without
+    // this the page could freeze a handful of pixels short of 0 — and those pixels are the seam
+    // between the article and the hero card the return is about to fold away.
+    if (backEngaged) { lenis?.scrollTo(0, { immediate: true }); lenis?.stop() }
   }
   if (!backEngaged) return
   if (pullTop.value <= 0) {
@@ -164,17 +167,42 @@ function pushPull() {
   scene.setBackProgress(pullTop.value)
 }
 
-// Released short of the threshold: the pull springs back rather than snapping, and the scene
-// scrubs back with it — the same function, run the other way.
+// ⚠️ LETTING GO IS A DECISION, NOT A RETREAT. This used to spring every release back to 0 — which
+// is right for a brush against the top edge and catastrophic for anything else, because the pull is
+// 800px long and a gesture is 120–200px: the journey was wound back between every notch and every
+// swipe, and the homepage was unreachable by any input but one unbroken trackpad flick. Past this
+// point the gesture has plainly been made, so the release finishes it; below it, nothing happened.
+// ⚠️ The posters are home by BACK_POSTERS (0.60) and the accent ground has cleared by BACK_BG
+// (0.64), so what settles after this is the last of the group's tilt — a finish, not a playback.
+const RELEASE_COMMIT = 0.7
+const RELEASE_STEP = 0.055   // per frame, springing back — about 210ms from just under the commit
+const SETTLE_STEP = 0.022    // per frame, finishing — about 250ms over the remaining 0.3
+
 let releaseRaf = 0
 function releasePull() {
   cancelAnimationFrame(releaseRaf)
   if (!pullTop.value) { pushPull(); return }
+  if (pullTop.value >= RELEASE_COMMIT) { settlePull(); return }
   const step = () => {
-    pullTop.value = Math.max(0, pullTop.value - 0.055)
+    pullTop.value = Math.max(0, pullTop.value - RELEASE_STEP)
     topAccum = pullTop.value * threshold()
     pushPull()
     if (pullTop.value > 0) releaseRaf = requestAnimationFrame(step)
+  }
+  releaseRaf = requestAnimationFrame(step)
+}
+
+// Released past the commit: carry the same scrub the rest of the way and go. ⚠️ Still the SAME
+// function — `setBackProgress` through `pushPull` — so the finish is the tail of the motion the
+// visitor was driving and not a separate animation played over it. A new gesture interrupts it
+// (both input handlers cancel `releaseRaf`) right up until `doExit` fires.
+function settlePull() {
+  const step = () => {
+    pullTop.value = Math.min(1, pullTop.value + SETTLE_STEP)
+    topAccum = pullTop.value * threshold()
+    pushPull()
+    if (pullTop.value < 1) releaseRaf = requestAnimationFrame(step)
+    else doExit()
   }
   releaseRaf = requestAnimationFrame(step)
 }
@@ -212,10 +240,21 @@ let lenis = null
 // Every pixel scrubs the whole return (see `pushPull`), so the threshold is how much gesture the
 // visitor gets to spend watching the chapter fold back into the deck, and how much room they have
 // to change their mind. 420px was right for a charge-and-fire; it is over in a blink as a scrub.
-const EXIT_THRESHOLD = 1150 // px of overscroll past the TOP edge — the full length of the return
+// ⚠️ AND IT HAS TO BE REACHABLE IN ONE ORDINARY GESTURE. 1150 was not: a mouse wheel moves ~120px
+// a notch and a thumb swipes ~200px, and `releasePull` threw the whole journey away the moment the
+// gesture ended — so every notch and every swipe drew a little of the return and then wound it
+// back. Measured on the shipped build: seven consecutive 200px swipes each peaked at p=0.59 and
+// each sprang to 0; six wheel notches 900ms apart each peaked at 0.10 and each sprang to 0. The
+// return was unreachable by anything but one unbroken trackpad flick. See RELEASE_COMMIT below —
+// letting go past that point FINISHES it — and these are sized so one comfortable gesture gets
+// there: 560px of wheel (≈4.7 notches, or one flick) and 182px of thumb.
+const EXIT_THRESHOLD = 800  // px of overscroll past the TOP edge — the full length of the return
 let topAccum = 0             // top overscroll accumulator — the scrub's position, in px
-let touching = false         // a finger is down, so the touch threshold is the one in play
-const threshold = () => (touching ? EXIT_THRESHOLD_TOUCH : EXIT_THRESHOLD)
+let touching = false         // a finger is down right now
+// ⚠️ NOT `touching`. The release runs AFTER touchend, so reading "is a finger down" there picked
+// the wheel's threshold to rescale a pull that had been measured against the thumb's.
+let touchMode = false        // the last gesture was a finger — so the touch threshold is in play
+const threshold = () => (touchMode ? EXIT_THRESHOLD_TOUCH : EXIT_THRESHOLD)
 let lastWheelT = 0           // last wheel-event time — a gap means a new gesture
 let wheelIdle = null         // …and the timer that notices the gap when no further event comes
 let exiting = false          // an exit committed (navigating home) — lock out further input
@@ -236,6 +275,11 @@ const DROP_START = 0.45      // de at which the page is fully out → the drop b
 // velocity step is what read as a stutter at the handover. Committing here leaves the deck with
 // somewhere to go, and `endExit(true)` carries it the rest of the way on a tween.
 const COMMIT_AT = 0.955
+// ⚠️ NOT `<= 2`. Lenis EASES into the top rather than landing on it — traced coming up from a read:
+// 47 → 17 → 7 → 3 → 1 over four notches, all of them after the page had visibly stopped moving. At a
+// 2px tolerance those four notches did nothing at all, which reads as the top edge being dead. The
+// pull engages inside this band and snaps the scroller to 0 as it does, so nothing is left hanging.
+const TOP_EDGE = 8
 let exitEngaged = false      // beginExit() has fired (the ring is reassembling under the scroll)
 
 function onWheel(e) {
@@ -243,6 +287,7 @@ function onWheel(e) {
   // Normalize deltas: Firefox fires deltaMode=1 (lines, ~3 per notch) — comparing raw line counts
   // against a pixel threshold made exits near-unreachable there. ~40px/line ≈ Chrome's ~120px notch.
   const dy = e.deltaY * (e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? window.innerHeight : 1)
+  touchMode = false
   const now = performance.now()
   // ⚠️ 700ms, not 400: a trackpad pauses mid-gesture more than that and the charge was being
   // thrown away under a finger that had not left the pad.
@@ -255,15 +300,15 @@ function onWheel(e) {
   // a half-drawn return sat there indefinitely — the same shape as AUDIT #62 on touch.
   clearTimeout(wheelIdle)
   wheelIdle = setTimeout(() => { if (topAccum > 0) releasePull() }, 700)
-  if (lenis.scroll <= 2) {
+  if (lenis.scroll <= TOP_EDGE) {
     // ⚠️ SIGNED, NOT ONE-WAY. `-dy` is positive pulling up and negative pushing back down, so the
     // scrub runs both ways under the same gesture — which is the whole of "I can actually reverse
     // it". Clamped at 0, where `pushPull` hands the page back to the scroll coupling.
     cancelAnimationFrame(releaseRaf)
     topAccum = Math.max(0, topAccum - dy)
-    pullTop.value = Math.min(1, topAccum / EXIT_THRESHOLD)
+    pullTop.value = Math.min(1, topAccum / threshold())
     pushPull()
-    if (topAccum >= EXIT_THRESHOLD) doExit()
+    if (topAccum >= threshold()) doExit()
   } else if (topAccum > 0) {
     releasePull()
   }
@@ -273,12 +318,13 @@ function onWheel(e) {
 // phone was the nav logo. A finger covers ground faster than a wheel, so the same journey is a
 // shorter number. (The BOTTOM exit needs nothing extra: it's driven by Lenis scroll position,
 // which native touch scrolling already produces.)
-const EXIT_THRESHOLD_TOUCH = 340
+const EXIT_THRESHOLD_TOUCH = 260
 let touchLastY = 0
 function onTouchStart(e) {
   const t = e.touches[0]
   if (!t) return
   touching = true
+  touchMode = true
   touchLastY = t.clientY
   cancelAnimationFrame(releaseRaf)            // a new finger takes over from a spring-back
 }
@@ -288,7 +334,8 @@ function onTouchMove(e) {
   if (!t) return
   const dy = touchLastY - t.clientY           // negative ⇒ dragging the page DOWN (scrolling up)
   touchLastY = t.clientY
-  if (lenis.scroll <= 2) {
+  touchMode = true
+  if (lenis.scroll <= TOP_EDGE) {
     topAccum = Math.max(0, topAccum - dy)     // signed — see the note in onWheel
     pullTop.value = Math.min(1, topAccum / EXIT_THRESHOLD_TOUCH)
     pushPull()
@@ -299,8 +346,8 @@ function onTouchMove(e) {
 }
 
 // ⚠️ The pull has to RELEASE — a value driven by a move handler needs an end handler, or it is only
-// ever correct mid-gesture (AUDIT #62). It springs back now rather than snapping: the scene is
-// scrubbed to wherever the pull is, so zeroing it in one frame would teleport the whole chapter home.
+// ever correct mid-gesture (AUDIT #62). It springs back rather than snapping: the scene is scrubbed
+// to wherever the pull is, so zeroing it in one frame would teleport the whole chapter home.
 function onTouchEnd() {
   touching = false
   releasePull()

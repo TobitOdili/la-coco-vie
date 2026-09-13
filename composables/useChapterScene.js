@@ -1755,11 +1755,17 @@ export function useChapterScene() {
   // going home looks like.
   //
   // The sub-ranges are the old timeline's durations over its 2.5s span, kept so the shape is the
-  // one that was signed off: posters 1.5s ⇒ [0, 0.60], background 1.6s ⇒ [0, 0.64], centre text
-  // 1.0s ⇒ [0, 0.40], and the carousel's own pose the full 2.5s ⇒ [0, 1].
+  // one that was signed off: posters 1.5s ⇒ [0, 0.60], background 1.6s ⇒ [0, 0.64], and the
+  // carousel's own pose the full 2.5s ⇒ [0, 1].
   const BACK_POSTERS = 0.60
   const BACK_BG = 0.64
-  const BACK_TXT = 0.40
+  // ⚠️ THE CENTRE WORDMARK IS A WINDOW, NOT A DEADLINE, AND IT STARTS LATE. It was [0, 0.40] — the
+  // homepage's big centre plane ("SAVE the DATE — CEREMONY, RECEPTION…") reaching FULL opacity and
+  // full size two-fifths of the way home, while the cards were still flying through it and directly
+  // under the return's own cue. Three things in the middle of the frame at once is a large part of
+  // what made this read as broken. It arrives once the ring has formed (BACK_POSTERS) and the accent
+  // ground has cleared (BACK_BG) — which is also the moment there is a homepage for it to belong to.
+  const BACK_TXT_FROM = 0.72
   let backStart = null
 
   function beginBack() {
@@ -1817,7 +1823,10 @@ export function useChapterScene() {
     carousel.position.y = lp(backStart.cy, idleCarouselY(), e)
     groupG.rotation.set(lp(backStart.gx, ht.x, e), lp(backStart.gy, ht.y, e), lp(backStart.gz, ht.z, e))
     exitBgAlpha = lp(backStart.bg, 0, ease(t / BACK_BG))
-    if (groupG.userData.txtMat) groupG.userData.txtMat.opacity = lp(backStart.txt, 1, ease(t / BACK_TXT))
+    if (groupG.userData.txtMat) {
+      const eT = ease((t - BACK_TXT_FROM) / (1 - BACK_TXT_FROM))
+      groupG.userData.txtMat.opacity = lp(backStart.txt, 1, eT)
+    }
 
     for (const o of backStart.all) {
       const m = o.p.mesh

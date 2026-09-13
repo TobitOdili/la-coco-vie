@@ -160,11 +160,25 @@ with the bottom every step must be locked into scroll so I can actually reverse 
    back down unwound the pull AND scrolled the page in the same notches, leaving you a few hundred
    pixels in with no way to pull again. ⚠️ **A wheel has no "end"**: the release needs a timer, not a
    gap check inside the handler, which never runs once the events stop.
+   **↪ 2026-09-13 — AND LETTING GO HAD TO MEAN SOMETHING.** The scrub was right and unreachable:
+   `releasePull()` sprang every release back to 0, which is correct for a brush against the top edge
+   and catastrophic once the pull is 1150px long and a gesture is 120px of wheel or 200px of thumb.
+   Seven consecutive swipes each drew 59% of the return and wound it back; the homepage could not be
+   reached by anything but one unbroken trackpad flick. Past `RELEASE_COMMIT` (0.7) the release now
+   FINISHES the return and below it the chapter comes back, and the lengths are sized so one ordinary
+   gesture crosses it (800 wheel / 260 touch). ⚠️ The finish is the same `setBackProgress` carried on,
+   not a tween played over it, and a new gesture interrupts it until `doExit` fires. See AUDIT #88.
+   ⚠️ Also `TOP_EDGE` 2 → 8: Lenis eases into the top over about four notches, and at a 2px tolerance
+   every one of them did nothing at all (AUDIT #91).
+
 3. **The veil.** A frosted wash comes down over the page as the pull is drawn — the mask's edge is
    `--p` — with the loader starting where the wordmark is (which fades out under it) and travelling
    to the centre of the frame. ⚠️ Its opacity ramps as well as its coverage: a wash already solid at
    half a pull turns the return into a loading screen with the animation hidden underneath, and the
-   animation is the thing the visitor is driving. ⚠️ It is `SiteNav`'s FIRST child at z-19 — nested
+   animation is the thing the visitor is driving. ⚠️ 2026-09-13 — IT WAS STILL TOO MUCH: 0.85 of an
+   88%-opaque paper by the end, and the deck reassembling behind it rendered as a near-white sheet.
+   Ceiling 0.44, blur 3.5px (AUDIT #89), and the homepage's centre wordmark now arrives at the END of
+   the return rather than two-fifths through it, where it landed on the cue (AUDIT #90). ⚠️ It is `SiteNav`'s FIRST child at z-19 — nested
    inside one of the nav's own z-20 bars it painted over WELCOME and RSVP — and the page has to call
    `syncNavInk()` from the pull handler, because that probe otherwise only runs on Lenis scroll
    events and the pull stops Lenis.
