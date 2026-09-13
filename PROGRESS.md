@@ -2,12 +2,15 @@
 
 > **▶▶ PIVOT (2026-07-23):** the project is no longer a Milla Nova replica — it is now the
 > **Covenant &amp; Uvie wedding site** ("A Love Story in Chapters"). The four cards became the journey
-> **US → THE BIG DAY → IN FRAMES → WITH LOVE**, each a bespoke inner page unified by the *thread*
+> **THE BIG DAY → COCO &amp; UVIE → IN FRAMES → FOR OUR NEXT CHAPTER** (ring order since 2026-09-06;
+> the slugs stay `the-big-day` / `us` / `in-frames` / `with-love`), each a bespoke inner page
 > motif; the homepage carries the couple's names/date/countdown, welcome note, and RSVP. The Three.js
 > **engine is unchanged** — this was the planned content-and-skin swap. Entries below that predate
 > this and say "replica"/wine-o-clock/etc. describe the engine's history. Current state + full recent
 > change log live in [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md) (the source of truth).
-> ALL copy/dates/venues/registry are PLACEHOLDERS pending the couple's details.
+> ⚠️ **That "ALL copy/dates/registry are placeholders" line is out of date as of 2026-09-13** —
+> the date, the RSVP, the four films, the Gift Registry and the couple's gift account details are
+> all real, and so is the Coco &amp; Uvie page's copy. See the README for what is still standing in.
 
 > **Doc map:** new here? Start with [`README.md`](README.md). How it works →
 > [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · assets/re-skin →
@@ -23,15 +26,15 @@
 > [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md), which is the source of truth.
 > Issue forensics (now #1–#27) are in [`AUDIT.md`](AUDIT.md).
 
-> Last updated: **2026-09-02**. All four inner pages are bespoke and live; the couple's own card
+> Last updated: **2026-09-13**. All four inner pages are bespoke and live; the couple's own card
 > films and In Frames reel photos are in; asset URLs are base-path correct on both hosts.
 > **In Frames and With Love were both rebuilt from scratch** — and In Frames has since been rebuilt
 > several more times, landing on **"the procession"** (pinned, scroll-scrubbed prints in CSS 3D,
 > v10 as of `56522682`). The Big Day is now **"the calendar"**, and the couple's **real dates** are
-> in: traditional **Fri 23 Oct 2026** (corrected from the 25th on 2026-09-02), white wedding +
-> reception **Thu 29 Oct 2026**, with a
-> countdown that rolls from the first to the second. ⚠️ **US's copy is deliberate lorem ipsum**
-> pending the couple's words. See the tracker.
+> in. ⚠️ **ONE WEDDING SINCE 2026-09-06**: the traditional marriage (Fri 23 Oct) was removed at the
+> couple's request and the site counts down to the **white wedding + reception, Thu 29 Oct 2026**
+> and nothing else. ⚠️ **Coco &amp; Uvie's copy is the couple's own since 2026-09-13** — the lorem
+> ipsum this file used to describe is gone. See the tracker.
 >
 > ✅ **User sign-off, 2026-08-31:** everything built in August "looks good on desktop and mobile",
 > and the **card films are working** — the one thing no headless tier could ever check (Browserless
@@ -68,7 +71,7 @@ poster cards, each opening into its own bespoke scroll page (US · THE BIG DAY �
 | UI | Vue 3, TailwindCSS v4 |
 | 3D / WebGL | Three.js with custom GLSL vertex + fragment shaders |
 | Animation | GSAP (timelines, eased tweens) |
-| Audio | Howler.js (per-chapter ambient loops, carousel tick SFX) |
+| Audio | Howler.js — ONE generated ambient track site-wide since 2026-09-11 (`SITE.themeAudio`), off by default. ⚠️ Was four per-chapter loops that were the REFERENCE SITE'S, renamed and never licensed. |
 | Scroll | **Lenis** (inner pages) · homepage carousel = window wheel listener (`virtualscroll` dep is dead) |
 | Fonts | Bague (woff), Movie (woff), Italiana, Monoton, Over the Rainbow |
 | QA | Browserless (headless geometry/probes, vs the original) + Claude-in-Chrome (real browser: video/textures) |
@@ -160,7 +163,9 @@ The carousel is `N=8` poster slots (4 chapters × 2, mirrored around a ring).
 - **The old site is gone from the deploy** — the watermarked registry clipart, the reference's own
   editorial stills, the `millanova-replica` package name and a studio credit in the nav markup.
   Verified: 0 old-site strings in `.output/public`.
-- **Still outstanding (content, not code):** the real gift list, the With Love payment link, In
+- **Still outstanding (content, not code):** ⚠️ the gift list landed 2026-09-11 and the payment link
+  was ANSWERED rather than filled (2026-09-13 — the couple's account details are in `SITE.gifts`;
+  there are no payment links on the site). What is left: In
   Frames' shared-drive link, and the two Big Day sound files.
 
 ### Camera

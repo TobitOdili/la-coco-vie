@@ -7,7 +7,8 @@ opens into its own bespoke scroll page.
 
 | | |
 |---|---|
-| **Live** | https://la-coco-vie.vercel.app/ |
+| **Live** | https://lacocovie26.com/ — the couple's own domain |
+| **Preview** | https://la-coco-vie.vercel.app/ |
 | **Repo** | https://github.com/TobitOdili/la-coco-vie |
 | **Cloudflare** | Workers static-assets deploy — see [Deployment](#deployment) |
 | **Secondary deploy** | https://tobitodili.github.io/la-coco-vie/ (GitHub Pages) |
@@ -16,16 +17,23 @@ opens into its own bespoke scroll page.
 > The **engine** was first built as a faithful, from-scratch **replica of the Milla Nova "Chapter
 > the Bride" homepage** ([chapter.millanova.com](https://chapter.millanova.com/), site by
 > [Sarakuz](https://sarakuz.com)) — a technical study. As of **2026-07-23** it has been **re-skinned
-> into Covenant &amp; Uvie's wedding site**: the four cards became the journey **US → THE BIG DAY →
-> IN FRAMES → WITH LOVE**, each with its own bespoke inner page. Full credit to the original
-> creators for the interaction design. The **card films are now the couple's own** (2026-08-10);
-> the remaining Milla Nova media in `public/` (gallery stills, the favicon) are
-> **aspect-correct placeholders** awaiting their own, and are **not** for redistribution.
+> into Covenant &amp; Uvie's wedding site**: the four cards became the journey **THE BIG DAY →
+> COCO &amp; UVIE → IN FRAMES → FOR OUR NEXT CHAPTER** (ring order, reordered 2026-09-06; the slugs
+> stay `the-big-day` / `us` / `in-frames` / `with-love`), each with its own bespoke inner page. Full credit to the original
+> creators for the interaction design. **Every image, film and font that ships is now the couple's
+> own or generated** — verified on a clean build, with zero old-site strings in `.output/public`.
+> The favicon is the only Milla Nova artefact left, and it is **not** for redistribution.
 >
-> ⚠️ **ALL copy, dates, venues, and the registry are PLACEHOLDERS** pending the couple's real
-> details. The dates are the couple's real ones, confirmed 2026-08-31: the **traditional
-> marriage on FRIDAY 23 October 2026** and the **white wedding + reception on Thursday 29
-> October 2026**. (They replaced a single placeholder date of October 27.)
+> ### What is real, and what is still standing in
+> ✅ **Real:** the date (**Thursday 29 October 2026**, Lagos — the ONLY wedding day on the site since
+> 2026-09-06, when the traditional marriage was removed at the couple's request), the RSVP link, all
+> four card films, the US polaroids and the In Frames reel, the **Coco & Uvie page's copy** (their own
+> words, 2026-09-13), the **Gift Registry** (ten real products with prices and shop links) and the
+> couple's two **gift account details** (`SITE.gifts`).
+> ⚠️ **Still standing in:** the welcome-note copy in `site.config.js`, In Frames' "Add Your Photos"
+> Drive link, `SITE.countdownFrom` (the day the dials shipped, not a chosen start), the **generated**
+> theme track (royalty-free by construction, never auditioned by a human), the footer credit URL and
+> the `#LaCocoVie26` hashtag.
 
 ---
 
@@ -48,11 +56,16 @@ is that no two pages share a language. Breaking it is what made With Love fail i
   The deck rests **upright** and leans only with live input — the pointer on desktop, the swipe on
   touch.
 - ✅ **The four bespoke inner pages** (the *thread* narrative — one line runs the whole site):
-  - **US** — "the margin notes": the story in two handwritten voices, taped polaroids. ⚠️ The page
-    is **written, not set** — nothing on it is type. Every string is in the hand (Over the Rainbow)
-    and appears **word by word off the scroll position**, each word un-clipped left to right the way
-    a pen lays it down, so scrolling back un-writes it. The heading finishes before the body starts,
-    then he writes in the margin and she answers.
+  - **COCO &amp; UVIE** (slug `us`) — "the margin notes": three scenes, a taped polaroid each.
+    ⚠️ The page is **written, not set** — nothing on it is type. Every string is in the hand (Over
+    the Rainbow) and appears **word by word off the scroll position**, each word un-clipped left to
+    right the way a pen lays it down, so scrolling back un-writes it.
+    ⚠️ **The copy is the couple's own** (2026-09-13) and it arrived without two of the page's
+    devices, so both are optional and currently unused: the **stitch date** on each scene (the rule
+    still draws, it just carries no words) and the **two-voice margin notes** (Covenant in the left
+    margin, Uvie answering in the right). The margin notes are this page's best trick — two short
+    lines per scene is all it needs. `body` is an array of paragraphs; one per page may be
+    `{ t, ask: true }` for the line the scene is built around.
   - **THE BIG DAY** — **the invitation.** A **ghost October**: the whole month, every numeral
     faded back, and the 29th inked and ringed by a hand-drawn loop. Then the **knot** — two threads
     arrive from either side, cross, loop around one another and leave as one line (restored verbatim
@@ -78,7 +91,9 @@ is that no two pages share a language. Breaking it is what made With Love fail i
   - **FOR OUR NEXT CHAPTER** (slug `with-love`) — the **ink** writes the thank-you, then the gift names become the page: six
     bands of the list sliding across the screen at their own speeds, forever. Point at a word and
     its band coasts to a halt, the word fills in solid, the rest of the wall steps back, and the
-    item opens beneath it. ⚠️ **Third design.** A strung room of paper tags and a turning satin
+    item opens beneath it. The names are the **real products** with their prices and shop links,
+    and the reveal's *"or send the cash instead"* walks you down to the couple's **account details**
+    — there are no payment links anywhere on the site, by their decision. ⚠️ **Third design.** A strung room of paper tags and a turning satin
     ribbon came first; both were rejected, and for the same reason — *a quiet, scroll-revealed page
     is this chapter's failure mode.* ⚠️ **No artwork at all**, which is also why it stays current
     for free: adding a gift is adding a word. Ends by splitting in two to sign both names → RSVP.
@@ -88,8 +103,14 @@ is that no two pages share a language. Breaking it is what made With Love fail i
   with per-page scrub types (`.scrub`/`.fade`/`.write`/`.drawdown`); floating white cards recur on
   US, Big Day and In Frames. With Love and In Frames additionally **derive their geometry from
   measurement** — see ARCHITECTURE → Bespoke inner pages.
-- ✅ **Exits** — top edge reverse-rewinds into the ring; bottom edge is the scroll-driven
-  **cluster-unfurl outro** (user-approved). Both reversible.
+- ✅ **Exits — both edges are SCRUBS, not playbacks.** Every property of the return is a function
+  of one 0→1 number that the gesture drives directly, so it is reversible at any point and reaching
+  the end IS the arrival. Top edge: overscroll up and the chapter folds back into the deck behind a
+  frosted veil, with a loader that starts as the wordmark and travels to the centre of the frame.
+  Bottom edge: the page scrolls out and the ring reassembles under it (the cluster-unfurl outro).
+  ⚠️ **Letting go is a decision, not a retreat** — past 70% the release finishes the return, below it
+  the chapter comes back. Springing every release to zero is what made the homepage unreachable on a
+  phone (AUDIT #88); the lengths are sized so one ordinary gesture crosses that point.
 - ✅ **Mobile / touch** — swipe + momentum, tap-vs-swipe guard, parked EXPLORE button, portrait
   geometry fixes; the homepage refinements are device-verified.
 - ✅ **Homepage card copy** — each card face carries what its chapter is (*Our Journey So Far*,
@@ -106,13 +127,12 @@ is that no two pages share a language. Breaking it is what made With Love fail i
 - ✅ **Asset URLs are base-path correct on both hosts** — everything goes through
   [`utils/asset.js`](utils/asset.js). ⚠️ `import.meta.env.BASE_URL` **cannot** be used for this in
   Nuxt; it silently broke every image on the GitHub Pages deploy. See ARCHITECTURE → Base URL.
-- 🔧 **Open** — the rest of the real content/media (copy, gallery stills, the
-  registry list + its item art); **eight dead links to fill — RSVP (the primary CTA, on every page),
-  the With Love cash card, the In Frames Drive folder, all three maps (now inline links inside the
-  calendar's day card), Add to Calendar (one `.ics` carrying both wedding days), and the footer
-  credit**; Big Day follow-ups
-  (traditional-wedding date, thread-motion consistency, a real map card); favicon still Milla Nova's;
-  portrait card-sizing; code-health (split the ~1500-line scene module).
+- 🔧 **Open** — **one destination left to fill**: In Frames' "Add Your Photos" Drive folder (the
+  footer credit URL may never need one). Plus: the welcome-note copy, `SITE.countdownFrom`, a human
+  listen to the generated theme track, the wedding photographs In Frames is waiting for, three
+  registry links that point at a collection or brand page rather than the exact product, the favicon
+  (still Milla Nova's), and code-health — `useChapterScene.js` is past 2,400 lines and wants
+  splitting.
 
 Full live status → [`PROGRESS.md`](PROGRESS.md) · issue history → [`AUDIT.md`](AUDIT.md) · plan → [`docs/ROADMAP.md`](docs/ROADMAP.md)
 
@@ -148,7 +168,7 @@ npm run preview   # preview a production build
 | UI | Vue 3 `<script setup>` |
 | 3D / WebGL | **Three.js** + custom GLSL vertex & fragment shaders |
 | Animation | **GSAP** (timelines, eased tweens; `GSDevTools` under `?debug`) |
-| Audio | **Howler.js** (per-chapter ambient loops) |
+| Audio | **Howler.js** — ONE generated ambient track for the whole site (`SITE.themeAudio`), off by default |
 | Scroll | **Lenis** (inner pages) · homepage carousel: window `wheel` listener + touch handlers with release momentum on `#canvas-hit-layer` |
 | Styling | Tailwind v4 (via `@tailwindcss/vite`) + `assets/css/main.css` |
 | Fonts | Bague & Movie (local `.woff`) + Italiana / Monoton / Over the Rainbow (Google Fonts) |
@@ -178,7 +198,9 @@ components/
   chapter/WithLove.vue       ★ FOR OUR NEXT CHAPTER (slug `with-love`) — the wall: the gift names slide, forever
   chapter/ChapterSection.vue Generic section block — now the unused fallback
   chapter/PopupCard.vue      Floating white card (moment / utility / registry) pinned to the viewport
-  chapter/ChapterEnd.vue     Chapter-end: "See you there — RSVP" + socials + disclaimer
+  chapter/ChapterEnd.vue     Chapter-end: "See you there" + the date + RSVP + gift accounts + hashtag
+  GiftAccounts.vue           ★ The couple's two gift accounts — the ONLY renderer of SITE.gifts,
+                             in two voices (`tone="footer"` and `tone="page"`). Tap a number to copy.
 composables/
   useChapterScene.js         ★ The whole 3D experience: scene, shaders, intro, select/exit + CHAPTERS
   chapterPages.js            Inner-page content: CHAPTER_PAGES + POPUPS (data only)
@@ -190,7 +212,7 @@ new frames/                  📁 Media drop — the couple's raw photos/films, 
 wrangler.jsonc              Cloudflare deploy — static assets from .output/public, NO Worker script
 ```
 
-`composables/useChapterScene.js` (~1500 lines) is where ~90% of the project lives. Read
+`composables/useChapterScene.js` (~2,400 lines) is where ~90% of the project lives. Read
 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) before editing it. **Debug:** load any route with
 `?debug` (on the initial URL) for scene probes + the GSAP timeline scrubber.
 

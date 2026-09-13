@@ -237,7 +237,7 @@ defineEmits(['toggle-about', 'go-home', 'toggle-sound'])
      underneath. Rendered and compared frame by frame — the ring, the four cards and their films all
      have to stay READABLE through this the whole way down, because they are the thing the visitor
      is driving. 0.44 frosts the page; anything near 0.7 hides it. */
-  opacity: calc(0.08 + var(--p, 0) * 0.36);
+  opacity: calc(var(--p, 0) * 0.44);
   backdrop-filter: blur(calc(var(--p, 0) * 3.5px)) saturate(0.95);
   -webkit-backdrop-filter: blur(calc(var(--p, 0) * 3.5px)) saturate(0.95);
   -webkit-mask-image: linear-gradient(to bottom,
@@ -248,10 +248,14 @@ defineEmits(['toggle-about', 'go-home', 'toggle-sound'])
     #000 0%,
     #000 calc(var(--p, 0) * 112%),
     transparent calc(var(--p, 0) * 112% + 14%));
-  transition: opacity 0.55s ease;
+  /* ⚠️ NO TRANSITION WHILE THE PULL OWNS IT. `--p` IS the animation, and a 0.55s ease on an opacity
+     derived from it meant the wash was permanently half a second behind the finger — it smeared on
+     a quick pull and hung behind on the release. The transition belongs only to the hand-off at the
+     end, which is a state change rather than a scrub. */
+  transition: none;
 }
 /* Committed: hold it whole for the route change, then let it go and reveal the deck. */
-.back-veil.leaving { opacity: 0 !important; }
+.back-veil.leaving { opacity: 0 !important; transition: opacity 0.5s ease; }
 
 /* ── going back: the loader that was the logo ────────────────────────────────
    Starts where the wordmark is and travels to the middle of the frame as the veil reaches it. */
@@ -272,10 +276,15 @@ defineEmits(['toggle-about', 'go-home', 'toggle-sound'])
   z-index: 21;
   /* The ink is the chapter's, because the veil under it is the chapter's paper. */
   color: var(--accent, #333);
-  opacity: calc(var(--p, 0) * 1.5);
-  transition: opacity 0.45s ease;
+  /* ⚠️ IT LEADS, IT DOES NOT FOLLOW. At `p * 1.5` the loader was only fully up at 67% of the pull —
+     after the hero had finished folding back into a card at 60% — so it read as an indicator for
+     something that had already happened. Up inside the first quarter now; the RING still closes
+     with `--p`, which is the part that tracks the journey. */
+  opacity: calc(var(--p, 0) * 4);
+  /* Same reason as the veil: no transition while the pull is driving it. */
+  transition: none;
 }
-.pull-cue.leaving { opacity: 0; }
+.pull-cue.leaving { opacity: 0; transition: opacity 0.4s ease; }
 .pull-ring {
   position: relative;
   display: block;
@@ -317,8 +326,9 @@ defineEmits(['toggle-about', 'go-home', 'toggle-sound'])
   font-size: 0.68rem;
   letter-spacing: 0.26em;
   text-transform: uppercase;
-  /* Holds off until the mark has left the wordmark's line — two words in one place is a collision. */
-  opacity: calc(max(0, var(--p, 0) - 0.28) * 1.4);
+  /* Holds off until the mark has left the wordmark's line — two words in one place is a collision —
+     and then arrives quickly, because it is the half of the cue that says what is happening. */
+  opacity: calc(max(0, var(--p, 0) - 0.1) * 3.4);
 }
 
 .wordmark {

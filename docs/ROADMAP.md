@@ -52,10 +52,15 @@ prod- and real-browser-verified.
   read as "shrinks first, then expands"). Reversible; spins in the down-scroll direction. 9 "morph the page
   into a card" attempts were rejected and removed — don't reintroduce them.
 - ✅ **All 4 chapters built.** ⚠️ Superseded: this described the pre-pivot shared-layout build using the
-  reference's harvested copy. All four are now bespoke wedding pages with placeholder copy; In Frames
-  and With Love were each rebuilt again in August (film spools / wandering ink).
-- ✅ **Mobile / touch.** Carousel swipe + momentum, tap-vs-swipe guard, parked EXPLORE tap target, touch
+  reference's harvested copy. All four are now bespoke wedding pages; In Frames and With Love were
+  each rebuilt again in August (film spools / wandering ink). ⚠️ The copy is no longer a placeholder
+  everywhere: Coco &amp; Uvie is the couple's own words (2026-09-13) and the Gift Registry is their
+  real list (2026-09-11). The welcome note in `site.config.js` is the main one still standing in.
+- ✅ **Mobile / touch.** Carousel swipe + momentum (a real flick coasts — the velocity is a 90ms
+  window, not the last touchmove delta), tap-vs-swipe guard, parked EXPLORE tap target, touch
   top-edge exit, and portrait geometry fixes. All gated on `isMobile`.
+  ⚠️ **The touch top-edge exit was unreachable between 2026-09-12 and 2026-09-13** — the return's
+  scrub sprang back to zero on every release, so a thumb could never finish it. See AUDIT #88.
 
 ⚠️ **ONE WEDDING (2026-09-06).** The traditional marriage (23 Oct) was removed at the couple's
 request: `site.config` carries a single event, the countdown and the welcome note name only the

@@ -110,13 +110,16 @@ routes (so no intro replay). Handles:
   scene's select/deselect; `provide('webglSceneRef', …)` so the routed page can reach the scene.
 - Document title via `useHead({ title })` (assigning `document.title` directly gets clobbered
   by Nuxt once `pages/` is active).
-- **Audio inline** via Howler (lazy-initialised on first user gesture). Each chapter has a
-  looping ambient track (`CHAPTERS[i].audio`, `html5:true`) + a `tick` sound; volume fades up on
-  hover (0.12), louder on select (0.5), out on leave; the `SiteNav` sound toggle mutes Howler
-  globally. This is a faithful port of the reference's audio (verified 2026-07-23 via Browserless —
-  `chapter.millanova.com` uses the same Howler.js + the same files). ⚠️ **The 4 tracks are
-  PLACEHOLDERS** (the reference's own mp3s, named off the old chapter slugs) — swap for the couple's
-  wedding music and update `CHAPTERS[i].audio`. (`useAudio.js` was a *separate* never-imported
+- **Audio inline** via Howler (lazy-initialised on first user gesture). ⚠️ **ONE TRACK FOR THE
+  WHOLE SITE** since 2026-09-11 (`SITE.themeAudio`, user: "use the same music for all the pages"),
+  `html5:true`, plus a `tick` sound; volume fades up on hover (0.12), louder on select (0.5), out on
+  leave; the `SiteNav` sound toggle mutes Howler globally, and sound is OFF by default. The wiring is
+  a faithful port of the reference's audio (verified 2026-07-23 via Browserless —
+  `chapter.millanova.com` uses the same Howler.js). ⚠️ The four per-chapter tracks it replaced were
+  the **reference site's own mp3s**, renamed and never licensed — a liability, now gone. The file
+  that ships is GENERATED (`node scripts/gen-theme-audio.mjs`), so it is royalty-free by
+  construction; it has never been auditioned by a human. Drop a licensed file in at that path to
+  replace it and change nothing else. (`useAudio.js` was a *separate* never-imported
   composable, deleted 2026-07-23; it was not this working path.)
 - Sets `--noise-url` to an **absolute** URL (see [Base URL & assets](#base-url--assets)).
 
@@ -127,10 +130,18 @@ routes (so no intro replay). Handles:
 owns the inner-page scroll + exit:
 - **Lenis** smooth scroll (wrapper `.chapter-page`, content `.chapter-scroll`); each scroll
   tick → `scene.setScroll(px)` for the 1:1 hero coupling (P1), **and** → `updateExit(scroll)`.
-- **Top-edge exit** via a `wheel` listener (gated until the select-in settles): overscroll up past
-  the **top** edge past `EXIT_THRESHOLD` (800 px) → `doExit()` → `router.push('/')` → route watcher →
-  `deselectChapter()` (reverse rewind; DOM unmounts on navigate, one WebGL motion). `doExit()` takes
-  no args — only the top edge calls it.
+- **Top-edge return — A SCRUB, not a threshold** (`wheel` + `touch`, gated until the select-in
+  settles). Overscroll up inside `TOP_EDGE` (8 px of Lenis scroll) and every pixel drives
+  `scene.setBackProgress(0→1)` directly: the chapter folds back into the deck as you pull, reverses
+  under the same gesture, and reaching 1 IS the arrival. `EXIT_THRESHOLD` (800 px wheel /
+  `EXIT_THRESHOLD_TOUCH` 260 px finger) is the LENGTH OF THE ANIMATION, not a trigger distance.
+  ⚠️ **Letting go is a decision.** Past `RELEASE_COMMIT` (0.7) the release finishes the return and
+  calls `doExit()` → `scene.endBack()` → `router.push('/')`; below it the pull springs back and the
+  chapter returns. Springing EVERY release to zero is what made the homepage unreachable by any
+  gesture shorter than the whole 1150px it then was — see AUDIT #88.
+  ⚠️ `doExit()` calls `endBack()` BEFORE the push, which clears `selectedIndex` — that is what stops
+  the route watcher firing a second, animated `deselectChapter()` over a return that already
+  happened. It takes no args; only the top edge calls it.
 - **Bottom-edge exit (BUILT, scroll-driven)** via a transparent `.chapter-outro` section (200vh)
   below the article. `updateExit(scrollY)` maps scroll position → `de` 0→1: over the first leg the
   article scrolls fully out (`de` 0→`DROP_START`), then over the rest the ring's card drops in
@@ -718,7 +729,8 @@ scene
 | `txtMesh.position` | (0,-8,20) | center text; y=-8 clears the logo (#11) |
 
 > The old `SCROLL_EXIT_THRESHOLD` (scene-level scroll-back exit, #7) was **removed** — exits now
-> live in `pages/[slug].vue` at the page edges (`END_EXIT_THRESHOLD = 800` px overscroll there).
+> live in `pages/[slug].vue` at the page edges (`EXIT_THRESHOLD` 800 px of wheel /
+> `EXIT_THRESHOLD_TOUCH` 260 px of finger, which are the LENGTH of the return rather than a trigger).
 
 ### Poster slots
 Each of the 8 slots is built by `createPoster(i, chapterIdx, logoTexture)`. Slot `i` (1–8)
@@ -751,8 +763,14 @@ so `blendFactor` 0→1 straightens a card, and 2 is the hover state.
 ### Fragment shader — layered composite
 Composites three textures with `progress`-driven UV transforms:
 1. `posterTexture` — the chapter SVG artwork (`p1–p4.svg`)
-2. `photoTexture` — the chapter film (`VideoTexture`), shown inside the poster frame
-3. `logoTexture` — the Milla Nova logo, tinted with `borderColor` (the chapter accent)
+2. `photoTexture` — the chapter film (`VideoTexture`), shown inside the poster frame. ⚠️ The window
+   is **square** on a ring card and the whole layout is written for a **3:4** film; two of the four
+   are 9:16 phone video, so the sampled rectangle is re-cut to the film's real shape (`photoAspect`,
+   read off the still — which IS frame 0.04 of that film) and `photoFocus` per chapter says which
+   part of a taller one survives the crop. It is a CROP, never a scale. See AUDIT #82/#83.
+3. `logoTexture` — the couple's wordmark, punched into the poster in `borderColor` (the chapter
+   accent). ⚠️ Multiplied out at `progress` 1 (`logo.a *= 1.0 - progress`): on the ring it is the
+   card's own imprint, on the page it is a second, larger copy of what the nav already shows.
 
 `progress` (0 = carousel, 1 = fullscreen) drives how the poster reframes into a full-screen
 layout on selection. Back faces render near-white to blend with the page. The final alpha is
@@ -810,11 +828,12 @@ drives two exits — a top-edge reverse rewind and a scroll-driven bottom "outro
 | Trigger | Animation | Path |
 |---|---|---|
 | **Back button / nav logo** (any time) | reverse-spin into the ring | `router.push('/')` → watcher → `deselectChapter()` |
-| **Top edge**, overscroll up | reverse rewind | `doExit()` → `router.push('/')` → `deselectChapter()` |
+| **Top edge**, overscroll up | **scrubbed** fold back into the deck, driven by the gesture | `pushPull()` → `setBackProgress(k)` → (past `RELEASE_COMMIT`) `doExit()` → `endBack()` → `router.push('/')`. ⚠️ NOT `deselectChapter()` — `endBack()` clears `selectedIndex` so the route watcher stays out of it |
 | **Bottom**, scroll down into `.chapter-outro` (BUILT) | scroll-coupled ring reassembly + card drop | `updateExit` → `setExitProgress(de)` → `commitExit` → `endExit` + `router.push('/')` |
 
-- **`doExit()`** (`pages/[slug].vue`): fires once **top-edge** overscroll exceeds `EXIT_THRESHOLD`
-  (800 px); stops Lenis and `router.push('/')` (DOM unmounts → only WebGL animates). It takes no args —
+- **`doExit()`** (`pages/[slug].vue`): fires when the top-edge scrub reaches 1 — either because the
+  gesture drove it there or because it was released past `RELEASE_COMMIT` and settled. Calls
+  `scene.endBack()`, stops Lenis, `router.push('/')` (DOM unmounts → only WebGL animates). No args;
   only the top edge calls it.
 - **`deselectChapter()`** (~2.5 s, top/back): snaps the hero to ring-centre (`baseY`), reverse-spins
   `animatedRotationY → preSelectRot`, restores tilt / carousel-Y / all posters. Smooth from the top
@@ -897,13 +916,21 @@ video". `beginBack / setBackProgress / cancelBack / endBack` mirror the bottom e
 every property of the return is a function of one 0→1 number, so the pull IS the animation, it
 reverses under the same gesture, and reaching 1 is the arrival with nothing left to play.
 `deselectChapter()` — the route watcher's path for the Back button and the nav logo — is the same
-scrub driven by a tween, so there is exactly one description of what going home looks like. ⚠️ Two
-things the scrub needs that a threshold did not: **the scroller stands down while the pull owns the
-gesture** (`lenis.stop()`), or a push back down unwinds the pull AND scrolls the page in the same
-notches; and **a wheel has no "end"**, so the release needs a TIMER, not a check inside the handler
-that never runs once the events stop (the same shape as AUDIT #62 on touch).
+scrub driven by a tween, so there is exactly one description of what going home looks like. ⚠️ Four
+things the scrub needs that a threshold did not:
+  1. **The scroller stands down while the pull owns the gesture** (`lenis.stop()`), or a push back
+     down unwinds the pull AND scrolls the page in the same notches.
+  2. **A wheel has no "end"**, so the release needs a TIMER, not a check inside the handler that
+     never runs once the events stop (the same shape as AUDIT #62 on touch).
+  3. **Letting go has to MEAN something.** Springing every release back to 0 is right for a brush
+     against the top edge and makes the return unreachable by any gesture shorter than the whole
+     animation — which no wheel notch or thumb swipe is. Past `RELEASE_COMMIT` (0.7) the release
+     finishes; below it the chapter comes back. AUDIT #88.
+  4. **Nothing driven by the pull may carry a CSS transition.** `--p` IS the animation; a
+     `transition: opacity` on a `calc(--p)` opacity puts the veil and the loader half a second
+     behind the finger. Transitions belong to `.leaving` only. AUDIT #94.
 ⚠️ **BOTH EDGES OF A CHAPTER LEAD HOME, AND THE SIGNPOST BELONGS AT EACH DOOR.** The top takes a
-sustained pull (1150px of wheel, 340px of finger — that is the LENGTH OF THE ANIMATION now, not a
+sustained pull (800px of wheel, 260px of finger — that is the LENGTH OF THE ANIMATION, not a
 trigger distance); the bottom commits at the end of the outro. Both
 fill the same ring — drawn by `stroke-dashoffset` the way The Big Day's countdown dials are, with a
 chevron for the direction — but they are **two elements in two places**, because the two exits are

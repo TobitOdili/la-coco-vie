@@ -129,6 +129,19 @@ with the bottom every step must be locked into scroll so I can actually reverse 
    and the build fails on the GLSL after it. Cost two builds to learn twice.
    ⚠️ The portrait branch (`condition`) is untouched — that framing was already right.
 
+   **↪ 2026-09-13 — except it was not.** User: *"on mobile there is a strip of color at the top of the
+   page that makes the page look broken."* The portrait branch placed its photo window with two
+   hand-added offsets (`aspectRatio/2`, and another 40px of poster), and they only put the window's
+   top edge on the plane's top edge at ONE phone aspect. Everywhere else a band of the card's cream
+   paper sat above the film at the very top of the frame — and it scales with the frame: 3px at
+   390x844, **18px at 390x760**, which is the viewport an iPhone actually has once Safari's chrome is
+   counted. Derived now: solve the offset so the expression comes out at exactly 1.3333 at `uv.y = 1`
+   (which is `pUv.y = 1`, the window's own top edge) at every aspect. Verified by sampling the top
+   row of the canvas at six frame sizes. See AUDIT #92.
+   ⚠️ The dark band BELOW the card on a phone is NOT this bug and is deliberate: the hero is fitted
+   to the viewport's WIDTH, so a 24x32 card on a tall screen is shorter than the frame and the
+   renderer's clear colour (the chapter accent) fills beneath it. That is where "READ ON" lives.
+
    **↪ 2026-09-13 — the same three numbers again, as FRACTIONS this time.** User: *"the hero section
    on desktop still has the huge title and only half the hero is the video."* They were right, and
    the reason was that 620 / 350 / 0.06 are only correct at one frame size. `posterSize` was a fixed
@@ -155,7 +168,8 @@ with the bottom every step must be locked into scroll so I can actually reverse 
    `cy` −43 → −36.8 → −24.1 → −13.6 → −12 and hero scale 3.31 → 2.23 → 1.01 → 1, tracking the pull;
    pushing back down runs every one of them in reverse under the same gesture; releasing springs
    back to exactly the captured state; and the page scrolls normally afterwards.
-   ⚠️ The threshold is the LENGTH of the animation now (1150px of wheel, 340px of finger), not a
+   ⚠️ The threshold is the LENGTH of the animation now (1150px of wheel, 340px of finger — cut to
+   **800 / 260** the next day so one ordinary gesture can cross the release-commit; see below), not a
    trigger distance. ⚠️ **Lenis stands down while the pull owns the gesture** — without it a push
    back down unwound the pull AND scrolled the page in the same notches, leaving you a few hundred
    pixels in with no way to pull again. ⚠️ **A wheel has no "end"**: the release needs a timer, not a
@@ -170,6 +184,20 @@ with the bottom every step must be locked into scroll so I can actually reverse 
    not a tween played over it, and a new gesture interrupts it until `doExit` fires. See AUDIT #88.
    ⚠️ Also `TOP_EDGE` 2 → 8: Lenis eases into the top over about four notches, and at a 2px tolerance
    every one of them did nothing at all (AUDIT #91).
+
+   **↪ 2026-09-13 (same day, second pass) — AND THEN IT HAD TO STOP LAGGING.** Reachable is not the
+   same as right. Three things were still wrong and the user called all three: *"still broken and
+   glitchy, and it seems the loading animation appears AFTER the page has become a card again."*
+   • **The veil and the cue were half a second behind the finger.** Both opacities are `calc()`s of
+     `--p` — the scrub itself — and both carried a 0.45–0.55s CSS transition on `opacity`. The one
+     thing that had to be locked to the gesture was the one thing lagging it. `transition: none`
+     while the pull owns them; the transition belongs only to `.leaving`. (AUDIT #94.)
+   • **The loader arrived after the card had already folded.** `BACK_POSTERS` 0.60 → **0.82**, and
+     the cue is fully up inside the first quarter. The indicator leads. (AUDIT #93.)
+   • **The commit ran the last stretch at a flat rate.** It closes a fraction of what REMAINS each
+     frame now, so it decelerates into the arrival instead of hitting it at speed. And the engage
+     order was wrong: `beginBack()` zeroes the scroll coupling as it snapshots, so it has to run
+     AFTER `scrollTo(0)`, not before. (AUDIT #95.)
 
 3. **The veil.** A frosted wash comes down over the page as the pull is drawn — the mask's edge is
    `--p` — with the loader starting where the wordmark is (which fades out under it) and travelling

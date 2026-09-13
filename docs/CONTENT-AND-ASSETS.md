@@ -125,7 +125,9 @@ public/
 │   ├── cu-txt1.png … cu-txt4.png  Floating center-text art (the per-chapter tagline)
 │   ├── cu-logo.png              The C&U wordmark rendered into the shader (⚠️ alpha = accent mask)
 │   ├── noise.png                Film-grain overlay (animated via body::after) — 792 KB
-│   ├── us/                      US polaroids — the couple's own (900px verticals), 5 files
+│   ├── us/                      US polaroids — the couple's own (900px verticals), 3 files
+│   │                            (⚠️ was 5; brunch-day, neon-restaurant and love-big-ben were
+│   │                            deleted 2026-09-13 with the page's two popup cards)
 │   ├── reel/                    In Frames — the couple's own: the 5 `*-sm` thumbs on the background
 │   │                            spools. ⚠️ The 11 `proj-*` / full-size PRINTS were REMOVED
 │   │                            2026-09-05: the prints design was replaced by the folder window and
@@ -154,11 +156,18 @@ the couple). Unreferenced, but tracked and deployed on every build. **Deleted 20
     └── Movie.woff               "Movie"-style display font (About copy)
 ```
 
-### Inner-page COPY — ⚠️ ALL PLACEHOLDER
+### Inner-page COPY — part real, part standing in
 
-`composables/chapterPages.js` holds `CHAPTER_PAGES` + `POPUPS`. **Every word of it is written to
-demonstrate placement and tone, not fact** — dates, venues, story beats and gift items are invented,
-and `[bracketed notes]` mark what the couple must fill in.
+`composables/chapterPages.js` holds `CHAPTER_PAGES` + `POPUPS`. It used to say **all placeholder**;
+that has not been true since September 2026.
+
+| Page | Copy |
+|---|---|
+| **Coco & Uvie** (`us`) | ✅ **The couple's own words, verbatim** (2026-09-13). ⚠️ It arrived without two of the page's devices, so both are OPTIONAL and unused: the per-scene `date` (the stitch line still draws, it just carries no words) and `notes[]`, the two-voice margin notes (`voice: 'c'` Covenant / `'u'` Uvie) plus the polaroid `caption`. The margin notes are this page's best trick — two short lines a scene. `body` is an ARRAY of paragraphs; a `'\n'` inside one is a hard line break; one paragraph per page may be `{ t, ask: true }` for the line the scene is built around. |
+| **The Big Day** | ✅ Real, and deliberately almost empty. **The date is the only fact on the page** (user, 2026-09-06) — no times, venue, programme, dress code or map, and no hover that reveals any. The RSVP is the gate. Do not re-add them. |
+| **In Frames** | ✅ Real UI text (it is a file browser). The three folders are the couple's events; the photographs they will hold do not exist yet, and the page says so. |
+| **For Our Next Chapter** (`with-love`) | ✅ **The couple's real Gift Registry** (2026-09-11), by real product names with prices and shop links (2026-09-12). ⚠️ No `cashUrl` field and no payment links anywhere — the couple's **account details** live in `SITE.gifts` and render through `components/GiftAccounts.vue`. |
+| **POPUPS** | ⚠️ Mostly ORPHANED. The two US moment cards were deleted with the page's widgets (2026-09-13); `dressCode` and the four `reg*` cards are kept only in case a utility card is wanted again. `fullAlbum`'s Drive URL is the site's last unfilled destination. |
 
 ⚠️ **This section used to say the copy was the reference's own verbatim harvest. That has been false
 since the 2026-07-23 pivot** — the harvested Milla Nova copy was replaced wholesale by the wedding
@@ -322,9 +331,23 @@ both vanished this way). Reinstall, or use macOS `sips` for straight resizing �
 
 ### Swapping the card films
 
-The card shader is tuned for a **900×1200 (3:4) portrait, silent** texture — the same geometry the
-reference's films used. Source clips are usually square phone exports, so **crop to fill**; letting a
-square texture stretch into the 3:4 window distorts faces. Install `ffmpeg-static` **into a scratch
+The card shader's layout is written for a **900×1200 (3:4) portrait, silent** texture — the same
+geometry the reference's films used.
+
+⚠️ **A NON-3:4 FILM IS NO LONGER STRETCHED, BUT IT IS CROPPED HARD, AND YOU CHOOSE HOW** (2026-09-13).
+The window is SQUARE on a ring card and a wide letterbox on the desktop hero, so a 9:16 phone video
+loses most of its height either way. Two things make that survivable and both need you:
+1. `photoAspect` — read off `still-{slug}.jpg`, which IS frame 0.04 of the film. **Re-run
+   `npm run gen:stills` after any film swap** or the shader sizes the crop from the old film.
+2. `focus` on the chapter in `CHAPTERS` — 0 keeps the top of the frame, 1 the bottom, 0.5 centres;
+   it is INERT for a 3:4 film. Look at the still and pick: the couple stand low in `us.mp4`
+   (`focus: 1`) and high in `with-love.mp4` (`focus: 0.48`), and the same value flatters one and
+   shows the other a ceiling. See AUDIT #82/#83.
+
+Encoding to 3:4 up front is still the better answer where you have the footage to spare — it puts
+the framing decision in front of a human looking at the video. Source clips are usually square or
+9:16 phone exports, so **crop to fill**; letting a square texture stretch into the 3:4 window
+distorts faces. Install `ffmpeg-static` **into a scratch
 directory** (not the repo, not brew):
 
 ```bash

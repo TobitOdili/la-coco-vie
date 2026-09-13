@@ -253,8 +253,18 @@ void main() {
     pUv.y -= edge - (progress*.05*1.5);
     if (condition) {
         float pUvY = (ppUv.y - 1.) * aspectRatio * 1.75 + 1.;
-        pUvY += aspectRatio / 2.;
-        pUvY += 40./ (posterWidth*posterAspectRatio);
+        // ⚠️ THE FILM HAS TO LAND ON THE PLANE'S TOP EDGE, and this used to be two hand-added
+        // offsets (aspectRatio/2 and another 40px of poster) that only did so at ONE phone aspect.
+        // Anywhere else the window's top edge fell short and a band of the card's cream paper was
+        // left above the film, at the very top of the frame, reading as a broken page. It scales
+        // with the frame: 3px on a 390x844 viewport and 18px on the 390x760 an iPhone actually has
+        // once Safari's chrome is counted — which is the size the report came in at.
+        // Derived instead: solve the offset so that at uv.y = 1 (the plane's top) this expression
+        // comes out at exactly 1.3333, which is pUv.y = 1 after the divide below — the window's own
+        // top edge. TOP_EPS keeps it a hair inside, because the mask test is strict.
+        float topY = (40./(windowWidth*posterAspectRatio)) * aspectRatio * 1.75 + 1.;
+        float TOP_EPS = 0.004;
+        pUvY += 1.33333 - topY - TOP_EPS;
         pUv.y = mix(pUv.y, pUvY, progress);
         pUv.y /= 1.333;
     } else {
@@ -1757,7 +1767,14 @@ export function useChapterScene() {
   // The sub-ranges are the old timeline's durations over its 2.5s span, kept so the shape is the
   // one that was signed off: posters 1.5s ⇒ [0, 0.60], background 1.6s ⇒ [0, 0.64], and the
   // carousel's own pose the full 2.5s ⇒ [0, 1].
-  const BACK_POSTERS = 0.60
+  // ⚠️ 0.60 PUT THE CARD HOME BEFORE THE LOADER GOT THERE. User: "it seems the loading animation
+  // appears AFTER the page has become a card again" — and it did: the hero finished folding back
+  // into a ring card at 60% of the pull while the cue was still fading up (full at 67%) and its
+  // ring still a third open. The indicator has to lead the thing it is indicating, so the fold now
+  // runs almost the whole way and the cue is up inside the first quarter (see `.pull-cue` in
+  // SiteNav). ⚠️ Not 1.0: whatever is unfinished when the pull is released past RELEASE_COMMIT is
+  // carried by the settle, and the settle should be a finish rather than a fast-forward.
+  const BACK_POSTERS = 0.82
   const BACK_BG = 0.64
   // ⚠️ THE CENTRE WORDMARK IS A WINDOW, NOT A DEADLINE, AND IT STARTS LATE. It was [0, 0.40] — the
   // homepage's big centre plane ("SAVE the DATE — CEREMONY, RECEPTION…") reaching FULL opacity and

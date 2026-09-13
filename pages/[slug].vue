@@ -148,14 +148,16 @@ function pushPull() {
   syncNavInk()
   if (!scene) return
   if (pullTop.value > 0 && !backEngaged) {
+    // ⚠️ LAND ON THE TOP FIRST, THEN CAPTURE. The pull engages anywhere inside TOP_EDGE, and
+    // `beginBack` zeroes the scene's scroll coupling as it snapshots the pose — so capturing while
+    // the page was still a few pixels down dropped the hero card by those pixels in one frame,
+    // right at the start of the return. Order matters: scroll home, then snapshot, then stop.
+    lenis?.scrollTo(0, { immediate: true })
     backEngaged = !!scene.beginBack?.()
     // ⚠️ THE SCROLLER STANDS DOWN WHILE THE PULL OWNS THE GESTURE. Without this a push back down
     // unwound the pull AND scrolled the page in the same notches, so reversing a return left you a
     // few hundred pixels into the chapter with no way to pull again. One gesture, one meaning.
-    // ⚠️ AND IT LANDS ON THE TOP as it does. The pull engages anywhere inside TOP_EDGE, so without
-    // this the page could freeze a handful of pixels short of 0 — and those pixels are the seam
-    // between the article and the hero card the return is about to fold away.
-    if (backEngaged) { lenis?.scrollTo(0, { immediate: true }); lenis?.stop() }
+    if (backEngaged) lenis?.stop()
   }
   if (!backEngaged) return
   if (pullTop.value <= 0) {
@@ -176,7 +178,13 @@ function pushPull() {
 // (0.64), so what settles after this is the last of the group's tilt — a finish, not a playback.
 const RELEASE_COMMIT = 0.7
 const RELEASE_STEP = 0.055   // per frame, springing back — about 210ms from just under the commit
-const SETTLE_STEP = 0.022    // per frame, finishing — about 250ms over the remaining 0.3
+// ⚠️ THE FINISH DECELERATES. A flat step covered the last stretch at a constant rate and arrived at
+// full speed, which after a slow scrub reads as the animation being taken away and played — the
+// exact complaint the scrub was built to answer. Closing a fraction of the REMAINING distance each
+// frame eases out on its own: about 450ms from the commit point, fastest at the moment you let go
+// and slowest as it lands.
+const SETTLE_EASE = 0.085    // fraction of what is left, per frame
+const SETTLE_SNAP = 0.004    // close enough to 1 to call it arrived
 
 let releaseRaf = 0
 function releasePull() {
@@ -198,7 +206,8 @@ function releasePull() {
 // (both input handlers cancel `releaseRaf`) right up until `doExit` fires.
 function settlePull() {
   const step = () => {
-    pullTop.value = Math.min(1, pullTop.value + SETTLE_STEP)
+    const left = 1 - pullTop.value
+    pullTop.value = left <= SETTLE_SNAP ? 1 : pullTop.value + left * SETTLE_EASE
     topAccum = pullTop.value * threshold()
     pushPull()
     if (pullTop.value < 1) releaseRaf = requestAnimationFrame(step)
