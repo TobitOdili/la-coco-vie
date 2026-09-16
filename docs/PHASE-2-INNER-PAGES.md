@@ -105,6 +105,59 @@ state, everything below it is history — newest first.)
 
 ---
 
+## ▶▶ THE MOBILE SELECT, DIAGNOSED PROPERLY — 2026-09-16 (AUDIT #113, #114; #98 reverted)
+
+User: *"I still want the spin to happen on clicking a card in mobile. I was just saying the image
+seems to slide over the title of the card while it transitions to page. Keep the spin animation on
+mobile as we have on desktop."*
+
+**#98 was the wrong fix and is reverted.** The symptom had been read correctly a round earlier and
+then pinned on the wrong cause — the select's extra forward turn — so portrait was given a
+shortest-signed-path rotation. That did remove the flat-colour stretch, by removing the spin. The
+turn is back on every device, unchanged from landscape.
+
+⚠️ **The lesson is not "measure more".** The measurements were fine both times. *"The picture
+slides over IT"* names the thing being covered and I never asked what **it** was. It was the card's
+own **title**.
+
+**What is actually happening (#113).** `progress` morphs the card from ring framing — title, with a
+small photo window under it — to hero framing. Landscape's hero keeps a title band, so as the
+window grows the title rises INTO that band and the two never meet. Portrait's hero is full-bleed
+film to the plane's top edge (#92), so the window's top edge has to travel up **through the title**
+to get there. Filmed at 45ms on a 390×844 phone: at `progress` 0.04 the picture's edge is under
+"COCO & UVIE", by 0.16 it has eaten "& UVIE", by 0.43 only a fragment of "COCO" is left. And traced:
+the card stays broad and facing the viewer (|normalDotCam| ~0.84) for the first **1.2s** while
+progress climbs 0 → 0.62 — the whole wipe in plain sight.
+
+The morph now runs at timeline position **1.15 for 1.1s**, while the card is off to the side. The
+card you tapped spins away as the card you tapped, title whole, and swings back already framed as
+the page. The rotation is untouched.
+
+**And the other half (#114).** The deck dropped out of frame from the first frame of the select,
+which landscape can afford because its hero is wider than the viewport and covers the fall.
+Portrait's hero is ~390×520 in an 844-tall frame **and** swings off to the side mid-turn, so there
+was nothing on screen at all — eleven consecutive captured frames of flat accent, about a second.
+A phone was promised a spin and shown brown. The deck now holds while the hero is away and falls as
+it comes back (position 1.15, duration 1.5); re-filmed, it sweeps COCO & UVIE, IN FRAMES, FOR OUR
+NEXT CHAPTER and THE BIG DAY past the frame, and the empty stretch is down to about three frames.
+⚠️ It must be gone by the time the hero seats at 3s — portrait's hero covers only the top ~62%,
+so a card left up pokes out below it, which is what `hideFrom` exists to solve. 2.65s, a third of a
+second clear.
+
+**Verified:** desktop's progress curve unchanged (0 → 0.13 → 0.5 → 0.88 → 1, same as before);
+tablet portrait (768×1024) filmed and reads well; deep links on all four chapters at both sizes land
+at `progress` 1 with no deck cards left up; select, top-edge return (one 260px swipe) and bottom
+exit (14 swipes) all work on touch; 15 route/size loads with **0 overflow, 0 errors, 0 failed
+requests**.
+
+⚠️ **The root cause is still there, and it is a design question, not a bug.** Portrait's hero has
+no title band, so a guest on a phone never sees which chapter they opened — and the wipe is now
+hidden rather than impossible. Giving portrait a title band the way landscape has one would remove
+it at the source and put the chapter's name back on the page. That is a visible change to the first
+screen of every chapter, so it is the couple's call, not a silent fix.
+
+---
+
 ## ▶▶ FULL QA PASS — 2026-09-15, `dfe865cc` (no fixes; survey + plan) → [`QA-2026-09-15.md`](QA-2026-09-15.md)
 
 User: *"now I want you to do a FULL Q/A pass. Do it exhaustively and thoroughly … Don't solve right

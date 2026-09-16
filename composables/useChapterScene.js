@@ -1710,23 +1710,14 @@ export function useChapterScene() {
       carousel.position.y = selectedCarouselY()
       groupG.rotation.set(0, 0, 0)
     } else {
-      // ⚠️ PORTRAIT TAKES THE SHORT WAY ROUND. Landscape advances a whole extra turn on purpose —
-      // the deck spinning up to present the card you picked is the homepage's signature, and on a
-      // wide frame the hero is WIDER THAN THE VIEWPORT for most of that turn, so what you see is a
-      // card filling the screen rather than one travelling across it. On a phone the same hero is
-      // only ~390×520 in a 390×760 frame: it does not cover the screen, so the turn plays out as
-      // the picture sweeping in from off-frame over flat accent — "I can see the picture slide over
-      // it while it becomes a page". Same animation, different reading, because the card's size
-      // relative to the frame is different. Portrait goes straight to front-facing instead: the
-      // card you tapped flattens and grows where it already is.
-      // ⚠️ NOT zero rotation — the SHORTEST SIGNED path. Tap a card off to the side and it still
-      // turns to face you, which is the part that has to stay.
-      if (isMobile) {
-        const d = targetRot - carousel.animatedRotationY
-        targetRot = carousel.animatedRotationY + Math.atan2(Math.sin(d), Math.cos(d))
-      } else {
-        while (targetRot - carousel.animatedRotationY < Math.PI) targetRot += TWO_PI
-      }
+      // ⚠️ ONE FULL FORWARD TURN, ON EVERY DEVICE. The deck spinning up to present the card you
+      // picked is the homepage's signature and it is NOT what the phone complaint was about.
+      // 2026-09-16, user: "I still want the spin to happen on clicking a card in mobile. I was just
+      // saying the image seems to slide over the title of the card while it transitions to page."
+      // A shortest-signed-path branch for portrait shipped in 2852aa80 and is reverted here — it
+      // answered a question nobody asked and took the turn away. The real fault is in the SHADER,
+      // not the rotation: the photo window grows up over the card's own title. See AUDIT #113.
+      while (targetRot - carousel.animatedRotationY < Math.PI) targetRot += TWO_PI
       tl.to(carousel, { animatedRotationY: targetRot, duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
 
       // Move carousel down
@@ -1741,10 +1732,38 @@ export function useChapterScene() {
     // the reference-tuned value.
     const s = heroFillScale()
 
-    const heroDur = fast ? 1.1 : 2
-    tl.to(heroPoster.material.uniforms.blendFactor, { value: 1.0, duration: heroDur, ease: 'power3.inOut', overwrite: true }, 0)
-    tl.to(heroPoster.material.uniforms.progress, { value: 1.0, duration: heroDur, ease: 'power3.inOut', overwrite: true }, 0)
-    tl.to(heroPoster.mesh.scale, { x: s, y: s, z: 1, duration: heroDur, ease: 'power3.inOut', overwrite: true }, 0)
+    // ── WHEN the card re-frames itself, which is not the same question as how ───────────
+    // `progress` morphs the card from ring-card framing (title, with a small photo window under
+    // it) to hero framing. On LANDSCAPE the hero keeps a title band, so as the window grows the
+    // title rises INTO that band and the two never meet — the morph is legible and it plays while
+    // the card is wider than the viewport. On PORTRAIT the hero is full-bleed film to the plane's
+    // top edge (AUDIT #92), so the window's top edge has to travel all the way up THROUGH the
+    // card's own title to get there.
+    // ⚠️ And it did that on camera. Traced on a 390×844 phone: the card stays broad and facing
+    // the viewer (|normalDotCam| ~0.84) for the first 1.2s, while progress climbs 0 → 0.62 — so
+    // the whole wipe happened in plain sight. User, 2026-09-16: "the image seems to slide over the
+    // title of the card while it transitions to page."
+    // The answer is NOT to take the turn away (that shipped in 2852aa80 and was wrong — the spin
+    // is the homepage's signature and the user asked for it back). It is to run the re-framing
+    // while the card is off to the side: the card you tapped spins away AS the card you tapped,
+    // title intact, and swings back already framed as the page.
+    // ⚠️ The window is bounded by the turn, not chosen by feel — measured on the same trace:
+    // the card is broad and on screen 0 → ~1.15s, off to the side ~1.2 → ~2.4s, and back in frame
+    // from ~2.4s. Landscape is untouched: its morph is the good part, and hiding it would be
+    // throwing away the thing that makes the desktop select read.
+    // ⚠️ THE GATE IS `isMobile` (aspect < 1), WHICH IS WIDER THAN THE WIPE. The shader's own
+    // `condition` — the full-bleed framing that causes the wipe — is
+    // `aspectRatio < 0.75 || (windowWidth < 768 && aspectRatio < 1)`, so a 768×1024 tablet is
+    // PORTRAIT but draws the landscape hero, title band and all, and has no wipe to hide. It is
+    // inside this gate anyway, deliberately: mirroring that expression in JS would put the 768 in
+    // two places, and a breakpoint duplicated across a shader and its caller is exactly the drift
+    // that produced the md-step in `posterSize` (AUDIT #84). The cost of over-gating is that the
+    // tablet's morph plays off camera too — filmed at 768×1024, it reads fine.
+    const heroDur = fast ? 1.1 : (isMobile ? 1.1 : 2)
+    const heroAt = (fast || !isMobile) ? 0 : 1.1
+    tl.to(heroPoster.material.uniforms.blendFactor, { value: 1.0, duration: heroDur, ease: 'power3.inOut', overwrite: true }, heroAt)
+    tl.to(heroPoster.material.uniforms.progress, { value: 1.0, duration: heroDur, ease: 'power3.inOut', overwrite: true }, heroAt)
+    tl.to(heroPoster.mesh.scale, { x: s, y: s, z: 1, duration: heroDur, ease: 'power3.inOut', overwrite: true }, heroAt)
 
     // Hide every other poster (including the same chapter's back copy) by dropping it below the
     // frame. The offset must clear the CAROUSEL's selected height, not just be "a big number":
@@ -1763,10 +1782,22 @@ export function useChapterScene() {
       const halfH = dFar * Math.tan(toRad(camera.fov / 2))   // visible half-height there
       hideFrom = -(halfH + 16 + 12) - selectedCarouselY()    // 16 = card half-height, 12 = margin
     }
+    // ⚠️ ON A PHONE THE DECK IS THE ONLY THING THERE IS, so it cannot leave early. Landscape can
+    // drop it from the first frame because the hero is wider than the viewport and covers the whole
+    // fall; portrait's hero is ~390×520 in an 844-tall frame AND it swings off to the side for the
+    // middle of the turn, so dropping the deck at 0 left the screen showing nothing but flat accent
+    // for about a second — captured frame by frame, eleven consecutive frames of brown. That is a
+    // spin the visitor was promised and could not see. The deck now holds while the hero is away
+    // and falls as it comes back, so what a phone shows IS the turn.
+    // ⚠️ It still has to be gone by the time the hero seats (the turn ends at 3s): portrait's hero
+    // covers only the top ~62% of the frame, so a card left up pokes out below it — which is what
+    // `hideFrom` above is solving for. 1.15 + 1.5 lands it at 2.65s, a third of a second clear.
+    const deckAt = (fast || !isMobile) ? 0 : 1.15
+    const deckDur = (fast || !isMobile) ? 2 : 1.5
     posters.filter((p) => p !== heroPoster).forEach((p, idx) => {
       // On a deep link they were never on screen — park them, don't animate them off.
       if (fast) { p.mesh.position.y = hideFrom - idx * 8; return }
-      tl.to(p.mesh.position, { y: hideFrom - idx * 8, duration: 2, ease: 'power3.inOut', overwrite: true }, 0)
+      tl.to(p.mesh.position, { y: hideFrom - idx * 8, duration: deckDur, ease: 'power3.inOut', overwrite: true }, deckAt)
     })
   }
 
