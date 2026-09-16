@@ -127,6 +127,8 @@ const webglSceneRef = inject('webglSceneRef', null)
 // inside the band of accent the pull opens above the page card. (The BOTTOM edge's cue is in this
 // page's own content, at the end of it.)
 const navPull = useState('homePull', () => 0)
+// The cue's own 0→1 — it finishes at FOLD_FROM, where the veil is only half drawn. See pushPull.
+const navCue = useState('homeCue', () => 0)
 // Set at the moment of commit and cleared by SiteNav once its veil has faded: the page itself
 // unmounts on the next tick, so it cannot be the thing that plays the veil out.
 const navLeaving = useState('homeLeaving', () => false)
@@ -140,7 +142,10 @@ const navLeaving = useState('homeLeaving', () => false)
 let backEngaged = false
 function pushPull() {
   const scene = webglSceneRef?.value?.scene
+  // The veil reads the raw pull; the cue completes at the end of the FIRST stage, because the cue
+  // closing IS "the animation completing within the page".
   navPull.value = pullTop.value
+  navCue.value = Math.min(1, pullTop.value / FOLD_FROM)
   // ⚠️ RE-PROBE THE NAV'S GROUND. `syncNavInk` otherwise only runs on Lenis scroll events, and the
   // pull STOPS Lenis — so the flag was whatever the last scroll left it as while the veil, which is
   // the chapter's pale paper, washed in underneath the nav. Measured mid-pull: menu ink
@@ -166,7 +171,9 @@ function pushPull() {
     if (!exiting) lenis?.start()
     return
   }
-  scene.setBackProgress(pullTop.value)
+  // ⚠️ THE SCENE ONLY MOVES IN THE SECOND STAGE. Below FOLD_FROM this is 0 — `beginBack` has
+  // captured the pose and is holding it, so the chapter sits there whole while the loader draws.
+  scene.setBackProgress(Math.max(0, (pullTop.value - FOLD_FROM) / (1 - FOLD_FROM)))
 }
 
 // ⚠️ LETTING GO IS A DECISION, NOT A RETREAT. This used to spring every release back to 0 — which
@@ -176,7 +183,12 @@ function pushPull() {
 // point the gesture has plainly been made, so the release finishes it; below it, nothing happened.
 // ⚠️ The posters are home by BACK_POSTERS (0.60) and the accent ground has cleared by BACK_BG
 // (0.64), so what settles after this is the last of the group's tilt — a finish, not a playback.
-const RELEASE_COMMIT = 0.7
+// ⚠️ PAST THE FOLD'S START, deliberately: releasing can only commit once the card has visibly
+// begun going back, so "I let go and it went home" is never a surprise.
+const RELEASE_COMMIT = 0.62
+// The inverse of `pullFrom` — the release drives `pullTop` directly and has to keep the pixel
+// accumulator honest, or a new gesture would resume from the wrong place.
+const accumFor = (p) => deadZone() + Math.pow(Math.min(1, Math.max(0, p)), 1 / PULL_GAMMA) * (threshold() - deadZone())
 const RELEASE_STEP = 0.055   // per frame, springing back — about 210ms from just under the commit
 // ⚠️ THE FINISH DECELERATES. A flat step covered the last stretch at a constant rate and arrived at
 // full speed, which after a slow scrub reads as the animation being taken away and played — the
@@ -193,7 +205,7 @@ function releasePull() {
   if (pullTop.value >= RELEASE_COMMIT) { settlePull(); return }
   const step = () => {
     pullTop.value = Math.max(0, pullTop.value - RELEASE_STEP)
-    topAccum = pullTop.value * threshold()
+    topAccum = accumFor(pullTop.value)
     pushPull()
     if (pullTop.value > 0) releaseRaf = requestAnimationFrame(step)
   }
@@ -208,7 +220,7 @@ function settlePull() {
   const step = () => {
     const left = 1 - pullTop.value
     pullTop.value = left <= SETTLE_SNAP ? 1 : pullTop.value + left * SETTLE_EASE
-    topAccum = pullTop.value * threshold()
+    topAccum = accumFor(pullTop.value)
     pushPull()
     if (pullTop.value < 1) releaseRaf = requestAnimationFrame(step)
     else doExit()
@@ -258,6 +270,34 @@ let lenis = null
 // letting go past that point FINISHES it — and these are sized so one comfortable gesture gets
 // there: 560px of wheel (≈4.7 notches, or one flick) and 182px of thumb.
 const EXIT_THRESHOLD = 800  // px of overscroll past the TOP edge — the full length of the return
+// ── resistance ───────────────────────────────────────────────────────────────
+// ⚠️ THE RETURN SHOULD COST SOMETHING. Straight px ÷ length made the first notch at the top edge
+// move the whole chapter, so brushing the top while reading started the page folding away. Two
+// things stand in the way now, and neither is a delay — both are things you can feel:
+//   • A DEAD ZONE. The first stretch of overscroll does nothing at all, so the top edge is a wall
+//     before it is a handle and an accidental nudge cannot begin the return.
+//   • A GAMMA. Past the dead zone, progress is `u ^ PULL_GAMMA` with the exponent above 1, so the
+//     early travel buys less than the late travel: it takes real effort to get the return moving
+//     and then it comes with you. That is what a spring feels like.
+// ⚠️ These are load-bearing on reachability — see AUDIT #88, where the return was unreachable for
+// two days. Every change here has to be re-measured against a 200px thumb swipe and a wheel roll.
+const DEAD_WHEEL = 70        // px of overscroll that buys nothing
+const DEAD_TOUCH = 28
+const PULL_GAMMA = 1.4
+const deadZone = () => (touchMode ? DEAD_TOUCH : DEAD_WHEEL)
+function pullFrom(px) {
+  const d = deadZone()
+  const u = Math.min(1, Math.max(0, (px - d) / Math.max(1, threshold() - d)))
+  return Math.pow(u, PULL_GAMMA)
+}
+// ── the two stages ───────────────────────────────────────────────────────────
+// ⚠️ THE PAGE STAYS A PAGE UNTIL THE RING HAS CLOSED. User: "would be even better to see the
+// animation complete within the page before reversing the card back into homepage." So the pull is
+// in two halves and the SCENE does not move at all in the first one: the veil washes down and the
+// loader draws and completes, with the chapter still whole under it; only past this does the card
+// begin folding back into the deck. The cue gets its own 0→1 over the first stage (`homeCue`) while
+// the veil keeps the raw pull, which is why there are two shared values rather than one.
+const FOLD_FROM = 0.5
 let topAccum = 0             // top overscroll accumulator — the scrub's position, in px
 let touching = false         // a finger is down right now
 // ⚠️ NOT `touching`. The release runs AFTER touchend, so reading "is a finger down" there picked
@@ -315,9 +355,9 @@ function onWheel(e) {
     // it". Clamped at 0, where `pushPull` hands the page back to the scroll coupling.
     cancelAnimationFrame(releaseRaf)
     topAccum = Math.max(0, topAccum - dy)
-    pullTop.value = Math.min(1, topAccum / threshold())
+    pullTop.value = pullFrom(topAccum)
     pushPull()
-    if (topAccum >= threshold()) doExit()
+    if (pullTop.value >= 1) doExit()
   } else if (topAccum > 0) {
     releasePull()
   }
@@ -327,7 +367,7 @@ function onWheel(e) {
 // phone was the nav logo. A finger covers ground faster than a wheel, so the same journey is a
 // shorter number. (The BOTTOM exit needs nothing extra: it's driven by Lenis scroll position,
 // which native touch scrolling already produces.)
-const EXIT_THRESHOLD_TOUCH = 260
+const EXIT_THRESHOLD_TOUCH = 240
 let touchLastY = 0
 function onTouchStart(e) {
   const t = e.touches[0]
@@ -346,9 +386,9 @@ function onTouchMove(e) {
   touchMode = true
   if (lenis.scroll <= TOP_EDGE) {
     topAccum = Math.max(0, topAccum - dy)     // signed — see the note in onWheel
-    pullTop.value = Math.min(1, topAccum / EXIT_THRESHOLD_TOUCH)
+    pullTop.value = pullFrom(topAccum)
     pushPull()
-    if (topAccum >= EXIT_THRESHOLD_TOUCH) doExit()
+    if (pullTop.value >= 1) doExit()
   } else if (topAccum > 0) {
     releasePull()
   }
@@ -593,7 +633,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   navOnDark.value = false   // the homepage has no dark ground
-  if (!navLeaving.value) navPull.value = 0   // …and no pull in progress (unless one is landing)
+  // …and no pull in progress (unless one is landing, which SiteNav plays out and then clears)
+  if (!navLeaving.value) { navPull.value = 0; navCue.value = 0 }
   pageEl.value?.removeEventListener('wheel', onWheel)
   pageEl.value?.removeEventListener('touchstart', onTouchStart)
   pageEl.value?.removeEventListener('touchmove', onTouchMove)

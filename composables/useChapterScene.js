@@ -1710,7 +1710,23 @@ export function useChapterScene() {
       carousel.position.y = selectedCarouselY()
       groupG.rotation.set(0, 0, 0)
     } else {
-      while (targetRot - carousel.animatedRotationY < Math.PI) targetRot += TWO_PI
+      // ⚠️ PORTRAIT TAKES THE SHORT WAY ROUND. Landscape advances a whole extra turn on purpose —
+      // the deck spinning up to present the card you picked is the homepage's signature, and on a
+      // wide frame the hero is WIDER THAN THE VIEWPORT for most of that turn, so what you see is a
+      // card filling the screen rather than one travelling across it. On a phone the same hero is
+      // only ~390×520 in a 390×760 frame: it does not cover the screen, so the turn plays out as
+      // the picture sweeping in from off-frame over flat accent — "I can see the picture slide over
+      // it while it becomes a page". Same animation, different reading, because the card's size
+      // relative to the frame is different. Portrait goes straight to front-facing instead: the
+      // card you tapped flattens and grows where it already is.
+      // ⚠️ NOT zero rotation — the SHORTEST SIGNED path. Tap a card off to the side and it still
+      // turns to face you, which is the part that has to stay.
+      if (isMobile) {
+        const d = targetRot - carousel.animatedRotationY
+        targetRot = carousel.animatedRotationY + Math.atan2(Math.sin(d), Math.cos(d))
+      } else {
+        while (targetRot - carousel.animatedRotationY < Math.PI) targetRot += TWO_PI
+      }
       tl.to(carousel, { animatedRotationY: targetRot, duration: 3, ease: 'power3.inOut', overwrite: true }, 0)
 
       // Move carousel down

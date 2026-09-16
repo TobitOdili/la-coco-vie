@@ -93,7 +93,8 @@ is that no two pages share a language. Breaking it is what made With Love fail i
     its band coasts to a halt, the word fills in solid, the rest of the wall steps back, and the
     item opens beneath it. The names are the **real products** with their prices and shop links,
     and the reveal's *"or send the cash instead"* walks you down to the couple's **account details**
-    — there are no payment links anywhere on the site, by their decision. ⚠️ **Third design.** A strung room of paper tags and a turning satin
+    — there are no payment links anywhere on the site, by their decision, and the accounts live on
+    **this page only** (they were in every chapter's footer for two days, which asks too often). ⚠️ **Third design.** A strung room of paper tags and a turning satin
     ribbon came first; both were rejected, and for the same reason — *a quiet, scroll-revealed page
     is this chapter's failure mode.* ⚠️ **No artwork at all**, which is also why it stays current
     for free: adding a gift is adding a word. Ends by splitting in two to sign both names → RSVP.
@@ -108,9 +109,12 @@ is that no two pages share a language. Breaking it is what made With Love fail i
   the end IS the arrival. Top edge: overscroll up and the chapter folds back into the deck behind a
   frosted veil, with a loader that starts as the wordmark and travels to the centre of the frame.
   Bottom edge: the page scrolls out and the ring reassembles under it (the cluster-unfurl outro).
-  ⚠️ **Letting go is a decision, not a retreat** — past 70% the release finishes the return, below it
-  the chapter comes back. Springing every release to zero is what made the homepage unreachable on a
-  phone (AUDIT #88); the lengths are sized so one ordinary gesture crosses that point.
+  ⚠️ **Letting go is a decision, not a retreat** — past `RELEASE_COMMIT` the release finishes the
+  return, below it the chapter comes back. Springing every release to zero is what made the homepage
+  unreachable on a phone (AUDIT #88); the lengths are sized so one ordinary gesture crosses that
+  point. ⚠️ **The top edge costs something and happens in two halves**: a dead zone plus a gamma
+  curve mean the first stretch of overscroll buys almost nothing, and the chapter stays a PAGE until
+  the loader's ring has closed — only then does the card begin folding back into the deck.
 - ✅ **Mobile / touch** — swipe + momentum, tap-vs-swipe guard, parked EXPLORE button, portrait
   geometry fixes; the homepage refinements are device-verified.
 - ✅ **Homepage card copy** — each card face carries what its chapter is (*Our Journey So Far*,
@@ -198,9 +202,11 @@ components/
   chapter/WithLove.vue       ★ FOR OUR NEXT CHAPTER (slug `with-love`) — the wall: the gift names slide, forever
   chapter/ChapterSection.vue Generic section block — now the unused fallback
   chapter/PopupCard.vue      Floating white card (moment / utility / registry) pinned to the viewport
-  chapter/ChapterEnd.vue     Chapter-end: "See you there" + the date + RSVP + gift accounts + hashtag
-  GiftAccounts.vue           ★ The couple's two gift accounts — the ONLY renderer of SITE.gifts,
-                             in two voices (`tone="footer"` and `tone="page"`). Tap a number to copy.
+  chapter/ChapterEnd.vue     Chapter-end: "See you there" + the date + RSVP + hashtag
+  GiftAccounts.vue           ★ The couple's two gift accounts — the ONLY renderer of SITE.gifts.
+                             FOR OUR NEXT CHAPTER only. Tap anywhere on an account to copy its
+                             number: the synchronous `execCommand` path runs FIRST (it is the one
+                             that works in an in-app webview) with the async API fired alongside.
 composables/
   useChapterScene.js         ★ The whole 3D experience: scene, shaders, intro, select/exit + CHAPTERS
   chapterPages.js            Inner-page content: CHAPTER_PAGES + POPUPS (data only)

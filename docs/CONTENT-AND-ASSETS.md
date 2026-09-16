@@ -269,8 +269,9 @@ Items live in `CHAPTER_PAGES['with-love'].sections[].items[]`:
 
 - ⚠️ **SUPERSEDED.** This once read "no prices and no per-item links… and no account details".
   Prices and product URLs landed 2026-09-11; the couple's two real **account details** landed
-  2026-09-13 in `SITE.gifts`, rendered by `components/GiftAccounts.vue` in With Love's cash section
-  and in every other chapter's footer. There are no payment links and no `cashUrl` field.
+  2026-09-13 in `SITE.gifts`, rendered by `components/GiftAccounts.vue`. There are no payment links
+  and no `cashUrl` field. ⚠️ Since 2026-09-15 the accounts are on **For Our Next Chapter only** —
+  they were in every chapter's footer for two days, which asks four times.
 - `x` is **dead** — it positioned words for the ink line and nothing reads it now. The wall places
   everything itself: each band is a seeded shuffle of the whole list, repeated until it is wider than
   the viewport plus one repetition.

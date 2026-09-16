@@ -76,7 +76,11 @@ export const SITE = {
 
   // ── Where a gift goes ───────────────────────────────────────────────────────
   // ⚠️ ACCOUNTS, NOT PAYMENT LINKS (user, 2026-09-13: "rather than payment links, just add
-  // their account details across the site"). Until now the site carried THREE kinds of
+  // their account details across the site").
+  // ⚠️ AND SINCE 2026-09-15 THEY ARE ON ONE PAGE ONLY — For Our Next Chapter, the chapter that is
+  // about giving. They spent two days in every chapter's footer as well, which is a wedding site
+  // asking four times. `components/GiftAccounts.vue` keeps its `tone="footer"` styling for the day
+  // a footer wants them again; nothing renders it today. Until now the site carried THREE kinds of
   // payment placeholder — a per-item `cashUrl` on all ten registry items, a site-wide link
   // on With Love's cash panel, and a note promising both were coming — and not one of them
   // resolved anywhere. These two accounts are real, they are the same two wherever they

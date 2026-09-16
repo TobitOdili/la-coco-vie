@@ -135,7 +135,15 @@ owns the inner-page scroll + exit:
   `scene.setBackProgress(0→1)` directly: the chapter folds back into the deck as you pull, reverses
   under the same gesture, and reaching 1 IS the arrival. `EXIT_THRESHOLD` (800 px wheel /
   `EXIT_THRESHOLD_TOUCH` 260 px finger) is the LENGTH OF THE ANIMATION, not a trigger distance.
-  ⚠️ **Letting go is a decision.** Past `RELEASE_COMMIT` (0.7) the release finishes the return and
+  ⚠️ **IT COSTS SOMETHING, AND IT HAPPENS IN TWO HALVES** (2026-09-15). A `DEAD_WHEEL`/`DEAD_TOUCH`
+  zone (70/28 px) buys nothing, so the top edge is a wall before it is a handle; past it progress is
+  `u ^ PULL_GAMMA` (1.4), so early travel buys less than late travel — resistance you can feel
+  rather than a delay you wait out. And below `FOLD_FROM` (0.5) **the scene does not move at all**:
+  the veil washes down and the loader's ring closes with the chapter still whole under it, and only
+  past that does the card fold back into the deck. The cue therefore has its own 0→1 shared value
+  (`homeCue`, finishing at `FOLD_FROM`) while the veil keeps the raw pull (`homePull`).
+  ⚠️ **Letting go is a decision.** Past `RELEASE_COMMIT` (0.62 — deliberately past `FOLD_FROM`, so a
+  release can only commit once the card has visibly begun going back) the release finishes and
   calls `doExit()` → `scene.endBack()` → `router.push('/')`; below it the pull springs back and the
   chapter returns. Springing EVERY release to zero is what made the homepage unreachable by any
   gesture shorter than the whole 1150px it then was — see AUDIT #88.
@@ -821,6 +829,14 @@ The chosen chapter becomes a single full-bleed **hero**:
 - The select + deselect timelines are tracked (`selectTl` / `deselectTl`) and killed if interrupted,
   so rapid back/forward can't leave a stale `onComplete` clobbering state.
 
+> ⚠️ **THE SELECT TURNS THE DECK A WHOLE EXTRA REVOLUTION — IN LANDSCAPE ONLY.** `targetRot` is
+> advanced into [180°, 540°) so every chapter is one controlled turn in the intro's direction, and on
+> a wide frame the hero is WIDER THAN THE VIEWPORT for most of it, so it reads as a card filling the
+> screen. In PORTRAIT the same hero is smaller than the frame (fill-width on a tall screen), so the
+> identical turn read as the picture sweeping in from off-frame over flat accent. Portrait takes the
+> shortest signed path to front-facing instead — the card you tapped flattens and grows where it is.
+> See AUDIT #98 before "making these consistent".
+
 ### Exit (in `pages/[slug].vue`)
 There is **no scene-level scroll-back exit** (`scene.onScroll` no-ops while selected). The inner page
 drives two exits — a top-edge reverse rewind and a scroll-driven bottom "outro":
@@ -929,6 +945,9 @@ things the scrub needs that a threshold did not:
   4. **Nothing driven by the pull may carry a CSS transition.** `--p` IS the animation; a
      `transition: opacity` on a `calc(--p)` opacity puts the veil and the loader half a second
      behind the finger. Transitions belong to `.leaving` only. AUDIT #94.
+  5. **The px→progress map is not linear**, so anything that writes `pullTop` directly (the release
+     spring, the settle) has to run `accumFor()` to keep the pixel accumulator honest — otherwise a
+     new gesture resumes from the wrong place. AUDIT #97.
 ⚠️ **BOTH EDGES OF A CHAPTER LEAD HOME, AND THE SIGNPOST BELONGS AT EACH DOOR.** The top takes a
 sustained pull (800px of wheel, 260px of finger — that is the LENGTH OF THE ANIMATION, not a
 trigger distance); the bottom commits at the end of the outro. Both

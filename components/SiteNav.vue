@@ -60,7 +60,7 @@
                in one place is a collision; a handover is not. -->
           <div
             class="wordmark whitespace-nowrap text-[17px] lg:text-[26px] pointer-events-auto"
-            :style="{ color: navInk, opacity: 1 - homePull }"
+            :style="{ color: navInk, opacity: 1 - homeCue }"
             @click="$emit('go-home')"
           >
             COVENANT <span class="amp">&amp;</span> UVIE
@@ -76,8 +76,12 @@
                from the logo": it begins as the thing it replaces.
                Its twin for the BOTTOM exit lives at the very end of the chapter's own content —
                the two edges leave by different doors and the signpost belongs at each one. -->
-          <div v-if="homePull > 0 || homeLeaving" class="pull-cue" :class="{ leaving: homeLeaving }"
-            :style="{ '--p': homeLeaving ? 1 : homePull }" aria-hidden="true">
+          <!-- ⚠️ `homeCue`, NOT `homePull`. The cue runs its whole 0→1 over the FIRST HALF of the
+               pull and then holds, because the ring closing is the thing that has to finish while
+               the chapter is still a page — the card only starts folding back after it. The veil
+               above keeps the raw pull, so the two are deliberately out of step. -->
+          <div v-if="homeCue > 0 || homeLeaving" class="pull-cue" :class="{ leaving: homeLeaving }"
+            :style="{ '--p': homeLeaving ? 1 : homeCue }" aria-hidden="true">
             <span class="pull-ring">
               <svg viewBox="0 0 44 44" focusable="false">
                 <circle class="pull-track" cx="22" cy="22" r="20" />
@@ -199,6 +203,8 @@ const navInk = computed(() => (navOnDark.value ? 'var(--accentLight)' : props.ac
 // How far a top-edge pull has charged, 0→1. Written by the chapter page (which owns the gesture),
 // read here because the cue belongs where the wordmark is — see the template.
 const homePull = useState('homePull', () => 0)
+// The cue's own progress — it completes at the halfway point of the pull. See pages/[slug].vue.
+const homeCue = useState('homeCue', () => 0)
 // Set by the page at the moment it commits, cleared here once the veil has played out — the page
 // unmounts on the next tick, so it cannot be the thing that fades its own overlay.
 const homeLeaving = useState('homeLeaving', () => false)
@@ -206,7 +212,7 @@ let leaveT = null
 watch(homeLeaving, (on) => {
   clearTimeout(leaveT)
   if (!on) return
-  leaveT = setTimeout(() => { homeLeaving.value = false; homePull.value = 0 }, 620)
+  leaveT = setTimeout(() => { homeLeaving.value = false; homePull.value = 0; homeCue.value = 0 }, 620)
 })
 onBeforeUnmount(() => clearTimeout(leaveT))
 

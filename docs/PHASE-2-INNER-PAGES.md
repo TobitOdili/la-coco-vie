@@ -211,7 +211,33 @@ with the bottom every step must be locked into scroll so I can actually reverse 
    `syncNavInk()` from the pull handler, because that probe otherwise only runs on Lenis scroll
    events and the pull stops Lenis.
 
-**▶▶ STATE (2026-09-13, latest) — THE COUPLE'S OWN WORDS, THEIR OWN FILMS, AND TWO ACCOUNTS.**
+**▶▶ STATE (2026-09-15, latest) — WHAT A RETURN COSTS, AND WHERE A CARD OPENS.**
+User: *"leave the account numbers on only the for our next chapter page (also copy doesn't reliably
+work)… add some resistance to reverse scrolling back from the top… would be even better to see the
+animation complete within the page before reversing the card back into homepage… when I click a card
+(on mobile) I can see the picture slide over it while it becomes a page."*
+
+1. **The accounts are on one page.** They were in every chapter's footer for two days ("across the
+   site"); a wedding footer that asks on all four chapters asks too often. For Our Next Chapter is
+   the page that is about giving, so that is where they are. `GiftAccounts.vue` keeps its
+   `tone="footer"` styling for the day a footer wants them again.
+   ⚠️ **And the copy was lying.** The tap target was the digits (~130×20px) and the synchronous
+   fallback selected the textarea with a Range — which is empty, because a textarea's value is not
+   its DOM contents — while `execCommand` still returned true. It said "copied" and copied nothing.
+   The whole row is the button now, a textarea is selected with `select()` + `setSelectionRange`,
+   and BOTH paths run on every tap. Verified against a sentinel on the real clipboard. AUDIT #96.
+2. **The return costs something, and it happens in two halves.** A dead zone (70px wheel / 28px
+   finger) then a gamma of 1.4, so the top edge is a wall before it is a handle and the early travel
+   buys less than the late travel. Then: below `FOLD_FROM` (0.5) **the scene does not move** — the
+   veil washes down, the ring closes, the chapter is still a page; only past it does the card fold
+   back into the deck. That is "see the animation complete within the page before reversing the card
+   back into homepage", and it is still one scrub the gesture drives. AUDIT #97.
+3. **A card opens where you tapped it, in portrait.** The select advances the deck a whole extra
+   turn, which on a wide frame is a card filling the screen and on a phone — where the hero does not
+   cover the frame — is a picture wiping across flat accent. Portrait takes the shortest signed path
+   to front-facing. Landscape is untouched. AUDIT #98.
+
+**▶▶ STATE (2026-09-13) — THE COUPLE'S OWN WORDS, THEIR OWN FILMS, AND TWO ACCOUNTS.**
 User: *"You should have enough details to fill in the footer placeholder information. Rather than
 payment links, just add their account details across the site… the background video on For Our Next
 Chapter should be updated… swap out the main card video in the Coco & Uvie page… remove the widgets
@@ -225,8 +251,8 @@ chapter's real copy and the desktop hero (documented above).
    `tone="footer"` for the chapter footers and `tone="page"` for With Love's own section. The number
    is a button: an account number is not something anyone wants to READ, it is something they want
    in their banking app, so it copies to the clipboard.
-   ⚠️ The footer block is suppressed on With Love, where the same two accounts already have a
-   section of their own a screen and a half above it — printing them again reads as asking twice.
+   ⚠️ **SUPERSEDED 2026-09-15** — the footer block is gone from every chapter, not just suppressed
+   on With Love. The accounts are on For Our Next Chapter alone; see the 2026-09-15 state note above.
    ⚠️ The registry reveal's *"or send the cash instead"* is a BUTTON that scrolls to that section.
    It cannot scroll the page itself: **Lenis owns this scroller**, and a native anchor jump (or
    `scrollIntoView`, or `window.scrollTo`) is undone on its next frame. It dispatches

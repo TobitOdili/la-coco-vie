@@ -13,10 +13,11 @@
       </a>
     </div>
 
-    <!-- ⚠️ NOT ON WITH LOVE. That chapter IS the gift list and gives these same two accounts a
-         section of their own a screen and a half above this one; printing them again under it
-         reads as asking twice. Every other chapter ends here, so this is where they go. -->
-    <GiftAccounts v-if="showGifts" tone="footer" />
+    <!-- ⚠️ NO GIFT ACCOUNTS HERE (2026-09-15). They were in every chapter's footer for two days
+         — "add their account details across the site" — and the couple asked for them back on FOR
+         OUR NEXT CHAPTER alone, which is the page that is about giving. A wedding footer that asks
+         on all four chapters asks too often. `components/GiftAccounts.vue` still carries the
+         `tone="footer"` styling for the day it belongs here again. -->
 
     <div class="socials">
       <span class="hashtag">#LaCocoVie26</span>
@@ -25,15 +26,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { SITE } from '~/site.config'
-import GiftAccounts from '~/components/GiftAccounts.vue'
 
-const props = defineProps({
+defineProps({
   chapter: { type: Object, required: true }, // { slug, title, … }
 })
-
-const showGifts = computed(() => props.chapter?.slug !== 'with-love')
 
 const root = ref(null)
 const visible = ref(false)
@@ -73,8 +71,7 @@ onBeforeUnmount(() => observer?.disconnect())
 .in-view > * { opacity: 1; transform: none; }
 .in-view .end-date { transition-delay: 0.08s; }
 .in-view .pills { transition-delay: 0.16s; }
-.in-view .accounts { transition-delay: 0.26s; }
-.in-view .socials { transition-delay: 0.34s; }
+.in-view .socials { transition-delay: 0.26s; }
 
 .end-title {
   font-family: 'Bague', sans-serif;
