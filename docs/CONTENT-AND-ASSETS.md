@@ -142,9 +142,11 @@ public/
 │   │                            load by `txtFor()` (WebGL textures cannot use srcset).
 │   ├── us/*-sm.jpg              600px polaroids for 1×/2× screens, via srcset in UsStory.
 │   │                            Both from `scripts/gen-image-variants.mjs` — re-run after gen-textures.
-│   ├── noise.png                180² greyscale grain, 60.8 KB, from `scripts/gen-noise.mjs`.
-│   │                            ⚠️ Was the reference's 500² full-colour RGBA tile at 773 KB — 34–43%
-│   │                            of every page's image payload. See AUDIT #117.
+│   ├── noise.png                500² full-colour RGBA grain, 773 KB. ⚠️ LEAVE IT ALONE unless you
+│   │                            can verify a replacement FULL-SCREEN: it is 34–43% of every page's
+│   │                            image payload and worth reclaiming, but a synthesised 180²
+│   │                            greyscale tile shipped and was rejected the same day — "elegant
+│   │                            grains to straight up noise". See AUDIT #118.
 │   ⚠️ cu-p{1..4}.svg           UNREFERENCED — 119 KB each, 478 KB shipped on every build for
 │                                nothing. Every `CHAPTERS[].svg` points at the .png of the same
 │                                name. Same class as AUDIT #38; filed as AUDIT #108 (open).

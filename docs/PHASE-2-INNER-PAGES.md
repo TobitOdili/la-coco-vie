@@ -158,15 +158,32 @@ route shipped **1.8–2.3 MB and the bytes were IDENTICAL** on a 360px phone and
 
 | | was | now |
 |---|---|---|
-| `noise.png` — the grain tile | **773 KB** (500² full-colour RGBA, 204 alpha levels) | **60.8 KB** (180² greyscale, 16 levels) |
 | the four taglines | 2048², ~562 KB, **~67 MB of VRAM** | 1024² `-sm` below 1600 device px |
 | the US polaroids | ~900px at every size | `srcset` 600w / 900w |
-| **`/` on a phone** | **1823 KB** | **909 KB** |
+| **`/` on a phone** | **1823 KB** | **1304 KB** |
+| ~~`noise.png` — the grain tile~~ | ~~773 KB~~ | ↩️ **REVERTED — see below** |
 
-⚠️ **The grain's four numbers were matched BY EYE, A/B, not derived.** The first attempt
-reproduced the original's statistics exactly — alpha ceiling 220, 67% of pixels under alpha 32,
-hard-bimodal grey — and looked wrong: sparse hard specks where the original is a fine even texture.
-Grain reads as a field, not as a histogram; many faint pixels, not a few strong ones.
+### ↩️ The grain was reverted the same day (AUDIT #118)
+
+The tile was also replaced — the reference's 500² full-colour RGBA grain (773 KB, and **34–43% of
+every page's image payload**) for a synthesised 180² greyscale one at 61 KB. User: *"The grains are
+TOO MUCH. Please restore … it's gone from elegant grains to straight up noise."* Restored byte for
+byte (sha256 checked against the pre-change file); the generator is deleted rather than left loaded.
+
+⚠️ **THE MISTAKE WAS THE TEST, NOT THE NUMBERS.** It *was* A/B'd — same crop, jitter animation
+frozen, old against new, three rounds of tuning until they matched. The crop was **260×160 px**, and
+grain is a **full-screen texture**. At that size a coarser tile reads as "slightly denser"; across a
+whole viewport the same difference reads as dirt.
+
+Two traps underneath it. Synthesising noise to match the original's *statistics* (alpha ceiling,
+percentile distribution, bimodal grey) produced something visibly wrong, because grain is read as a
+field and not as a histogram — I noticed that once, re-tuned by eye, and then trusted the same
+too-small crop again. And a 180² tile repeats 2.8× more often across a 500px span than the original
+did, which a 260px crop **cannot** show by construction.
+
+⚠️ The rule, and it is not about grain: **match the test to the scale of the artefact.** A crop can
+verify a detail; it cannot verify a field. The 773 KB is still worth reclaiming — by resampling the
+original rather than replacing it, and by judging it full-screen on more than one route.
 
 ⚠️ **The taglines cannot use `srcset`** — they are WebGL textures and there is no element for it to
 act on, so the choice is made at load in `txtFor()`. ⚠️ **And the test is DEVICE pixels, not CSS
@@ -178,9 +195,9 @@ Verified at 1×/2×/3×: phone and 1440@1× get `-sm`, 1440@2× gets the full ar
 **Verified:** 25 route/size loads with 0 overflow, 0 errors, 0 failed requests; the return filmed
 at 390×844 and 1440×900; both exits, cancel and deep links re-checked.
 
-⚠️ **Two new generator scripts, and both must be re-run when the art changes:**
-`node scripts/gen-noise.mjs` and `node scripts/gen-image-variants.mjs` (the latter **after**
-`gen-textures.mjs`). See [`scripts/README.md`](../scripts/README.md).
+⚠️ **One new generator script, to be re-run when the art changes:**
+`node scripts/gen-image-variants.mjs`, **after** `gen-textures.mjs`. See
+[`scripts/README.md`](../scripts/README.md).
 
 ---
 

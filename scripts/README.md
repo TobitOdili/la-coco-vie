@@ -84,29 +84,29 @@ someone's claim. It replaced four per-chapter tracks that were the **reference s
 never licensed. ⚠️ **It has never been listened to by a human.** Audition it; if it is not right,
 drop a licensed file in at that path and change nothing else. Sound is OFF by default.
 
+
 ---
 
-## `gen-noise.mjs` — the film-grain tile
+## ~~`gen-noise.mjs`~~ — removed 2026-09-16, and worth knowing why
 
-```bash
-node scripts/gen-noise.mjs
-```
+There was briefly a generator here that replaced `public/images/noise.png` — the reference site's
+500×500 full-colour RGBA grain tile — with a synthesised 180² greyscale one: 773 KB down to 61 KB,
+and **34–43% of every page's image payload**. The user's verdict on the live result was *"the
+grains are TOO MUCH … it's gone from elegant grains to straight up noise."* The original file is
+restored, byte for byte, and the generator is deleted rather than left loaded.
 
-Writes `public/images/noise.png`, the grain tiled by `body::after` (opacity 0.4) and by In Frames'
-`.room-grain` (scaled to 200px, opacity 0.13).
+⚠️ **The mistake was the test, not the numbers.** It was A/B'd — same crop, jitter animation
+frozen, old tile against new — but the crop was **260×160 px**, and grain is a full-screen texture.
+At that size a coarser tile reads as "slightly denser"; across a whole viewport the same difference
+reads as dirt. Two further traps in the same attempt: synthesising noise to match the original's
+*statistics* (alpha ceiling, percentile distribution, bimodal grey) produced something visibly
+wrong, because grain is read as a field rather than as a histogram; and a 180² tile repeats 2.8×
+more often across a 500px span than the original did, which the small crop could not show at all.
 
-⚠️ **It replaced a 773 KB file.** The tile that shipped until 2026-09-16 was the reference site's:
-500×500 **full-colour RGBA** with 204 distinct alpha levels and 253 distinct reds. Random colour
-does not compress, so it was 250,000 px × ~3.1 bytes — and **34–43% of every page's image payload**,
-downloaded identically by a 360px phone and a 2560px desktop. The generated tile is 180×180,
-greyscale, with grey and alpha quantised to 16 levels: **60.8 KB**, and the look is unchanged.
-
-⚠️ **The four numbers at the top were matched BY EYE, A/B, not derived.** The first attempt
-reproduced the original's statistics exactly (alpha ceiling 220, 67% of pixels under alpha 32,
-hard-bimodal grey) and looked wrong — sparse hard specks where the original is a fine even texture.
-Grain reads as a field, not as a histogram: many faint pixels, not a few strong ones. If you change
-`ALPHA_MAX`, `ALPHA_GAMMA`, `DARK_HI` or `LIGHT_LO`, do the A/B again — freeze `body::after`'s
-animation, screenshot the same crop of flat paper, and compare against the previous tile.
+⚠️ **If this is attempted again:** resample the ACTUAL original rather than synthesising a new
+one (that preserves its grain character exactly), keep the tile large enough not to repeat more
+often than 500px, and judge it **full-screen, on more than one route, at more than one size** —
+ideally against the live site, not a crop. The 773 KB is worth reclaiming; it is not worth the look.
 
 ---
 
@@ -129,5 +129,5 @@ time. Keep the 1024 here and the threshold there in step.
 
 ⚠️ **The tagline test is DEVICE pixels, not CSS pixels.** A 390px phone at 3× has 1170 real pixels
 and a 1440 laptop at 1× has 1440 — by CSS width alone the phone looks like the smaller screen and
-is the higher-resolution one. Measured after wiring: phone payload on `/` went 1823 KB → **909 KB**,
-and a 1440 desktop at 2× correctly still gets the full-size taglines.
+is the higher-resolution one. Measured after wiring, with the grain tile left as it was: phone payload on `/` went
+1823 KB → **1304 KB**, and a 1440 desktop at 2× correctly still gets the full-size taglines.
