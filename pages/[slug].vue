@@ -146,6 +146,12 @@ function pushPull() {
   // closing IS "the animation completing within the page".
   navPull.value = pullTop.value
   navCue.value = Math.min(1, pullTop.value / FOLD_FROM)
+  // The band: the picture goes down, the article goes with it, and the line above them is the
+  // return. `--band` lets the cue sit in the opening rather than guess at it.
+  const band = bandPx()
+  scene?.setHeroPull?.(band)
+  if (scrollEl.value) scrollEl.value.style.transform = band ? `translate3d(0, ${band}px, 0)` : ''
+  if (import.meta.client) document.documentElement.style.setProperty('--band', band + 'px')
   // ⚠️ RE-PROBE THE NAV'S GROUND. `syncNavInk` otherwise only runs on Lenis scroll events, and the
   // pull STOPS Lenis — so the flag was whatever the last scroll left it as while the veil, which is
   // the chapter's pale paper, washed in underneath the nav. Measured mid-pull: menu ink
@@ -167,6 +173,9 @@ function pushPull() {
   if (!backEngaged) return
   if (pullTop.value <= 0) {
     scene.cancelBack?.()
+    scene.setHeroPull?.(0)
+    if (scrollEl.value) scrollEl.value.style.transform = ''
+    if (import.meta.client) document.documentElement.style.setProperty('--band', '0px')
     backEngaged = false
     if (!exiting) lenis?.start()
     return
@@ -269,7 +278,7 @@ let lenis = null
 // return was unreachable by anything but one unbroken trackpad flick. See RELEASE_COMMIT below —
 // letting go past that point FINISHES it — and these are sized so one comfortable gesture gets
 // there: 560px of wheel (≈4.7 notches, or one flick) and 182px of thumb.
-const EXIT_THRESHOLD = 800  // px of overscroll past the TOP edge — the full length of the return
+const EXIT_THRESHOLD = 860  // px of overscroll past the TOP edge — the full length of the return
 // ── resistance ───────────────────────────────────────────────────────────────
 // ⚠️ THE RETURN SHOULD COST SOMETHING. Straight px ÷ length made the first notch at the top edge
 // move the whole chapter, so brushing the top while reading started the page folding away. Two
@@ -281,9 +290,13 @@ const EXIT_THRESHOLD = 800  // px of overscroll past the TOP edge — the full l
 //     and then it comes with you. That is what a spring feels like.
 // ⚠️ These are load-bearing on reachability — see AUDIT #88, where the return was unreachable for
 // two days. Every change here has to be re-measured against a 200px thumb swipe and a wheel roll.
-const DEAD_WHEEL = 70        // px of overscroll that buys nothing
-const DEAD_TOUCH = 28
-const PULL_GAMMA = 1.4
+// ⚠️ RAISED 2026-09-16 (user: "make reverse scroll a little more resistive"). Re-measured
+// against the reachability floor that #88 was about — the commit point is now 208px of thumb
+// (was 179) and ~666px of wheel, about 5.5 notches (was 589, 4.9). One ordinary swipe still
+// arrives; a brush against the top edge is now a wall rather than a handle.
+const DEAD_WHEEL = 110       // px of overscroll that buys nothing
+const DEAD_TOUCH = 45
+const PULL_GAMMA = 1.6
 const deadZone = () => (touchMode ? DEAD_TOUCH : DEAD_WHEEL)
 function pullFrom(px) {
   const d = deadZone()
@@ -298,6 +311,25 @@ function pullFrom(px) {
 // begin folding back into the deck. The cue gets its own 0→1 over the first stage (`homeCue`) while
 // the veil keeps the raw pull, which is why there are two shared values rather than one.
 const FOLD_FROM = 0.5
+// ── the band ───────────────────────────────────────────────────────
+// ⚠️ THE PAGE IS THE INDICATOR NOW. User, 2026-09-16: "sliding down from the top of a card to go
+// back to home does the right thing with the animation, but it isn't clear enough. Let's actually
+// use the page itself to show the return … move the picture down (on mobile), add the text/circle
+// animation as a line on top of the page while it moves down, then take it out when the animation
+// completes."
+// So stage one no longer washes a veil over everything (that was AUDIT #89's near-miss, and it
+// muted the very thing the visitor is driving). Instead the hero card AND the article slide DOWN
+// together by `bandPx`, opening a band of the chapter's accent at the top of the frame — and the
+// return's line lives in that band, where the wordmark was. Pulling literally opens the door you
+// are leaving by.
+// ⚠️ The card is moved by the SCENE (`setHeroPull`), not by CSS: at scroll 0 the top of the frame
+// IS the WebGL card seen through a transparent `.chapter-hero`, so moving the DOM alone would move
+// nothing anyone can see. The DOM shift is for the sliver of article that can be on screen inside
+// TOP_EDGE, so the two never separate.
+// ⚠️ It opens over the FIRST STAGE ONLY and then holds: past FOLD_FROM the card is folding back
+// into the deck and a band that kept growing would just be pushing a shrinking card around.
+const BAND_MAX = () => Math.max(96, Math.min(176, Math.round(window.innerHeight * 0.22)))
+const bandPx = () => BAND_MAX() * Math.min(1, pullTop.value / FOLD_FROM)
 let topAccum = 0             // top overscroll accumulator — the scrub's position, in px
 let touching = false         // a finger is down right now
 // ⚠️ NOT `touching`. The release runs AFTER touchend, so reading "is a finger down" there picked
@@ -367,7 +399,7 @@ function onWheel(e) {
 // phone was the nav logo. A finger covers ground faster than a wheel, so the same journey is a
 // shorter number. (The BOTTOM exit needs nothing extra: it's driven by Lenis scroll position,
 // which native touch scrolling already produces.)
-const EXIT_THRESHOLD_TOUCH = 240
+const EXIT_THRESHOLD_TOUCH = 265
 let touchLastY = 0
 function onTouchStart(e) {
   const t = e.touches[0]
@@ -470,6 +502,11 @@ function groundIsDark() {
   // on that chapter's light tone — and past the hero the article's own opaque background is under
   // the nav, so the walk above returns before it ever reaches this line. What is left is the exit,
   // where the card has gone and the accent really is the ground: the case this was written for.
+  // ⚠️ THE BAND IS THE CHAPTER ACCENT, AND ALL FOUR ACCENTS ARE DARK (#41492D, #42221A, #453350,
+  // #2E4A52). Once the pull has opened it past the nav's own probe line the nav is sitting on that
+  // accent, not on the card's pale title band — so the hero shortcut below would ink it dark on
+  // dark. This is the one case where the ground genuinely changes without the scroll moving.
+  if (backEngaged && bandPx() > NAV_PROBE_Y) return true
   if (!exitEngaged && lenis && lenis.scroll < window.innerHeight * 0.9) return false
   return !!webglSceneRef?.value?.scene?.clearIsDark?.()
 }
@@ -651,6 +688,11 @@ onBeforeUnmount(() => {
   lenis = null
   webglSceneRef?.value?.scene?.setScroll(0)
   webglSceneRef?.value?.scene?.setHeroPull?.(0)
+  // The band is a document-level custom property and a transform on the scrolled element: both
+  // outlive this component unless they are put back. A stale `--band` would size the next
+  // chapter's cue against a pull that is over.
+  if (import.meta.client) document.documentElement.style.setProperty('--band', '0px')
+  if (scrollEl.value) scrollEl.value.style.transform = ''
   // ⚠️ ALWAYS. A `true` left behind here would follow the visitor to the homepage, which has no
   // page to clear it, and blank the canvas.
   webglSceneRef?.value?.scene?.setCanvasHidden?.(false)

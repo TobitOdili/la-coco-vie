@@ -105,6 +105,85 @@ state, everything below it is history — newest first.)
 
 ---
 
+## ▶▶ THE RETURN IS THE PAGE NOW, AND A PHONE STOPPED DOWNLOADING THE DESKTOP'S IMAGES — 2026-09-16 (AUDIT #115–#117)
+
+User: *"Sliding down from the top of a card to go back to home does the right thing with the
+animation, but it isn't clear enough. Let's actually use the page itself to show the return. Make
+reverse scroll a little more resistive, move the picture down (on mobile), add the text/circle
+animation as a line on top of the page while it moves down, then take it out when the animation
+completes. We can even have the logo morph into that, just do it more smoothly to fit the vibe of
+the site. Also I hope we're not loading full size images on smaller screens."*
+
+### The return (#115, #116)
+
+**The veil is gone.** The old first stage washed a translucent sheet over the whole frame and drew
+a ring in it. AUDIT #89 had already had to halve that veil once because it whited out the deck
+reassembling behind it — the shape of the mistake was there both times and neither of us named it:
+**an indicator laid ON TOP of a page says nothing about where you are going.**
+
+Now the hero card and the article **slide down together** by up to 176px (`clamp(96, 22vh, 176)`),
+opening a band of the chapter's accent at the top of the frame, and the return's line lives in that
+band. Pulling opens the door you are leaving by.
+
+⚠️ **The card has to be moved by the SCENE, not by CSS.** At scroll 0 the top of the frame IS the
+WebGL card seen through a transparent `.chapter-hero`, so moving the DOM alone moves nothing anyone
+can see — captured at 600px of wheel, `--band` read 176px while the card had not shifted a pixel.
+
+⚠️ **And it has to be applied inside `setBackProgress`, not in `animate()`.** `beginBack` sets
+`isDeselecting`, which gates animate()'s scroll coupling off, and the scrub re-places the hero from
+the captured pose on every frame — so the `heroPullPx` term up there is dead the moment the pull
+engages. It also has to unwind on the same curve (`1 - e`), or the card lands 176px below its slot.
+
+**The logo morphs rather than swaps.** The old cue travelled from the wordmark's line to the middle
+of the frame while the wordmark faded linearly — two objects, one chasing the other. The rule now
+grows left and right out of exactly where the ampersand sits while the letters part (a shaped fade
+plus 0.18em of tracking), and the ring is the ampersand's replacement at the same optical size.
+⚠️ Both curves are shaped in **JS**, never with a CSS transition: `homeCue` IS the scrub, and a
+transition on anything driven by it lags the finger by its own duration (AUDIT #94).
+
+**The line leaves as the fold completes**, which is also a correctness fix: the ground under it
+travels from the chapter's dark accent to white over `BACK_BG`, so an `--accentLight` mark that
+stayed up would dissolve into the paper it sits on.
+
+**Resistance:** dead zone 70→110px wheel / 28→45px touch, gamma 1.4→1.6, lengths 800→860 and
+240→265. Re-measured against the floor AUDIT #88 was about — a 120px swipe now never fires (six
+tried), 200px arrives in two, 280px and 340px in one, wheel rolls at 60/150/300/600 ms per notch all
+arrive, a short release springs back and the page scrolls normally afterwards, and the bottom exit
+is untouched.
+
+### The images (#117)
+
+We *were* loading full-size images on small screens — measured across 5 routes × 2 screens, every
+route shipped **1.8–2.3 MB and the bytes were IDENTICAL** on a 360px phone and a 2560px desktop.
+
+| | was | now |
+|---|---|---|
+| `noise.png` — the grain tile | **773 KB** (500² full-colour RGBA, 204 alpha levels) | **60.8 KB** (180² greyscale, 16 levels) |
+| the four taglines | 2048², ~562 KB, **~67 MB of VRAM** | 1024² `-sm` below 1600 device px |
+| the US polaroids | ~900px at every size | `srcset` 600w / 900w |
+| **`/` on a phone** | **1823 KB** | **909 KB** |
+
+⚠️ **The grain's four numbers were matched BY EYE, A/B, not derived.** The first attempt
+reproduced the original's statistics exactly — alpha ceiling 220, 67% of pixels under alpha 32,
+hard-bimodal grey — and looked wrong: sparse hard specks where the original is a fine even texture.
+Grain reads as a field, not as a histogram; many faint pixels, not a few strong ones.
+
+⚠️ **The taglines cannot use `srcset`** — they are WebGL textures and there is no element for it to
+act on, so the choice is made at load in `txtFor()`. ⚠️ **And the test is DEVICE pixels, not CSS
+pixels**: a 390px phone at 3× has 1170 real pixels and a 1440 laptop at 1× has 1440, so by CSS width
+alone the phone looks like the smaller screen while being the higher-resolution one. An
+`innerWidth < 768` test would have served the small texture to the screen that needed the big one.
+Verified at 1×/2×/3×: phone and 1440@1× get `-sm`, 1440@2× gets the full art.
+
+**Verified:** 25 route/size loads with 0 overflow, 0 errors, 0 failed requests; the return filmed
+at 390×844 and 1440×900; both exits, cancel and deep links re-checked.
+
+⚠️ **Two new generator scripts, and both must be re-run when the art changes:**
+`node scripts/gen-noise.mjs` and `node scripts/gen-image-variants.mjs` (the latter **after**
+`gen-textures.mjs`). See [`scripts/README.md`](../scripts/README.md).
+
+---
+
 ## ▶▶ THE MOBILE SELECT, DIAGNOSED PROPERLY — 2026-09-16 (AUDIT #113, #114; #98 reverted)
 
 User: *"I still want the spin to happen on clicking a card in mobile. I was just saying the image

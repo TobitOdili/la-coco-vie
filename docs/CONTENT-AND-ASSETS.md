@@ -138,6 +138,13 @@ public/
 │   │                            184 KB for all four. ⚠️ REGENERATE with the film: `npm run gen:stills`
 │   ├── cu-favicon.png           Browser-tab mark — the ampersand (replaced the reference's star)
 │   │                            ⚠️ Emitted TWICE in <head> (icon + apple-touch-icon, same file).
+│   ├── cu-txt{1..4}-sm.png      1024² tagline art for screens under 1600 DEVICE px — picked at
+│   │                            load by `txtFor()` (WebGL textures cannot use srcset).
+│   ├── us/*-sm.jpg              600px polaroids for 1×/2× screens, via srcset in UsStory.
+│   │                            Both from `scripts/gen-image-variants.mjs` — re-run after gen-textures.
+│   ├── noise.png                180² greyscale grain, 60.8 KB, from `scripts/gen-noise.mjs`.
+│   │                            ⚠️ Was the reference's 500² full-colour RGBA tile at 773 KB — 34–43%
+│   │                            of every page's image payload. See AUDIT #117.
 │   ⚠️ cu-p{1..4}.svg           UNREFERENCED — 119 KB each, 478 KB shipped on every build for
 │                                nothing. Every `CHAPTERS[].svg` points at the .png of the same
 │                                name. Same class as AUDIT #38; filed as AUDIT #108 (open).

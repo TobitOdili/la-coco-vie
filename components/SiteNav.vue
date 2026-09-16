@@ -1,10 +1,11 @@
 <template>
   <div>
-    <!-- ⚠️ FIRST, so both nav bars (later siblings at the same z-20) paint on top of it. Nested
-         inside one of them it washed out WELCOME and RSVP, which is not the nav stepping aside —
-         it is the nav looking broken. See `.back-veil`. -->
-    <div v-if="homePull > 0 || homeLeaving" class="back-veil" :class="{ leaving: homeLeaving }"
-      :style="{ '--p': homeLeaving ? 1 : homePull }" aria-hidden="true" />
+    <!-- ⚠️ THE VEIL IS GONE (2026-09-16). A frosted wash over the whole frame was the old answer to
+         "show me the return", and the user's verdict was that it "isn't clear enough" — which it
+         was not: it dimmed the deck reassembling behind it (AUDIT #89 already had to halve it once)
+         and it said nothing about WHERE you were going. The page itself is the indicator now: the
+         hero card and the article slide DOWN, opening a band of the chapter accent at the top, and
+         `.pull-cue` below is the line that lives in that band. Nothing is painted over anything. -->
 
     <!-- Top navigation bar -->
     <div class="!fixed z-20 top-0 w-full">
@@ -60,7 +61,7 @@
                in one place is a collision; a handover is not. -->
           <div
             class="wordmark whitespace-nowrap text-[17px] lg:text-[26px] pointer-events-auto"
-            :style="{ color: navInk, opacity: 1 - homeCue }"
+            :style="{ color: navInk, opacity: wordmarkFade, letterSpacing: wordmarkTrack }"
             @click="$emit('go-home')"
           >
             COVENANT <span class="amp">&amp;</span> UVIE
@@ -81,13 +82,22 @@
                the chapter is still a page — the card only starts folding back after it. The veil
                above keeps the raw pull, so the two are deliberately out of step. -->
           <div v-if="homeCue > 0 || homeLeaving" class="pull-cue" :class="{ leaving: homeLeaving }"
-            :style="{ '--p': homeLeaving ? 1 : homeCue }" aria-hidden="true">
-            <span class="pull-ring">
-              <svg viewBox="0 0 44 44" focusable="false">
-                <circle class="pull-track" cx="22" cy="22" r="20" />
-                <circle class="pull-draw" cx="22" cy="22" r="20" />
-              </svg>
-              <i class="pull-chev" />
+            :style="{ '--p': homeLeaving ? 1 : homeCue, '--o': homeLeaving ? 0 : cueOpacity }" aria-hidden="true">
+            <!-- ⚠️ A LINE, AND IT GROWS OUT OF THE WORDMARK. The rule extends left and right from
+                 exactly where the ampersand sits while the letters around it fade, so the mark does
+                 not swap for the loader — it opens into it. The ring is the ampersand's replacement
+                 and it is the same optical size at p=0, which is what makes the handover read as
+                 one object rather than two. -->
+            <span class="pull-rule">
+              <i class="rule-seg" />
+              <span class="pull-ring">
+                <svg viewBox="0 0 44 44" focusable="false">
+                  <circle class="pull-track" cx="22" cy="22" r="20" />
+                  <circle class="pull-draw" cx="22" cy="22" r="20" />
+                </svg>
+                <i class="pull-chev" />
+              </span>
+              <i class="rule-seg" />
             </span>
             <span class="pull-label">back to the chapters</span>
           </div>
@@ -163,6 +173,29 @@ const nextEvent = computed(() => {
   const now = Date.now()
   return (SITE.events || []).find((e) => new Date(e.date).getTime() > now) || null
 })
+// ── the wordmark's handover ──────────────────────────────────────────
+// ⚠️ SHAPED IN JS, NOT WITH A CSS TRANSITION. `homeCue` IS the scrub, so a transition on anything
+// driven by it lags the finger by its own duration — that is AUDIT #94, and it is most of what
+// "glitchy" meant last time. A smoothstep gives the ease without ever being behind the gesture.
+// The mark is gone by 45% of the first stage, well before the rule reaches its full width, so the
+// two are never both at full strength: it reads as one thing becoming another.
+const smoothstep = (a, b, x) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)))
+  return t * t * (3 - 2 * t)
+}
+const wordmarkFade = computed(() => 1 - smoothstep(0, 0.45, homeCue.value))
+// ⚠️ AND IT IS TAKEN OUT AS THE FOLD FINISHES. User: "then take it out when the animation
+// completes." Two reasons, and the second is the one that bites: the line has said everything it
+// has to say once the ring has closed, AND the ground underneath it is on its way from the
+// chapter's dark accent to the homepage's white (`BACK_BG`, 64% of the second stage) — so a mark
+// inked in `--accentLight` that stayed up would fade into the paper it is sitting on. It leaves on
+// its own terms instead, over the stretch where the card is folding back into the deck.
+const cueOpacity = computed(() =>
+  Math.min(1, homeCue.value * 4) * (1 - smoothstep(0.62, 0.92, homePull.value)))
+// A hair of extra tracking as it goes, so the letters look like they are being drawn apart into
+// the rule rather than simply switched off.
+const wordmarkTrack = computed(() => `${(smoothstep(0, 0.45, homeCue.value) * 0.18).toFixed(3)}em`)
+
 const daysToGo = computed(() =>
   nextEvent.value
     ? Math.max(0, Math.ceil((new Date(nextEvent.value.date) - Date.now()) / 86400000))
@@ -231,74 +264,65 @@ defineEmits(['toggle-about', 'go-home', 'toggle-sound'])
    reveals it downward — so "fades in down from the top across the page" is one interpolation with
    nothing to keep in sync. Below the nav's own z-20 bars so WELCOME and RSVP stay legible on top of
    it, and above everything else. */
-.back-veil {
-  position: fixed;
-  inset: 0;
-  z-index: 19;
-  pointer-events: none;
-  background: color-mix(in srgb, var(--accentLight, #F3F1EC) 88%, transparent);
-  /* ⚠️ THE WASH THICKENS, IT DOES NOT ARRIVE OPAQUE — and the ceiling is the whole point. It was
-     `0.22 + p*0.66`, which is 0.85 of an 88%-opaque paper by the end: the deck reassembling behind
-     it came out as a white-out, and the return read as a loading screen with an animation somewhere
-     underneath. Rendered and compared frame by frame — the ring, the four cards and their films all
-     have to stay READABLE through this the whole way down, because they are the thing the visitor
-     is driving. 0.44 frosts the page; anything near 0.7 hides it. */
-  opacity: calc(var(--p, 0) * 0.44);
-  backdrop-filter: blur(calc(var(--p, 0) * 3.5px)) saturate(0.95);
-  -webkit-backdrop-filter: blur(calc(var(--p, 0) * 3.5px)) saturate(0.95);
-  -webkit-mask-image: linear-gradient(to bottom,
-    #000 0%,
-    #000 calc(var(--p, 0) * 112%),
-    transparent calc(var(--p, 0) * 112% + 14%));
-  mask-image: linear-gradient(to bottom,
-    #000 0%,
-    #000 calc(var(--p, 0) * 112%),
-    transparent calc(var(--p, 0) * 112% + 14%));
-  /* ⚠️ NO TRANSITION WHILE THE PULL OWNS IT. `--p` IS the animation, and a 0.55s ease on an opacity
-     derived from it meant the wash was permanently half a second behind the finger — it smeared on
-     a quick pull and hung behind on the release. The transition belongs only to the hand-off at the
-     end, which is a state change rather than a scrub. */
-  transition: none;
-}
-/* Committed: hold it whole for the route change, then let it go and reveal the deck. */
-.back-veil.leaving { opacity: 0 !important; transition: opacity 0.5s ease; }
 
-/* ── going back: the loader that was the logo ────────────────────────────────
-   Starts where the wordmark is and travels to the middle of the frame as the veil reaches it. */
+/* ── going back: the line the wordmark opens into ─────────────────────────────
+   ⚠️ IT STAYS ON THE WORDMARK'S LINE. The old cue TRAVELLED from here to the middle of the frame,
+   which made sense when a veil was closing over everything and the loader had to be found in it.
+   It does not now: the band opening below is the thing that moves, and the return's mark belongs
+   exactly where the mark it replaces was. Nothing chases anything.
+   ⚠️ The ink is `--accentLight`, not `--accent`: the band this sits in is the renderer's clear
+   colour, which is always the chapter's DARK accent. Same reasoning as AUDIT #78. */
 .pull-cue {
   position: fixed;
   left: 50%;
-  /* ⚠️ INTERPOLATED FROM THE WORDMARK'S OWN LINE to the centre of the frame. Pinned to either end
-     it is a second element appearing beside the first; moving between them is what makes it read
-     as the mark becoming the loader. */
-  top: calc(0.9rem + var(--p, 0) * (50vh - 2.6rem));
+  top: 0.9rem;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: calc(0.2rem + var(--p, 0) * 0.7rem);
+  gap: calc(0.35rem + var(--p, 0) * 0.5rem);
   white-space: nowrap;
   pointer-events: none;
   z-index: 21;
-  /* The ink is the chapter's, because the veil under it is the chapter's paper. */
-  color: var(--accent, #333);
-  /* ⚠️ IT LEADS, IT DOES NOT FOLLOW. At `p * 1.5` the loader was only fully up at 67% of the pull —
-     after the hero had finished folding back into a card at 60% — so it read as an indicator for
-     something that had already happened. Up inside the first quarter now; the RING still closes
-     with `--p`, which is the part that tracks the journey. */
-  opacity: calc(var(--p, 0) * 4);
-  /* Same reason as the veil: no transition while the pull is driving it. */
+  color: var(--accentLight, #F3F1EC);
+  /* It leads the thing it indicates — up inside the first quarter, while the RING is what tracks
+     the journey. Same reason as before; see AUDIT #93. The fade-OUT is shaped in JS (`cueOpacity`)
+     because it has to be a curve and a CSS transition would lag the scrub. */
+  opacity: var(--o, 0);
+  /* No transition while the pull is driving it — AUDIT #94. */
   transition: none;
 }
 .pull-cue.leaving { opacity: 0; transition: opacity 0.4s ease; }
+
+/* The rule itself: two hairlines growing out from the ring, left and right. They start at zero
+   width, so at the moment of handover there is only the ring sitting where the ampersand was. */
+.pull-rule {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--p, 0) * 0.6rem);
+}
+.rule-seg {
+  display: block;
+  height: 1px;
+  background: currentColor;
+  /* ⚠️ Capped in rem as well as vw. On a 1920 frame a pure vw rule ran most of the width of the
+     screen and stopped reading as a mark under the nav; on a 360 phone a pure rem rule was longer
+     than the frame. min() of the two holds the same proportion at both ends. */
+  width: calc(var(--p, 0) * min(22vw, 7.5rem));
+  opacity: calc(0.25 + var(--p, 0) * 0.45);
+  transition: none;
+}
+
 .pull-ring {
   position: relative;
   display: block;
-  /* Grows with the pull, from a mark the size of the wordmark's cap-height to a loader. */
-  /* ⚠️ It ends at the CENTRE OF THE FRAME, where 2.9rem read as a stray dot. This is the one
-     thing on screen saying what is happening; it is allowed to be seen. */
-  width: calc(1.15rem + var(--p, 0) * 2.85rem);
-  height: calc(1.15rem + var(--p, 0) * 2.85rem);
+  /* ⚠️ IT STARTS AT THE AMPERSAND'S SIZE AND STAYS A MARK. The old one grew to 4rem because it
+     was alone in the middle of an empty frosted screen. Here it is one element of a line under the
+     nav, and 4rem in that company is a dinner plate — the rule extending either side is what
+     carries the sense of progress now, and the ring only has to hold the arc. */
+  width: calc(1.15rem + var(--p, 0) * 0.85rem);
+  height: calc(1.15rem + var(--p, 0) * 0.85rem);
+  flex: none;
   transition: none;
 }
 .pull-ring svg { width: 100%; height: 100%; display: block; overflow: visible; }

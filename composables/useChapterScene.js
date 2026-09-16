@@ -750,8 +750,26 @@ export function useChapterScene() {
     // IMPORTANT: added to scene root (not groupG) so it doesn't inherit groupG's
     // 25°/70°/15° tilt. lookAt(camera) called every frame keeps it facing the viewer.
     // This matches original: D.add(F) where D=scene, F=txt mesh, F.lookAt(O.position) per frame.
+    // ⚠️ THE TAGLINES COME IN TWO SIZES AND THE SCREEN PICKS ONE. These are WebGL textures, so
+    // there is no <img> and `srcset` cannot help — the choice has to be made here, at load.
+    // Measured 2026-09-16: the four originals are 2048×2048 (~562 KB) and cost about **67 MB of
+    // VRAM decoded** (4 × 2048² × 4 bytes) on exactly the devices least able to spare it, while a
+    // 390px phone renders the plane at roughly 390 CSS px. The 1024² variants are a quarter of that
+    // memory and ~36% fewer bytes.
+    // ⚠️ THE TEST IS DEVICE PIXELS, NOT CSS PIXELS. A 390px phone at 3× has 1170 real pixels to
+    // fill and a 1440 laptop at 1× has 1440 — the phone is the *higher*-resolution device of the
+    // two by CSS width alone, which is how a naive `innerWidth < 768` test ends up serving the
+    // small texture to the screen that needed the big one. 1600 device px is the crossover: below
+    // it the plane is never drawn wider than 1024 of them.
+    // ⚠️ `-sm` files come from `scripts/gen-image-variants.mjs`; re-run it after `gen-textures.mjs`.
+    const txtFor = (url) => (
+      typeof window !== 'undefined' &&
+      window.innerWidth * (window.devicePixelRatio || 1) < 1600
+        ? url.replace(/\.png$/, '-sm.png')
+        : url
+    )
     txtTextures = await Promise.all(
-      CHAPTERS.map((ch) => loadTexture(ch.txt).then((t) => { reportProgress(); return t }))
+      CHAPTERS.map((ch) => loadTexture(txtFor(ch.txt)).then((t) => { reportProgress(); return t }))
     )
     txtTextures.forEach((t) => {
       t.wrapS = THREE.ClampToEdgeWrapping
@@ -1899,6 +1917,26 @@ export function useChapterScene() {
       m.scale.set(sc, sc, 1)
       o.p.material.uniforms.blendFactor.value = lp(o.blend, 0, eP)
       o.p.material.uniforms.progress.value = lp(o.prog, 0, eP)
+    }
+
+    // ── THE BAND ──────────────────────────────────────────────────────
+    // The picture slides DOWN as you pull, opening the return's line above it (2026-09-16).
+    // ⚠️ IT HAS TO BE APPLIED HERE, not in animate(). `beginBack` sets `isDeselecting`, which gates
+    // animate()'s scroll coupling off — so the `heroPullPx` term up there is dead the moment the
+    // pull engages, and this function re-places the hero from the captured pose on every frame.
+    // Setting the pull without this produced a band that opened in the DOM while the card sat
+    // perfectly still: captured at 600px of wheel, band = 176px and the hero had not moved a pixel.
+    // ⚠️ AND IT UNWINDS WITH THE RETURN (the `1 - e`). The band holds at its maximum through the
+    // second stage while the card folds back into the deck — but the card is going to its ring slot,
+    // and a constant screen offset would land it 176px below the slot. Releasing it on the same
+    // curve means the card rises back into the ring exactly as it folds, which is what going home
+    // looks like.
+    if (selectedHero && heroPullPx) {
+      const m = selectedHero.mesh
+      m.getWorldPosition(_frontVec)
+      const dz = Math.max(1, camera.position.z - _frontVec.z)
+      const worldPerPx = (2 * dz * Math.tan(toRad(camera.fov / 2))) / height
+      m.position.y -= heroPullPx * worldPerPx * (1 - e)
     }
   }
 

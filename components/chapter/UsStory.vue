@@ -28,7 +28,20 @@
         <!-- One taped polaroid per scene — settles straight(er) as it reveals. -->
         <figure v-if="scene.images?.[0]" class="polaroid">
           <span class="tape" aria-hidden="true" />
-          <img :src="scene.images[0]" :alt="scene.caption || scene.title" loading="lazy" />
+          <!-- ⚠️ THE ONLY <img> ON THE SITE BIG ENOUGH TO BE WORTH A SRCSET. The polaroids are ~900px
+               originals rendered at `min(72vw, 20rem)` on a phone and `min(30vw, 24rem)` above it —
+               281 CSS px and 384 CSS px — so anything at or below 2× was downloading roughly twice
+               the pixels it could draw. `sizes` mirrors those two CSS rules and the cap, so a wide
+               desktop does not ask for a 30vw image it will never show at that size.
+               The `-sm` file comes from `scripts/gen-image-variants.mjs`. -->
+          <img
+            :src="scene.images[0]"
+            :srcset="srcSet(scene.images[0])"
+            sizes="(max-width: 768px) 72vw, (max-width: 1280px) 30vw, 384px"
+            :alt="scene.caption || scene.title"
+            loading="lazy"
+            decoding="async"
+          />
           <figcaption v-if="scene.capW.length" data-unit>
             <template v-for="(w, k) in scene.capW" :key="k"
               ><span class="w write" :data-window="w.win">{{ w.t }}</span>{{ ' ' }}</template
@@ -170,6 +183,10 @@ function paras(body, a, b) {
     ),
   }))
 }
+
+// The two widths that exist on disk for every polaroid. Keep in step with
+// `scripts/gen-image-variants.mjs` (600px) and the originals (~900px).
+const srcSet = (u) => (u ? `${u.replace(/\.jpe?g$/i, '-sm.jpg')} 600w, ${u} 900w` : undefined)
 
 const scenes = computed(() =>
   props.sections.map((s) => ({
