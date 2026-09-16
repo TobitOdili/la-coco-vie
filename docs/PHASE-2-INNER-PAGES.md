@@ -105,7 +105,7 @@ state, everything below it is history — newest first.)
 
 ---
 
-## ▶▶ FULL QA PASS — 2026-09-15 (no fixes; survey + plan) → [`QA-2026-09-15.md`](QA-2026-09-15.md)
+## ▶▶ FULL QA PASS — 2026-09-15, `dfe865cc` (no fixes; survey + plan) → [`QA-2026-09-15.md`](QA-2026-09-15.md)
 
 User: *"now I want you to do a FULL Q/A pass. Do it exhaustively and thoroughly … Don't solve right
 away just update all the logs and MDs and create a game plan for any bugs you find."*

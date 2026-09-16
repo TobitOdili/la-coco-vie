@@ -7,8 +7,9 @@
 
 > **Doc map:** this file is the **forensic issue history** — per-issue root causes, fixes,
 > and commit refs (numbered #1–#112). ⚠️ **#99–#112 are OPEN** — they came out of the full QA pass
-> of 2026-09-15 and the survey, the measurements behind each one and the ordered plan are in
-> [`docs/QA-2026-09-15.md`](docs/QA-2026-09-15.md). For orientation start at [`README.md`](README.md);
+> of 2026-09-15 (`dfe865cc`), and the survey, the measurements behind each one and the ordered plan
+> are in [`docs/QA-2026-09-15.md`](docs/QA-2026-09-15.md). Those rows carry no fix commit because
+> nothing has been fixed; the ref is the pass that FOUND them. For orientation start at [`README.md`](README.md);
 > how-it-works is [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md); live status is
 > [`PROGRESS.md`](PROGRESS.md). The **Priority Order table near the bottom is the quickest
 > index** of every issue and its status.
