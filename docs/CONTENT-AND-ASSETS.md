@@ -137,6 +137,10 @@ public/
 │   ├── still-{slug}.jpg         Frame 0.04 of each film — the card window's picture at rest.
 │   │                            184 KB for all four. ⚠️ REGENERATE with the film: `npm run gen:stills`
 │   ├── cu-favicon.png           Browser-tab mark — the ampersand (replaced the reference's star)
+│   │                            ⚠️ Emitted TWICE in <head> (icon + apple-touch-icon, same file).
+│   ⚠️ cu-p{1..4}.svg           UNREFERENCED — 119 KB each, 478 KB shipped on every build for
+│                                nothing. Every `CHAPTERS[].svg` points at the .png of the same
+│                                name. Same class as AUDIT #38; filed as AUDIT #108 (open).
 ├── video/
 │   ├── us.mp4                   Chapter films — the couple's own, played as VideoTexture
 │   ├── the-big-day.mp4          on hover/select. Silent, H.264, ~0.6–3.7 MB each. 900×1200

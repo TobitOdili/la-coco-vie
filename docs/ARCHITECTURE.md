@@ -1120,6 +1120,51 @@ for any future CSS-var asset paths.
 There are two complementary ways to capture the running site. **For our own
 geometry/layout work, prefer the local one** — it's instant and renders at the real aspect.
 
+> ### ★ The four probes worth rebuilding (from the full QA pass, 2026-09-15)
+> Written throwaway at the repo root as `qa-*.mjs`, run against a **production** build served
+> statically (`rm -rf .output && npm run build`, `npx serve -s .output/public -l 5099`), and
+> **deleted before commit**. Full results and findings → [`QA-2026-09-15.md`](QA-2026-09-15.md).
+>
+> ⚠️ **A probe `.mjs` must live in the repo ROOT** or `playwright-core` will not resolve, and
+> ⚠️ `page.evaluate(someFunctionString)` **returns `undefined`** — Playwright evaluates the string
+> as an expression and does not call it. Write `page.evaluate('(' + FN + ')()')`. A whole 40-page
+> sweep came back empty before that was noticed.
+>
+> 1. **Static sweep** — every route × every size, measured at the top *and* after scrolling to the
+>    bottom: document overflow (`scrollWidth > clientWidth`, plus the elements contributing),
+>    console errors, failed requests, every link, broken/alt-less images, sub-44px tap targets,
+>    sub-11px text, clipped text, duplicate ids, heading order, `<meta>`.
+> 2. **Collision** — the one that found AUDIT #101. At N scroll positions, take the rects of
+>    `.wordmark, .countdown, .menu-item, .popup-card, .cash-dock, .leave-cue` and intersect them
+>    with every **visible leaf text run** inside `.chapter-scroll`. Report positions-with-overlap out
+>    of N, so the answer is a rate rather than an anecdote.
+> 3. **Contrast against the REAL ground** — the one that found #100 and #107, and the only honest
+>    way to measure a site whose grounds are video, canvas and gradients. Collect every visible leaf
+>    text run with its rect, colour and **cumulative ancestor opacity**; set `visibility: hidden` on
+>    all of them (never `display`, which reflows); screenshot the viewport; hand the base64 PNG back
+>    *into* the page, draw it to a canvas and take the mean RGB of each rect via `getImageData`;
+>    composite the text colour over it and compute the WCAG ratio. One screenshot per scroll
+>    position, not one per element.
+>    ⚠️ Report each element's **BEST** ratio across all positions. An element mid-fade reads 1.0 and
+>    is not a defect; only "never readable anywhere" is.
+>    ⚠️ Then check the class before filing. Outline-only type (`color: transparent` +
+>    `-webkit-text-stroke`, as the With Love wall uses) reports 1.0 while being perfectly legible.
+> 4. **Touch** — `context({ hasTouch: true, isMobile: true })` plus CDP
+>    `Input.dispatchTouchEvent` (`touchStart`/`touchMove`×N/`touchEnd`). A `hasTouch` context
+>    **ignores `mouse.wheel`**, so this is the only way to exercise the swipe paths.
+>    ⚠️ Probe the gesture the way a thumb makes it. AUDIT #88 shipped broken because the probes
+>    used one continuous gesture where a person makes several short ones.
+>
+> **Contact sheets beat scrubbing screenshots.** Capture ~18 frames down a page, then compose them
+> into a grid by writing an HTML file of `file://` `<img>`s and screenshotting *that* `fullPage`.
+> A whole chapter at a whole breakpoint becomes one readable image, and layout problems that only
+> exist between two scroll positions become obvious.
+>
+> **Two artefacts that will fool you:** the desktop **custom cursor** renders as a small ring
+> wherever the mouse was last parked (move it to `(2, 2)` before every screenshot), and the
+> **homepage needs ~10–14s to settle** — a shot at 6s catches the intro mid-flight, and the
+> composition looks broken when it is not.
+
 ### ★ Local fast loop (preferred for iterating our own build)
 Run the dev server and screenshot it with **local system Chrome** via Playwright — real
 1440×900 (aspect 1.6), real WebGL, no deploy wait, no aspect quirk. Edit → Nuxt hot-reloads

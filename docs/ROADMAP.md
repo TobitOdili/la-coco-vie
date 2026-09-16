@@ -125,6 +125,30 @@ Mechanics are documented in [`CONTENT-AND-ASSETS.md`](CONTENT-AND-ASSETS.md):
 
 ---
 
+## Phase 4 — Ship-readiness 🔎 (opened 2026-09-15 by the full QA pass)
+
+The four chapters are built and live; what is left is the difference between *built* and *ready to
+be shared with a few hundred guests*. The survey, the measurements behind each item and the ordered
+plan are in [`QA-2026-09-15.md`](QA-2026-09-15.md); the issues are **AUDIT #99–#112**, all open.
+
+| round | what | why it is in this order |
+|---|---|---|
+| **1 — the link and the first screen** | share previews + per-route titles (#99) · re-ink the bottom chrome inside the hero (#100) · one countdown for both places (#104) | The link is the whole distribution model, and the bottom chrome is invisible on the first screen a guest ever sees. Highest value, lowest risk, no motion touched. |
+| **2 — reading the pages** | copy vs the fixed nav (#101) · nine small labels to AA (#107) · the desktop tagline off the card tops (#102) | The reading experience, in the order a guest meets it. #102 wants the same derive-from-the-frustum treatment as #40/#84/#85. |
+| **3 — reach** | keyboard-operable chrome (#105) · a reduced-motion contract (#106) · landscape phone (#103) · sub-44px targets (#109) | Smaller audiences, larger edits. #106 needs the contract decided before any code. |
+| **4 — housekeeping** | drop 478 KB of unused SVGs (#108) · delete orphaned `POPUPS` + `marks[]` comments (#110) · `robots.txt` / sitemap / soft-404 (#112) · verify the five 403 registry links from Lagos (#111) | Cheap, and none of it is felt by a guest until it is wrong. |
+
+⚠️ **Splitting `useChapterScene.js` (2,437 lines) is deliberately NOT in this phase.** It is the
+right thing eventually and the wrong thing six weeks before a wedding: every item above is a small
+verifiable edit, and a refactor underneath them turns a QA round into a regression hunt.
+
+⚠️ **Still waiting on the couple, not on code:** In Frames' Drive folder and its photographs;
+what The Big Day should say beyond the date (it currently carries no venue, time, dress code or
+map); `SITE.countdownFrom`; the welcome-note copy; a human listen to the generated theme track; and
+the three registry links that point at a collection or brand page rather than an exact product.
+
+---
+
 ## Attribution
 
 The original **"Chapter the Bride"** concept, design, artwork, films, audio, and copy are

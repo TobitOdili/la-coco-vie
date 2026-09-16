@@ -38,15 +38,42 @@ state, everything below it is history — newest first.)
 > 5. **`overflow:hidden` on a scene root kills `position:sticky`.** Put it on the sticky child.
 >
 > **DATES ARE REAL (user, 2026-08-31; the traditional CORRECTED to the 23rd on 2026-09-02):** the
-> **traditional on FRI 23 Oct 2026** and the **white wedding + reception on Thu 29 Oct 2026** — they replaced the single placeholder Oct 27, and the
+> **traditional on FRI 23 Oct 2026** and the **white wedding + reception on Thu 29 Oct 2026**.
+>
+> ⚠️⚠️ **EVERYTHING IN THE PARAGRAPH ABOVE AND THE FOUR BULLETS BELOW WAS TRUE ON 2026-09-02 AND IS
+> NOT TRUE NOW.** Corrected 2026-09-15 during the full QA pass, which is also where AUDIT #110 came
+> from — this snapshot is the first thing a cold pickup reads, and it was describing features that
+> have since been deleted. What actually holds today:
+> - **ONE wedding day.** The traditional (23 Oct) was removed site-wide on 2026-09-06 at the
+>   couple's request. The site counts down to the **white wedding + reception, Thu 29 Oct 2026**,
+>   and nothing else. `SITE.events` keeps its array shape so a second day can come back.
+> - **The Big Day has NO maps, NO `.ics`, NO venue, NO time and NO dress code.** The "all three open
+>   in maps are live" and "Add to Calendar is live" notes below describe a version that no longer
+>   exists. Its three sections are the ghost October with the 29th ringed, the knot, and the
+>   countdown; the page says *"everything else — where, when, what to wear — comes with your
+>   rsvp."* `POPUPS.calBoth` and `POPUPS.dressCode` survive in `chapterPages.js` referenced by
+>   nothing, and three comments there still describe a `marks[]` shape the data does not have.
+> - **US's copy is the couple's own words** since 2026-09-13. The lorem ipsum is gone, and so are
+>   that page's two popup widgets (removed at the couple's request).
+> - **The favicon is the couple's own** generated ampersand (`cu-favicon.png`). Nothing of the
+>   reference's ships — `public/images/gallery/` and `images/dresses/` were deleted on 2026-09-03.
+> - **The registry is real** (ten products, prices, shop links) and so are the couple's two **gift
+>   account details**, which live on For Our Next Chapter only since 2026-09-15.
+> - **Of the three dead destinations, one is left:** "Add Your Photos" (In Frames). The cash card
+>   was closed by `SITE.gifts` (AUDIT #87); the footer credit may never need one.
+> - **The audio is ONE generated track** for the whole site, not four per-chapter files.
+>
+> <details><summary>The 2026-09-02 text, kept for the record</summary>
+>
+> — they replaced the single placeholder Oct 27, and the
 > homepage countdown now rolls over from the first to the second. ⚠️ Those weekdays (Sunday and
 > Thursday) are what October 2026 actually gives; if that looks wrong, the MONTH is wrong.
 > **PLACEHOLDER (waiting on the couple):** all copy; the times;
-> venues; the registry list; the favicon (still Milla Nova's); the 4 audio tracks; and the With Love
+> venues; the registry list; the favicon; the 4 audio tracks; and the With Love
 > item art (one watermarked clipart stand-in). The card films, the In Frames reel photos and **every
 > photo on US** ARE the couple's own — which leaves `public/images/gallery/` (3.8 MB of Milla Nova
 > stills) referenced by nothing at all; it can be deleted.
-> ⚠️ **US's copy is deliberate LOREM IPSUM** (2026-08-31, user's request — the page is being reviewed
+> **US's copy is deliberate LOREM IPSUM** (2026-08-31, user's request — the page is being reviewed
 > for layout, not words). Only the three section HEADINGS are real; the popup card titles are lorem too.
 >
 > **The THREE dead destinations left** (down from eight on 2026-09-03). Every one is still
@@ -65,6 +92,8 @@ state, everything below it is history — newest first.)
 > - **Add to Calendar** is live and needs no service: the `.ics` is built in the browser and handed
 >   over as a Blob, per day or both days at once.
 >
+> </details>
+>
 > **VERIFIED (user, 2026-08-31):** everything built in August looks right **on desktop and mobile**,
 > and the **card films work**. The only thing still unchecked by a human is the **mobile swipe lean**
 > (emulation says rest 0.24° / peak 10.2°; `LEAN_MAX_DEG` is the knob).
@@ -73,6 +102,66 @@ state, everything below it is history — newest first.)
 > (traditional-wedding date, thread-motion consistency, a real map card); portrait card-sizing
 > ("passable"); code-health (split the ~1500-line `useChapterScene.js`).
 > **Regenerate card art:** `npm run gen:textures` (see [`scripts/README.md`](../scripts/README.md)).
+
+---
+
+## ▶▶ FULL QA PASS — 2026-09-15 (no fixes; survey + plan) → [`QA-2026-09-15.md`](QA-2026-09-15.md)
+
+User: *"now I want you to do a FULL Q/A pass. Do it exhaustively and thoroughly … Don't solve right
+away just update all the logs and MDs and create a game plan for any bugs you find."*
+
+Homepage + all four chapters at **eight viewports** (360×640 → 1920×1080) plus **844×390 and
+932×430 landscape**, **2560×1440**, real touch, keyboard, reduced motion, link health and what a
+crawler receives. **14 issues filed as AUDIT #99–#112. Nothing was changed in the app.**
+
+**Healthy, and worth knowing:** zero document overflow at any size · zero console/page errors on any
+route · zero failed requests, broken images, missing `alt`, duplicate ids or rendered `#` links ·
+both exits work on wheel **and** touch on all four chapters · tap-to-copy verified against the real
+clipboard · In Frames' window and With Love's cash dialog both correct, `Escape` included.
+
+**The three that matter most:**
+1. **#99 — a shared link has no preview**, and **every chapter shell carries the HOMEPAGE title**
+   (`/us/index.html` says "A Love Story in Chapters"): the per-chapter title is set client-side and
+   an unfurler never runs it. One `<meta>` in the whole document, and `ssr: false` leaves an empty
+   `<body>`. The site's entire distribution is somebody pasting the link into WhatsApp.
+2. **#100 — the bottom chrome is invisible on the first screen of every chapter.** `WITH LOVE, C & U`
+   measures **1.03** and `OFF` **1.08** against the real rendered ground at 390×844 (AA wants 4.5).
+   ⚠️ The dark band under the hero card on a phone is **deliberate** and documented below — the
+   card is fitted to the viewport's WIDTH and the clear colour fills beneath it. What nobody did was
+   re-ink the chrome that sits in that band: the TOP nav flips via `groundIsDark()` (#86), the bottom
+   row never learned to.
+3. **#101 — page copy runs under the nav** at **18 of 26 scroll positions on /us at 360×640**
+   (104 element overlaps). The wordmark is centred and so is the copy; there is no scrim, so both
+   become mush together.
+
+Then: the desktop tagline printed across the card tops at every landscape size (#102, the same
+constants-in-world-units shape as #40/#84/#85) · landscape phone unhandled, hero title on the
+wordmark (#103) · the homepage says 44 days and The Big Day says 43, `ceil` vs `floor` (#104) · the
+chrome is unreachable by keyboard — the only focusable control on the homepage is RSVP (#105) ·
+`prefers-reduced-motion` ignored by the carousel and every scrubbed scene (#106) · nine small
+functional labels that never reach AA, including **`BACK TO THE CHAPTERS` and the footer's own
+wedding date** (#107) · 478 KB of unreferenced poster SVGs shipping (#108, same class as #38) ·
+three sub-44px targets (#109) · seven orphaned `POPUPS` entries and `marks[]` comments describing
+data that does not exist (#110) · five of ten registry links 403 from here (#111, **verify from
+Lagos**) · soft-404s, no `robots.txt`/`sitemap.xml`, no `<h1>` anywhere (#112).
+
+⚠️ **Two probe artefacts that will fool the next person** reading the screenshots: the desktop
+custom cursor renders as a small ring wherever the mouse was parked (it is not a stray dot in the
+design), and **the homepage takes ~10–14s to settle** — a shot at 6s catches the intro mid-flight and
+the composition looks broken when it is not. Both cost me a wrong reading before I checked.
+
+⚠️ **Measure the ground, then check the class, before filing type as invisible.** The registry
+wall reported a contrast ratio of 1.0 across the board and is perfectly legible: its words are
+outline-only by design (`color: transparent` + `-webkit-text-stroke`, filling in on `.word.on`).
+Excluded, not filed. The same discipline caught a false positive on In Frames' `Escape` handler —
+both folder views live in the DOM at once and `.on` switches them, so "is `.view-empty` present"
+answers yes forever.
+
+The **ordered plan** (four rounds, cheapest and highest-value first) is at the end of
+[`QA-2026-09-15.md`](QA-2026-09-15.md). Deliberately NOT in it: splitting `useChapterScene.js`.
+Every issue above is a small verifiable edit; a refactor underneath them turns a QA round into a
+regression hunt.
+
 
 **▶▶ FIXED (2026-08-10, `67693fd3`) — GITHUB PAGES ASSETS (every image on every inner page).**
 `import.meta.env.BASE_URL` **cannot** build public-asset URLs in Nuxt: Vite's client `base` is

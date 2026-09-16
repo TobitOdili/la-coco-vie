@@ -35,6 +35,13 @@ import { asset } from '~/utils/asset'
 // one, leave it null and the note stands alone. See docs/CONTENT-AND-ASSETS.md.
 
 // ── The floating popup cards ─────────────────────────────────────────────────
+// ⚠️ AUDIT #110 (open, found 2026-09-15): SEVEN of the entries below are referenced by NOTHING.
+// `fullAlbum` is the only one any page uses. `calBoth`, `dressCode`, `regFund`, `regEspresso`,
+// `regDinner`, `regLuggage` and `us` are dead — AND SO ARE SEVERAL COMMENTS IN THIS FILE: three of
+// them describe `marks[].events[].map` and `marks[].dress` "in the-big-day below", but the-big-day
+// has no `marks`. Its calendar section carries `monthISO`, `mark`, `kicker` and `note`, and that
+// chapter renders no maps, no .ics and no dress code at all. Read the data, not the comments,
+// until this is cleaned up. See docs/QA-2026-09-15.md.
 export const POPUPS = {
   // ⚠️ THE “US” POPUPS ARE GONE (2026-09-13, user: “remove the widgets on that coco & uvie
   // page. we won’t need them”). They were two captioned polaroids that docked while their scene

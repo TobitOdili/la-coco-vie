@@ -26,7 +26,17 @@
 > [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md), which is the source of truth.
 > Issue forensics (now #1–#27) are in [`AUDIT.md`](AUDIT.md).
 
-> Last updated: **2026-09-13**. All four inner pages are bespoke and live; the couple's own card
+> ▶▶ **FULL QA PASS, 2026-09-15 — 14 open issues, none fixed.** The homepage and all four chapters
+> were swept at eight viewports plus landscape phones and 2560×1440, with touch, keyboard, reduced
+> motion, link health and what a crawler receives. **Nothing in the app was changed.** Survey,
+> measurements and the ordered plan → [`docs/QA-2026-09-15.md`](docs/QA-2026-09-15.md); the issues
+> are **AUDIT #99–#112**. The three that matter most: a shared link has no preview and every chapter
+> previews as the homepage (#99); the bottom chrome is invisible on the first screen of every
+> chapter, measuring 1.03 against its own ground (#100); and page copy runs under the nav at up to
+> 69% of scroll positions (#101). Healthy: zero overflow, zero console errors, zero failed requests,
+> both exits working on wheel and touch, tap-to-copy verified against the real clipboard.
+>
+> Last updated: **2026-09-15**. All four inner pages are bespoke and live; the couple's own card
 > films and In Frames reel photos are in; asset URLs are base-path correct on both hosts.
 > **In Frames and With Love were both rebuilt from scratch** — and In Frames has since been rebuilt
 > several more times, landing on **"the procession"** (pinned, scroll-scrubbed prints in CSS 3D,
