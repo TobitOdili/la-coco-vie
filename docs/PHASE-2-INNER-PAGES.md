@@ -105,6 +105,66 @@ state, everything below it is history — newest first.)
 
 ---
 
+## ▶▶ THE RETURN NO LONGER ARRIVES AT A STANDSTILL — 2026-09-17 (AUDIT #119)
+
+User: *"On reverse scrolling from top of page into chapters, love the way the loading animation
+plays out, but it seems the page is returned into a spin that's reverse direction of what the
+natural reverse scroll would be, which causes it to spin into the deck one way, then stop and spin
+the other way on continuous down scroll. Similar to the return to the deck from the bottom of an
+inner page, nudge the deck to keep going after the spin completes so a user feels a natural
+transition."*
+
+The **stop** is real and is fixed. The **direction** turned out to be somewhere else — see below.
+
+### The stop
+
+The same fault the BOTTOM exit had in AUDIT #74, which the top return never got. Two causes, both
+traced frame by frame at 1440×900:
+
+1. **The scrub's easing is a smoothstep, and a smoothstep's derivative at 1 is zero.** The turn was
+   *guaranteed* to arrive dead no matter what else was done to it — traced, −0.277 rad/frame
+   decaying to −0.001 over about 1.8s and then exactly zero. `BACK_SPIN_CARRY` blends a third of
+   the travel back to linear, which gives it terminal velocity without touching the shape of the
+   start.
+2. **There was no hand-over** where the bottom exit has `EXIT_FOLLOW`.
+
+⚠️ **The tail must not be added on top of a finished turn.** A −22° nudge past `preSelectRot`
+carried the deck a third of a slot beyond its mark and changed which chapter came up front
+(in-frames → with-love). The scrub now stops **`BACK_FOLLOW` short** and the tween finishes the job
+— exactly what `SPIN_TO = 0.98` does for the bottom exit.
+
+⚠️ **40° is under one slot on purpose.** The ring's cards are 45° apart. Measured travel after the
+commit: 141.5° with no tail, 152.9° at 22°, **164.0° at 40°**, 174.5° at 58° — it keeps buying
+motion, but past a slot the scrub visibly stops more than a card-width short and the tween starts
+reading as a second, separate move.
+
+**Measured:** travel after the commit **141.5° → 164.8°**, still moving at 1867ms against 1667ms,
+resting angle unchanged (0.409 → 0.411 rad), and the card that comes up front is the same one.
+Reachability re-checked against AUDIT #88: 120px never fires, 200px arrives in two, 280px in one,
+wheel at 60/300/600 ms per notch all arrive, a short release springs back and the page scrolls
+normally, and the bottom exit is untouched.
+
+### The direction — it is on the way IN, not the way out
+
+Measured, because the sign was not what it looked like:
+
+| | direction |
+|---|---|
+| homepage, scrolling down | **negative** (0 → −1.44 over six notches) |
+| bottom exit | **negative** |
+| **top return** | **negative** (7.069 → 0) |
+| **select** | **positive** (0 → +7.069) |
+
+The three ways of *leaving* all agree with the homepage's own scroll. The one reversal in the whole
+loop is the **select**, which always advances forward a whole turn. So "spin into the deck one way,
+then the other way" is most likely the select against everything else rather than the return.
+
+⚠️ **Left alone deliberately.** Reversing the select flips the homepage's signature animation — a
+design decision, not a defect, and the last time a select direction was changed without being asked
+it had to be reverted (AUDIT #98). Worth one sentence from the couple before it moves.
+
+---
+
 ## ▶▶ THE RETURN IS THE PAGE NOW, AND A PHONE STOPPED DOWNLOADING THE DESKTOP'S IMAGES — 2026-09-16 (AUDIT #115–#117)
 
 User: *"Sliding down from the top of a card to go back to home does the right thing with the

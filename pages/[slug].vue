@@ -205,7 +205,17 @@ const RELEASE_STEP = 0.055   // per frame, springing back — about 210ms from j
 // frame eases out on its own: about 450ms from the commit point, fastest at the moment you let go
 // and slowest as it lands.
 const SETTLE_EASE = 0.085    // fraction of what is left, per frame
-const SETTLE_SNAP = 0.004    // close enough to 1 to call it arrived
+// ⚠️ THE RETURN COMMITS BEFORE ITS LAST FEW PERCENT, for the same reason the bottom exit does at
+// `COMMIT_AT`. The settle closes a FRACTION of what is left each frame (AUDIT #95, so it
+// decelerates instead of arriving at full speed), which makes the tail an exponential creep — and
+// a creep hands `endBack` a deck that has already stopped. Committing here leaves it moving.
+// ⚠️ 0.08 of the PULL is not 8% of anything anyone can see. Everything on this scrub runs through
+// a smoothstep, which is flat at its end: `ease(0.92)` is 0.9814, so the pose, tilt and background
+// jump under 2% of their range. The rotation jumps more (~4% of the turn, because it blends in
+// linear travel — see BACK_SPIN_CARRY) and that is the point: the render lerp turns that into
+// velocity rather than a snap, which is the momentum `BACK_FOLLOW` then carries.
+// Measured travel after the commit: 154.5° at 0.004, 164.0° here, against 141.5° before any of it.
+const SETTLE_SNAP = 0.08     // hand over to endBack's follow-through this close to 1
 
 let releaseRaf = 0
 function releasePull() {

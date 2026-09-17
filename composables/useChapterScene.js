@@ -1848,6 +1848,25 @@ export function useChapterScene() {
   // what made this read as broken. It arrives once the ring has formed (BACK_POSTERS) and the accent
   // ground has cleared (BACK_BG) — which is also the moment there is a homepage for it to belong to.
   const BACK_TXT_FROM = 0.72
+  // How much of the return's turn is carried by LINEAR travel rather than the smoothstep — i.e.
+  // how fast it is still going when it lands. 0 is the old behaviour (arrives dead). See the note
+  // at the `animatedRotationY` line in setBackProgress.
+  const BACK_SPIN_CARRY = 0.34
+  // The leftover the homepage is handed, the way `EXIT_FOLLOW` hands one to the bottom exit. It is
+  // BIGGER than EXIT_FOLLOW because it has more to cover: the bottom exit commits at `de` 0.955
+  // with the turn still running at 44°/de, whereas the return commits at a true 1 and only has
+  // what BACK_SPIN_CARRY left it.
+  // ⚠️ THE SCRUB STOPS SHORT AND THE FOLLOW-THROUGH FINISHES THE JOB, so the deck is still
+  // turning through the commit AND still lands exactly where it started. Adding a nudge ON TOP of a
+  // completed turn also works, but it carries the deck a third of a slot past its mark — measured,
+  // a −22° tail changed which chapter came up front (in-frames → with-love). The bottom exit
+  // solved the same problem the same way: `SPIN_TO = 0.98` leaves the turn 98.7% done at the
+  // landing and `EXIT_FOLLOW` carries the rest.
+  // ⚠️ UNDER ONE SLOT (the ring's cards are 45° apart), deliberately. Measured travel after the
+  // commit: 141.5° with no tail at all, 152.9° at 22°, **164.0° at 40°**, 174.5° at 58° — it keeps
+  // buying motion, but past a slot the scrub visibly stops more than a card-width short and the
+  // tween reads as a second, separate move rather than the end of the first.
+  const BACK_FOLLOW = toRad(40)
   let backStart = null
 
   function beginBack() {
@@ -1901,7 +1920,18 @@ export function useChapterScene() {
     const eP = ease(t / BACK_POSTERS)
     const ht = homeTilt()
 
-    carousel.animatedRotationY = lp(backStart.rot, preSelectRot, e)
+    // ⚠️ THE TURN ARRIVES STILL MOVING, and it is the only property here that does.
+    // Everything else on the return should settle: the pose, the tilt, the background. The TURN
+    // should not — the homepage it is landing on is a deck that rotates with scroll, and a deck
+    // that reaches zero and waits reads as having stopped and been started again (AUDIT #74, the
+    // same fault on the bottom exit). `ease` is a smoothstep, whose derivative at 1 is ZERO, so the
+    // rotation was guaranteed to creep to a standstill: traced frame by frame, -0.277 rad/frame
+    // decaying to -0.001 over ~1.8s and then EXACTLY zero for a second and a half.
+    // Blending a little linear travel back in gives it terminal velocity without touching the
+    // shape of the start — at t=1 the derivative is BACK_SPIN_CARRY instead of 0 — and `endBack`
+    // then picks it up with a tween rather than from a standstill.
+    carousel.animatedRotationY = lp(backStart.rot, preSelectRot + BACK_FOLLOW,
+      e * (1 - BACK_SPIN_CARRY) + t * BACK_SPIN_CARRY)
     carousel.position.y = lp(backStart.cy, idleCarouselY(), e)
     groupG.rotation.set(lp(backStart.gx, ht.x, e), lp(backStart.gy, ht.y, e), lp(backStart.gz, ht.z, e))
     exitBgAlpha = lp(backStart.bg, 0, ease(t / BACK_BG))
@@ -1960,6 +1990,24 @@ export function useChapterScene() {
     hoveredIndex = -1
     exitBgAlpha = 0
     if (groupG.userData.txtMat) groupG.userData.txtMat.opacity = 1
+    // ⚠️ THE DECK MUST NOT ARRIVE AT A STANDSTILL — the same handover the BOTTOM exit got in
+    // AUDIT #74, which the top return never had. User, 2026-09-17: *"nudge the deck to keep going
+    // after the spin completes so a user feels a natural transition."*
+    // Traced at 1440×900, frame by frame, across the landing: the return's turn decays from
+    // -0.277 rad/frame to -0.001 over about 1.8s and then sits at EXACTLY zero for a second and a
+    // half, until the next wheel notch starts the homepage's own scroll-rotation from a standstill.
+    // Nothing about that is a dropped frame; it is a step change in velocity, twice — down to zero
+    // and back up — and that is what reads as the deck stopping and being started again.
+    // ⚠️ The sign is not a choice. The select always advances FORWARD (`targetRot += TWO_PI` until
+    // it leads by at least π), so the return always unwinds NEGATIVE — measured 7.069 → 0 — which is
+    // the same direction the homepage's own down-scroll turns (measured 0 → -1.44 over six notches).
+    // `EXIT_FOLLOW` is negative for exactly that reason, so the same constant is continuous here.
+    // ⚠️ It is killed by `setDragging(true)` along with the exit's, which is already written to
+    // expect a live tween on `carousel` — a finger arriving mid-follow-through owns the ring.
+    gsap.to(carousel, {
+      animatedRotationY: preSelectRot,
+      duration: 1.1, ease: 'power2.out', overwrite: true,
+    })
   }
 
   // The route watcher's path (Back button, nav logo): the same scrub, driven by a tween.
