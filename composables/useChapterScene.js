@@ -168,6 +168,9 @@ void main() {
     float posterAspectRatio = 1.333;
     float md = 1024.0;
     float sm = 768.0;
+    // How late the card art re-frames itself relative to the select. 1.0 is the old linear
+    // behaviour (the title collapses immediately); higher holds it longer. See the note below.
+    float TITLE_EASE = 1.8;
     bool condition = aspectRatio < 0.75 || (windowWidth < sm && aspectRatio < 1.);
     float windowHeight = windowWidth / aspectRatio;
     float posterWidth = windowWidth;
@@ -240,8 +243,24 @@ void main() {
         // at 1440. Raise this without raising the band and the titles are sliced from underneath.
         ppUv.y += 0.189;
     }
-    ppUv.x = mix(uv.x, ppUv.x, progress);
-    ppUv.y = mix(uv.y, ppUv.y, progress);
+    // ⚠️ THE TITLE DOES NOT SHRINK ON THE FIRST FRAME OF THE SELECT. The hero framing zooms the
+    // card art OUT by 1/0.20 = 5x (see posterSize above) while the card itself only scales UP by
+    // 3.31x, so the title's size ON SCREEN is cardScale / artZoom — and mixed linearly those two
+    // do not cancel. Worked out along the tween: (1 + 2.31p) / (1 + 4p) is 0.88 by p = 0.1 and
+    // 0.77 by p = 0.3, so nearly all of the shrink happened in the first third, while the card had
+    // barely begun to move. User, 2026-09-17: *"let's NOT shrink the title immediately after
+    // clicking … without any jarring changes like suddenly shrinking the title."*
+    // Raising progress to TITLE_EASE holds the art at its card framing while the card grows and
+    // spends the change at the end instead: the same curve now reads 1.13 at p = 0.3, 1.00 at
+    // p = 0.5 and 0.66 at p = 1 — the title rides the card out and settles, rather than collapsing
+    // the moment it is clicked.
+    // ⚠️ LANDSCAPE ONLY. On portrait, ppUv.y also derives the photo window's top edge (pUvY
+    // below, AUDIT #92), so re-timing it there would move the film off the plane's top edge. That
+    // framing was already right and is untouched.
+    // ⚠️ NO BACKTICKS ANYWHERE IN THIS SHADER — it is a JS template literal. See AUDIT #81.
+    float titleP = condition ? progress : pow(progress, TITLE_EASE);
+    ppUv.x = mix(uv.x, ppUv.x, titleP);
+    ppUv.y = mix(uv.y, ppUv.y, titleP);
     vec4 poster = texture2D(posterTexture, ppUv);
     poster = mix(poster, fromLinear(vec4(borderColor.r, borderColor.g, borderColor.b, 1.0)), logo.a);
     vec2 pUv = uv;
@@ -1867,6 +1886,9 @@ export function useChapterScene() {
   // buying motion, but past a slot the scrub visibly stops more than a card-width short and the
   // tween reads as a second, separate move rather than the end of the first.
   const BACK_FOLLOW = toRad(40)
+  // The least the return may travel. Without it, a capture sitting just below a multiple of 2π
+  // would send the card home on a few degrees of turn instead of a spin.
+  const BACK_MIN_TURN = Math.PI * 0.75
   let backStart = null
 
   function beginBack() {
@@ -1881,7 +1903,25 @@ export function useChapterScene() {
     gsap.killTweensOf(carousel)
     gsap.killTweensOf(carousel.position)
     gsap.killTweensOf(groupG.rotation)
+    // ── WHICH WAY HOME ──────────────────────────────────────────────────
+    // ⚠️ THE RETURN TURNS THE WAY THE GESTURE DRIVING IT TURNS THE DECK. You reach the homepage by
+    // scrolling UP, and on the homepage scrolling UP turns the deck POSITIVE (measured: 12.885 →
+    // 13.841 over ten notches). The return used to unwind the select instead — straight back down
+    // to `preSelectRot`, i.e. NEGATIVE — so the deck span one way into the deck and then reversed
+    // the moment the visitor kept swiping. User, 2026-09-17: *"the card should enter the deck in a
+    // counter clockwise spin to match the 'down swipe' counter clockwise spin. Currently it enters
+    // in clockwise and has to change spin directions on continuous swipe."*
+    // ⚠️ The BOTTOM exit already agrees with its own gesture and is untouched: you leave by
+    // scrolling DOWN, scrolling down turns the deck NEGATIVE (13.841 → 12.892), and the exit's turn
+    // is negative. That is why the user reports the bottom one as correct.
+    // Rotation is 2π-periodic, so going FORWARD to the next multiple that clears the captured angle
+    // lands on exactly the same picture as `preSelectRot` while travelling the other way round.
+    // `BACK_MIN_TURN` keeps it a real turn rather than a few degrees when the capture happens to sit
+    // just under a multiple.
+    let homeRot = preSelectRot
+    while (homeRot < carousel.animatedRotationY + BACK_MIN_TURN) homeRot += TWO_PI
     backStart = {
+      homeRot,
       rot: carousel.animatedRotationY,
       cy: carousel.position.y,
       gx: groupG.rotation.x, gy: groupG.rotation.y, gz: groupG.rotation.z,
@@ -1930,7 +1970,7 @@ export function useChapterScene() {
     // Blending a little linear travel back in gives it terminal velocity without touching the
     // shape of the start — at t=1 the derivative is BACK_SPIN_CARRY instead of 0 — and `endBack`
     // then picks it up with a tween rather than from a standstill.
-    carousel.animatedRotationY = lp(backStart.rot, preSelectRot + BACK_FOLLOW,
+    carousel.animatedRotationY = lp(backStart.rot, backStart.homeRot - BACK_FOLLOW,
       e * (1 - BACK_SPIN_CARRY) + t * BACK_SPIN_CARRY)
     carousel.position.y = lp(backStart.cy, idleCarouselY(), e)
     groupG.rotation.set(lp(backStart.gx, ht.x, e), lp(backStart.gy, ht.y, e), lp(backStart.gz, ht.z, e))
@@ -1980,6 +2020,8 @@ export function useChapterScene() {
 
   // Committed: finalize the homepage ring from wherever the scrub got to.
   function endBack() {
+    // Read it before `backStart` is cleared — the follow-through below finishes the turn onto it.
+    const homeRotAtCommit = backStart ? backStart.homeRot : carousel.animatedRotationY
     setBackProgress(1)
     backStart = null
     selectedIndex = -1
@@ -2005,7 +2047,7 @@ export function useChapterScene() {
     // ⚠️ It is killed by `setDragging(true)` along with the exit's, which is already written to
     // expect a live tween on `carousel` — a finger arriving mid-follow-through owns the ring.
     gsap.to(carousel, {
-      animatedRotationY: preSelectRot,
+      animatedRotationY: homeRotAtCommit,
       duration: 1.1, ease: 'power2.out', overwrite: true,
     })
   }

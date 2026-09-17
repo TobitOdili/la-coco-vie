@@ -105,6 +105,66 @@ state, everything below it is history — newest first.)
 
 ---
 
+## ▶▶ DIRECTION, EVERYWHERE — 2026-09-17 (AUDIT #122–#124)
+
+Three from one message, and the first is a correction of my own measurement.
+
+### The return turned against its own gesture (#122)
+
+⚠️ **I had measured this in #119 and got the wrong answer, by comparing the wrong gesture.** I
+checked the return against scrolling DOWN and reported "same direction, no reversal". But you reach
+the homepage by scrolling **UP**, and the question is what the *same* gesture does once you land.
+
+| gesture | deck turns |
+|---|---|
+| scroll UP on the homepage | **positive** (12.885 → 13.841 over ten notches) |
+| the top return (reached by scrolling up) | **was negative** → now **positive** |
+| scroll DOWN on the homepage | negative |
+| the bottom exit (reached by scrolling down) | negative — **untouched, it was right all along** |
+
+Rotation is 2π-periodic, so the return now travels FORWARD to the next multiple that clears the
+captured angle: the same picture, reached the other way round. Measured +5.498 rad, landing at
+mod 2π = 0.408 — exactly where it landed before.
+
+### The horizontal axis was inverted on desktop (#123)
+
+The wheel mapped `deltaY - deltaX`, so the horizontal axis ran opposite to the touch drag, which is
+direct manipulation and had always been right. A left swipe took the deck from 12.566 to 12.885 on
+desktop and to 11.868 on a phone. Now `deltaY + deltaX`; both give negative. The vertical term is
+untouched.
+
+⚠️ **Verify this one by FILMING it, not by reading a card's world x.** The ring is tilted 70° on
+desktop, so world x is not screen direction — tracking it reported "moves RIGHT" for *both* devices,
+including the one the user says is correct. Two successive left swipes, side by side, settle it in
+one look.
+
+### The card's title collapsed on the first frame of the select (#124)
+
+The hero framing zooms the card art OUT by 1/0.20 = 5× while the card scales UP by 3.31×, so the
+title's size on screen is `cardScale / artZoom` — and mixed linearly those do not cancel:
+`(1 + 2.31p) / (1 + 4p)` is 0.88 by p = 0.1 and 0.77 by p = 0.3. Nearly all of the shrink happened
+in the first third, while the card had barely begun to move. The art's own mix is
+`pow(progress, 1.8)` now: 1.13 at p = 0.3, 1.00 at p = 0.5, 0.66 at p = 1 — the title rides the card
+out and settles instead of collapsing on the click. Landscape only; portrait's `ppUv.y` also derives
+the photo window's top edge (#92).
+
+⚠️ **And I put backticks in the shader again** — in the comment warning about AUDIT #81, naming
+two uniforms the way this codebase names everything else. The build failed on the GLSL after it.
+⚠️ **#81's "check with a count" is not enough**: I added TWO, the file's count stayed even, and it
+still terminated the template literal. Slice the shader between its own delimiters and assert
+**zero** backticks in the body:
+
+```js
+const i = src.index('const fragmentShader'), a = src.indexOf('`', i), b = src.indexOf('`', a + 1)
+console.log(src.slice(a + 1, b).split('`').length - 1)   // must be 0
+```
+
+**Verified:** 20 route/size loads with 0 overflow, 0 errors, 0 failed requests; return reachability
+unchanged (120px never fires, 200px in two, 280px in one, wheel at 60/300/600 ms all arrive); bottom
+exit and deep links unaffected; the select filmed before and after at 1440×900.
+
+---
+
 ## ▶▶ THE THEME TRACK IS THEIRS NOW — AND THE MUSIC WAS NEVER LOOPING — 2026-09-17 (AUDIT #120, #121)
 
 User: *"the audio note. I don't love it. Attaching one we should use instead."* — then, after the

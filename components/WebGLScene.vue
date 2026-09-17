@@ -34,7 +34,17 @@ function onHitClick(e) {
 // unrelated custom-scrollbar widget whose constructor threw on our config, so the code
 // always fell back to this listener anyway. Removed the dead import.)
 function onWheel(e) {
-  scene.onScroll(e.deltaY - e.deltaX)
+  // ⚠️ BOTH TERMS ARE PLUS. The horizontal one used to be MINUS, which made a trackpad swipe
+  // left push the deck RIGHT — the opposite of what the same swipe does on a phone, where the
+  // drag is direct manipulation and the card follows the finger. User, 2026-09-17: *"on mobile,
+  // horizontal scroll direction is intuitive (swipe left to push the deck left), but on desktop,
+  // it goes the other way."* Measured before and after by tracking the front card's world x: a
+  // left swipe (deltaX +40) moved it from -16.4 to +1.7, i.e. RIGHT, while the same swipe on a
+  // phone moved it from 0.0 to -3.5, i.e. LEFT.
+  // ⚠️ The VERTICAL term is unchanged and still mirrors the phone's flick — see the note on the
+  // touch handler below. The two axes having different-looking signs there is deliberate; here
+  // they are the same because `onScroll` negates the lot.
+  scene.onScroll(e.deltaY + e.deltaX)
 }
 
 // Touch → carousel drag (mobile). The carousel used to be wheel-ONLY, so on a phone the ring
