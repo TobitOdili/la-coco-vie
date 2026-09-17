@@ -105,6 +105,40 @@ state, everything below it is history — newest first.)
 
 ---
 
+## ▶▶ THE THEME TRACK IS THEIRS NOW — AND THE MUSIC WAS NEVER LOOPING — 2026-09-17 (AUDIT #120, #121)
+
+User: *"the audio note. I don't love it. Attaching one we should use instead."* — then, after the
+first file could not be reached: *"Just added an audio file to the New Frames folder. Use that."*
+
+**The track.** The generated royalty-free bed is replaced by The Bayonne Orchestra's violin
+instrumental of "Can't Help Falling in Love". It is **prepared, not just converted**
+(`scripts/prep-theme-audio.mjs`): a commercial recording is mastered to be played once, so it ended
+in silence and **started at full level**. Measured — the music stops at 158.0s but the file ran to
+162.7s, so every loop would have played **4.6 seconds of dead air** and then jumped straight back in
+at −18 dBFS. Trimmed to 1.2s of breath, faded in over 1.6s, the recording's own fade-out kept.
+After: the head starts at −72 dBFS and the tail ends at −60 — silence joins silence. 1.86 MB at
+96 kbps AAC, and it is not fetched until the first interaction.
+
+### ⚠️ And on the way, the bug nobody would ever have reported (#120)
+
+**The music played once and stopped.** Howler is constructed with `loop: true, html5: true`; the
+Howl carries `_loop: true` and the `<audio>` node's own `loop` stayed **false**. Traced across the
+end of the track: `currentTime` ran 156.7 → 157.3 → … → 159.3 and then sat there `paused` for every
+sample after. Howler's `end` event does not fire on that path either — so the obvious fallback,
+`theme.on('end', …)`, was tried and **also did nothing**, which is why it was tested rather than
+assumed.
+
+Sound is off by default, the track is 2m39s, and most visits are shorter than that — so this was
+invisible, and anyone who did turn it on would have assumed the music was meant to end. It was
+almost certainly broken for the whole life of the previous track too. Fixed by setting the
+browser's own `loop` on the node (seamless, no re-buffer), with the `end` handler kept behind
+optional chaining as a fallback because `_sounds[0]._node` is private API.
+
+**Verified:** `currentTime` wraps 159.3 → 0.4 and never pauses; mute/unmute still track the toggle;
+nothing is fetched before the first interaction.
+
+---
+
 ## ▶▶ THE RETURN NO LONGER ARRIVES AT A STANDSTILL — 2026-09-17 (AUDIT #119)
 
 User: *"On reverse scrolling from top of page into chapters, love the way the loading animation

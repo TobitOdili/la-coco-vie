@@ -33,9 +33,9 @@ opens into its own bespoke scroll page.
 > words, 2026-09-13), the **Gift Registry** (ten real products with prices and shop links) and the
 > couple's two **gift account details** (`SITE.gifts`).
 > ⚠️ **Still standing in:** the welcome-note copy in `site.config.js`, In Frames' "Add Your Photos"
-> Drive link, `SITE.countdownFrom` (the day the dials shipped, not a chosen start), the **generated**
-> theme track (royalty-free by construction, never auditioned by a human), the footer credit URL and
-> the `#LaCocoVie26` hashtag.
+> Drive link, `SITE.countdownFrom` (the day the dials shipped, not a chosen start), the footer credit URL and
+> the `#LaCocoVie26` hashtag. ⚠️ The theme track is no longer the generated one — it is the couple's
+> chosen recording (see `site.config.js` for what that means for licensing).
 
 ---
 
@@ -135,7 +135,7 @@ is that no two pages share a language. Breaking it is what made With Love fail i
   Nuxt; it silently broke every image on the GitHub Pages deploy. See ARCHITECTURE → Base URL.
 - 🔧 **Open — content** — **one destination left to fill**: In Frames' "Add Your Photos" Drive
   folder (the footer credit URL may never need one). Plus: the welcome-note copy,
-  `SITE.countdownFrom`, a human listen to the generated theme track, the wedding photographs In
+  `SITE.countdownFrom`, the wedding photographs In
   Frames is waiting for, and three registry links that point at a collection or brand page rather
   than the exact product. ⚠️ **The Big Day tells a guest the date and nothing else** — no venue,
   time, dress code or map; the page says they come with the RSVP. That is a choice, but it is the
@@ -247,7 +247,7 @@ Each doc has **one job** — start with the README, then go deep where needed.
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Phases (homepage → inner pages → re-skin) + attribution |
 | [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md) | **Next up** — scope & build plan for the chapter inner pages |
 | [`PROGRESS.md`](PROGRESS.md) | **Living status** — what works, resolved/open issues, dev workflow, session log |
-| [`AUDIT.md`](AUDIT.md) | Issue-by-issue **forensic history** (root causes, fixes, commit refs) — #1–#119 |
+| [`AUDIT.md`](AUDIT.md) | Issue-by-issue **forensic history** (root causes, fixes, commit refs) — #1–#121 |
 | [`docs/QA-2026-09-15.md`](docs/QA-2026-09-15.md) | **The full QA pass** — every route × every size, the probe recipes, and the open plan (#99–#112) |
 
 ---

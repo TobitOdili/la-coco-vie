@@ -136,6 +136,19 @@ async function initAudio() {
     theme = new Howl({ src: [asset(SITE.themeAudio)], loop: true, volume: 0.5, html5: true })
     Howler.mute(!soundOn.value)
     theme.play()
+    // ⚠️ `loop: true` IS NOT ENOUGH WITH `html5: true`, AND NEITHER IS THE `end` EVENT. Howler
+    // carries `_loop: true` on the Howl but never puts `loop` on the underlying <audio> node on
+    // this path, and its `end` never fires either — so the bed played ONCE and stopped for good.
+    // Measured across the end of the track: `currentTime` ran 156.7 → 159.3 and then sat there
+    // `paused` for every sample after. Nobody would ever have reported it — the music simply stops
+    // two and a half minutes in, on a site where sound is off by default and most visits are
+    // shorter than the track.
+    // The browser's own `loop` is the reliable mechanism (and seamless — it does not re-buffer), so
+    // set it on the node itself. `_sounds[0]._node` is private, hence the optional chaining and the
+    // `end` handler kept behind it: if the shape ever changes, the fallback still restarts it.
+    const node = theme._sounds?.[0]?._node
+    if (node) node.loop = true
+    theme.on('end', () => { if (!theme.playing()) theme.play() })
   } catch (e) {
     console.warn('Audio init failed:', e)
   }

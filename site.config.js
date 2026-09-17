@@ -46,10 +46,18 @@ export const SITE = {
   // ⚠️ ONE AMBIENT TRACK FOR THE WHOLE SITE (user, 2026-09-11: "use the same music for all the
   // pages"). It replaces four per-chapter tracks that were the REFERENCE SITE'S, renamed and never
   // licensed — a liability flagged here since 2026-09-04 and now gone.
-  // ⚠️ This file is GENERATED (`node scripts/gen-theme-audio.mjs`), so it is royalty-free by
-  // construction rather than by someone's claim. It has never been listened to by its author —
-  // audition it, and if it is not right, drop a licensed file in at this path and change nothing
-  // else. Sound is OFF by default.
+  // ⚠️ THE COUPLE'S OWN CHOICE SINCE 2026-09-17: The Bayonne Orchestra's violin instrumental of
+  // "Can't Help Falling in Love", supplied in `new frames/` after the generated bed was rejected
+  // ("I don't love it"). It replaced a track that `scripts/gen-theme-audio.mjs` synthesised — that
+  // generator still exists but no longer produces what ships.
+  // ⚠️ PREPARED, NOT JUST CONVERTED. It loops forever, so the join is the job:
+  // `node scripts/prep-theme-audio.mjs "<source>"` trims the dead tail (the source ran 4.6s past
+  // its last note) and fades the head in (it had none), then encodes 96 kbps AAC. See that script.
+  // ⚠️ LICENSING, STATED PLAINLY AND NOT AS AN OBJECTION: the composition is still in copyright
+  // (Peretti / Creatore / Weiss, 1961) and this is an unlicensed recording of it. The couple chose
+  // it knowing that. If it ever needs to be clean, a licensed cover from Epidemic Sound / Artlist /
+  // Musicbed drops in at this path and nothing else changes — re-run the prep script and go.
+  // Sound is OFF by default and the file is not fetched until the first interaction.
   themeAudio: '/audio/theme.m4a',
 
   // ⚠️ REMOVED from the nav on 2026-09-03 at the user's request — the homepage

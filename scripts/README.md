@@ -71,13 +71,43 @@ otherwise, and an `about:blank` page cannot load `file://` media at all.
 
 ---
 
-## `gen-theme-audio.mjs` — the site's one ambient track
+## `prep-theme-audio.mjs` — the site's ambient bed, prepared for looping
+
+```bash
+node scripts/prep-theme-audio.mjs "new frames/<file>.mp3"
+```
+
+Writes `public/audio/theme.m4a` (AAC 96 kbps CBR) from a supplied recording. **This is what ships**
+since 2026-09-17: The Bayonne Orchestra's violin instrumental of "Can't Help Falling in Love",
+chosen by the couple after the generated bed below was rejected.
+
+⚠️ **It loops forever, so the join is the whole job.** A commercial recording is mastered to be
+played once: it ends in silence and it **starts at full level**. Measured on the supplied track —
+the music stops at 158.0s but the file runs to 162.7s, so every loop would have played **4.6 seconds
+of dead air** and then jumped back in at −18 dBFS with no fade. Under a page that is silent by
+default, that reads as a fault rather than as music. The script trims the tail back to 1.2s of
+breath (scanning backwards for the last 50ms window above −45 dBFS, so it adapts to any source),
+fades the head in over 1.6s, and keeps the recording's own fade-out. After: head starts at
+−72 dBFS, tail ends at −60 — silence joins silence.
+
+⚠️ The render runs in Chrome's Web Audio and comes back as a WAV via a real **download**, not
+base64: the decoded stereo buffer is ~30 MB and pushing that through `page.evaluate` as a string is
+slow and fragile. `afconvert` does the AAC encode (there is no ffmpeg on this machine).
+
+⚠️ **Looping needs a line in `app.vue`, not just this file** — see AUDIT #120. Howler's
+`loop: true` does nothing on its `html5: true` path.
+
+---
+
+## `gen-theme-audio.mjs` — the generated bed (no longer what ships)
 
 ```bash
 node scripts/gen-theme-audio.mjs
 ```
 
-Writes `public/audio/theme.m4a`, the single ambient bed for the whole site (`SITE.themeAudio`).
+Writes `public/audio/theme.m4a`. ⚠️ **Superseded on 2026-09-17** — running it now would overwrite
+the couple's chosen track with the synthesised one. Kept because it is the fallback if the licensing
+of the current recording ever needs to be clean (see `site.config.js`).
 
 ⚠️ It is **generated**, which is the point: it is royalty-free by construction rather than by
 someone's claim. It replaced four per-chapter tracks that were the **reference site's**, renamed and
