@@ -232,12 +232,18 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 **Homepage**
 - Custom cursor (lerped, 24px → 140px "EXPLORE", cubic-bezier(`.68,-.6,.32,1.6`))
 - Film-grain noise overlay (animated, absolute-resolved asset URL)
-- Scroll rotates the carousel (window wheel listener; horizontal swipes too via `deltaY − deltaX`)
-- Hover: film plays, card flattens (`blendFactor → 2`), card lifts `y+7`, center text swaps — single card only
+- Scroll rotates the carousel (window wheel listener; horizontal swipes too via `deltaY + deltaX` —
+  the sign matches the touch drag since AUDIT #123)
+- Hover: film plays, card flattens (`blendFactor → 2`), and **the pose** — the card rises, comes
+  forward ~21 units along the camera's view ray and slerps round to face the viewer square-on
+  (`applyHoverPose`, AUDIT #125; desktop only, a phone keeps the lift alone) — centre text swaps;
+  single card only
 - Audio: chapter tracks fade in on hover, louder on select, fade out on unhover
 - Click selects the **front-facing** card → flattens + grows into the hero → URL `/{slug}` (scroll-then-click lands front-centre)
 - Far-side ring cards fade to faint ghosts (depth falloff); per-chapter CSS body classes; About + sound toggles
-- Loading screen — real asset-gated counter (13 textures), GSAP-eased, GSAP fade exit
+- Loading screen — real asset-gated counter (13 textures), GSAP-eased, GSAP fade exit; **each glyph
+  is re-cast every 100 ms** in one of three display faces (Italiana / Monoton / Over the Rainbow),
+  frozen at 99 (AUDIT #127)
 
 **Phase 2 — inner pages ("card becomes the page")**
 - Real `/{slug}` routes on a persistent shell; deep-links, browser back/forward, per-slug prerender; URL = source of truth

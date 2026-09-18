@@ -393,8 +393,11 @@ silhouette/colour specs, except for the two originals where the reference showed
 The reference pairs **Yaroslava** with wine, **Markita** with la-storia, and **Kohana + Yaroslava**
 with amour; we use the subset whose images we host.
 
-Google Fonts (loaded via `<link>` in `nuxt.config.ts`): **Italiana**, **Monoton**,
-**Over the Rainbow** — used by the loader and the per-chapter `.display` styles.
+Google Fonts (loaded via `<link>` in `nuxt.config.ts`, built from `SITE.googleFonts`):
+**Italiana**, **Monoton**, **Over the Rainbow**, **Caveat**. The first three are the loader's
+pool — its counter re-casts each glyph in one of them every 100ms (AUDIT #127) — and also the
+per-chapter `.display` styles. **Caveat is not in that pool**: it is THE BIG DAY's marker hand and
+`site.config.js` forbids sharing a page's hand with anything else.
 
 ---
 

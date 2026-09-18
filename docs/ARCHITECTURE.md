@@ -631,8 +631,14 @@ current chapter's `--accentLight`. Static "IMMERSE YOURSELF…" copy.
 
 ### `components/LoadingScreen.vue`
 Asset-gated counter. Receives `progress` (0–100) from `app.vue`, GSAP-eases the displayed
-number toward it, plays a GSAP fade-out on reaching 100. Light-gray, centered, Italiana
-number + Over-the-Rainbow `%`. 12 s safety timeout so it can never hang. See AUDIT #12.
+number toward it, plays a GSAP fade-out on reaching 100. Light-gray, centered. 12 s safety
+timeout so it can never hang. See AUDIT #12.
+**Every glyph is its own span and its own typeface** (AUDIT #127): each digit and the `%` is
+re-cast every 100 ms in one of three display faces — Italiana, Monoton, Over the Rainbow — so the
+number is never reliably the same face twice and the one you finally read is whatever each glyph
+landed in. It is the reference's own trick, decoded from its `Preloader`. The shuffle **freezes at
+99** so the "100%" holds still through the fade, and `prefers-reduced-motion` gets the opening mix
+held. Caveat is deliberately not in the pool — it is THE BIG DAY's hand (see `site.config.js`).
 
 ### `site.config.js`
 Brand/chrome copy in one object (`SITE`) + `googleFontsHref()`. Consumed by `nuxt.config.ts`
@@ -808,6 +814,27 @@ The `animate()` rAF loop each frame:
 - **While a chapter is open**: drives the hero up from `setScroll`'s value (1:1 screen coupling, P1)
   — except during the select-in / exit animations, which own the hero transform.
 
+### Hover — the pose (`applyHoverPose`, AUDIT #125)
+One function owns what a hovered card does with its transform, called once a frame from
+`animate()` with that frame's elapsed seconds:
+- **rise** `HOVER_LIFT` up the ring's own +Y, **come forward** `HOVER_PULL` along the camera's view
+  ray (so the card grows *in place* — its projected centre does not move), **rise again**
+  `HOVER_RISE` in world up (framing: our deck sits 12 units lower than the reference's), and
+  **slerp** the rotation to `lookAt(camera)` turned 180° about Y (a ring card wears its art on its
+  −Z face: `rotation.y = −90 − φ`, looking inward).
+- `hoverK` (0→1 per card) is a **dt-scaled exponential chase, not a tween** — the target moves
+  (the deck turns under a held hover, the pointer hands the lift between cards, the camera drifts),
+  and a chase re-derives it from the RESTING pose every frame rather than accumulating.
+- **It owns the transform** of any card with hover left in it (`hoverPosed`), so it only runs where
+  nothing else writes card transforms: the idle deck, and a select's own window. The return scrub
+  and the bottom exit pose every card themselves and are gated out.
+- **A select hands it the hero and takes back every other card.** `selectChapter` clears the pose on
+  all non-heroes (the deck-hide tweens own those positions for 2 s) and unwinds the hero's on the
+  select's own timeline — 1.2 s, `power2.inOut`, because a chase is fastest at the start while the
+  hero's `power3.inOut` scale is at its slowest, and the card visibly SHRANK for the first third of
+  a second (19% by 400 ms; 6% now, over 600 ms). Same fault as #124, one system out.
+- Mobile keeps the lift and nothing else — nothing hovers on touch.
+
 ### Select (`selectChapter(chIdx)`, ~3 s GSAP timeline)
 The chosen chapter becomes a single full-bleed **hero**:
 - Clears any active hover first (hover is gated while selected, so it could never un-fire).
@@ -883,9 +910,9 @@ drives two exits — a top-edge reverse rewind and a scroll-driven bottom "outro
 
 | Input | Where handled | Effect |
 |---|---|---|
-| Mouse move | `window` → `scene.onMouseMove` | camera parallax + raycast hover detection |
-| Hover card (homepage) | `onMouseMove` → `hoverChapter(slotI)` | lift (`y+7`), flatten (`blendFactor→2`), play film, swap center text, cursor "EXPLORE", audio fade-in |
-| Wheel / trackpad (homepage) | `onWheel` window listener → `scene.onScroll(deltaY − deltaX)` | rotate the carousel (`deltaX` so horizontal swipes rotate too, #10). **No-op while a chapter is open.** Touch isn't wired (would need `virtual-scroll`). |
+| Mouse move | `window` → `scene.onMouseMove` | camera parallax + hover resolution (screen-space containment, not a raycast — see Known tech debt) |
+| Hover card (homepage) | `onMouseMove` → `hoverChapter(slotI)` + `applyHoverPose` | **the pose**: rise, come forward along the view ray, turn to face the viewer square-on (AUDIT #125) — plus flatten (`blendFactor→2`), play film, swap center text, cursor "EXPLORE", audio fade-in |
+| Wheel / trackpad (homepage) | `onWheel` window listener → `scene.onScroll(deltaY + deltaX)` | rotate the carousel (`deltaX` so horizontal swipes rotate too, #10; the **sign matches the touch drag** since #123). **No-op while a chapter is open.** Touch has its own drag handler. |
 | Click (homepage) | `#canvas-hit-layer` `@click` → `onClick` → selects the **front-facing** card | The flat hitboxes don't follow the shader bend, so `onClick` selects `frontChapterIdx()` (what the center text shows), not the raw raycast hit. Requires `pointer-events:auto` (AUDIT #15). |
 | Wheel (inner page) | `.chapter-page` (Lenis) + a `wheel` listener | mid-page = smooth scroll (drives the hero coupling); **top-edge overscroll** → reverse exit; **scrolling into `.chapter-outro`** → scroll-coupled bottom exit (`updateExit` → `setExitProgress`) (see Lifecycle → exit) |
 | Back / logo click | `SiteNav` → `app.vue goHome` → `router.push('/')` | exit chapter (reverse-spin) |
@@ -1099,7 +1126,7 @@ for any future CSS-var asset paths.
 | Item | Notes |
 |---|---|
 | **Orientation-dependent constants** | Several scene constants look universal but are **landscape-derived**, and portrait broke on every one: `aspectRatio * 2.07` (really fill-width at the *desktop* camera distance — now derived by `heroFillScale()`), `SELECTED_Y -43` (now derived by `selectedCarouselY()`, which also fixed an ASPECT-ratio drift the portrait constant had hidden — AUDIT #85), the card-hide offset (must clear the frustum at the ring's DEEPEST card, ±62, not the front's ±29), and the fixed 60-unit wordmark plane (now `fitTxtMesh()`). Check `isMobile` before assuming a constant is universal. |
-| **Hover/click resolution** | The flat raycast hitboxes don't follow the shader bend, so a raycast can't say *which* card was hit — the picker was deleted 2026-08-11. Hover is now **screen-space containment**: project each poster's box and test whether the pointer is inside it. Three rules, each fixing a real bug — (1) candidates must be in the **near half** and **`uOpacity ≥ 0.75`**, so faded background cards can't be hovered (they were swapping the centre wordmark to an invisible chapter); (2) **acquire ≠ release** — the release territory is 1.45× the acquire one, because a single threshold at a boundary always oscillates; (3) the territory is measured from the card's **RESTING** position, with the hover lift subtracted back out through the ring's tilt quaternion — otherwise the region travels with the lift and the hysteresis is defeated. Shared by `onMouseMove`, the per-frame scroll re-target, and `onClick`. See AUDIT #22/#23. |
+| **Hover/click resolution** | The flat raycast hitboxes don't follow the shader bend, so a raycast can't say *which* card was hit — the picker was deleted 2026-08-11. Hover is now **screen-space containment**: project each poster's box and test whether the pointer is inside it. Three rules, each fixing a real bug — (1) candidates must be in the **near half** and **`uOpacity ≥ 0.75`**, so faded background cards can't be hovered (they were swapping the centre wordmark to an invisible chapter); (2) **acquire ≠ release** — the release territory is 1.45× the acquire one, because a single threshold at a boundary always oscillates; (3) **acquire** is measured from the card's **RESTING** position, with the whole hover offset subtracted back out through the ring's tilt quaternion — otherwise the region travels with the card and the hysteresis is defeated — while **release** is measured from the card's **LIVE** pose and tested FIRST, because a hovered card now comes forward far enough to stand in front of its neighbours and must not hand the hover to a card it is covering (AUDIT #125/#126). Shared by `onMouseMove`, the per-frame scroll re-target, and `onClick`. See AUDIT #22/#23. |
 | **Card lean (`uAngle`)** | `uAngle` Z-rotates every card before the bend, i.e. it is how far the deck leans. It rests at **0° (upright)** and is deflected only by live input: the pointer on desktop (gated on `hasPointer`, so a touch device never inherits a stale value), and **the ring's own angular velocity** on touch, which settles back upright. ⚠️ It used to be `mouse.x * 10 + 10` while the intro tweens the mouse proxy to 0.5 — a permanent 15° lean that touch could never correct (AUDIT #24). `LEAN_MAX_DEG` (10) is the tunable; a fast coast sits near that clamp. |
 | Debug instrumentation | `__heroDebug` / `__camDebug` / `__probe` / `__exitBegin/Scrub/End` and `__gsdev()` (GSAP DevTools) are gated behind **`?debug` on the initial load URL**. Inert otherwise. Fine to ship; remove if you want them gone. |
 | **Palette** | The wedding colours live in `CHAPTERS` (`composables/useChapterScene.js`) + the `.--{slug}` vars in `assets/css/main.css` + the `CH` array in `scripts/gen-textures.mjs` — keep all three in sync. The four bespoke components also hardcode family tones (Big Day's `#77854A` marker, In Frames' `#241A33` room, With Love's teal ink). |

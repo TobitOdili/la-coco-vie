@@ -19,7 +19,8 @@ state, everything below it is history — newest first.)
 > | **WITH LOVE** | **the wall** — six bands of the gift list sliding across the screen at their own speeds, forever; point at a word and its band stops and the thing opens under it | one transform per band per frame; no artwork at all |
 >
 > **ALSO DONE & LIVE (prod-verified):** the homepage carousel (per-card hover/click via
-> `posterAtScreen`, scroll-following lift, live cursor tint, names + date + countdown, welcome note,
+> `posterAtScreen`; the hovered card rises, comes forward and turns to face you — AUDIT #125;
+> the hover follows the ring as it scrolls; live cursor tint, names + date + countdown, welcome note,
 > RSVP); both exit edges; mobile/touch; the wedding palette; ambient audio (Howler inline in
 > `app.vue`); **the couple's own card films**; and the **GitHub Pages asset fix** (see below).
 >
@@ -102,6 +103,83 @@ state, everything below it is history — newest first.)
 > (traditional-wedding date, thread-motion consistency, a real map card); portrait card-sizing
 > ("passable"); code-health (split the ~1500-line `useChapterScene.js`).
 > **Regenerate card art:** `npm run gen:textures` (see [`scripts/README.md`](../scripts/README.md)).
+
+---
+
+## ▶▶ THE HOVER IS A POSE NOW, AND THE COUNT IS SET IN THREE HANDS — 2026-09-18 (AUDIT #125–#127)
+
+Both halves of one message, and both were already in the reference — read out of its bundle rather
+than guessed at from its surface.
+
+### The hover only lifted the card (#125)
+
+User: *"when I hover over one, can we raise the card to show much more prominently … The cards off
+center on the sides (but still in view) should zoom/rotate to face the user more prominently (and
+straight on)."*
+
+Ours raised a hovered card 7 units and flattened it. That is the whole of what it did — and on the
+ring's side cards, which are up to **edge-on** to the camera, it was barely visible at all. The
+reference does two more things, and they are the effect:
+
+| its function | what it does | ours now |
+|---|---|---|
+| `RO()` | `position.lerp` toward `init + rayDir·−20.9` — the card moves along the camera's own view ray | `HOVER_PULL` |
+| `CO()` | `quaternion.slerp` toward `lookAt(camera)` turned 180° about Y | the facing slerp |
+
+Both live in one per-frame function, `applyHoverPose`. Measured at 1440×900:
+
+| card | `normalDotCam` | distance to camera |
+|---|---|---|
+| front-ish | −0.60 → **−1.00** | 77.8 → **51.9** |
+| near edge-on, off to the side | **0.04 → −0.99** | 100.7 → 74.5 |
+
+⚠️ **Along the view ray, not toward the ring's centre.** A card moved straight at the camera keeps
+its projected centre, so it grows *where it stands* instead of sliding across the screen — and the
+hover territory stays honest about where the card is.
+
+⚠️ **A chase, not a tween.** The target moves the whole time: the deck can turn under a held hover,
+the pointer hands the lift from one card to the next mid-flight, and the camera drifts with the
+mouse. The pose is re-derived from the card's RESTING pose every frame and never accumulated.
+
+⚠️ **And a rise the reference does not need.** `IDLE_Y_DESKTOP` drops our deck 12 units to clear
+the central tagline, so a card growing 1.7× around its own centre grew off the bottom of the frame
+— measured, its bottom edge landed at y=917 in a 900px window, clipping the caption. 4 units of
+world +Y fixes the framing; like every other world distance it scales with `fitScale()` (#86).
+
+⚠️ **A select had to be taught to take it back.** Non-hero cards give their pose back the moment a
+select starts (the deck-hide tweens own those positions for the next two seconds). The hero's
+unwinds on the select's own timeline, eased in over 1.2s, because a chase is fastest at the start
+while the hero's `power3.inOut` scale is at its slowest — the card you clicked **shrank** for the
+first third of a second (19% by 400ms, measured as scale ÷ distance). Now 6%, spread over 600ms.
+Same fault as #124, one system further out.
+
+⚠️ A phone keeps the lift and nothing else. Nothing hovers on touch — EXPLORE selects the front
+card — and the reference skips its pull on mobile too.
+
+### The release test was reading the wrong card (#126)
+
+Found while building the above, not reported. `posters[hoveredIndex]` — but **slots are numbered
+1–8 and the array is indexed 0–7**, so the release hysteresis tested the next slot's poster, and
+`undefined` for slot 8, where it silently did nothing. It goes through `.find(p => p.i === …)` now
+like every other lookup in the file. The rule is stronger too: release is tested **first and
+against the card's live pose**, since a hovered card now stands in front of its neighbours and must
+not hand the hover to a card it is covering. Verified by sweeping the pointer across the deck in
+15px steps at three heights — contiguous runs, one transition per boundary, no oscillation.
+
+### The count was set in one hand (#127)
+
+User: *"the reference site occasionally mixes in another font (the fun one we previously used for
+IN FRAMES … that fun font gets randomly assigned to the 1, or either of the 0's, or even the %
+sign. It's different every time."*
+
+Decoded from its `Preloader`: four spans — three digits and the `%` — a 100ms interval, and
+`gsap.utils.random(0, 2, 1)` re-casting each one in a chapter's display class. The `(0, 2, 1)` is
+the detail: its fourth chapter face is its body font, and the random can never reach it, so the
+effect is always display type. Ours takes the same three families — Italiana, Monoton (the
+concentric strokes), Over the Rainbow — and **not Caveat**, which is THE BIG DAY's hand and is not
+shared with anything, chrome included (`site.config.js`). The count itself stays driven by real
+asset progress; the shuffle freezes at 99 so the "100%" a visitor reads holds still through the
+fade. `prefers-reduced-motion` gets the opening mix, held.
 
 ---
 

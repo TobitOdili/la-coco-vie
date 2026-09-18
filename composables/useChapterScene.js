@@ -404,6 +404,42 @@ export function useChapterScene() {
   // out from under the pointer never releases it; small enough that moving off the
   // card still does.
   const HOVER_RELEASE_GROW = 1.45
+  // ── Hover prominence: the card you point at comes forward and turns to face you ───────
+  // ⚠️ THE LIFT WAS NEVER THE WHOLE EFFECT. Ours raised a hovered card 7 units and stopped
+  // there, which on a SIDE card — still steeply foreshortened by the ring — barely read.
+  // The reference does two more things, decoded from its bundle: it moves the card along the
+  // camera's own view ray (a per-frame position.lerp toward init + rayDir * -20.9) and it
+  // slerps the card's rotation to lookAt(camera), flipped 180 degrees about Y. User,
+  // 2026-09-18: "the cards off center on the sides ... should zoom/rotate to face the user
+  // more prominently (and straight on) when hovered."
+  // ⚠️ ALONG THE VIEW RAY, NOT TOWARD THE RING'S CENTRE. A card moved straight at the camera
+  // keeps its projected CENTRE exactly where it was: it grows in place rather than sliding
+  // across the screen, which is both what the reference does and what lets the hover
+  // territory below stay honest about where the card actually is.
+  const HOVER_LIFT = 7      // ring-local +Y — the lift this hover has always had
+  const HOVER_PULL = 20.9   // world units toward the camera (the reference's own number)
+  // ⚠️ AND A RISE THE REFERENCE DOES NOT HAVE, because our ring does not sit where theirs
+  // does: IDLE_Y_DESKTOP drops the whole deck 12 units to clear the central tagline, so a card
+  // that grows 1.7x around its own centre grows straight off the bottom of the frame. Measured
+  // at 1440x900 with the pull alone: the card's bottom edge landed at y=917 in a 900px window,
+  // clipping its caption. 4 units of world +Y puts it back inside with room under it.
+  const HOVER_RISE = 4      // world +Y, desktop only — framing, not lift
+  // Seconds to close 63% of the remaining distance.
+  // ⚠️ A CHASE, NOT A TWEEN. The pose is re-derived from the ring's CURRENT pose every frame,
+  // so it has to survive the deck rotating under a held hover, a card handing the lift to its
+  // neighbour mid-flight, and a click interrupting both. An exponential chase does that from
+  // any state; a tween toward a target captured at hover time does not. dt-scaled, so it is
+  // the same motion at 60 and 120Hz.
+  const HOVER_TAU_IN = 0.2
+  const HOVER_TAU_OUT = 0.26
+  // ⚠️ A SELECT UNWINDS THE HERO'S HOVER ON THE SELECT'S OWN CLOCK, and it is the one place
+  // this is a tween rather than a chase — see selectChapter. A chase is fastest at the start and
+  // the hero's scale tween (power3.inOut) is at its SLOWEST there, so the card receded faster
+  // than it grew and shrank for the first third of a second: measured at 1440x900, on-screen
+  // size (scale / distance) fell 19% by 400ms before it began to climb. A card you just clicked
+  // must never flinch away from you — the same fault as AUDIT #124, one system further out.
+  const HOVER_UNWIND_DUR = 1.2
+  const HOVER_UNWIND_EASE = 'power2.inOut'
   // ── Card lean (uAngle) ──────────────────────────────────────────────────────
   // uAngle Z-ROTATES every card before the cylindrical bend, so it is literally how
   // far the deck leans. It used to be `mouse.x * 10 + 10`, and the intro tweens the
@@ -435,6 +471,7 @@ export function useChapterScene() {
   let prevRotY = 0
   let hasPointer = false         // a real pointer has moved at least once
   let hoveredIndex = -1
+  let lastFrameMs = 0            // previous frame's timestamp — the hover chase is dt-scaled
   // Last known cursor position (screen px). animate() re-resolves the hover target from this
   // each frame, so a wheel scroll (which fires no mousemove) still hands the lift to whatever
   // card rotates under the pointer. Off-screen until the first real mousemove.
@@ -1044,6 +1081,15 @@ export function useChapterScene() {
       introX: ipx,
       introZ: ipz,
       baseY: 0,
+      // ── Hover pose (applyHoverPose owns all three) ──
+      // `hoverK` 0 to 1 is how far this card is into its hover; `hoverOff` is the ring-local
+      // offset it is currently carrying, kept so the hover TERRITORY can subtract it straight
+      // back out (posterScreenBox) instead of re-deriving it; `hoverPosed` says whether this
+      // card's transform is the pose's to write.
+      baseQuat: mesh.quaternion.clone(),
+      hoverK: 0,
+      hoverOff: new THREE.Vector3(),
+      hoverPosed: false,
     }
   }
 
@@ -1309,6 +1355,19 @@ export function useChapterScene() {
       groupG.userData.txtMesh.lookAt(camera.position)
     }
 
+    // ── The hover pose ─────────────────────────────────────────
+    // ⚠️ THE GATE IS ABOUT OWNERSHIP, not about when hover is allowed: applyHoverPose writes
+    // card transforms, so it may only run where nothing else writes them — the idle deck, and a
+    // select's own window, where the only card it can still be holding is the hero (the select
+    // tweens every card EXCEPT the hero, and the card you click is always the card you were
+    // hovering). The return scrub and the bottom exit pose every card themselves.
+    const nowMs = performance.now()
+    const dt = lastFrameMs ? Math.min(0.05, Math.max(0, (nowMs - lastFrameMs) / 1000)) : 1 / 60
+    lastFrameMs = nowMs
+    if (introComplete && !isIntro && !isDeselecting && !exitStart && (selectedIndex === -1 || isSelecting)) {
+      applyHoverPose(dt)
+    }
+
     // Keep hover + center text + cursor tint in sync each idle frame (Issues #9/#13/#14).
     if (introComplete && selectedIndex === -1) {
       // Re-resolve the hover from the last cursor position against the CURRENT ring — this hands
@@ -1455,17 +1514,23 @@ export function useChapterScene() {
   // Centre + half-extents of a poster in SCREEN px (derived from the card's real
   // geometry, so it stays right at any zoom, distance or viewport).
   //
-  // ⚠️ Measured from the card's RESTING position, with the hover lift subtracted back
-  // out. If the territory moved with the lift it would drag itself out from under the
-  // pointer, and hysteresis cannot help: releasing drops the card, which slides the
-  // region back under the pointer, which re-acquires… the same flicker, one step out.
-  // The territory a card owns must not depend on whether it is currently hovered.
-  function posterScreenBox(p) {
+  // ⚠️ Measured from the card's RESTING position, with the whole hover offset subtracted
+  // back out. If the territory moved with the hover it would drag itself out from under the
+  // pointer, and hysteresis cannot help: releasing drops the card, which slides the region
+  // back under the pointer, which re-acquires… the same flicker, one step out. The territory
+  // a card owns must not depend on whether it is currently hovered.
+  // ⚠️ `live` is the one exception and it is the RELEASE test's (see resolveHoverTarget): a
+  // hovered card is nearer and bigger than its slot, and letting go of it needs to be measured
+  // against the card the visitor can actually see, not the smaller one underneath.
+  // ⚠️ It used to subtract `position.y - baseY`, which caught more than the hover — during the
+  // return scrub every card is off its slot, and the territory was being un-done by the scrub's
+  // own displacement. `hoverOff` is exactly the hover and nothing else.
+  function posterScreenBox(p, live = false) {
     p.mesh.getWorldPosition(_hb1)
-    const lift = p.mesh.position.y - (p.baseY ?? p.mesh.position.y)
-    if (lift) {
-      // local +Y through the ring's tilt → world, so this is exact under the tilted group
-      _hbOff.set(0, lift, 0).applyQuaternion(p.mesh.parent.getWorldQuaternion(_hbQ))
+    const off = p.hoverOff
+    if (!live && off && (off.x || off.y || off.z)) {
+      // ring-local → world through the group's tilt, so this is exact under the tilted group
+      _hbOff.copy(off).applyQuaternion(p.mesh.parent.getWorldQuaternion(_hbQ))
       _hb1.sub(_hbOff)
     }
     _hb2.copy(_hb1)
@@ -1479,8 +1544,8 @@ export function useChapterScene() {
   }
 
   // Is (x,y) inside this card's territory? `grow` widens it for the RELEASE test.
-  function posterContains(p, x, y, grow = 1) {
-    const b = posterScreenBox(p)
+  function posterContains(p, x, y, grow = 1, live = false) {
+    const b = posterScreenBox(p, live)
     const nx = (x - b.cx) / (b.rx * grow)
     const ny = (y - b.cy) / (b.ry * grow)
     return nx * nx + ny * ny <= 1
@@ -1517,19 +1582,26 @@ export function useChapterScene() {
     // Same gate as onClick — the deck is on its way home and is a legitimate target. See there.
     if (!introComplete) return -1
     if (selectedIndex !== -1 && !isDeselecting) return -1
-    const found = posterAtScreen(x, y)
-    if (found) return found.i
-
     // ── RELEASE HYSTERESIS ──────────────────────────────────────────────────
-    // A hovered card LIFTS, which moves its own hitbox up off the pointer. At a
-    // card's bottom edge that produced a loop: lift → pointer now outside → unhover
-    // → card drops → pointer inside again → lift … i.e. the flicker. Acquiring needs
-    // the pointer inside the card; RELEASING needs it outside a deliberately larger
-    // region, so the lift alone can never trigger it. Classic hysteresis: the two
-    // thresholds must differ or a boundary will always oscillate.
-    const held = hoveredIndex !== -1 ? posters[hoveredIndex] : null
-    if (held && posterContains(held, x, y, HOVER_RELEASE_GROW)) return hoveredIndex
-    return -1
+    // A hovered card LIFTS, which moves its own hitbox up off the pointer. At a card's
+    // bottom edge that produced a loop: lift → pointer now outside → unhover → card drops →
+    // pointer inside again → lift … i.e. the flicker. Acquiring needs the pointer inside the
+    // card; RELEASING needs it outside a deliberately larger region, so the hover's own
+    // motion can never trigger it. Classic hysteresis: the two thresholds must differ or a
+    // boundary will always oscillate.
+    // ⚠️ TESTED FIRST, AND AGAINST THE LIVE POSE. A hovered card now comes forward far enough
+    // to stand in front of its neighbours, and the acquire scan below reads RESTING territory —
+    // so the pointer sitting on the big card could land inside a neighbour's slot and hand the
+    // hover to a card the visitor cannot even see. Whatever is in front keeps it.
+    // ⚠️ `posters[hoveredIndex]` was the wrong card: slots are numbered 1–8 and the array is
+    // indexed 0–7, so this read the NEXT slot's poster — and `undefined` for slot 8, which made
+    // the release test silently do nothing there. Every other lookup in the file goes through
+    // `.find(p => p.i === …)`; this one now does too.
+    const held = hoveredIndex !== -1 ? posters.find((q) => q.i === hoveredIndex) : null
+    if (held && posterContains(held, x, y, HOVER_RELEASE_GROW, true)) return hoveredIndex
+
+    const found = posterAtScreen(x, y)
+    return found ? found.i : -1
   }
 
   // Move the lift to `targetSlot` (or clear it at -1): only the one poster lifts (#13), and
@@ -1560,20 +1632,16 @@ export function useChapterScene() {
     if (!p) return
     const chIdx = p.chapterIdx
 
-    // power2.OUT (not inOut) so the lift starts immediately on hover — inOut eases IN, so the
-    // first ~0.3s barely moved and the hover read as laggy though it registered instantly.
+    // power2.OUT (not inOut) so the flatten starts immediately on hover — inOut eases IN, so
+    // the first ~0.3s barely moved and the hover read as laggy though it registered instantly.
     gsap.to(p.material.uniforms.blendFactor, {
       value: 2.0,
       duration: 0.55,
       ease: 'power2.out',
       overwrite: true,
     })
-    gsap.to(p.mesh.position, {
-      y: p.baseY + 7,
-      duration: 0.55,
-      ease: 'power2.out',
-      overwrite: true,
-    })
+    // The lift, the pull toward the camera and the turn to face it are NOT tweened from here:
+    // all three are a function of the ring's live pose, so applyHoverPose chases them every frame.
 
     // Play video (chapter-keyed)
     const vid = videoElements[chIdx]
@@ -1598,16 +1666,102 @@ export function useChapterScene() {
       ease: 'power2.out',
       overwrite: true,
     })
-    gsap.to(p.mesh.position, {
-      y: p.baseY,
-      duration: 0.5,
-      ease: 'power2.out',
-      overwrite: true,
-    })
+    // The pose unwinds itself — applyHoverPose chases `hoverK` back to 0 the moment this card
+    // stops being `hoveredIndex`, and hands the transform back at the end of it.
     const vid = videoElements[chIdx]
     if (vid) {
       vid.pause()
     }
+  }
+
+  // ── The hover pose ────────────────────────────────────────────
+  // Everything a hovered card does with its transform: it rises, it comes forward along the
+  // camera's own view ray (so it grows in place rather than sliding across the screen), and it
+  // turns to face the viewer square-on. Called once a frame from animate() with that frame's
+  // elapsed seconds.
+  //
+  // ⚠️ THIS FUNCTION OWNS THE TRANSFORM of any card with hover left in it (hoverPosed), and
+  // nothing else may write that card's position or quaternion while it does. The moment a
+  // card's hover reaches zero it writes the resting pose once and lets go — which is why the
+  // states it runs in are so narrow (see the call site), and why a select hands it the hero and
+  // takes every other card back (see selectChapter).
+  //
+  // ⚠️ DERIVED FROM THE RESTING POSE EVERY FRAME, never accumulated. The deck can turn under a
+  // held hover, the pointer can hand the lift from one card to the next mid-flight, and the
+  // camera drifts with the mouse throughout — an offset applied on top of last frame's offset
+  // would walk away from the ring and never come back.
+  const _hvRest = new THREE.Vector3(), _hvDir = new THREE.Vector3(), _hvOff = new THREE.Vector3()
+  const _hvM = new THREE.Matrix4()
+  const _hvQ = new THREE.Quaternion(), _hvQPar = new THREE.Quaternion(), _hvQTar = new THREE.Quaternion()
+  const _hvFlip = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI)
+
+  function applyHoverPose(dt) {
+    const rIn = 1 - Math.exp(-dt / HOVER_TAU_IN)
+    const rOut = 1 - Math.exp(-dt / HOVER_TAU_OUT)
+    // ⚠️ THE PULL AND THE RISE ARE WORLD DISTANCES, so they travel with the camera exactly as
+    // the depth fade's thresholds do (AUDIT #86): a short viewport pulls the camera back, and a
+    // fixed 20.9 units there would be a visibly weaker hover than the same hover on a laptop.
+    const fit = fitScale()
+    // three.js refreshes world matrices inside render(), so the ring's is one frame stale at
+    // this point in the frame — and every number below is measured against it.
+    groupG.updateMatrixWorld(true)
+    carousel.getWorldQuaternion(_hvQPar)
+    _hvQPar.invert()          // world → ring-local, used by both halves below
+
+    for (const p of posters) {
+      const want = p.i === hoveredIndex ? 1 : 0
+      // The hero's unwind during a select belongs to the select's timeline, not to the chase.
+      if (isSelecting && p === selectedHero) {
+        if (p.hoverK < 0.001) p.hoverK = 0
+      } else {
+        const k = p.hoverK + (want - p.hoverK) * (want ? rIn : rOut)
+        p.hoverK = Math.abs(k - want) < 0.001 ? want : k
+      }
+
+      if (p.hoverK === 0) {
+        if (p.hoverPosed) clearHoverPose(p)
+        continue
+      }
+      p.hoverPosed = true
+
+      // Where this card would be sitting if nothing were hovered — the anchor for both halves.
+      _hvRest.set(p.baseX, p.baseY, p.baseZ).applyMatrix4(carousel.matrixWorld)
+
+      if (!isMobile) {
+        // TURN TO FACE THE VIEWER. lookAt(camera, card) builds a basis whose +Z points at the
+        // camera, and a ring card wears its art on the −Z face (they look INWARD: rotation.y is
+        // −90−φ), so the basis is spun 180° about Y before being taken into the ring's frame.
+        _hvM.lookAt(camera.position, _hvRest, p.mesh.up)
+        _hvQ.setFromRotationMatrix(_hvM).multiply(_hvFlip)
+        _hvQTar.copy(_hvQPar).multiply(_hvQ)
+        p.mesh.quaternion.copy(p.baseQuat).slerp(_hvQTar, p.hoverK)
+
+        // COME FORWARD along the view ray — straight at the camera, so the card's projected
+        // centre stays put and it grows where it stands — and rise, in world up, to sit in
+        // the frame rather than out of the bottom of it.
+        _hvDir.subVectors(camera.position, _hvRest).normalize()
+        _hvOff.copy(_hvDir).multiplyScalar(HOVER_PULL * fit * p.hoverK)
+        _hvOff.y += HOVER_RISE * fit * p.hoverK
+        _hvOff.applyQuaternion(_hvQPar)
+      } else {
+        // ⚠️ A PHONE KEEPS THE LIFT AND NOTHING ELSE, exactly as it always has. Nothing hovers
+        // on touch — EXPLORE selects the front card — so the pull and the turn would only ever
+        // be reached by a stray synthetic mousemove. The reference skips its pull on mobile too.
+        _hvOff.set(0, 0, 0)
+      }
+      _hvOff.y += HOVER_LIFT * p.hoverK
+      p.hoverOff.copy(_hvOff)
+      p.mesh.position.set(p.baseX + _hvOff.x, p.baseY + _hvOff.y, p.baseZ + _hvOff.z)
+    }
+  }
+
+  // Put a card back on its slot and hand its transform back to whatever wants it next.
+  function clearHoverPose(p) {
+    p.mesh.position.set(p.baseX, p.baseY, p.baseZ)
+    p.mesh.quaternion.copy(p.baseQuat)
+    p.hoverOff.set(0, 0, 0)
+    p.hoverK = 0
+    p.hoverPosed = false
   }
 
   function onClick(e) {
@@ -1829,6 +1983,19 @@ export function useChapterScene() {
     // ⚠️ It still has to be gone by the time the hero seats (the turn ends at 3s): portrait's hero
     // covers only the top ~62% of the frame, so a card left up pokes out below it — which is what
     // `hideFrom` above is solving for. 1.15 + 1.5 lands it at 2.65s, a third of a second clear.
+    // ⚠️ EVERY CARD EXCEPT THE HERO GIVES ITS HOVER POSE BACK HERE. The tweens below own those
+    // positions for the next two seconds and applyHoverPose is about to lose its reach to them,
+    // so a card still carrying a fraction of an older hover (pointer crosses one card to the
+    // next and clicks, inside half a second) would be left turned out of the ring for good. The
+    // hero keeps its pose and unwinds it smoothly — a select never touches the hero's position.
+    posters.forEach((p) => { if (p !== heroPoster && p.hoverPosed) clearHoverPose(p) })
+    // ⚠️ THE HERO'S HOVER COMES OFF ON THIS TIMELINE, slowly and eased-in, so that the card
+    // never gets smaller than it already was under the pointer. See HOVER_UNWIND_DUR.
+    if (heroPoster.hoverPosed) {
+      if (fast) clearHoverPose(heroPoster)
+      else tl.to(heroPoster, { hoverK: 0, duration: HOVER_UNWIND_DUR, ease: HOVER_UNWIND_EASE, overwrite: true }, 0)
+    }
+
     const deckAt = (fast || !isMobile) ? 0 : 1.15
     const deckDur = (fast || !isMobile) ? 2 : 1.5
     posters.filter((p) => p !== heroPoster).forEach((p, idx) => {
