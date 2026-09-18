@@ -104,47 +104,45 @@ const CH = [
 ]
 
 // ── The laurel ───────────────────────────────────────────────────────────────
-// Drawn, not fetched: the reference stamps an award laurel under its tagline ("BEST LOVE
-// STORY 2024") and the couple asked for the same thing in their own names (user, 2026-09-18:
-// "can we add the flower thing to the bottom of our text mesh? Ofc change it to Coco & Uvie
-// and the year to 2026"). Every leaf is computed here rather than traced from theirs — this
-// repo carries none of their art, and a wreath is two mirrored sprays of ellipses.
-//
-// ⚠️ The leaves are biggest MID-BRANCH and taper at both ends. A laurel is a spray; leaves of
-// one size read as a fan or a cog. The second, smaller row on the inside of the stem is what
-// stops the branch looking like a row of pinned leaves.
-// ⚠️ It is set in Bague, not Italiana — the badge is chrome, in the site's chrome voice, and
-// the tagline above it is the display one. Both take the chapter's own ink.
-// ── The laurel ───────────────────────────────────────────────────────────────
-// ⚠️ NOT DRAWN BY HAND, AND NOT THE REFERENCE'S. Two hand-built wreaths were rejected ("looks
-// weird and bad compared to reference site's") — the second after measuring theirs properly,
-// which fixed the proportions and still read as homemade. A laurel is a piece of ornamental
-// draughtsmanship, and the honest way to get one is to use one that was drawn by somebody who
-// draws ornament. This is "Greek Roman Laurel wreath vector.svg" by Dalovar on Wikimedia
-// Commons, released **CC0 1.0** — public domain, no attribution required, commercial use fine.
-// See scripts/assets/laurel.svg for the file and the link.
-// ⚠️ It is also a better ASSET than a crop of theirs would have been: real vector, so it stays
-// sharp at any texture size, and it carries no fill of its own, so each chapter paints it with
-// its own ink from one line below. The reference's is a raster baked into their PNG at ~350px.
-// ⚠️ THIS SITE HAS FORM ON THIS. Four per-chapter audio tracks were the reference's, renamed and
-// unlicensed, and had to be pulled (see site.config.js). Every mark on this page should be one
-// the couple can keep.
-const WREATH = readFileSync(`${HERE}/assets/laurel.svg`, 'utf8')
-  .replace(/<!--[\s\S]*?-->/g, '')
-  .replace(/<\/?svg[^>]*>/g, '')
-  .trim()
+// ⚠️ THIS IS THE REFERENCE SITE'S OWN WREATH, and it is here on the owner's instruction: *"that
+// svg is not copyrighted, we already had it on ours and deleted it"* — which is literally true of
+// this repo. Their four tagline textures (`public/images/txt-1..4.png`) were tracked here until
+// d8d7641a (2026-07-24) and the wreath was baked into all four. Two hand-drawn replacements and
+// one CC0 substitute were all rejected; this is the mark the couple asked for.
+// ⚠️ HOW IT WAS TAKEN OUT: their texture is a flat single-colour raster, so `scripts/` has a
+// one-off that flood-fills its components and keeps only those reaching past r=150 from the badge
+// centre — the two branches — dropping the 23 glyph blobs of "BEST LOVE STORY / 2024" that sat
+// inside. What is stored is an ALPHA MASK (white on transparent, 446×250), not their artwork in
+// their colour: the ink below paints through it, so every chapter gets the wreath in its own.
+// ⚠️ 446px is plenty. The badge is drawn at 560 in a 2048² texture that renders about 130px wide
+// on a 1440 screen — the mask is downsampled at every size the site actually uses.
+const LAUREL = readFileSync(`${HERE}/assets/laurel.png`).toString('base64')
+const LAUREL_W = 446, LAUREL_H = 250
 
-// The names sit inside the wreath with the year under them — the award-badge arrangement.
-// ⚠️ `viewBox` first, `width` second: the badge is sized in the tagline's CSS and has to scale
-// with it rather than crop. The viewBox is the wreath's own (0 160.7 595.3 519.9); every
-// coordinate below is in those units, so 297.6 is its centre line.
-const badgeSvg = (ink) => `<svg viewBox="0 160.7 595.3 519.9" width="560" xmlns="http://www.w3.org/2000/svg">
-<g fill="${ink}">${WREATH}</g>
-<g fill="${ink}" font-family="Bague" text-anchor="middle">
-<text x="297.6" y="390" font-size="60" letter-spacing="2">COCO</text>
-<text x="297.6" y="456" font-size="60" letter-spacing="2">&amp; UVIE</text>
-<text x="297.6" y="538" font-size="38" letter-spacing="8">2026</text>
-</g></svg>`
+// The badge: the wreath, with the names above its tips and the year down in the bowl — the same
+// arrangement their own badge uses. `currentColor` carries the chapter ink to BOTH the mask fill
+// and the type, so there is one colour to set.
+const BADGE_W = 560
+const badgeHtml = () => `<div class="badge">
+  <div class="wreath"></div>
+  <div class="bn b1">COCO</div>
+  <div class="bn b2">&amp; UVIE</div>
+  <div class="by">2026</div>
+</div>`
+
+const badgeCss = `
+  /* ⚠️ The container carries the ink; everything inside inherits it through currentColor. */
+  .badge{position:relative;width:${BADGE_W}px;height:${Math.round((BADGE_W * LAUREL_H) / LAUREL_W) + 43}px;margin-top:56px}
+  .badge .wreath{position:absolute;left:0;bottom:0;width:100%;height:${Math.round((BADGE_W * LAUREL_H) / LAUREL_W)}px;
+    background:currentColor;
+    -webkit-mask:url(data:image/png;base64,${LAUREL}) center/contain no-repeat;
+    mask:url(data:image/png;base64,${LAUREL}) center/contain no-repeat}
+  .badge .bn,.badge .by{position:absolute;left:0;right:0;text-align:center;font-family:'Bague',serif;line-height:1}
+  .badge .bn{font-size:48px;letter-spacing:0.04em}
+  .badge .b1{top:40px}
+  .badge .b2{top:100px}
+  .badge .by{font-size:30px;letter-spacing:0.22em;top:216px;opacity:0.9}
+`
 
 const ONLY_TAGLINES = process.argv.includes('--taglines')
 
@@ -200,8 +198,8 @@ ${titleEls}
        fade, one depth sort and one scale — and the whole group stays centred in the square,
        which is what the scene positions. It also means the badge takes the chapter's ink for
        free. The margin is the gap under the last line of type. */
-    .badge{margin-top:60px;line-height:0}
-    </style><body><div class="wrap">${lines}<div class="badge">${badgeSvg(c.ink)}</div></div></body>`,
+    ${badgeCss}
+    </style><body><div class="wrap">${lines}${badgeHtml()}</div></body>`,
     { width: 2048, height: 2048, out: `${IMG}/cu-txt${c.n}.png`, omitBackground: true }
   )
   console.log(`cu-p${c.n} + cu-txt${c.n} written`)

@@ -12,11 +12,13 @@ Regenerates every generated texture the WebGL scene uses, into `public/images/`:
 | `cu-p1..4.png` | The same faces **rendered to PNG** — this is what the scene loads. |
 | `cu-txt1..4.png` | The centre **tagline** art (2048×2048, transparent) — the four lines of type **and the laurel badge** under them (`COCO & UVIE / 2026`, in the chapter's ink). |
 
-**`assets/laurel.svg`** is the badge's wreath: *Greek Roman Laurel wreath vector.svg* by Dalovar
-(Wikimedia Commons), **CC0 1.0** — public domain, no attribution required, commercial use fine. It
-carries no `fill`, so `badgeSvg()` paints it with the chapter's ink. Two hand-drawn wreaths were
-tried first and both read as homemade (AUDIT #133–#135); the reference's own laurel is **not** in
-this repo and should not be added.
+**`assets/laurel.png`** is the badge's wreath — the **reference site's own**, extracted from its
+tagline texture at the owner's instruction (it was in this repo until d8d7641a, baked into the
+`txt-1..4.png` we shipped then). It is stored as a **446×250 alpha mask**, white on transparent,
+with their "BEST LOVE STORY / 2024" lettering removed: the components were flood-filled and only
+those reaching past r=150 from the badge centre — the two branches — were kept. `badgeCss` paints
+it with `currentColor`, so each chapter gets it in its own ink. Two hand-drawn wreaths and one CC0
+substitute came first and were all rejected (AUDIT #133–#136).
 | `cu-logo.png` | The nav/card **wordmark** (480×480, transparent). |
 | `cu-favicon.png` | The **browser-tab mark** (180×180) — the ampersand, on the site's ground. Replaced the reference site's star `favicon.ico`, deleted 2026-09-03. |
 

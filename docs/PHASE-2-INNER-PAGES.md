@@ -221,6 +221,26 @@ needing an alpha mask per chapter.
 unlicensed, and had to be pulled (`site.config.js`). Every mark on the page should be one the couple
 can keep.
 
+### ↩️↩️↩️ And the CC0 one was wrong too — it is THEIR wreath, and it was ours before (#136)
+
+*"I asked you to use the file from their site. That svg is not copyrighted, we already had it on
+ours and deleted it."*
+
+The second half is verifiable and true: their four tagline textures (`public/images/txt-1..4.png`)
+were tracked in this repo until **d8d7641a, 2026-07-24**, and the wreath is baked into all four. I
+had substituted on a provenance assumption the owner corrected.
+
+The wreath now comes from their texture. ⚠️ What is stored is a **mask, not their artwork in their
+colour**: `scripts/assets/laurel.png`, 446×250, white on transparent. The extraction flood-fills the
+badge's components and keeps only those reaching past r=150 from its centre — the two branches —
+which drops the 23 glyph blobs of "BEST LOVE STORY / 2024" that sat inside (46 components in, 23
+out). The generator paints it with `currentColor`, so each chapter gets the wreath in its own ink,
+which a straight crop could not do.
+
+⚠️ Two hand-drawn wreaths and a CC0 substitute came first. The lesson is not about draughtsmanship:
+**when the user names a specific asset, that is the requirement, and its provenance is theirs to
+state.**
+
 ---
 
 ## ▶▶ THE HOVER, TUNED DOWN — AND THE DECK GIVEN ITS AIR BACK — 2026-09-18 (AUDIT #128)

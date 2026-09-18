@@ -394,14 +394,15 @@ The reference pairs **Yaroslava** with wine, **Markita** with la-storia, and **K
 with amour; we use the subset whose images we host.
 
 **The laurel badge** under every tagline (`COCO & UVIE / 2026`) is baked into `cu-txt1..4.png` in
-each chapter's ink. The wreath is **`scripts/assets/laurel.svg`** — *Greek Roman Laurel wreath
-vector.svg* by Dalovar on Wikimedia Commons, **CC0 1.0** (public domain, no attribution required,
-commercial use permitted); it carries no fill of its own, which is how it takes each chapter's ink.
-⚠️ The reference site's laurel is a raster inside their own texture and is **not** in this repo —
-same rule that took out the four unlicensed audio tracks (see `site.config.js`). The names and the
-year are not data: changing them means editing `badgeSvg()` in `scripts/gen-textures.mjs` and
-re-running `node scripts/gen-textures.mjs --taglines`, then `gen-image-variants.mjs` for the `-sm`
-copies.
+each chapter's ink. The wreath is **`scripts/assets/laurel.png`** — **the reference site's own**,
+taken out of its tagline texture at the owner's instruction (*"that svg is not copyrighted, we
+already had it on ours and deleted it"*; true — it was in `public/images/txt-1..4.png` here until
+d8d7641a, 2026-07-24). Stored as a 446×250 **alpha mask** with their "BEST LOVE STORY / 2024"
+lettering removed, so the generator paints it with each chapter's ink rather than carrying theirs.
+⚠️ Not the same call as the four per-chapter audio tracks, which were pulled as unlicensed (see
+`site.config.js`) — that one stands. The names and the year are not data: changing them means
+editing `badgeHtml`/`badgeCss` in `scripts/gen-textures.mjs` and re-running
+`node scripts/gen-textures.mjs --taglines`, then `gen-image-variants.mjs` for the `-sm` copies.
 
 Google Fonts (loaded via `<link>` in `nuxt.config.ts`, built from `SITE.googleFonts`):
 **Italiana**, **Monoton**, **Over the Rainbow**, **Caveat**. The first three are the loader's
