@@ -115,53 +115,36 @@ const CH = [
 // stops the branch looking like a row of pinned leaves.
 // ⚠️ It is set in Bague, not Italiana — the badge is chrome, in the site's chrome voice, and
 // the tagline above it is the display one. Both take the chapter's own ink.
-// ⚠️ EVERY NUMBER BELOW WAS MEASURED OFF THE REFERENCE, not guessed. The first attempt was sent
-// straight back ("the flower you added looks weird and bad compared to reference site's") and the
-// reason was proportion, not craft: theirs is a WIDE SHALLOW BOWL of small, dense leaves, and mine
-// was a near-circle of a few big ones — a cog, not a wreath. Measured off their own tagline
-// texture at full size: the arc runs about 100° from the bottom (not 130°), each leaf is ~0.25 of
-// the wreath's radius (not 0.43), and there are ~15 a side (not 8).
-const LAUREL = { R: 100, A0: 4, A1: 100, N: 15 }
+// ── The laurel ───────────────────────────────────────────────────────────────
+// ⚠️ NOT DRAWN BY HAND, AND NOT THE REFERENCE'S. Two hand-built wreaths were rejected ("looks
+// weird and bad compared to reference site's") — the second after measuring theirs properly,
+// which fixed the proportions and still read as homemade. A laurel is a piece of ornamental
+// draughtsmanship, and the honest way to get one is to use one that was drawn by somebody who
+// draws ornament. This is "Greek Roman Laurel wreath vector.svg" by Dalovar on Wikimedia
+// Commons, released **CC0 1.0** — public domain, no attribution required, commercial use fine.
+// See scripts/assets/laurel.svg for the file and the link.
+// ⚠️ It is also a better ASSET than a crop of theirs would have been: real vector, so it stays
+// sharp at any texture size, and it carries no fill of its own, so each chapter paints it with
+// its own ink from one line below. The reference's is a raster baked into their PNG at ~350px.
+// ⚠️ THIS SITE HAS FORM ON THIS. Four per-chapter audio tracks were the reference's, renamed and
+// unlicensed, and had to be pulled (see site.config.js). Every mark on this page should be one
+// the couple can keep.
+const WREATH = readFileSync(`${HERE}/assets/laurel.svg`, 'utf8')
+  .replace(/<!--[\s\S]*?-->/g, '')
+  .replace(/<\/?svg[^>]*>/g, '')
+  .trim()
 
-// One leaf: a symmetric almond growing FORWARD from the point where it meets the stem.
-// ⚠️ THE CONTROL POINTS SIT AT ±W, NOT ±W/2. A quadratic Bézier peaks at HALF its control offset,
-// so controls at ±W/2 draw a leaf half as wide as asked for — which is what made the first pass
-// read as spikes rather than leaves.
-const laurelLeaf = (L, W) =>
-  `M 0 0 Q ${(L / 2).toFixed(1)} ${(-W).toFixed(1)} ${L.toFixed(1)} 0 Q ${(L / 2).toFixed(1)} ${W.toFixed(1)} 0 0`
-
-function laurelSvg(ink) {
-  const { R, A0, A1, N } = LAUREL
-  const rad = (d) => (d * Math.PI) / 180
-  const pt = (side, th) => [side * R * Math.sin(th), -R + R * Math.cos(th)]
-  let out = ''
-  for (const side of [-1, 1]) {
-    const p0 = pt(side, rad(A0 - 3)), p1 = pt(side, rad(A1 + 3))
-    out += `<path d="M ${p0[0].toFixed(1)} ${p0[1].toFixed(1)} A ${R} ${R} 0 0 ${side < 0 ? 1 : 0} ${p1[0].toFixed(1)} ${p1[1].toFixed(1)}" fill="none" stroke="${ink}" stroke-width="2"/>`
-    for (let i = 0; i < N; i++) {
-      const t = i / (N - 1)
-      const th = rad(A0 + t * (A1 - A0))
-      const [px, py] = pt(side, th)
-      // the branch's own direction here, pointing toward the tip — every leaf sweeps that way,
-      // which is why the ones at the bottom lie flat instead of hanging down
-      const tanDeg = (Math.atan2(-Math.sin(th), -side * Math.cos(th)) * 180) / Math.PI
-      const L = R * (0.26 - 0.05 * t), W = L * 0.38
-      const lean = i === N - 1 ? 0 : (i % 2 === 0 ? 22 : -22)   // alternate sides of the stem
-      out += `<path d="${laurelLeaf(L, W)}" fill="${ink}" transform="translate(${px.toFixed(1)} ${py.toFixed(1)}) rotate(${(tanDeg + side * lean).toFixed(1)})"/>`
-    }
-  }
-  return out
-}
-
+// The names sit inside the wreath with the year under them — the award-badge arrangement.
 // ⚠️ `viewBox` first, `width` second: the badge is sized in the tagline's CSS and has to scale
-// with it rather than crop. The names sit ABOVE the branch tips and the year in the bowl — the
-// same arrangement the reference uses, and the reason the wreath has to be a shallow bowl.
-const badgeSvg = (ink) => `<svg viewBox="-118 -200 236 216" width="440" xmlns="http://www.w3.org/2000/svg">
-${laurelSvg(ink)}
-<text x="0" y="-150" text-anchor="middle" font-family="Bague" font-size="26" letter-spacing="1" fill="${ink}">COCO</text>
-<text x="0" y="-113" text-anchor="middle" font-family="Bague" font-size="26" letter-spacing="1" fill="${ink}">&amp; UVIE</text>
-<text x="0" y="-48" text-anchor="middle" font-family="Bague" font-size="17" letter-spacing="3" fill="${ink}">2026</text>
-</svg>`
+// with it rather than crop. The viewBox is the wreath's own (0 160.7 595.3 519.9); every
+// coordinate below is in those units, so 297.6 is its centre line.
+const badgeSvg = (ink) => `<svg viewBox="0 160.7 595.3 519.9" width="560" xmlns="http://www.w3.org/2000/svg">
+<g fill="${ink}">${WREATH}</g>
+<g fill="${ink}" font-family="Bague" text-anchor="middle">
+<text x="297.6" y="390" font-size="60" letter-spacing="2">COCO</text>
+<text x="297.6" y="456" font-size="60" letter-spacing="2">&amp; UVIE</text>
+<text x="297.6" y="538" font-size="38" letter-spacing="8">2026</text>
+</g></svg>`
 
 const ONLY_TAGLINES = process.argv.includes('--taglines')
 

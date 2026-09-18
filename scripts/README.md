@@ -10,7 +10,13 @@ Regenerates every generated texture the WebGL scene uses, into `public/images/`:
 |---|---|
 | `cu-p1..4.svg` | Poster card **faces** — editable SVG sources (bg = chapter `accentLight`, title in the chapter font, ink = `accent`). |
 | `cu-p1..4.png` | The same faces **rendered to PNG** — this is what the scene loads. |
-| `cu-txt1..4.png` | The centre **tagline** art (2048×2048, transparent) — the four lines of type **and the laurel badge** under them (`COCO & UVIE / 2026`, drawn by `laurelSvg()`, in the chapter's ink). |
+| `cu-txt1..4.png` | The centre **tagline** art (2048×2048, transparent) — the four lines of type **and the laurel badge** under them (`COCO & UVIE / 2026`, in the chapter's ink). |
+
+**`assets/laurel.svg`** is the badge's wreath: *Greek Roman Laurel wreath vector.svg* by Dalovar
+(Wikimedia Commons), **CC0 1.0** — public domain, no attribution required, commercial use fine. It
+carries no `fill`, so `badgeSvg()` paints it with the chapter's ink. Two hand-drawn wreaths were
+tried first and both read as homemade (AUDIT #133–#135); the reference's own laurel is **not** in
+this repo and should not be added.
 | `cu-logo.png` | The nav/card **wordmark** (480×480, transparent). |
 | `cu-favicon.png` | The **browser-tab mark** (180×180) — the ampersand, on the site's ground. Replaced the reference site's star `favicon.ico`, deleted 2026-09-03. |
 

@@ -393,10 +393,15 @@ silhouette/colour specs, except for the two originals where the reference showed
 The reference pairs **Yaroslava** with wine, **Markita** with la-storia, and **Kohana + Yaroslava**
 with amour; we use the subset whose images we host.
 
-**The laurel badge** under every tagline (`COCO & UVIE / 2026`) is drawn by `laurelSvg()` in
-`scripts/gen-textures.mjs` and baked into `cu-txt1..4.png`, in each chapter's ink. It is not data:
-changing the names or the year means editing that script and re-running
-`node scripts/gen-textures.mjs --taglines`, then `gen-image-variants.mjs` for the `-sm` copies.
+**The laurel badge** under every tagline (`COCO & UVIE / 2026`) is baked into `cu-txt1..4.png` in
+each chapter's ink. The wreath is **`scripts/assets/laurel.svg`** — *Greek Roman Laurel wreath
+vector.svg* by Dalovar on Wikimedia Commons, **CC0 1.0** (public domain, no attribution required,
+commercial use permitted); it carries no fill of its own, which is how it takes each chapter's ink.
+⚠️ The reference site's laurel is a raster inside their own texture and is **not** in this repo —
+same rule that took out the four unlicensed audio tracks (see `site.config.js`). The names and the
+year are not data: changing them means editing `badgeSvg()` in `scripts/gen-textures.mjs` and
+re-running `node scripts/gen-textures.mjs --taglines`, then `gen-image-variants.mjs` for the `-sm`
+copies.
 
 Google Fonts (loaded via `<link>` in `nuxt.config.ts`, built from `SITE.googleFonts`):
 **Italiana**, **Monoton**, **Over the Rainbow**, **Caveat**. The first three are the loader's

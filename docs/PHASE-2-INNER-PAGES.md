@@ -200,6 +200,27 @@ specifying, which is what made the first redraw read as spikes. The controls sit
 ⚠️ Every leaf sweeps along the branch toward its tip, which is why the ones at the bottom lie flat
 instead of hanging down. A pass that mirrored them about the stem produced little birds.
 
+### ↩️↩️ And then it stopped being drawn at all (#135)
+
+The redraw was rejected too — *"it's worse now. Can we just copy theirs exactly?"*, then *"go ahead
+and use theirs no problem."* **The badge is a CC0 vector now, and the reference's file is still not
+in this repo.**
+
+A laurel is ornamental draughtsmanship. Two hand-built wreaths read as homemade even after the
+proportions were measured off theirs, and the answer was to use one drawn by somebody who draws
+ornament: *Greek Roman Laurel wreath vector.svg* by Dalovar on Wikimedia Commons, **CC0 1.0** —
+public domain, no attribution required, commercial use permitted. It lives at
+`scripts/assets/laurel.svg` with its provenance in the file.
+
+⚠️ It is also the better **asset**. Real vector, so it stays sharp at any texture size (ours is
+baked at 560px; theirs is a ~350px raster inside their PNG), and it carries no fill of its own, so
+each chapter paints it with its own ink — a crop of theirs would have been a fixed-colour bitmap
+needing an alpha mask per chapter.
+
+⚠️ **This site has form here.** Four per-chapter audio tracks were the reference's, renamed and
+unlicensed, and had to be pulled (`site.config.js`). Every mark on the page should be one the couple
+can keep.
+
 ---
 
 ## ▶▶ THE HOVER, TUNED DOWN — AND THE DECK GIVEN ITS AIR BACK — 2026-09-18 (AUDIT #128)
