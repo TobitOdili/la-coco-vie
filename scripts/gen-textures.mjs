@@ -115,43 +115,52 @@ const CH = [
 // stops the branch looking like a row of pinned leaves.
 // ⚠️ It is set in Bague, not Italiana — the badge is chrome, in the site's chrome voice, and
 // the tagline above it is the display one. Both take the chapter's own ink.
-const LAUREL = { R: 150, A0: 12, A1: 130, N: 8 }
+// ⚠️ EVERY NUMBER BELOW WAS MEASURED OFF THE REFERENCE, not guessed. The first attempt was sent
+// straight back ("the flower you added looks weird and bad compared to reference site's") and the
+// reason was proportion, not craft: theirs is a WIDE SHALLOW BOWL of small, dense leaves, and mine
+// was a near-circle of a few big ones — a cog, not a wreath. Measured off their own tagline
+// texture at full size: the arc runs about 100° from the bottom (not 130°), each leaf is ~0.25 of
+// the wreath's radius (not 0.43), and there are ~15 a side (not 8).
+const LAUREL = { R: 100, A0: 4, A1: 100, N: 15 }
+
+// One leaf: a symmetric almond growing FORWARD from the point where it meets the stem.
+// ⚠️ THE CONTROL POINTS SIT AT ±W, NOT ±W/2. A quadratic Bézier peaks at HALF its control offset,
+// so controls at ±W/2 draw a leaf half as wide as asked for — which is what made the first pass
+// read as spikes rather than leaves.
+const laurelLeaf = (L, W) =>
+  `M 0 0 Q ${(L / 2).toFixed(1)} ${(-W).toFixed(1)} ${L.toFixed(1)} 0 Q ${(L / 2).toFixed(1)} ${W.toFixed(1)} 0 0`
 
 function laurelSvg(ink) {
   const { R, A0, A1, N } = LAUREL
-  const cx = 0, cy = -30
   const rad = (d) => (d * Math.PI) / 180
-  const pt = (side, th) => [cx + side * R * Math.sin(th), cy + R * Math.cos(th)]
-  const leaf = (L, W) => `M ${-L / 2} 0 Q 0 ${-W / 2} ${L / 2} 0 Q 0 ${W / 2} ${-L / 2} 0`
+  const pt = (side, th) => [side * R * Math.sin(th), -R + R * Math.cos(th)]
   let out = ''
   for (const side of [-1, 1]) {
-    const p0 = pt(side, rad(A0 - 6)), p1 = pt(side, rad(A1 + 7))
-    out += `<path d="M ${p0[0].toFixed(1)} ${p0[1].toFixed(1)} A ${R} ${R} 0 0 ${side < 0 ? 1 : 0} ${p1[0].toFixed(1)} ${p1[1].toFixed(1)}" fill="none" stroke="${ink}" stroke-width="3"/>`
+    const p0 = pt(side, rad(A0 - 3)), p1 = pt(side, rad(A1 + 3))
+    out += `<path d="M ${p0[0].toFixed(1)} ${p0[1].toFixed(1)} A ${R} ${R} 0 0 ${side < 0 ? 1 : 0} ${p1[0].toFixed(1)} ${p1[1].toFixed(1)}" fill="none" stroke="${ink}" stroke-width="2"/>`
     for (let i = 0; i < N; i++) {
       const t = i / (N - 1)
       const th = rad(A0 + t * (A1 - A0))
       const [px, py] = pt(side, th)
-      const outX = side * Math.sin(th), outY = Math.cos(th)
+      // the branch's own direction here, pointing toward the tip — every leaf sweeps that way,
+      // which is why the ones at the bottom lie flat instead of hanging down
       const tanDeg = (Math.atan2(-Math.sin(th), -side * Math.cos(th)) * 180) / Math.PI
-      const taper = Math.sin(Math.PI * (0.18 + 0.82 * t))
-      const L = 34 + 30 * taper, W = 13 + 9 * taper
-      out += `<path d="${leaf(L, W)}" fill="${ink}" transform="translate(${(px + outX * W * 0.72).toFixed(1)} ${(py + outY * W * 0.72).toFixed(1)}) rotate(${(tanDeg + side * 30).toFixed(1)})"/>`
-      if (t > 0.12 && t < 0.92) {
-        out += `<path d="${leaf(L * 0.74, W * 0.8)}" fill="${ink}" transform="translate(${(px - outX * W * 0.6).toFixed(1)} ${(py - outY * W * 0.6).toFixed(1)}) rotate(${(tanDeg - side * 8).toFixed(1)})"/>`
-      }
+      const L = R * (0.26 - 0.05 * t), W = L * 0.38
+      const lean = i === N - 1 ? 0 : (i % 2 === 0 ? 22 : -22)   // alternate sides of the stem
+      out += `<path d="${laurelLeaf(L, W)}" fill="${ink}" transform="translate(${px.toFixed(1)} ${py.toFixed(1)}) rotate(${(tanDeg + side * lean).toFixed(1)})"/>`
     }
   }
   return out
 }
 
-// ⚠️ `viewBox` first, `width` second: the badge is sized in the tagline's CSS, and the SVG has
-// to scale with it rather than crop. The wreath spans roughly x ±235, y −215…+150 in its own
-// units — leave the margin, or the lowest leaves are clipped off.
-const badgeSvg = (ink) => `<svg viewBox="-250 -215 500 380" width="470" xmlns="http://www.w3.org/2000/svg">
+// ⚠️ `viewBox` first, `width` second: the badge is sized in the tagline's CSS and has to scale
+// with it rather than crop. The names sit ABOVE the branch tips and the year in the bowl — the
+// same arrangement the reference uses, and the reason the wreath has to be a shallow bowl.
+const badgeSvg = (ink) => `<svg viewBox="-118 -200 236 216" width="440" xmlns="http://www.w3.org/2000/svg">
 ${laurelSvg(ink)}
-<text x="0" y="-95" text-anchor="middle" font-family="Bague" font-size="46" letter-spacing="1.5" fill="${ink}">COCO</text>
-<text x="0" y="-37" text-anchor="middle" font-family="Bague" font-size="46" letter-spacing="1.5" fill="${ink}">&amp; UVIE</text>
-<text x="0" y="52" text-anchor="middle" font-family="Bague" font-size="26" letter-spacing="5" fill="${ink}">2026</text>
+<text x="0" y="-150" text-anchor="middle" font-family="Bague" font-size="26" letter-spacing="1" fill="${ink}">COCO</text>
+<text x="0" y="-113" text-anchor="middle" font-family="Bague" font-size="26" letter-spacing="1" fill="${ink}">&amp; UVIE</text>
+<text x="0" y="-48" text-anchor="middle" font-family="Bague" font-size="17" letter-spacing="3" fill="${ink}">2026</text>
 </svg>`
 
 const ONLY_TAGLINES = process.argv.includes('--taglines')

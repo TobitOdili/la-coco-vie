@@ -179,6 +179,27 @@ back and drops the badge into the band the deeper dip opened between the last li
 tops. `node scripts/gen-textures.mjs --taglines` regenerates only the taglines; re-run
 `gen-image-variants.mjs` after it or a phone still loads the old `-sm` art.
 
+### ↩️ And it was redrawn the same day (#134)
+
+*"The flower you added looks weird and bad compared to reference site's."* Fair — I had drawn it
+from the small screenshot instead of measuring. Pulled their own tagline texture (2048², studied in
+a scratchpad; **nothing from it is in this repo**) and measured the badge at full size:
+
+| | reference | my first pass |
+|---|---|---|
+| arc from the bottom | **~100°** (a wide shallow bowl) | 130° (very nearly a closed circle) |
+| leaf length | **~0.25 × R** | 0.43 × R |
+| leaves per branch | **~15**, small and dense | 8, big and sparse |
+
+Small and dense reads as a laurel; big and few reads as a cog.
+
+⚠️ **And a Bézier bug underneath it.** A quadratic peaks at HALF its control offset, so
+`Q L/2 −W/2 … Q L/2 W/2` draws a leaf **W/2** wide, not W — every leaf was half the width I was
+specifying, which is what made the first redraw read as spikes. The controls sit at ±W now.
+
+⚠️ Every leaf sweeps along the branch toward its tip, which is why the ones at the bottom lie flat
+instead of hanging down. A pass that mirrored them about the stem produced little birds.
+
 ---
 
 ## ▶▶ THE HOVER, TUNED DOWN — AND THE DECK GIVEN ITS AIR BACK — 2026-09-18 (AUDIT #128)
