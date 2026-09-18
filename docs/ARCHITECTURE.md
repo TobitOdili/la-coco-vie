@@ -818,8 +818,9 @@ The `animate()` rAF loop each frame:
 One function owns what a hovered card does with its transform, called once a frame from
 `animate()` with that frame's elapsed seconds:
 - **rise** `HOVER_LIFT` up the ring's own +Y, **come forward** `HOVER_PULL` along the camera's view
-  ray (so the card grows *in place* — its projected centre does not move), **rise again**
-  `HOVER_RISE` in world up (framing: our deck sits 12 units lower than the reference's), and
+  ray (so the card grows *in place* — its projected centre does not move; 10 units ≈ 1.3× on
+  screen, and **not** the reference's 20.9, which read as 1.7× and swallowed the tagline — #128),
+  **rise again** `HOVER_RISE` in world up (framing, since a card grows downward too), and
   **slerp** the rotation to `lookAt(camera)` turned 180° about Y (a ring card wears its art on its
   −Z face: `rotation.y = −90 − φ`, looking inward).
 - `hoverK` (0→1 per card) is a **dt-scaled exponential chase, not a tween** — the target moves
@@ -832,7 +833,7 @@ One function owns what a hovered card does with its transform, called once a fra
   all non-heroes (the deck-hide tweens own those positions for 2 s) and unwinds the hero's on the
   select's own timeline — 1.2 s, `power2.inOut`, because a chase is fastest at the start while the
   hero's `power3.inOut` scale is at its slowest, and the card visibly SHRANK for the first third of
-  a second (19% by 400 ms; 6% now, over 600 ms). Same fault as #124, one system out.
+  a second (19% by 400 ms; 0.9% at the shipped pull). Same fault as #124, one system out.
 - Mobile keeps the lift and nothing else — nothing hovers on touch.
 
 ### Select (`selectChapter(chIdx)`, ~3 s GSAP timeline)

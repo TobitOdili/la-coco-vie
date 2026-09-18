@@ -235,9 +235,9 @@ lighter = ['#f0d7bf', '#a0aeae', '#b3b0db', '#f0c3e1']   // accentLighter
 - Scroll rotates the carousel (window wheel listener; horizontal swipes too via `deltaY + deltaX` —
   the sign matches the touch drag since AUDIT #123)
 - Hover: film plays, card flattens (`blendFactor → 2`), and **the pose** — the card rises, comes
-  forward ~21 units along the camera's view ray and slerps round to face the viewer square-on
-  (`applyHoverPose`, AUDIT #125; desktop only, a phone keeps the lift alone) — centre text swaps;
-  single card only
+  forward 10 units along the camera's view ray (≈1.3× on screen) and slerps round to face the
+  viewer square-on (`applyHoverPose`, AUDIT #125/#128; desktop only, a phone keeps the lift
+  alone) — centre text swaps; single card only
 - Audio: chapter tracks fade in on hover, louder on select, fade out on unhover
 - Click selects the **front-facing** card → flattens + grows into the hero → URL `/{slug}` (scroll-then-click lands front-centre)
 - Far-side ring cards fade to faint ghosts (depth falloff); per-chapter CSS body classes; About + sound toggles

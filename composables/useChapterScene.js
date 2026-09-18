@@ -400,10 +400,15 @@ export function useChapterScene() {
   const CARD_W = 24, CARD_H = 32
   const CARD_HALF_H = CARD_H / 2
   const CARD_ASPECT = CARD_W / CARD_H
-  // Release territory is 1.45x the acquire territory. Big enough that a card lifting
-  // out from under the pointer never releases it; small enough that moving off the
-  // card still does.
-  const HOVER_RELEASE_GROW = 1.45
+  // Release territory is 1.3x the acquire territory, and it is measured from the card's LIVE
+  // pose (see resolveHoverTarget). Big enough that a card lifting out from under the pointer
+  // never releases it; small enough that moving off the card still does.
+  // ⚠️ It was 1.45 against the RESTING box. Once release started reading the live box — which
+  // already carries the hover's own growth and lift — 1.45 on top of that let a card hold the
+  // hover from 200px outside itself: measured, the pointer sitting on the left sliver still
+  // kept the front card it had just left. 1.3 still contains the resting box with margin
+  // (60px of lift against a 79px allowance) and releases where the card visibly ends.
+  const HOVER_RELEASE_GROW = 1.3
   // ── Hover prominence: the card you point at comes forward and turns to face you ───────
   // ⚠️ THE LIFT WAS NEVER THE WHOLE EFFECT. Ours raised a hovered card 7 units and stopped
   // there, which on a SIDE card — still steeply foreshortened by the ring — barely read.
@@ -412,26 +417,37 @@ export function useChapterScene() {
   // slerps the card's rotation to lookAt(camera), flipped 180 degrees about Y. User,
   // 2026-09-18: "the cards off center on the sides ... should zoom/rotate to face the user
   // more prominently (and straight on) when hovered."
+  // ⚠️ BUT NOT AT THE REFERENCE'S OWN 20.9 — THAT IS TOO MUCH IN OUR FRAME. Shipped at 20.9 and
+  // sent straight back (user, same day): "it zooms too much, blocks the center mesh text, and
+  // even your own picture shows the side card cutting into one of the front ones." Measured at
+  // 1440x900, 20.9 took a front card from 77.8 units away to 51.9 — 1.7x on screen, which
+  // swallowed the whole tagline and ran into the next card. At 10 it lands at ~62: about 1.3x,
+  // it clears the neighbouring card, and the tagline still reads around it.
+  // ⚠️ WHY THE SAME NUMBER DOES NOT TRANSLATE: their deck and ours are the same ring (8 cards,
+  // radius 40, 24x32 cards, fov 45 at z=100 — read out of their bundle, not guessed), but their
+  // hovered card is the one at the SIDE of the frame with white space to grow into, while our
+  // tagline sits dead centre between the two front cards. The measured gap between the two
+  // front cards is 110px on theirs and 105px on ours: the pitch is the same, the room is not.
   // ⚠️ ALONG THE VIEW RAY, NOT TOWARD THE RING'S CENTRE. A card moved straight at the camera
   // keeps its projected CENTRE exactly where it was: it grows in place rather than sliding
   // across the screen, which is both what the reference does and what lets the hover
   // territory below stay honest about where the card actually is.
   const HOVER_LIFT = 7      // ring-local +Y — the lift this hover has always had
-  const HOVER_PULL = 20.9   // world units toward the camera (the reference's own number)
-  // ⚠️ AND A RISE THE REFERENCE DOES NOT HAVE, because our ring does not sit where theirs
-  // does: IDLE_Y_DESKTOP drops the whole deck 12 units to clear the central tagline, so a card
-  // that grows 1.7x around its own centre grows straight off the bottom of the frame. Measured
-  // at 1440x900 with the pull alone: the card's bottom edge landed at y=917 in a 900px window,
-  // clipping its caption. 4 units of world +Y puts it back inside with room under it.
-  const HOVER_RISE = 4      // world +Y, desktop only — framing, not lift
+  const HOVER_PULL = 10     // world units toward the camera
+  // ⚠️ AND A SMALL RISE THE REFERENCE DOES NOT HAVE, because a card growing around its own
+  // centre grows DOWNWARD too and our deck sits low in the frame. At the first attempt's 1.7x
+  // the bottom edge landed at y=917 in a 900px window, clipping the caption, and needed 4 units
+  // to clear. At 1.3x it barely needs anything — 2 units is enough, and every unit here is a
+  // unit the card climbs into the tagline, which is the thing it must not swallow.
+  const HOVER_RISE = 2      // world +Y, desktop only — framing, not lift
   // Seconds to close 63% of the remaining distance.
   // ⚠️ A CHASE, NOT A TWEEN. The pose is re-derived from the ring's CURRENT pose every frame,
   // so it has to survive the deck rotating under a held hover, a card handing the lift to its
   // neighbour mid-flight, and a click interrupting both. An exponential chase does that from
   // any state; a tween toward a target captured at hover time does not. dt-scaled, so it is
   // the same motion at 60 and 120Hz.
-  const HOVER_TAU_IN = 0.2
-  const HOVER_TAU_OUT = 0.26
+  const HOVER_TAU_IN = 0.28
+  const HOVER_TAU_OUT = 0.32
   // ⚠️ A SELECT UNWINDS THE HERO'S HOVER ON THE SELECT'S OWN CLOCK, and it is the one place
   // this is a tween rather than a chase — see selectChapter. A chase is fastest at the start and
   // the hero's scale tween (power3.inOut) is at its SLOWEST there, so the card receded faster
@@ -491,13 +507,25 @@ export function useChapterScene() {
   // sees ~34 units across at that depth (three's `fov` is VERTICAL, so narrow aspect ⇒ narrow
   // horizontal view) — which cropped the wordmark at both edges. fitTxtMesh() scales it down.
   const TXT_PLANE = 60
-  const TXT_Y_DESKTOP = -8   // tuned so it clears the top logo/subtitle (issue #11)
+  const TXT_Y_DESKTOP = -2   // tuned so it clears the top logo/subtitle (issue #11)
   const TXT_Y_MOBILE = 14    // upper third — clear of the cards, matching the reference
   // Desktop: the tagline is a large central plane; the front card rose into its lower half.
   // Shrink the wordmark a touch AND drop the whole idle ring so the front card clears the text.
   // Both are DESKTOP-ONLY (mobile keeps its own fitTxtMesh scale + 0 idle Y, tuned separately).
-  const TXT_SCALE_DESKTOP = 0.82
-  const IDLE_Y_DESKTOP = -12   // idle carousel Y on desktop (was 0); select uses selectedCarouselY()
+  // 0.82 until 2026-09-18: raising the deck put the cards into the tagline, and trimming it
+  // ~10% keeps the same relationship to the card tops that the reference has (their tagline
+  // overlaps its front cards by ~100px and is occluded by them, which is exactly the depth cue
+  // — the text belongs BEHIND the deck, not printed across it).
+  const TXT_SCALE_DESKTOP = 0.74
+  // ⚠️ −12 UNTIL 2026-09-18, AND THAT WAS THE DECK HIDING FROM THE TAGLINE. Dropping the ring
+  // to clear the text left it hard against the bottom of the frame: measured at 1440x900 the
+  // front cards ran 420→845 in a 900px window — 420px of white above them and 55px below —
+  // against the reference's 300→720, which is 300 above and 180 below. That bottom-heavy
+  // composition is what came back as "still not as sleek… I think the cards are spaced out more
+  // on reference site". They are not: the ring is identical and the front-card gap measures
+  // 110px there against 105px here. It was the air that was missing, not the pitch. The deck
+  // sits up where theirs does now, and the tagline moved with it (TXT_Y_DESKTOP).
+  const IDLE_Y_DESKTOP = -5   // idle carousel Y on desktop (was 0, then -12)
   // ── Selected card resting Y ──────────────────────────────────────────────────
   // The hero card is scaled to fill the viewport's WIDTH (see heroFillScale), and this puts its
   // TOP EDGE on the viewport's top edge — which is the whole contract of the hero: the page's
@@ -2608,8 +2636,14 @@ export function useChapterScene() {
     const mesh = groupG?.userData?.txtMesh
     if (!mesh || !camera) return
     // Portrait puts the wordmark in the UPPER third so the (large, central) cards don't bury it
-    // — the reference separates them the same way. Landscape keeps the tuned -8 (issue #11).
-    mesh.position.y = isMobile ? TXT_Y_MOBILE : TXT_Y_DESKTOP
+    // — the reference separates them the same way. Landscape keeps its own tuned height (#11).
+    // ⚠️ AND IT RIDES THE CAMERA DOWN ON A SHORT FRAME. `applyFit` pulls the camera back AND
+    // down (y = -15k) below FIT_MIN_H, which slides the whole scene UP the screen — but the nav
+    // above the tagline is fixed CSS pixels and does not move with it. On a landscape phone the
+    // raised tagline ran straight into the date line. Giving back exactly what the camera took
+    // (-15(k-1)) holds the tagline where it sits relative to the chrome; k is 1 at every height
+    // the composition was drawn for, so nothing on a laptop moves by a pixel.
+    mesh.position.y = isMobile ? TXT_Y_MOBILE : TXT_Y_DESKTOP - 15 * (fitScale() - 1)
     const d = Math.max(1, camera.position.z - mesh.position.z)
     const visibleW = 2 * d * Math.tan(toRad(camera.fov / 2)) * aspectRatio
     // Mobile scales to fit the narrow frustum; desktop applies a fixed shrink so the big

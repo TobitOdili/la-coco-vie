@@ -106,6 +106,68 @@ state, everything below it is history — newest first.)
 
 ---
 
+## ▶▶ THE HOVER, TUNED DOWN — AND THE DECK GIVEN ITS AIR BACK — 2026-09-18 (AUDIT #128)
+
+Sent straight back the same day: *"it zooms too much, blocks the center mesh text, and even your
+own picture shows the side card cutting into one of the front ones… Still not as sleek as reference
+site. I also think the cards are spaced out more on reference site."*
+
+### The hover
+
+| | was | now |
+|---|---|---|
+| `HOVER_PULL` | 20.9 (the reference's own number) | **10** |
+| a hovered front card | 77.8 → 51.9 units, ~1.7× on screen | 77.8 → ~62, **~1.3×** |
+| `HOVER_RISE` | 4 | 2 |
+| `HOVER_RELEASE_GROW` | 1.45 | **1.3** |
+| chase in / out | 0.20s / 0.26s | **0.28s / 0.32s** — a glide, not a snap |
+
+It clears the neighbouring card completely now and the tagline reads around it. The select's
+flinch went with it: on-screen size through the click runs **16.84 → 16.69 → 40.33**, a 0.9% dip
+against 6% before.
+
+⚠️ 1.45 was calibrated against the RESTING territory. Once release started reading the card's LIVE
+pose (#126), 45% on top of a card that had already grown let it hold the hover from 200px outside
+itself — measured, the pointer sitting on the left sliver still kept the front card it had left.
+
+### The decks are the same deck — measured, not assumed
+
+Read out of the reference's own bundle: `N = 8`, `ve = 40` (ring radius),
+`PlaneGeometry(300*.08, 400*.08)` = 24×32, `PerspectiveCamera(45, …)` at `(0, −15, 100)`. Every one
+of those is ours. On screen at 1440×900 the gap between the two front cards measures **110px there
+and 105px here**. The cards are not spaced out more; the pitch is identical.
+
+### What was actually different: the air
+
+| in a 900px window | reference | ours (before) | ours (now) |
+|---|---|---|---|
+| front cards | 300 → 720 | 420 → 845 | 330 → 780 |
+| white above | 300px | 420px | 330px |
+| **white below** | **180px** | **55px** | **120px** |
+
+`IDLE_Y_DESKTOP = −12` was the deck hiding from the tagline, and it left the composition sitting on
+the bottom edge of the frame. The deck is at **−5** now and the tagline came up with it
+(`TXT_Y_DESKTOP` −8 → −2, `TXT_SCALE_DESKTOP` 0.82 → 0.74), so the card tops overlap and occlude its
+last line exactly as the reference's do. That is the depth cue the composition was missing: the
+text belongs BEHIND the deck, not printed across it (AUDIT #102).
+
+⚠️ **The tagline gives its height back on a short frame.** `applyFit` pulls the camera DOWN as well
+as back below `FIT_MIN_H`, which slides the scene up the screen — but the nav above the tagline is
+fixed CSS pixels. Without `− 15·(fitScale() − 1)` the landscape phone put the tagline straight into
+the date line. Portrait is untouched: it has its own `TXT_Y_MOBILE` and `idleCarouselY()` returns 0.
+
+### ⚠️ And the reference screenshot I had been comparing against was a HOVERED deck
+
+Their hover raycasts from `be`, a vector initialised to NDC `(0, −0.5)` and only ever written by a
+`mousemove` handler. So a freshly loaded reference homepage **already has one card pulled forward
+and turned to face you** before the visitor touches anything — which is why every fresh screenshot
+of theirs reads "one card forward, the rest fallen back" and ours reads as a flat wall of two, and
+why their front card measured 46 units from the camera when the ring's nearest point is 69.
+
+Ours does not do this. It is a deliberate choice, not a bug — and it is the couple's to make.
+
+---
+
 ## ▶▶ THE HOVER IS A POSE NOW, AND THE COUNT IS SET IN THREE HANDS — 2026-09-18 (AUDIT #125–#127)
 
 Both halves of one message, and both were already in the reference — read out of its bundle rather
