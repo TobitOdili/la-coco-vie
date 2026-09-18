@@ -106,6 +106,81 @@ state, everything below it is history — newest first.)
 
 ---
 
+## ▶▶ THE DECK DIPS, THE HOVER COMES TO THE FRONT, AND THE TAGLINE GETS ITS LAUREL — 2026-09-18 (AUDIT #129–#133)
+
+Five, from one message.
+
+### The deck now dips toward you (#129)
+
+*"Can you pan the whole deck for the cards to be lower in front and possibly higher at the back so
+it exposes more of the center text mesh?"* The group's X tilt is that pan: rotating the ring about
+X sends the near side DOWN (`y = −40·sin x`) and the far side up. **25° → 36°** drops the two front
+cards ~7 units — about 95px at 1440×900 — and lifts the back of the arc by the same.
+
+⚠️ Only the FRONT cards can hide the tagline. The far ones sit at z ≈ −37 against the text plane
+at 0, so the text is drawn over them: the back of the arc is composition, not legibility.
+
+### A hovered side card was sorted behind the deck (#130)
+
+*"Hovering on an off-center card still puts it behind the center ones which is weird."* True, and
+not fixable by geometry: a side card starts 100 units out where the front pair sit at 78, so
+bringing it genuinely nearer would need the 20.9 zoom that had already been rejected twice. **The
+hovered card is lifted out of the deck instead** — `depthTest = false` and a `renderOrder` above
+every other card, so it is composited last.
+
+⚠️ **The reference does exactly this, by another route.** `hoverPoster(true)` calls
+`poster.layers.set(1)`, and its render loop draws layer 0, calls `clearDepth()`, then draws layer
+1. A second pass over a cleared depth buffer and a depth test turned off are the same trick.
+
+### The zoom, third cut (#131)
+
+*"The zoom is still too exaggerated… closer to ours than reference site's zoom levels. Just a more
+fluid and a bit more prominent card hover."*
+
+| `HOVER_PULL` | a front card lands at | on screen |
+|---|---|---|
+| 20.9 (the reference's) | 51.9 | ~1.7× |
+| 10 | ~62 | ~1.3× |
+| **5** | **~68** | **~1.15×** |
+
+The prominence is #130, not the zoom.
+
+### The tagline went blank while scrolling (#132)
+
+*"As I scroll through the deck the text mesh should change. Right now it's empty while I scroll and
+only shows when the deck settles on one card."* **Two faults, stacked:**
+
+1. `setTxtChapter` killed the running tween and started a NEW fade to zero from wherever the last
+   had reached — and the fade back IN lived inside that tween's `onComplete`, which the next change
+   killed before it could fire. The front card changes every 45° of rotation, so a scroll
+   re-targets it several times a second and the opacity was dragged down and never came back. One
+   swap runs at a time now and always finishes; a change mid-swap only moves the target.
+2. ⚠️ **`alphaTest: 0.5` made every crossfade a hard cut.** An alphaTest discards any fragment
+   whose alpha (texel × material opacity) falls under it — so the plane vanished the instant its
+   opacity crossed 0.5 and came back the instant it crossed back. Every fade this material has
+   ever run was a cut at the halfway mark. It writes no depth; nothing needed it.
+
+⚠️ `cancelTxtSwap()` hands the opacity back at the three points where the scene takes it over.
+Killing the tween alone strands `txtSwapping` true and every later swap is dropped for good.
+
+### The laurel (#133)
+
+An award laurel under the tagline reading **COCO & UVIE / 2026**, in each chapter's own ink, baked
+into the same `cu-txt*.png` texture — one plane means one fade, one depth sort, one scale, and the
+ink for free.
+
+⚠️ **Drawn, not traced.** `laurelSvg()` computes both sprays: leaves biggest mid-branch, tapering
+at both ends (a laurel is a spray — one leaf size reads as a cog), with a smaller second row inside
+the stem. This repo carries none of the reference's art and this is no exception.
+
+⚠️ **It moved the type.** The texture is one centred group, so ~500px of new content in a 2048px
+square pushed the type up ~60px on screen and into the nav. `TXT_Y_DESKTOP` −2 → −7.5 puts the type
+back and drops the badge into the band the deeper dip opened between the last line and the card
+tops. `node scripts/gen-textures.mjs --taglines` regenerates only the taglines; re-run
+`gen-image-variants.mjs` after it or a phone still loads the old `-sm` art.
+
+---
+
 ## ▶▶ THE HOVER, TUNED DOWN — AND THE DECK GIVEN ITS AIR BACK — 2026-09-18 (AUDIT #128)
 
 Sent straight back the same day: *"it zooms too much, blocks the center mesh text, and even your

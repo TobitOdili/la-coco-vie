@@ -393,6 +393,11 @@ silhouette/colour specs, except for the two originals where the reference showed
 The reference pairs **Yaroslava** with wine, **Markita** with la-storia, and **Kohana + Yaroslava**
 with amour; we use the subset whose images we host.
 
+**The laurel badge** under every tagline (`COCO & UVIE / 2026`) is drawn by `laurelSvg()` in
+`scripts/gen-textures.mjs` and baked into `cu-txt1..4.png`, in each chapter's ink. It is not data:
+changing the names or the year means editing that script and re-running
+`node scripts/gen-textures.mjs --taglines`, then `gen-image-variants.mjs` for the `-sm` copies.
+
 Google Fonts (loaded via `<link>` in `nuxt.config.ts`, built from `SITE.googleFonts`):
 **Italiana**, **Monoton**, **Over the Rainbow**, **Caveat**. The first three are the loader's
 pool — its counter re-casts each glyph in one of them every 100ms (AUDIT #127) — and also the

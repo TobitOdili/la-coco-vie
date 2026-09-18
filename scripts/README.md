@@ -10,12 +10,13 @@ Regenerates every generated texture the WebGL scene uses, into `public/images/`:
 |---|---|
 | `cu-p1..4.svg` | Poster card **faces** — editable SVG sources (bg = chapter `accentLight`, title in the chapter font, ink = `accent`). |
 | `cu-p1..4.png` | The same faces **rendered to PNG** — this is what the scene loads. |
-| `cu-txt1..4.png` | The centre **tagline** art (2048×2048, transparent). |
+| `cu-txt1..4.png` | The centre **tagline** art (2048×2048, transparent) — the four lines of type **and the laurel badge** under them (`COCO & UVIE / 2026`, drawn by `laurelSvg()`, in the chapter's ink). |
 | `cu-logo.png` | The nav/card **wordmark** (480×480, transparent). |
 | `cu-favicon.png` | The **browser-tab mark** (180×180) — the ampersand, on the site's ground. Replaced the reference site's star `favicon.ico`, deleted 2026-09-03. |
 
 ```bash
-node scripts/gen-textures.mjs        # or:  npm run gen:textures
+node scripts/gen-textures.mjs            # or:  npm run gen:textures
+node scripts/gen-textures.mjs --taglines # ONLY cu-txt*.png — leaves the card faces alone
 ```
 
 Needs Google Chrome installed (override with `CHROME_PATH=…`) and the `playwright-core`

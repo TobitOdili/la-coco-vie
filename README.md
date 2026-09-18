@@ -51,11 +51,11 @@ is that no two pages share a language. Breaking it is what made With Love fail i
 > the orientation; that doc is the source of truth.
 
 - ✅ **Homepage carousel** — intro animation, rotate-on-scroll (wheel + touch), **per-card
-  hover/click**: the card under the pointer rises, **comes forward along the camera's view ray and
-  turns to face you square-on** — a card off to the side of the ring swings a quarter turn to meet
-  you rather than staying a foreshortened sliver — and its film plays. Resolved by screen-space
-  containment, so faded background cards are not hoverable; the hover **follows the ring** as it
-  scrolls,
+  hover/click**: the card under the pointer rises, comes forward, **turns to face you square-on
+  and is drawn in front of the whole deck** — a card off to the side of the ring swings a quarter
+  turn to meet you rather than staying a foreshortened sliver — and its film plays. Resolved by
+  screen-space containment, so faded background cards are not hoverable; the hover **follows the
+  ring** as it scrolls,
   live cursor tint, click-to-open with a **tap confirmation** that holds until the chapter is up,
   the couple's names + date + **countdown**, a welcome note (the About panel), and RSVP.
   The deck rests **upright** and leans only with live input — the pointer on desktop, the swipe on

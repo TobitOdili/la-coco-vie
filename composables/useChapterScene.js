@@ -382,6 +382,10 @@ export function useChapterScene() {
   // txtTextures[0], and if the post-intro front card happened to be chapter 0 the early-return
   // would leave the plane at opacity 0 forever. It also means we never show a wrong wordmark.
   let currentTxtChapter = -1             // chapter shown on the center txtMesh (#9/#14)
+  let pendingTxtChapter = -1             // …and the one it is heading for, if a swap is running
+  let txtSwapping = false
+  const TXT_FADE_OUT = 0.1               // a full swap is 0.26s, so a fast scroll still reads
+  const TXT_FADE_IN = 0.16
   let lastFrontChapter = -1              // last front chapter reported for the cursor tint
   const _frontVec = new THREE.Vector3()  // scratch vec for front-card detection (#14)
   let canvasEl
@@ -417,12 +421,16 @@ export function useChapterScene() {
   // slerps the card's rotation to lookAt(camera), flipped 180 degrees about Y. User,
   // 2026-09-18: "the cards off center on the sides ... should zoom/rotate to face the user
   // more prominently (and straight on) when hovered."
-  // ⚠️ BUT NOT AT THE REFERENCE'S OWN 20.9 — THAT IS TOO MUCH IN OUR FRAME. Shipped at 20.9 and
-  // sent straight back (user, same day): "it zooms too much, blocks the center mesh text, and
-  // even your own picture shows the side card cutting into one of the front ones." Measured at
-  // 1440x900, 20.9 took a front card from 77.8 units away to 51.9 — 1.7x on screen, which
-  // swallowed the whole tagline and ran into the next card. At 10 it lands at ~62: about 1.3x,
-  // it clears the neighbouring card, and the tagline still reads around it.
+  // ⚠️ BUT NOT AT THE REFERENCE'S OWN 20.9 — THAT IS TOO MUCH IN OUR FRAME, AND 10 STILL WAS.
+  // 20.9 came back as "it zooms too much, blocks the center mesh text, and even your own picture
+  // shows the side card cutting into one of the front ones"; 10 came back as "the zoom is still
+  // too exaggerated, I think I much preferred how we had it — closer to ours than reference
+  // site's zoom levels. Just a more fluid and a bit more prominent card hover." Measured at
+  // 1440x900 a front card sits 77.8 units out: 20.9 brought it to 51.9 (1.7x on screen), 10 to
+  // ~62 (1.3x), and 5 lands it at ~69 — about 1.15x, which next to the lift and the turn is a
+  // card that comes forward rather than one that lunges. THE PROMINENCE IS NOT THE ZOOM: the
+  // hovered card is composited in front of the whole deck (see applyHoverPose), which is what
+  // actually makes it read as picked up.
   // ⚠️ WHY THE SAME NUMBER DOES NOT TRANSLATE: their deck and ours are the same ring (8 cards,
   // radius 40, 24x32 cards, fov 45 at z=100 — read out of their bundle, not guessed), but their
   // hovered card is the one at the SIDE of the frame with white space to grow into, while our
@@ -433,13 +441,14 @@ export function useChapterScene() {
   // across the screen, which is both what the reference does and what lets the hover
   // territory below stay honest about where the card actually is.
   const HOVER_LIFT = 7      // ring-local +Y — the lift this hover has always had
-  const HOVER_PULL = 10     // world units toward the camera
+  const HOVER_PULL = 5      // world units toward the camera
+  const HOVER_RENDER_ORDER = 10   // the hovered card draws after every other
   // ⚠️ AND A SMALL RISE THE REFERENCE DOES NOT HAVE, because a card growing around its own
   // centre grows DOWNWARD too and our deck sits low in the frame. At the first attempt's 1.7x
   // the bottom edge landed at y=917 in a 900px window, clipping the caption, and needed 4 units
   // to clear. At 1.3x it barely needs anything — 2 units is enough, and every unit here is a
   // unit the card climbs into the tagline, which is the thing it must not swallow.
-  const HOVER_RISE = 2      // world +Y, desktop only — framing, not lift
+  const HOVER_RISE = 1      // world +Y, desktop only — framing, not lift
   // Seconds to close 63% of the remaining distance.
   // ⚠️ A CHASE, NOT A TWEEN. The pose is re-derived from the ring's CURRENT pose every frame,
   // so it has to survive the deck rotating under a held hover, a card handing the lift to its
@@ -470,9 +479,21 @@ export function useChapterScene() {
   // 2026-09-07 ("cards still look kinda bent to the right"): enough tilt for the deck to read as
   // a tipped cylinder rather than a flat band, without the whole composition listing over.
   // Mobile has no roll and no yaw at all, which is why the complaint is a desktop one.
+  // ⚠️ THE X TERM IS THE DIP, and it is what lets the centre tagline be read. Rotating the ring
+  // about X tips the near side DOWN and the far side UP (the near point goes to y = −40·sin x),
+  // so raising it drops the two front cards clear of the text sitting behind them and arcs the
+  // far side up behind it. 25° until 2026-09-18, where the front cards' tops cut the tagline's
+  // last line: user, *"can you pan the whole deck for the cards to be lower in front and possibly
+  // higher at the back so it exposes more of the center text mesh?"* At 36° the front pair sit
+  // ~7 units (≈95px at 1440×900) lower and the back of the ring lifts by the same — which is
+  // also what opens the band the laurel badge sits in, between the last line of type and the
+  // card tops.
+  // ⚠️ Only the FRONT cards can hide the tagline — the far ones are behind its plane (z ≈ −37
+  // against the text at z = 0) and are drawn over by it, so the back of the arc is composition,
+  // not legibility.
   const homeTilt = () => (isMobile
     ? { x: toRad(22), y: 0, z: 0 }
-    : { x: toRad(25), y: toRad(70), z: toRad(8) })
+    : { x: toRad(36), y: toRad(70), z: toRad(8) })
   const LEAN_MAX_DEG = 4         // deflection at full mouse travel / a hard swipe. ⚠️ Was 10, which
                                  // skewed the cards noticeably whenever the pointer sat off-centre —
                                  // half of "the cards look bent" was simply where the mouse was.
@@ -507,7 +528,12 @@ export function useChapterScene() {
   // sees ~34 units across at that depth (three's `fov` is VERTICAL, so narrow aspect ⇒ narrow
   // horizontal view) — which cropped the wordmark at both edges. fitTxtMesh() scales it down.
   const TXT_PLANE = 60
-  const TXT_Y_DESKTOP = -2   // tuned so it clears the top logo/subtitle (issue #11)
+  // ⚠️ IT MOVED TWICE IN ONE DAY, AND THE SECOND MOVE WAS THE LAUREL'S. −8 → −2 raised the
+  // tagline with the deck; then the badge was baked into the same texture, which is centred as
+  // one group — so ~620px of new content in a 2048px square pushed the type up about 72px on
+  // screen and straight into the nav. −9 puts the TYPE back where it was and drops the badge
+  // into the gap between the two front cards, which is where it can be read.
+  const TXT_Y_DESKTOP = -7.5 // tuned so it clears the top logo/subtitle (issue #11)
   const TXT_Y_MOBILE = 14    // upper third — clear of the cards, matching the reference
   // Desktop: the tagline is a large central plane; the front card rose into its lower half.
   // Shrink the wordmark a touch AND drop the whole idle ring so the front card clears the text.
@@ -862,7 +888,13 @@ export function useChapterScene() {
     const txtGeo = new THREE.PlaneGeometry(TXT_PLANE, TXT_PLANE)
     // opacity 0 until the first setTxtChapter picks the RIGHT chapter (at intro end, instant)
     // — otherwise the plane flashes chapter 0's wordmark and then swaps.
-    const txtMat = new THREE.MeshBasicMaterial({ map: txtTextures[0], transparent: true, opacity: 0.0, depthWrite: false, alphaTest: 0.5 })
+    // ⚠️ NO alphaTest. It was 0.5, and an alphaTest is a CLIFF on the way through a fade: the
+    // renderer discards any fragment whose alpha (texel × material opacity) falls under it, so the
+    // whole tagline vanished the instant its opacity crossed 0.5 and came back the instant it
+    // crossed back. Every crossfade this material has ever run was really a hard cut at the
+    // half-way mark — which is why the scroll swap read as "empty while I scroll" even once the
+    // swap itself was fixed (#131). The plane writes no depth, so nothing needed the cliff.
+    const txtMat = new THREE.MeshBasicMaterial({ map: txtTextures[0], transparent: true, opacity: 0.0, depthWrite: false })
     txtMat.toneMapped = false
     const txtMesh = new THREE.Mesh(txtGeo, txtMat)
     // y=-8 pushes the text lower on screen so it clears the top logo/subtitle
@@ -969,6 +1001,12 @@ export function useChapterScene() {
           }
         })
       }
+      // The tagline's own state: what it shows, what it is heading for, and how visible it is.
+      window.__txtDebug = () => ({
+        opacity: +(groupG.userData.txtMat?.opacity ?? -1).toFixed(3),
+        current: currentTxtChapter, pending: pendingTxtChapter, swapping: txtSwapping,
+        front: frontChapterIdx(), hovered: hoveredIndex,
+      })
       window.__camDebug = () => ({
         x: +camera.position.x.toFixed(1), y: +camera.position.y.toFixed(1), z: +camera.position.z.toFixed(1),
         fov: camera.fov, baseDistance,
@@ -1484,31 +1522,68 @@ export function useChapterScene() {
 
   // Crossfade the center txtMesh to a chapter's txt (Issues #9 + #14).
   // No-ops if that chapter is already showing.
+  // ⚠️ THE SWAP HAS TO SURVIVE BEING INTERRUPTED, and being interrupted is the NORMAL case: the
+  // front card changes every 45° of ring rotation, so any scroll re-targets this several times a
+  // second. The old version killed the running tween and started a NEW fade to zero from wherever
+  // the last one had reached — and the fade back IN only existed inside that tween's onComplete,
+  // which the next change killed before it could fire. So under a scroll the opacity was dragged
+  // down again and again and never came back: the tagline went blank until the deck settled.
+  // User, 2026-09-18: *"as I scroll through the deck the text mesh should change. Right now it's
+  // empty while I scroll and only shows when the deck settles on one card."*
+  // One swap runs at a time and always finishes. A change arriving mid-swap only moves the
+  // target; the swap reads the latest one when it turns over, and re-runs if it moved again.
   function setTxtChapter(chIdx, instant = false) {
-    if (chIdx < 0 || chIdx === currentTxtChapter) return
     const txtMat = groupG.userData.txtMat
-    const newTex = txtTextures[chIdx]
-    if (!txtMat || !newTex) return
-    currentTxtChapter = chIdx
-    // (The front-chapter callback for the cursor tint is fired by the animate() tracker,
-    // not here — so it also updates during a scroll-settle while hovering, no mousemove.)
-    gsap.killTweensOf(txtMat)
+    if (chIdx < 0 || !txtMat || !txtTextures[chIdx]) return
+    pendingTxtChapter = chIdx
     if (instant) {
-      txtMat.map = newTex
+      cancelTxtSwap()
+      currentTxtChapter = chIdx
+      txtMat.map = txtTextures[chIdx]
       txtMat.needsUpdate = true
       txtMat.opacity = 1.0
       return
     }
+    // (The front-chapter callback for the cursor tint is fired by the animate() tracker,
+    // not here — so it also updates during a scroll-settle while hovering, no mousemove.)
+    if (txtSwapping || chIdx === currentTxtChapter) return
+    runTxtSwap()
+  }
+
+  function runTxtSwap() {
+    const txtMat = groupG.userData.txtMat
+    if (!txtMat) return
+    if (pendingTxtChapter === currentTxtChapter) { txtSwapping = false; return }
+    txtSwapping = true
     gsap.to(txtMat, {
       opacity: 0,
-      duration: 0.15,
+      duration: TXT_FADE_OUT,
       ease: 'power1.out',
+      overwrite: true,
       onComplete: () => {
-        txtMat.map = newTex
+        currentTxtChapter = pendingTxtChapter        // whatever the latest ask is by now
+        txtMat.map = txtTextures[currentTxtChapter]
         txtMat.needsUpdate = true
-        gsap.to(txtMat, { opacity: 1.0, duration: 0.25, ease: 'power1.in' })
+        gsap.to(txtMat, {
+          opacity: 1.0,
+          duration: TXT_FADE_IN,
+          ease: 'power1.in',
+          overwrite: true,
+          onComplete: () => { txtSwapping = false; runTxtSwap() },
+        })
       },
     })
+  }
+
+  // Hand the tagline's opacity back to whatever is about to own it (a select, the return scrub,
+  // the bottom exit). ⚠️ Killing the tween is not enough on its own: GSAP does not call an
+  // onComplete it has killed, so `txtSwapping` would stay true and every later swap would be
+  // dropped — the tagline would stop changing for the rest of the session.
+  function cancelTxtSwap() {
+    const txtMat = groupG.userData.txtMat
+    if (txtMat) gsap.killTweensOf(txtMat)
+    txtSwapping = false
+    pendingTxtChapter = currentTxtChapter
   }
 
   // The poster slot currently nearest the camera (front-facing). Robust to the group
@@ -1752,6 +1827,19 @@ export function useChapterScene() {
       }
       p.hoverPosed = true
 
+      // ⚠️ THE HOVERED CARD IS LIFTED OUT OF THE DECK, not merely moved inside it. No pull that
+      // is sane in this frame can make a SIDE card nearer than the front pair — it starts 100
+      // units out where they sit at 78, so it would take the 20.9 zoom that was just rejected —
+      // and until this, a hovered side card was still sorted BEHIND the cards it had turned to
+      // face you past. User, 2026-09-18: "hovering on an off-center card still puts it behind
+      // the center ones which is weird." Depth test off and a renderOrder above every other
+      // card composites it last, so the card you point at is always the one in front.
+      const wantFront = p.i === hoveredIndex
+      if (wantFront !== (p.mesh.renderOrder === HOVER_RENDER_ORDER)) {
+        p.mesh.renderOrder = wantFront ? HOVER_RENDER_ORDER : 0
+        p.material.depthTest = !wantFront   // a render state, not a shader define: no recompile
+      }
+
       // Where this card would be sitting if nothing were hovered — the anchor for both halves.
       _hvRest.set(p.baseX, p.baseY, p.baseZ).applyMatrix4(carousel.matrixWorld)
 
@@ -1787,6 +1875,8 @@ export function useChapterScene() {
   function clearHoverPose(p) {
     p.mesh.position.set(p.baseX, p.baseY, p.baseZ)
     p.mesh.quaternion.copy(p.baseQuat)
+    p.mesh.renderOrder = 0
+    p.material.depthTest = true
     p.hoverOff.set(0, 0, 0)
     p.hoverK = 0
     p.hoverPosed = false
@@ -1878,6 +1968,7 @@ export function useChapterScene() {
     }
 
     // Fade out txt mesh
+    cancelTxtSwap()
     if (groupG.userData.txtMat) {
       tl.to(groupG.userData.txtMat, { opacity: 0, duration: 1, ease: 'power2.inOut', overwrite: true }, 0)
     }
@@ -2115,6 +2206,7 @@ export function useChapterScene() {
     // just under a multiple.
     let homeRot = preSelectRot
     while (homeRot < carousel.animatedRotationY + BACK_MIN_TURN) homeRot += TWO_PI
+    cancelTxtSwap()
     backStart = {
       homeRot,
       rot: carousel.animatedRotationY,
@@ -2292,7 +2384,7 @@ export function useChapterScene() {
     gsap.killTweensOf(hero.mesh.position)
     gsap.killTweensOf(hero.material.uniforms.blendFactor)
     gsap.killTweensOf(hero.material.uniforms.progress)
-    if (groupG.userData.txtMat) gsap.killTweensOf(groupG.userData.txtMat)
+    cancelTxtSwap()
     exitStart = {
       rot: carousel.animatedRotationY,
       cy: carousel.position.y,

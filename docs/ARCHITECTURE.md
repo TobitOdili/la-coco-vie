@@ -629,6 +629,23 @@ bottom row (Sarakuz credit · sound toggle). Logo + nav tint with the current `-
 Full-screen overlay (`z-50`), slides in with a GSAP-free CSS transition. Background uses the
 current chapter's `--accentLight`. Static "IMMERSE YOURSELF…" copy.
 
+### The centre tagline (`txtMesh`)
+A single 60×60 plane at the scene root (not in `groupG`, so it takes none of the ring's tilt),
+`lookAt(camera)` every frame, showing `cu-txt{n}.png` for the **hovered** chapter, or the front
+one when nothing is hovered. Each texture carries the chapter's four-to-six lines of type **and
+the laurel badge** under them (AUDIT #133).
+- **The swap survives being interrupted** (#132): one crossfade runs at a time and always
+  finishes; a change arriving mid-swap only moves the target. The front card changes every 45° of
+  ring rotation, so under any scroll this is re-targeted several times a second — the old version
+  restarted the fade-out each time and never reached the fade-in, and the tagline simply went
+  blank until the deck settled.
+- ⚠️ **No `alphaTest` on this material.** It was 0.5, which discards every fragment whose alpha
+  (texel × opacity) falls under it — so each "crossfade" was really a hard cut at the halfway
+  mark. The plane writes no depth; nothing needed it.
+- `cancelTxtSwap()` hands the opacity back wherever the scene takes it over (select, return
+  scrub, bottom exit). Killing the tween alone would strand `txtSwapping` and every later swap
+  would be dropped.
+
 ### `components/LoadingScreen.vue`
 Asset-gated counter. Receives `progress` (0–100) from `app.vue`, GSAP-eases the displayed
 number toward it, plays a GSAP fade-out on reaching 100. Light-gray, centered. 12 s safety
@@ -818,9 +835,9 @@ The `animate()` rAF loop each frame:
 One function owns what a hovered card does with its transform, called once a frame from
 `animate()` with that frame's elapsed seconds:
 - **rise** `HOVER_LIFT` up the ring's own +Y, **come forward** `HOVER_PULL` along the camera's view
-  ray (so the card grows *in place* — its projected centre does not move; 10 units ≈ 1.3× on
-  screen, and **not** the reference's 20.9, which read as 1.7× and swallowed the tagline — #128),
-  **rise again** `HOVER_RISE` in world up (framing, since a card grows downward too), and
+  ray (so the card grows *in place* — its projected centre does not move; 5 units ≈ 1.15× on
+  screen, and **not** the reference's 20.9, which read as 1.7× and swallowed the tagline — #128,
+  #131), **rise again** `HOVER_RISE` in world up (framing, since a card grows downward too), and
   **slerp** the rotation to `lookAt(camera)` turned 180° about Y (a ring card wears its art on its
   −Z face: `rotation.y = −90 − φ`, looking inward).
 - `hoverK` (0→1 per card) is a **dt-scaled exponential chase, not a tween** — the target moves
@@ -834,6 +851,12 @@ One function owns what a hovered card does with its transform, called once a fra
   select's own timeline — 1.2 s, `power2.inOut`, because a chase is fastest at the start while the
   hero's `power3.inOut` scale is at its slowest, and the card visibly SHRANK for the first third of
   a second (19% by 400 ms; 0.9% at the shipped pull). Same fault as #124, one system out.
+- **and it is composited in front of the whole deck** — `depthTest = false` plus a `renderOrder`
+  above every other card (AUDIT #130). This is what makes a hovered card read as picked up, not
+  the zoom: a side card starts 100 units out against the front pair's 78, so no sane pull can put
+  it in front by geometry. The reference does the same thing with `layers.set(1)` and a second
+  render pass after `clearDepth()`. Both flags are released the moment the card stops being the
+  hovered one.
 - Mobile keeps the lift and nothing else — nothing hovers on touch.
 
 ### Select (`selectChapter(chIdx)`, ~3 s GSAP timeline)

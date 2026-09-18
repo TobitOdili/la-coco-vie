@@ -103,6 +103,59 @@ const CH = [
   },
 ]
 
+// ── The laurel ───────────────────────────────────────────────────────────────
+// Drawn, not fetched: the reference stamps an award laurel under its tagline ("BEST LOVE
+// STORY 2024") and the couple asked for the same thing in their own names (user, 2026-09-18:
+// "can we add the flower thing to the bottom of our text mesh? Ofc change it to Coco & Uvie
+// and the year to 2026"). Every leaf is computed here rather than traced from theirs — this
+// repo carries none of their art, and a wreath is two mirrored sprays of ellipses.
+//
+// ⚠️ The leaves are biggest MID-BRANCH and taper at both ends. A laurel is a spray; leaves of
+// one size read as a fan or a cog. The second, smaller row on the inside of the stem is what
+// stops the branch looking like a row of pinned leaves.
+// ⚠️ It is set in Bague, not Italiana — the badge is chrome, in the site's chrome voice, and
+// the tagline above it is the display one. Both take the chapter's own ink.
+const LAUREL = { R: 150, A0: 12, A1: 130, N: 8 }
+
+function laurelSvg(ink) {
+  const { R, A0, A1, N } = LAUREL
+  const cx = 0, cy = -30
+  const rad = (d) => (d * Math.PI) / 180
+  const pt = (side, th) => [cx + side * R * Math.sin(th), cy + R * Math.cos(th)]
+  const leaf = (L, W) => `M ${-L / 2} 0 Q 0 ${-W / 2} ${L / 2} 0 Q 0 ${W / 2} ${-L / 2} 0`
+  let out = ''
+  for (const side of [-1, 1]) {
+    const p0 = pt(side, rad(A0 - 6)), p1 = pt(side, rad(A1 + 7))
+    out += `<path d="M ${p0[0].toFixed(1)} ${p0[1].toFixed(1)} A ${R} ${R} 0 0 ${side < 0 ? 1 : 0} ${p1[0].toFixed(1)} ${p1[1].toFixed(1)}" fill="none" stroke="${ink}" stroke-width="3"/>`
+    for (let i = 0; i < N; i++) {
+      const t = i / (N - 1)
+      const th = rad(A0 + t * (A1 - A0))
+      const [px, py] = pt(side, th)
+      const outX = side * Math.sin(th), outY = Math.cos(th)
+      const tanDeg = (Math.atan2(-Math.sin(th), -side * Math.cos(th)) * 180) / Math.PI
+      const taper = Math.sin(Math.PI * (0.18 + 0.82 * t))
+      const L = 34 + 30 * taper, W = 13 + 9 * taper
+      out += `<path d="${leaf(L, W)}" fill="${ink}" transform="translate(${(px + outX * W * 0.72).toFixed(1)} ${(py + outY * W * 0.72).toFixed(1)}) rotate(${(tanDeg + side * 30).toFixed(1)})"/>`
+      if (t > 0.12 && t < 0.92) {
+        out += `<path d="${leaf(L * 0.74, W * 0.8)}" fill="${ink}" transform="translate(${(px - outX * W * 0.6).toFixed(1)} ${(py - outY * W * 0.6).toFixed(1)}) rotate(${(tanDeg - side * 8).toFixed(1)})"/>`
+      }
+    }
+  }
+  return out
+}
+
+// ⚠️ `viewBox` first, `width` second: the badge is sized in the tagline's CSS, and the SVG has
+// to scale with it rather than crop. The wreath spans roughly x ±235, y −215…+150 in its own
+// units — leave the margin, or the lowest leaves are clipped off.
+const badgeSvg = (ink) => `<svg viewBox="-250 -215 500 380" width="470" xmlns="http://www.w3.org/2000/svg">
+${laurelSvg(ink)}
+<text x="0" y="-95" text-anchor="middle" font-family="Bague" font-size="46" letter-spacing="1.5" fill="${ink}">COCO</text>
+<text x="0" y="-37" text-anchor="middle" font-family="Bague" font-size="46" letter-spacing="1.5" fill="${ink}">&amp; UVIE</text>
+<text x="0" y="52" text-anchor="middle" font-family="Bague" font-size="26" letter-spacing="5" fill="${ink}">2026</text>
+</svg>`
+
+const ONLY_TAGLINES = process.argv.includes('--taglines')
+
 const browser = await chromium.launch({ executablePath: CHROME, headless: true })
 
 async function shoot(html, { width, height, out, omitBackground = false, wait = 900 }) {
@@ -131,12 +184,18 @@ ${titleEls}
 <text x="500" y="1258" text-anchor="middle">${c.sub.replace(/&/g, '&amp;')}</text>
 </g>
 </svg>`
-  writeFileSync(`${IMG}/cu-p${c.n}.svg`, svg)
-  // ── poster PNG (fonts baked in — render the SVG inside a real page) ──
-  await shoot(
-    `<!doctype html><body style="margin:0"><img src="data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}" style="width:1000px;height:1330px"></body>`,
-    { width: 1000, height: 1330, out: `${IMG}/cu-p${c.n}.png`, wait: 1200 }
-  )
+  // ⚠️ `--taglines` regenerates ONLY cu-txt*.png. The card faces are byte-stable output from
+  // the same source, but re-rendering them means re-rasterising four fonts in whatever Chrome
+  // happens to be installed — noise in the diff for no change in the art. Use the flag when
+  // the edit is to the tagline side.
+  if (!ONLY_TAGLINES) {
+    writeFileSync(`${IMG}/cu-p${c.n}.svg`, svg)
+    // ── poster PNG (fonts baked in — render the SVG inside a real page) ──
+    await shoot(
+      `<!doctype html><body style="margin:0"><img src="data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}" style="width:1000px;height:1330px"></body>`,
+      { width: 1000, height: 1330, out: `${IMG}/cu-p${c.n}.png`, wait: 1200 }
+    )
+  }
   // ── tagline PNG ──
   const lines = c.tagline.map(([t, k]) => `<div class="${k}">${t}</div>`).join('')
   await shoot(
@@ -145,7 +204,12 @@ ${titleEls}
     .wrap{width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;color:${c.ink};text-align:center}
     .xl{font-family:'Italiana',serif;font-size:204px;line-height:0.82;letter-spacing:-0.01em}
     .sm{font-family:'Bague',serif;font-size:86px;line-height:1.0;letter-spacing:0.06em;opacity:0.9;margin:3px 0}
-    </style><body><div class="wrap">${lines}</div></body>`,
+    /* ⚠️ The badge is part of the TAGLINE texture, not a second plane. One plane means one
+       fade, one depth sort and one scale — and the whole group stays centred in the square,
+       which is what the scene positions. It also means the badge takes the chapter's ink for
+       free. The margin is the gap under the last line of type. */
+    .badge{margin-top:60px;line-height:0}
+    </style><body><div class="wrap">${lines}<div class="badge">${badgeSvg(c.ink)}</div></div></body>`,
     { width: 2048, height: 2048, out: `${IMG}/cu-txt${c.n}.png`, omitBackground: true }
   )
   console.log(`cu-p${c.n} + cu-txt${c.n} written`)
