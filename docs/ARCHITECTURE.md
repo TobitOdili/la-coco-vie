@@ -1174,7 +1174,14 @@ geometry/layout work, prefer the local one** — it's instant and renders at the
 > ### ★ The four probes worth rebuilding (from the full QA pass, 2026-09-15)
 > Written throwaway at the repo root as `qa-*.mjs`, run against a **production** build served
 > statically (`rm -rf .output && npm run build`, `npx serve -s .output/public -l 5099`), and
-> **deleted before commit**. Full results and findings → [`QA-2026-09-15.md`](QA-2026-09-15.md).
+> **deleted before commit**. Full results and findings → [`QA-2026-09-20.md`](QA-2026-09-20.md).
+>
+> ⚠️ **THREE WAYS A PROBE HAS LIED IN THIS REPO, all of which returned a clean result:** (1) excluding
+> "anything inside a `position: fixed` ancestor" to skip the chrome — a chapter page is itself
+> `position: fixed; inset: 0`, so that excludes the page; (2) skipping elements that have child
+> ELEMENTS, which drops every `<p>` containing a `<br>`; (3) calling an external URL without a
+> browser user agent and reading the bot-protection 403 as a dead link. When the instrument and a
+> screenshot disagree, the screenshot wins.
 >
 > ⚠️ **A probe `.mjs` must live in the repo ROOT** or `playwright-core` will not resolve, and
 > ⚠️ `page.evaluate(someFunctionString)` **returns `undefined`** — Playwright evaluates the string

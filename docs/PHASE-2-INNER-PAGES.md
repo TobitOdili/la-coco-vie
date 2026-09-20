@@ -99,10 +99,58 @@ state, everything below it is history — newest first.)
 > and the **card films work**. The only thing still unchecked by a human is the **mobile swipe lean**
 > (emulation says rest 0.24° / peak 10.2°; `LEAN_MAX_DEG` is the knob).
 >
-> **NEXT / OPEN:** real content + media; the eight dead links above; Big Day follow-ups
-> (traditional-wedding date, thread-motion consistency, a real map card); portrait card-sizing
-> ("passable"); code-health (split the ~1500-line `useChapterScene.js`).
+> **NEXT / OPEN:** the five-round plan in [`QA-2026-09-20.md`](QA-2026-09-20.md) — share previews
+> (#99) first, then keyboard reach (#105/#137), then contrast and the nav overlap (#107/#101/#100),
+> then landscape + reduced motion (#103/#106), then housekeeping (#108/#110/#138/#139). Plus: real
+> content + media; Big Day follow-ups (traditional-wedding date, thread-motion consistency, a real
+> map card); code-health (split the ~2500-line `useChapterScene.js`).
 > **Regenerate card art:** `npm run gen:textures` (see [`scripts/README.md`](../scripts/README.md)).
+
+---
+
+## ▶▶ SECOND FULL QA PASS — 2026-09-20 (no fixes; survey + plan) → [`QA-2026-09-20.md`](QA-2026-09-20.md)
+
+Five days and four rounds of deck work after the first one. **Nothing was fixed in this pass** — it
+re-tests all fourteen items the first one left open and files three more (#137–#139).
+
+**Mechanically the site is clean.** 30 route × size loads (5 routes × 360×640, 390×844, 768×1024,
+844×390, 1440×900, 1920×1080): **0 page errors, 0 console errors, 0 failed requests, 0 horizontal
+overflow, no 4xx or 5xx.** Every registry link resolves. Every interaction path works — hover →
+select → chapter → bottom exit → home, select → top return with the deck restored, the EXPLORE tap
+and the top swipe on a real touch device, the Welcome panel, the sound toggle, and In Frames' file
+browser by mouse AND keyboard.
+
+| | |
+|---|---|
+| ✅ **closed** | **#104** the countdown (reads 39 days on 2026-09-20; the calendar difference is 39 — not reproducible) · **#111** the registry 403s (all nine links 200 — the 403 was bot protection answering the probe's user agent) |
+| ⚠️ **half fixed** | **#102** the tagline over the card tops — resolved 1280→2560 by the 36° dip (#129), still true at 844×390 |
+| 🔴 **still open** | **#99** no share preview and one title for five URLs · **#100** the bottom chrome invisible over a hero · **#101** copy under the nav on /us (5/15 at 360×640) |
+| 🟠 | **#103** landscape phone · **#105** ONE focusable element on the homepage · **#106** the scene ignores reduced motion (the DOM respects it) · **#107** 26 instances below AA |
+| 🟡🟢 | **#108** 478 KB of unused SVGs · **#109** 24px-tall tap targets · **#110** dead data · **#112** no h1/robots/sitemap, soft 404s · **#137** Escape does not close the welcome note · **#138** In Frames thumbnails 5.8× oversized · **#139** `us.mp4` is 3.6 MB |
+
+### ⚠️ Two probe bugs, both of which produced a clean bill of health
+
+1. The nav-overlap probe skipped "anything inside a `position: fixed` ancestor" to avoid the chrome.
+   **A chapter page is itself `position: fixed; inset: 0`**, so that excluded the entire page. It
+   reported 0/15 while a screenshot of the same scroll position showed a quote crossing the wordmark.
+2. The same probe skipped elements with child *elements* — so every `<p>` containing a `<br>`, which
+   is most of US's copy, was never examined.
+
+Same shape as #123's "world x is not screen direction". **When the instrument and the screenshot
+disagree, the screenshot wins.** A third instance is in #111: a 403 that was the probe's user agent,
+not the site.
+
+### The plan, in five rounds
+
+1. **The link** (#99 + the `<h1>` half of #112) — head content in the *prerendered shell*, not
+   applied after hydration. No risk to the running site, and the site is being shared right now.
+2. **Reach** (#105, #137) — three `<div @click>` in `SiteNav.vue` become buttons, Escape closes the
+   note, and the deck gets a visually-hidden DOM route into each chapter. In Frames is the model.
+3. **Reading the pages** (#107, #101, #100, #109) — a floor under the quiet voice, starting with the
+   bank labels. Visible design change; show the couple a before/after first.
+4. **Landscape and motion** (#103, #106, the rest of #102) — reconcile `fitScale()` against the
+   fixed-pixel chrome, then a reduced-motion branch in the scene.
+5. **Housekeeping** (#108, #110, #138, #139) — the only round that can run while waiting on content.
 
 ---
 

@@ -147,7 +147,11 @@ is that no two pages share a language. Breaking it is what made With Love fail i
   three that matter most: **a shared link has no preview and every chapter previews as the
   homepage** (#99), **the bottom chrome is invisible on the first screen of every chapter** (#100),
   and **page copy runs under the nav at up to 69% of scroll positions** (#101). Survey, measurements
-  and the ordered plan → [`docs/QA-2026-09-15.md`](docs/QA-2026-09-15.md).
+  and the ordered plan → [`docs/QA-2026-09-20.md`](docs/QA-2026-09-20.md) (the second pass,
+  2026-09-20 — re-tests everything and adds #137–#139; the first is
+  [`docs/QA-2026-09-15.md`](docs/QA-2026-09-15.md)). ⚠️ The site itself is mechanically clean: 30
+  route × size loads with **0 errors, 0 failed requests, 0 overflow**, every link live and every
+  interaction path working. What is open is sharing, keyboard reach and contrast.
 - 🔧 **Open — code health** — `useChapterScene.js` is past 2,400 lines and wants splitting.
   ⚠️ Deliberately **not** in the QA plan: every issue above is a small verifiable edit, and a
   refactor underneath them turns a QA round into a regression hunt.
@@ -250,8 +254,9 @@ Each doc has **one job** — start with the README, then go deep where needed.
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Phases (homepage → inner pages → re-skin) + attribution |
 | [`docs/PHASE-2-INNER-PAGES.md`](docs/PHASE-2-INNER-PAGES.md) | **Next up** — scope & build plan for the chapter inner pages |
 | [`PROGRESS.md`](PROGRESS.md) | **Living status** — what works, resolved/open issues, dev workflow, session log |
-| [`AUDIT.md`](AUDIT.md) | Issue-by-issue **forensic history** (root causes, fixes, commit refs) — #1–#124 |
-| [`docs/QA-2026-09-15.md`](docs/QA-2026-09-15.md) | **The full QA pass** — every route × every size, the probe recipes, and the open plan (#99–#112) |
+| [`AUDIT.md`](AUDIT.md) | Issue-by-issue **forensic history** (root causes, fixes, commit refs) — #1–#139 |
+| [`docs/QA-2026-09-20.md`](docs/QA-2026-09-20.md) | **The current QA pass** — every route × every size, the probe recipes, the re-tests and the five-round plan (#99–#139) |
+| [`docs/QA-2026-09-15.md`](docs/QA-2026-09-15.md) | The first QA pass, superseded by the above but kept for its measurements |
 
 ---
 

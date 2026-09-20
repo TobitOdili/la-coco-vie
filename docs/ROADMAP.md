@@ -129,7 +129,12 @@ Mechanics are documented in [`CONTENT-AND-ASSETS.md`](CONTENT-AND-ASSETS.md):
 
 The four chapters are built and live; what is left is the difference between *built* and *ready to
 be shared with a few hundred guests*. The survey, the measurements behind each item and the ordered
-plan are in [`QA-2026-09-15.md`](QA-2026-09-15.md); the issues are **AUDIT #99–#112**, all open.
+plan are in [`QA-2026-09-20.md`](QA-2026-09-20.md) — the second pass, which re-tested every item and
+re-ordered the rounds (the first survey is [`QA-2026-09-15.md`](QA-2026-09-15.md)). The issues are
+**AUDIT #99–#112 and #137–#139**. ⚠️ Two are now closed (**#104** the countdown, not reproducible;
+**#111** the registry 403s, which were bot protection answering the probe's user agent) and **#102**
+is half fixed by the deck's deeper dip. The table below is the FIRST pass's ordering; the current
+one is the five rounds in QA-2026-09-20.
 
 | round | what | why it is in this order |
 |---|---|---|
