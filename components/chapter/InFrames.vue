@@ -110,6 +110,7 @@
               <button
                 type="button"
                 class="go-back"
+                data-cursor="morph"
                 :tabindex="path === null ? -1 : 0"
                 @click="back()"
               >
@@ -642,6 +643,13 @@ onBeforeUnmount(() => {
   outline: none;
   background: rgba(195, 166, 216, 0.07);
   box-shadow: inset 0 0 0 1px rgba(195, 166, 216, 0.55);
+}
+/* Held by the cursor: the lilac comes all the way up. Brighter than :hover on purpose — the two
+   fire together with a pointer, and the held state is the one that has to be worth the ring. */
+.go-back.cursor-held {
+  background: rgba(195, 166, 216, 0.2);
+  color: #F2EAF8;
+  box-shadow: inset 0 0 0 1px rgba(195, 166, 216, 0.8);
 }
 .empty-sub {
   margin: 0;

@@ -78,8 +78,9 @@
                  are two accounts, in a section of this same page — so the offer takes you to them
                  instead of describing them. ⚠️ `@pointerdown.stop` stays: the band underneath
                  reads pointer events to decide what to slow down. -->
-            <button type="button" class="reveal-cash" @pointerdown.stop @click="goCash">
-              or send the cash instead ↓
+            <button type="button" class="reveal-cash" data-cursor="morph" data-cursor-pad="16"
+                    @pointerdown.stop @click="goCash">
+              or send the cash instead
             </button>
           </div>
         </div>
@@ -108,7 +109,7 @@
         </section>
 
         <div class="cash-dock" :class="{ live: dockLive && !panelOpen }">
-          <button type="button" class="dock-hit" :aria-expanded="panelOpen" @click="openPanel">
+          <button type="button" class="dock-hit" data-cursor="morph" :aria-expanded="panelOpen" @click="openPanel">
             <span class="dock-eyebrow">{{ s.heading }}</span>
             <span class="dock-note">{{ s.note }}</span>
           </button>
@@ -810,12 +811,27 @@ onBeforeUnmount(() => {
 .reveal-cash::after {
   content: '';
   position: absolute;
-  left: 0;
-  right: 0;
+  left: -12px;
+  right: -12px;
   top: -12px;
   bottom: -12px;
 }
 .reveal-cash:hover, .reveal-cash:focus-visible { opacity: 1; outline: none; }
+/* ⚠️ THE FILL IS ON ::after, WHICH IS ALREADY THERE — it is the padded hit area (AUDIT #109), so
+   painting it is the one way this inline button can take a background without moving the text a
+   pixel. `z-index: -1` puts it behind the label and in front of the card, which is why the button
+   keeps `position: relative`. ⚠️ `data-cursor-pad="16"` above is 4 MORE than the fill's own 12:
+   at 12 the ring landed exactly on the fill's edge and, being drawn in the same accent, disappeared
+   into it — measured 208.9x48.1 of ring over a 208.9x48.1 fill. 4px of daylight puts it back on the
+   pale ground where it can be seen. */
+.reveal-cash.cursor-held { color: #F6F3EC; opacity: 1; border-bottom-color: transparent; isolation: isolate; }
+.reveal-cash.cursor-held::after {
+  background: #2E4A52;
+  /* 12px keeps this concentric with the ring outside it, whose radius is the button's own 0 plus
+     the 16px pad: 12 + the 4px gap = 16. */
+  border-radius: 12px;
+  z-index: -1;
+}
 
 /* ── even better — the section ───────────────────────────────────────────────
    Set exactly the way the popup is set: ink on paper, centred, nothing around it. It is a section
@@ -875,6 +891,11 @@ onBeforeUnmount(() => {
   cursor: none;
 }
 .dock-hit:focus-visible { outline: 1px solid currentColor; outline-offset: -4px; }
+/* ⚠️ The radius is HERE as well as on .cash-dock, and it is not redundant: the morph reads its
+   corner radius off the element it is given, and a sharp ring around a rounded card looks like a
+   mistake. The button fills the card, so the two are the same shape by definition. */
+.dock-hit { border-radius: 0.95rem; }
+.dock-hit.cursor-held { background: #2E4A52; color: #F6F3EC; }
 .dock-eyebrow {
   font-family: 'Over the Rainbow', cursive;
   font-size: clamp(1.25rem, 2.4vw, 1.7rem);

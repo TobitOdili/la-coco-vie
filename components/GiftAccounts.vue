@@ -9,6 +9,8 @@
         <button
           type="button"
           class="acc-hit"
+          data-cursor="morph"
+          data-cursor-pad="4"
           :class="{ ok: copied === a.number, bad: failed === a.number }"
           :aria-label="`Copy the ${a.bank} account number, ${spoken(a.number)}`"
           @click="copy(a.number)"
@@ -150,6 +152,14 @@ onBeforeUnmount(() => clearTimeout(timer))
   -webkit-tap-highlight-color: transparent;
 }
 .acc-hit:focus-visible { outline: 1px solid currentColor; outline-offset: 3px; }
+/* Held by the cursor. The row already carries the padding that makes it a target (44px floor,
+   AUDIT #109), so filling it needs no layout at all — and an account number you are about to
+   copy is exactly the thing that should light up under the pointer. */
+.acc-hit.cursor-held {
+  background: var(--accent, #2E4A52);
+  color: var(--accentLight, #F6F3EC);
+  border-radius: 0.55rem;
+}
 .digits {
   /* Tabular figures so the two numbers line up under each other, and enough tracking
      that a guest can read a digit at a time without losing their place. */

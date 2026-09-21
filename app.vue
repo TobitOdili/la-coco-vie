@@ -207,6 +207,37 @@ function onChapterUnhover() {
   cursorRef.value?.deactivate()
 }
 
+// ── The cursor takes the shape of an inner-page control ──────────────────────────────────────
+// Opt-in, by `data-cursor="morph"` on the control itself: the circle becomes that control's
+// outline (CustomCursor.morphTo) and the control gets `.cursor-held` to change its own colour.
+// Both halves are needed — see the note in CustomCursor on why the ring cannot simply fill it.
+//
+// ⚠️ ONE DELEGATED `pointerover` DOES BOTH ENTER AND LEAVE. It fires on every element the pointer
+// enters, so walking off a button onto the page fires it on the page, `closest` returns null, and
+// the morph is released — no matching pointerout to keep in sync, and nothing to leak if a control
+// is removed mid-hover (the loop checks isConnected too).
+const MORPH_SEL = '[data-cursor="morph"]'
+let heldEl = null
+function holdCursor(el) {
+  if (heldEl === el) return
+  heldEl?.classList.remove('cursor-held')
+  heldEl = el
+  if (el) {
+    el.classList.add('cursor-held')
+    cursorRef.value?.morphTo(el)
+  } else {
+    cursorRef.value?.unmorph()
+  }
+}
+function onPointerOver(e) {
+  // Touch has no hover: the "hover" a tap synthesizes would leave a button stuck in its held
+  // colour for as long as the page stayed open. Same lesson as the parked EXPLORE circle.
+  if (e.pointerType === 'touch') return holdCursor(null)
+  holdCursor(e.target instanceof Element ? e.target.closest(MORPH_SEL) : null)
+}
+// The pointer leaving the window fires no pointerover anywhere, so it needs saying separately.
+function onPointerLeaveWindow() { holdCursor(null) }
+
 function toggleAbout() { aboutOpen.value = !aboutOpen.value }
 async function toggleSound() {
   soundOn.value = !soundOn.value
@@ -271,10 +302,13 @@ async function releaseConfirmWhenSettled() {
   }, 100)
 }
 watch(() => route.params.slug, releaseConfirmWhenSettled)
+watch(() => route.params.slug, () => holdCursor(null))
 
 const initAudioOnce = () => initAudio()
 
 onMounted(() => {
+  document.addEventListener('pointerover', onPointerOver)
+  document.addEventListener('pointerleave', onPointerLeaveWindow)
   window.addEventListener('click', initAudioOnce, { once: true })
   window.addEventListener('touchstart', initAudioOnce, { once: true })
 
@@ -292,6 +326,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  document.removeEventListener('pointerover', onPointerOver)
+  document.removeEventListener('pointerleave', onPointerLeaveWindow)
   clearInterval(confirmTimer)
   if (resyncTimer) clearTimeout(resyncTimer)
   theme?.unload()

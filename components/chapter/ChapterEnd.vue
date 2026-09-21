@@ -11,8 +11,12 @@
     <p class="end-date">{{ SITE.dateLabel }}</p>
 
     <div class="pills">
-      <a class="pill" :href="SITE.nav.collectionUrl" target="_blank" rel="noopener noreferrer">
-        RSVP <span class="arrow">↗</span>
+      <!-- ⚠️ NO ARROW GLYPH. It was `RSVP ↗`; the couple asked for the decoration off the
+           buttons (2026-09-21). The link still says where it goes to a screen reader — it is an
+           <a> with target=_blank — and the hover now says it in the site's own language: the
+           cursor takes the pill's shape and the pill inverts. -->
+      <a class="pill" data-cursor="morph" :href="SITE.nav.collectionUrl" target="_blank" rel="noopener noreferrer">
+        RSVP
       </a>
     </div>
 
@@ -105,7 +109,14 @@ onBeforeUnmount(() => observer?.disconnect())
   transition: transform 0.3s ease, opacity 0.3s ease;
 }
 .pill:hover { transform: translateY(-2px); }
-.arrow { font-size: 0.9em; opacity: 0.8; }
+/* The cursor's half of this is the ring in main.css; this is the button's half. A solid accent
+   pill with pale ink inverts — pale ground, accent ink, and a hairline so it still reads as a
+   button against the chapter's own pale background. */
+.pill.cursor-held {
+  background: var(--accentLight, #fff);
+  color: var(--accent, #333);
+  box-shadow: inset 0 0 0 1px var(--accent, #333);
+}
 
 .socials {
   display: flex;

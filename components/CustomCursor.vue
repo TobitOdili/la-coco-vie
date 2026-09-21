@@ -2,7 +2,7 @@
   <div
     ref="cursorRef"
     class="cursor"
-    :class="{ active: isActive || parkedVisible || confirming, parked: isTouch, ready: parkedVisible, confirming }"
+    :class="{ active: isActive || parkedVisible || confirming, parked: isTouch, ready: parkedVisible, confirming, morphed }"
     :style="{ '--cursorAccent': accent }"
     @click="onExploreTap"
   >
@@ -42,13 +42,69 @@ let currentY = -100
 let targetX = -100
 let targetY = -100
 let rafId = null
+let moveEvent = 'pointermove'
+
+// ── The morph: over a control, the circle becomes that control's shape ───────────────────────
+// The reference does this on its inner pages and it is the whole hover language there — the
+// cursor stops being a dot near the button and becomes the button's own outline while the button
+// changes colour under it. User, 2026-09-21: "the cursor morph to take the shape of the buttons
+// while they change color."
+//
+// ⚠️ IT OUTLINES THE CONTROL, IT DOES NOT FILL IT, and that is a constraint rather than a taste:
+// this element is a child of .app-root at z-index 100 and the chapter page is a sibling at 10, so
+// nothing inside the page can ever be painted above it. A filled morph would bury the label of
+// the very button it is advertising. The colour change belongs to the button (.cursor-held).
+const morphed = ref(false)
+let morphEl = null          // the element being shadowed, or null
+let morphPad = 6            // px the ring sits outside it — data-cursor-pad overrides
+let morphArrived = false    // has the glide finished? once true the ring is glued, not chased
+
+function morphTo(el) {
+  if (isTouch.value || !el || el === morphEl) return
+  morphEl = el
+  morphPad = Number(el.dataset.cursorPad) || 6
+  morphArrived = false
+  morphed.value = true
+  // ⚠️ READ ONCE, NOT PER FRAME. getComputedStyle forces style resolution; the rect below is
+  // re-read every frame because it moves, but a button's corner radius does not.
+  const n = cursorRef.value
+  if (n) {
+    const raw = getComputedStyle(el).borderTopLeftRadius
+    // A ring outside a rounded box needs the pad added to its radius to stay concentric. A
+    // percentage radius is already relative to the ring's own box, so it passes straight through;
+    // an absurd pill radius is clamped to half the box by the browser, not by us.
+    n.style.setProperty('--morphRadius', raw.includes('%') ? raw : (parseFloat(raw) || 0) + morphPad + 'px')
+  }
+}
+
+function unmorph() {
+  morphEl = null
+  morphArrived = false
+  if (!morphed.value) return
+  morphed.value = false
+  const n = cursorRef.value
+  if (n) { n.style.width = ''; n.style.height = ''; n.style.removeProperty('--morphRadius') }
+}
 
 function lerp(a, b, t) {
   return a + (b - a) * t
 }
 
-function onMouseMove(e) {
-  // A real pointer showed up (e.g. a hybrid device) — resume following it.
+// ⚠️ ONLY A REAL POINTER MAY UN-PARK THE CIRCLE — AND `mousemove` CANNOT TELL YOU THAT. A tap
+// on a phone makes the browser synthesize a mousemove at the touch point for compatibility, so
+// every tap on a card looked like a mouse arriving: `parked` came off mid-tap, which stopped the
+// `.parked.confirming` rule that is supposed to retire the EXPLORE button from applying, and the
+// same element then lerped in from its off-screen start to land under the finger. User,
+// 2026-09-21: "tapping on a card on mobile causes the initial explore circle to disappear and
+// another to materialize/animate into where I tapped — that breaks immersion." It read as two
+// circles because it moved like two. `pointermove` carries `pointerType`, which is the only
+// thing that actually answers the question; the mousemove path below is the fallback for a
+// browser without PointerEvent, where `pointerType` is undefined and the guard lets it through.
+function onPointerMove(e) {
+  if (e.pointerType && e.pointerType !== 'mouse' && e.pointerType !== 'pen') return
+  // A real pointer showed up (e.g. a hybrid device) — resume following it. Start it where the
+  // pointer IS: lerping from the off-screen start is the same fly-in this just stopped being.
+  if (isTouch.value) { currentX = e.clientX; currentY = e.clientY }
   isTouch.value = false
   targetX = e.clientX
   targetY = e.clientY
@@ -60,17 +116,44 @@ function onExploreTap() {
 }
 
 function loop() {
+  // A control can leave under a held morph — a panel closes, the route changes — and a ring
+  // locked to a detached node would hang in the frame forever.
+  if (morphEl && !morphEl.isConnected) unmorph()
+
   if (!isTouch.value) {
-    currentX = lerp(currentX, targetX, 0.2)
-    currentY = lerp(currentY, targetY, 0.2)
+    if (morphEl) {
+      // ⚠️ RE-READ EVERY FRAME. The chapter pages scroll under Lenis, which MOVES the button;
+      // a rect captured at hover time would leave the ring behind within one flick.
+      const r = morphEl.getBoundingClientRect()
+      targetX = r.left + r.width / 2
+      targetY = r.top + r.height / 2
+      if (cursorRef.value) {
+        cursorRef.value.style.width = (r.width + morphPad * 2) + 'px'
+        cursorRef.value.style.height = (r.height + morphPad * 2) + 'px'
+      }
+    }
+
+    // ⚠️ GLIDE IN, THEN STICK. The same 0.2 lerp that gives the circle its weight leaves a
+    // morphed ring trailing its button by ~30px down a fast scroll, which reads as the ring
+    // having come loose. Chase until it arrives, then follow exactly.
+    if (morphArrived) {
+      currentX = targetX
+      currentY = targetY
+    } else {
+      currentX = lerp(currentX, targetX, 0.2)
+      currentY = lerp(currentY, targetY, 0.2)
+      if (morphEl && Math.abs(currentX - targetX) < 1.5 && Math.abs(currentY - targetY) < 1.5) morphArrived = true
+    }
 
     if (cursorRef.value) {
       // Centre cursor on pointer by offsetting half its current rendered size.
       // Original EO.update() uses hardcoded -12 (half of 24px rest size).
-      // We read actual size so it stays centred during the active expand animation too.
-      const half = cursorRef.value.offsetWidth / 2
-      cursorRef.value.style.top = (currentY - half) + 'px'
-      cursorRef.value.style.left = (currentX - half) + 'px'
+      // We read actual size so it stays centred during the active expand animation too —
+      // and both axes, because a morphed ring is no longer square.
+      const halfW = cursorRef.value.offsetWidth / 2
+      const halfH = cursorRef.value.offsetHeight / 2
+      cursorRef.value.style.top = (currentY - halfH) + 'px'
+      cursorRef.value.style.left = (currentX - halfW) + 'px'
     }
   }
 
@@ -96,16 +179,17 @@ onMounted(() => {
     typeof window !== 'undefined' &&
     (navigator.maxTouchPoints > 0 || 'ontouchstart' in window) &&
     !window.matchMedia('(pointer: fine)').matches
-  window.addEventListener('mousemove', onMouseMove)
+  moveEvent = typeof window.PointerEvent === 'function' ? 'pointermove' : 'mousemove'
+  window.addEventListener(moveEvent, onPointerMove)
   loop()
 })
 
 onUnmounted(() => {
-  window.removeEventListener('mousemove', onMouseMove)
+  window.removeEventListener(moveEvent, onPointerMove)
   cancelAnimationFrame(rafId)
 })
 
-defineExpose({ activate, deactivate, confirm, endConfirm })
+defineExpose({ activate, deactivate, confirm, endConfirm, morphTo, unmorph })
 </script>
 
 <style scoped>

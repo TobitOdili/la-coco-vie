@@ -440,15 +440,21 @@ export function useChapterScene() {
   // keeps its projected CENTRE exactly where it was: it grows in place rather than sliding
   // across the screen, which is both what the reference does and what lets the hover
   // territory below stay honest about where the card actually is.
-  const HOVER_LIFT = 7      // ring-local +Y — the lift this hover has always had
-  const HOVER_PULL = 5      // world units toward the camera
+  // ⚠️ AND 5 WAS STILL TOO MUCH, THIRD TIME OF ASKING (2026-09-21): "the zoom/rise effect is a
+  // bit overstated ... let's tone it down." 5 put a front card at ~69 units (1.15x on screen);
+  // 3 lands it at ~72, a hair over 1.08x. At that size the pull is no longer what you notice —
+  // the turn and the compositing are — which is the whole point of the note above.
+  const HOVER_LIFT = 5      // ring-local +Y — the lift this hover has always had
+  const HOVER_PULL = 3      // world units toward the camera
   const HOVER_RENDER_ORDER = 10   // the hovered card draws after every other
   // ⚠️ AND A SMALL RISE THE REFERENCE DOES NOT HAVE, because a card growing around its own
   // centre grows DOWNWARD too and our deck sits low in the frame. At the first attempt's 1.7x
   // the bottom edge landed at y=917 in a 900px window, clipping the caption, and needed 4 units
   // to clear. At 1.3x it barely needs anything — 2 units is enough, and every unit here is a
   // unit the card climbs into the tagline, which is the thing it must not swallow.
-  const HOVER_RISE = 1      // world +Y, desktop only — framing, not lift
+  // ⚠️ And down again with the pull: the rise exists to keep a GROWING card's bottom edge in
+  // frame, so it is scaled to the growth. At 1.08x there is almost nothing to clear.
+  const HOVER_RISE = 0.6    // world +Y, desktop only — framing, not lift
   // Seconds to close 63% of the remaining distance.
   // ⚠️ A CHASE, NOT A TWEEN. The pose is re-derived from the ring's CURRENT pose every frame,
   // so it has to survive the deck rotating under a held hover, a card handing the lift to its
@@ -1840,6 +1846,7 @@ export function useChapterScene() {
   // camera drifts with the mouse throughout — an offset applied on top of last frame's offset
   // would walk away from the ring and never come back.
   const _hvRest = new THREE.Vector3(), _hvDir = new THREE.Vector3(), _hvOff = new THREE.Vector3()
+  const _hvLook = new THREE.Vector3()
   const _hvM = new THREE.Matrix4()
   const _hvQ = new THREE.Quaternion(), _hvQPar = new THREE.Quaternion(), _hvQTar = new THREE.Quaternion()
   const _hvFlip = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI)
@@ -1893,10 +1900,20 @@ export function useChapterScene() {
       _hvRest.set(p.baseX, p.baseY, p.baseZ).applyMatrix4(carousel.matrixWorld)
 
       if (!isMobile) {
-        // TURN TO FACE THE VIEWER. lookAt(camera, card) builds a basis whose +Z points at the
-        // camera, and a ring card wears its art on the −Z face (they look INWARD: rotation.y is
-        // −90−φ), so the basis is spun 180° about Y before being taken into the ring's frame.
-        _hvM.lookAt(camera.position, _hvRest, p.mesh.up)
+        // TURN TO FACE THE VIEWER. lookAt(eye, card) builds a basis whose +Z points at the eye,
+        // and a ring card wears its art on the −Z face (they look INWARD: rotation.y is −90−φ),
+        // so the basis is spun 180° about Y before being taken into the ring's frame.
+        //
+        // ⚠️ THE EYE IS THE CAMERA AT THE CARD'S OWN HEIGHT — A YAW, NOT A FULL AIM. Pointing a
+        // card at the camera itself also PITCHES it, and the deck sits below the lens (the ring
+        // idles at y=−5 and a card hangs to −21), so every hovered card leaned backwards: normal
+        // tilted up, top edge away from you, bottom edge toward you. User, 2026-09-21: "it pans
+        // weird with the top more receded than the bottom." Flattening the eye to the card's y
+        // leaves the turn horizontal — the card comes square-on and stays UPRIGHT, which is what
+        // "face the user straight on" meant in the first place. Roll is unaffected either way:
+        // world +Y as the up vector has always zeroed it.
+        _hvLook.set(camera.position.x, _hvRest.y, camera.position.z)
+        _hvM.lookAt(_hvLook, _hvRest, p.mesh.up)
         _hvQ.setFromRotationMatrix(_hvM).multiply(_hvFlip)
         _hvQTar.copy(_hvQPar).multiply(_hvQ)
         p.mesh.quaternion.copy(p.baseQuat).slerp(_hvQTar, p.hoverK)

@@ -621,6 +621,23 @@ Self-contained lerped cursor (rAF loop, lerp 0.2). Rest = 24px ring; `.active` =
 black disc with "EXPLORE". `activate()` / `deactivate()` are called by `app.vue` on hover.
 Positioned via `top`/`left` (not transform) to avoid clipping — see AUDIT #1.
 
+**Three states, and they do not overlap.** `.active` (over a card) and `.confirming` (a tap
+acknowledged, held until the chapter is up) belong to the deck; `.parked` is touch only, where the
+circle becomes the on-screen EXPLORE button; `.morphed` belongs to the inner pages.
+
+**The morph — `data-cursor="morph"` is the whole contract.** Put it on a control and two things
+happen: `app.vue` delegates one `pointerover` on the document, adds `.cursor-held` to the control
+and calls `morphTo(el)`; the cursor then takes that control's size and corner radius, re-read from
+its live rect every frame, and glides in before sticking to it. `data-cursor-pad` (default 6)
+moves the ring further out. **The ring OUTLINES, it never fills** — this element is a child of
+`.app-root` at z-index 100 and `.chapter-page` is a sibling at 10, so nothing inside a page can be
+painted above it and a filled ring would bury the label. The colour change is the control's own job
+(`.cursor-held`, styled in each component). AUDIT #142.
+
+⚠️ **The pointer listener is `pointermove`, filtered on `pointerType`, and that is load-bearing.**
+A tap synthesizes a `mousemove` at the touch point; treating that as a real pointer un-parked the
+EXPLORE button mid-tap and flew the circle to the finger. AUDIT #141.
+
 ### `components/SiteNav.vue`
 Fixed chrome: top row (About · centered MILLA NOVA logo + "Chapter the bride" · Collection),
 bottom row (Sarakuz credit · sound toggle). Logo + nav tint with the current `--accent` var.

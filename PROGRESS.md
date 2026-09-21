@@ -33,7 +33,13 @@
 > 2026-09-20; the first is [`docs/QA-2026-09-15.md`](docs/QA-2026-09-15.md)); the issues are
 > **AUDIT #99–#112 and #137–#139**. ⚠️ **All five rounds were worked through on 2026-09-20 and
 > fourteen of the fifteen are closed** — #104 and #111 on re-test, the rest in `091f04e7`,
-> `8063a546`, `3d8ae4d1` and `6f0dd183`. **#139 is the only one left.** The three that matter most: a shared link has no preview and every chapter
+> `8063a546`, `3d8ae4d1` and `6f0dd183`. **#139 is the only one left.**
+>
+> ▶▶ **POLISH ROUND, 2026-09-21 — AUDIT #140–#142, all three closed.** The hovered card no longer
+> leans backwards and comes forward 1.08× rather than 1.15× (#140); a tap on a phone stops throwing a
+> second EXPLORE circle in from off-screen (#141); and the inner pages' buttons have the reference's
+> hover language — the cursor takes the control's shape while the control changes colour — with the
+> arrow glyphs off them (#142). The three that matter most: a shared link has no preview and every chapter
 > previews as the homepage (#99); the bottom chrome is invisible on the first screen of every
 > chapter, measuring 1.03 against its own ground (#100); and page copy runs under the nav at up to
 > 69% of scroll positions (#101). Healthy: zero overflow, zero console errors, zero failed requests,

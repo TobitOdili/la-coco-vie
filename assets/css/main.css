@@ -131,6 +131,38 @@ body {
   background-color: var(--cursorAccent, #000);
 }
 
+/* ===== The morph: the cursor wearing a control's shape ==========================================
+   Over anything marked `data-cursor="morph"` the circle becomes that control's outline and the
+   control changes colour underneath — the reference's whole hover language on its inner pages.
+   CustomCursor sets width/height/--morphRadius from the element's live rect; these rules only say
+   what the shape LOOKS like. ⚠️ MUST STAY BELOW `.cursor.active > .cursor-box`: same specificity,
+   so source order is the only thing that keeps the fill off a morphed ring. */
+.cursor.morphed {
+  /* No overshoot here. The bouncy curve the circle expands with wobbles the edges of a 200px
+     rectangle, which reads as jelly rather than as the ring settling onto the button. */
+  transition-duration: 0.42s;
+  transition-property: width, height;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+.cursor.morphed > .cursor-box {
+  background-color: transparent;
+  border-color: var(--cursorAccent, gray);
+  border-width: 1.5px;
+  border-radius: var(--morphRadius, 8px);
+}
+/* "Explore" belongs to the deck, not to a button that already has a label. */
+.cursor.morphed > .cursor-box > .explore { opacity: 0; transition: opacity 0.12s ease; }
+
+/* The control's half of the effect. The colour itself is the component's business — each chapter
+   has its own palette and a single global colour here would fight all four — so this only
+   declares the hook and the timing. Search `cursor-held` to find the treatments. */
+.cursor-held { transition: background-color 0.28s ease, color 0.28s ease, box-shadow 0.28s ease, opacity 0.28s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor.morphed { transition-duration: 0.01ms; }
+  .cursor-held { transition-duration: 0.01ms; }
+}
+
 .cursor-box > .explore {
   color: #fff;
   opacity: 0;
