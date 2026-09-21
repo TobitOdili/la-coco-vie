@@ -689,7 +689,7 @@ export function useChapterScene() {
   // with the deck perfectly still, which reads as the deck stopping and then being started again.
   // Running to 0.98 means it is still turning at 140°/de when the card seats and 44°/de at the
   // commit, where `EXIT_FOLLOW` picks it up: the horizontal never actually stops. It costs nothing
-  // in landing accuracy — at POSE_END the turn is 98.7% done, so the gap is 5.6° off centre.
+  // in landing accuracy — at `poseEnd` the turn is 98.7% done, so the gap is 5.6° off centre.
   const SPIN_TO = 0.98
   // How much of the turn window runs at a CONSTANT rate before the deceleration. The old flat spin
   // was constant the whole way; keeping most of it flat is what makes the reveal feel like the deck
@@ -704,21 +704,32 @@ export function useChapterScene() {
     const v = (u - SPIN_LINEAR_TO) / (1 - SPIN_LINEAR_TO)
     return SPIN_E0 + (1 - SPIN_E0) * (2 * v - v * v)
   }
-  const DROP_START = 0.45    // de at which the page is fully out → the unfurl + the second wine's drop begin
+  // ⚠️ WHERE THE ARTICLE FINISHES INSIDE THE EXIT — SET BY THE PAGE, NOT TYPED HERE. It used to be a
+  // constant that had to be kept in sync with pages/[slug].vue by hand, and worse, it marked a JOIN
+  // between two different scroll-to-de rates: measured at 1440x900, the deck turned −25.8°/100px
+  // for the whole first screen and −80°/100px from the frame the drop began. The page maps scroll to
+  // `de` on one straight line now and passes the fraction of it the article occupies, so this is
+  // `vh / outroHeight` and it moves with the viewport. The default is only what a caller that never
+  // passes one would get.
+  let dropStart = 0.45
   const exitBg = new THREE.Color('#ffffff')  // scene background during the exit (set to the chapter accent)
   let exitBgAlpha = 0        // 0 = transparent (homepage) … 1 = opaque accent (selected/exit)
   // How much of the dropping card is showing, 0→1 across the start of the drop. Read by animate(),
   // which MULTIPLIES it into the same depth falloff every other card gets — see the note there.
   let heroReveal = 0
   // ── Bottom-exit timing ─────────────────────────────────────────────────────
-  // `de` = exit progress 0→1, driven by the page's OUTRO-section scroll. Phase A [0..DROP_START]
-  // is the article scrolling out, uncovering the scene from the bottom; phase B [DROP_START..1] is
-  // the open deck receiving the card you were reading.
-  //  • HERO_FIT_END — the second wine copy un-frames + shrinks to ring size by this de (EARLY, while
-  //    still off-top + hidden) so its phase-B descent reads as a clean ring card, not a full-bleed morph.
-  const HERO_FIT_END = 0.25
+  // `de` = exit progress 0→1, driven by the page's OUTRO-section scroll at ONE constant rate.
+  // Phase A [0..dropStart] is the article scrolling out, uncovering the scene from the bottom;
+  // phase B [dropStart..1] is the open deck receiving the card you were reading. `dropStart` is set
+  // by the page from its own layout — see the note on it above.
+  //  • HERO_FIT_A — the second wine copy un-frames + shrinks to ring size by this fraction of phase A
+  //    (EARLY, while still off-top + hidden) so its descent reads as a clean ring card, not a morph.
+  // ⚠️ AS A FRACTION OF PHASE A, NOT OF `de`. Everything keyed to a phase is written that way now,
+  // because `dropStart` is no longer a constant: a raw `de` threshold here would mean something
+  // different at every viewport height. 0.556 of phase A is the 0.25 this was at dropStart 0.45.
+  const HERO_FIT_A = 0.556
   // ⚠️ THE DECK IS ON CAMERA FROM THE FIRST PIXEL. `.chapter-outro` is transparent, so there is no
-  // "behind the page" to assemble in: at `de` the article has uncovered `de / DROP_START` of the
+  // "behind the page" to assemble in: at `de` the article has uncovered `de / dropStart` of the
   // screen from the bottom up. Anything that must not be seen happening has to be finished inside
   // the first tenth or so of the exit, and anything meant to be WATCHED has to still be going after
   // it. That is the whole shape of the numbers below.
@@ -734,15 +745,16 @@ export function useChapterScene() {
   // is `de` ≈ 0.001, where the article still covers the whole screen — and from there one even
   // curve carries it the rest of the way. Nothing in this exit changes speed abruptly again.
   const POSE_HEAD = 0.66     // how far open the deck already is when the exit begins
-  const POSE_END = 0.90      // the fan is open — and the card lands — here
-  const DROP_END_B = 0.818   // bLin at which the hero has landed (= de POSE_END)
+  const DROP_END_B = 0.818   // bLin at which the hero has landed — and the fan finishes opening
   // The catch. ⚠️ IT STARTS BEFORE THE LANDING, and that is what stops it reading as a kink: the
   // card's descent eases OUT, so it arrives with no speed of its own, and a deck that only began to
   // give on the frame it seated would be a second motion starting from a standstill. Opening the
   // window early instead puts the ring at the bottom of its dip just as the card comes in — the deck
   // sinks under it and the two come back up together.
-  const CATCH_FROM = 0.83
-  const CATCH_END = 0.99     // …and the give is all but spent by the commit; endExit rides out the rest
+  // Both as fractions of the DROP, for the same reason as HERO_FIT_A. 0.691 and 0.982 of phase B are
+  // the 0.83 and 0.99 these were at dropStart 0.45.
+  const CATCH_FROM_B = 0.691
+  const CATCH_END_B = 0.982  // …and the give is all but spent by the commit; endExit rides out the rest
   const CATCH_RING = -3.0    // ×0.57 at the peak ⇒ the ring dips ~1.7 units, about 31px at the front
   const CATCH_CARD = -1.7    // …and each other card, as the give travels round the ring
   const CATCH_HERO = -1.1    // …and the card itself, pressing into its slot a beat later
@@ -2526,9 +2538,15 @@ export function useChapterScene() {
   // OUTRO-section scroll position (scroll-coupled — safe to call repeatedly in either direction):
   //   heroT — the hero card descends to its ring slot
   //   fitT  — the hero un-frames + shrinks to ring size EARLY (mostly while still high/off-screen)
-  function setExitProgress(de) {
+  function setExitProgress(de, ds) {
     if (!exitStart || !selectedHero) return
+    if (typeof ds === 'number' && ds > 0.05 && ds < 0.95) dropStart = ds
     const t = Math.min(1, Math.max(0, de))
+    // The phase points, derived from wherever the article finishes in this viewport.
+    const poseEnd = dropStart + DROP_END_B * (1 - dropStart)
+    const catchFrom = dropStart + CATCH_FROM_B * (1 - dropStart)
+    const catchEnd = dropStart + CATCH_END_B * (1 - dropStart)
+    const fitEnd = HERO_FIT_A * dropStart
     const c01 = (k) => Math.min(1, Math.max(0, k))
     const lp = (a, b, k = t) => a + (b - a) * k
     const ss = (k) => { const u = c01(k); return u * u * (3 - 2 * u) }
@@ -2536,11 +2554,11 @@ export function useChapterScene() {
     // starts behind the article and finishes under a landing card has no visible edges.
     const ss2 = (k) => { const u = c01(k); return u * u * u * (u * (u * 6 - 15) + 10) }
     const hero = selectedHero
-    // TWO PHASES. A [0..DROP_START]: the article is still scrolling out, uncovering the scene from
-    // the bottom in a strip that grows as `t / DROP_START` of the screen. B [DROP_START..1]: the
+    // TWO PHASES. A [0..dropStart]: the article is still scrolling out, uncovering the scene from
+    // the bottom in a strip that grows as `t / dropStart` of the screen. B [dropStart..1]: the
     // article is gone, the deck finishes opening, and the SECOND wine copy — the card you have been
     // reading as a page — comes down from off-top into the slot it left empty.
-    const bLin = Math.max(0, (t - DROP_START) / (1 - DROP_START))
+    const bLin = Math.max(0, (t - dropStart) / (1 - dropStart))
 
     // ── the deck opens ────────────────────────────────────────────────────────
     // ONE GAUGE for the ring's whole attitude: height, look-down, yaw, roll. 0 = the pose the
@@ -2552,7 +2570,7 @@ export function useChapterScene() {
     // radius (the radius does not change, here or anywhere). So two thirds of the opening
     // happens behind the article, and what you actually watch is the last third: the fan
     // tipping back, the deck rising and yawing into place, finishing exactly as the card lands.
-    const pose = POSE_HEAD + (1 - POSE_HEAD) * ss(t / POSE_END)
+    const pose = POSE_HEAD + (1 - POSE_HEAD) * ss(t / poseEnd)
 
     // ── the deck turns ────────────────────────────────────────────────────────
     // One full revolution plus `−homeTilt().y` — see EXIT_TURNS. Constant rate through the reveal
@@ -2569,7 +2587,7 @@ export function useChapterScene() {
     // once, damped, and the same give crosses the other cards as a wave travelling out from the
     // slot that was filled. Small — a couple of world units, ~35px at the front of the ring — but
     // it is the difference between a card landing IN the deck and a card landing in front of one.
-    const k = c01((t - CATCH_FROM) / (CATCH_END - CATCH_FROM))
+    const k = c01((t - catchFrom) / (catchEnd - catchFrom))
     const give = (u) => Math.sin(TWO_PI * u) * Math.exp(-2.6 * u)   // down, back, a smaller answer, spent
     const ringGive = CATCH_RING * give(k)
 
@@ -2586,7 +2604,7 @@ export function useChapterScene() {
     // nothing to notice it against.
     const drop = ss(c01((bLin - 0.06) / (DROP_END_B - 0.06)))
     const reveal = ss(c01((bLin - 0.06) / 0.28))
-    const fitT = Math.min(1, t / HERO_FIT_END)                      // shrink to ring size early (while off-top)
+    const fitT = Math.min(1, t / fitEnd)                            // shrink to ring size early (while off-top)
 
     // EVERY other card (incl. the chapter's MIRROR copy = the one that's "already there") is simply
     // PUT in its homepage slot, on the first scrubbed frame. ⚠️ NOT RISEN INTO IT. The select drops
@@ -2607,7 +2625,7 @@ export function useChapterScene() {
 
     // The SECOND copy of this chapter (the hero): off-top + hidden through phase A; once the article
     // has gone it descends into its slot and fades in — "drops in from the top." Ring-sized the whole
-    // descent (no full-bleed morph), and it lands ON `POSE_END`, the frame the deck finishes opening.
+    // descent (no full-bleed morph), and it lands ON `poseEnd`, the frame the deck finishes opening.
     // ⚠️ THE DROP STARTS FROM A COMPUTED HEIGHT, NOT FROM WHERE THE CARD HAPPENS TO BE. It used to
     // start at the y the page's scroll-coupling had left it at, which is (a) proportional to how long
     // the chapter is — In Frames pushed it far higher than The Big Day, so the same scroll gave wildly
@@ -2626,7 +2644,7 @@ export function useChapterScene() {
     // ⚠️ NOT set here. The dropping card has to arrive on the SAME depth falloff as the slot it lands in
     // — pinned at full opacity it was a bright white card among faded ghosts, and then dimmed the moment
     // the route committed. animate() multiplies this factor into the falloff it computes for every card.
-    heroReveal = t <= DROP_START ? 0 : reveal
+    heroReveal = t <= dropStart ? 0 : reveal
 
     // Center wordmark: stays out through the opening (the reference shows no floating wordmark
     // mid-exit), fading in only as the homepage fan settles over the last ~40% of de.

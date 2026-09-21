@@ -226,7 +226,15 @@ const RELEASE_STEP = 0.055   // per frame, springing back — about 210ms from j
 // exact complaint the scrub was built to answer. Closing a fraction of the REMAINING distance each
 // frame eases out on its own: about 450ms from the commit point, fastest at the moment you let go
 // and slowest as it lands.
-const SETTLE_EASE = 0.085    // fraction of what is left, per frame
+// ⚠️ 0.085 WAS STILL TOO EAGER (2026-09-21): "the return to the deck from top of inner page on
+// reverse scroll [is] too fast/sudden, and breaks the natural flow." After a scrub the visitor has
+// been driving by hand at their own pace, covering the last 38% in a third of a second is the
+// machine taking the wheel. 0.05 stretches that finish by 1.73x — ln(0.95)/ln(0.915), the ratio of
+// the two decay constants — while still decelerating the whole way, so the release reads as the
+// same motion running out rather than as a cut to playback. Traced home from a chapter: the ring's
+// velocity decays 0.058 → 0.005 → 0.0008 → 0 over about two seconds and lands on 12.566, the exact
+// rotation it left from.
+const SETTLE_EASE = 0.05     // fraction of what is left, per frame
 // ⚠️ THE RETURN COMMITS BEFORE ITS LAST FEW PERCENT, for the same reason the bottom exit does at
 // `COMMIT_AT`. The settle closes a FRACTION of what is left each frame (AUDIT #95, so it
 // decelerates instead of arriving at full speed), which makes the tail an exponential creep — and
@@ -380,16 +388,30 @@ const SETTLE_DEADLINE = 40   // ~8s at 200ms/try before we enable scroll without
 
 // Scroll-driven BOTTOM exit (the reference's "outro" section). As you scroll the article into the
 // transparent .chapter-outro, scroll position maps to `de` → scene.setExitProgress. The article FULLY
-// scrolls out over [outroTop-vh, outroTop] (de 0→DROP_START) while the ring spins on the accent bg with
-// the wine slot empty; then over [outroTop, limit] (de DROP_START→1) the wine card drops from the top.
+// scrolls out over [outroTop-vh, outroTop] while the ring spins on the accent bg with the wine slot
+// empty; then over [outroTop, limit] the wine card drops from the top. Both stretches are ONE linear
+// map of scroll to `de` — see DROP_START_MIN below for why that matters.
 // Reversible (scroll back up → cancelExit restores the article); de→1 (page bottom) commits + navigates.
-const DROP_START = 0.45      // de at which the page is fully out → the drop begins (MATCH useChapterScene.js)
+// ⚠️ THE EXIT HAS ONE SCROLL RATE NOW, AND THIS IS DERIVED FROM THE GEOMETRY RATHER THAN TYPED.
+// `de` used to be mapped piecewise — the article's last viewport carried 0→0.45 and the whole rest
+// of the outro carried 0.45→1 — so the two halves ran at different de-per-pixel and the deck's turn
+// changed speed the instant the article cleared. Measured on the shipped build at 1440x900, wheel
+// notch by wheel notch: **−25.8°/100px for the whole first screen, then −80°/100px** from the frame
+// the drop began. A 3.1x step, at exactly the moment the cards come back in. User, 2026-09-21:
+// *"why does the deck rotation suddenly have to speed up when the cards are added back in? Can't we
+// keep the entire motion locked to scroll."*
+// The map is one straight line over the whole outro now, so DROP_START is simply where the article
+// happens to finish inside it — `vh / outroHeight` — and the scene is TOLD that value rather than
+// keeping its own copy in sync. One rate, one clock, from the first pixel to the commit.
+const DROP_START_MIN = 0.2, DROP_START_MAX = 0.9   // sanity rails on a value read from layout
 // ⚠️ THE EXIT COMMITS BEFORE THE PAGE'S LAST PIXEL. Lenis eases into the bottom of a scroller, so
 // the final ~80px produce almost no `de` — the deck arrived at the homepage already stopped, and the
 // next wheel notch (the homepage rotates ~3× faster per pixel than the exit does) made it leap. That
 // velocity step is what read as a stutter at the handover. Committing here leaves the deck with
 // somewhere to go, and `endExit(true)` carries it the rest of the way on a tween.
-const COMMIT_AT = 0.955
+// Expressed as a fraction of the drop (phase B) rather than of `de`, because `de`'s phase boundary
+// now depends on the viewport. 0.92 of the drop is the 0.955 this was, back when DROP_START was 0.45.
+const COMMIT_AT_B = 0.92
 // ⚠️ NOT `<= 2`. Lenis EASES into the top rather than landing on it — traced coming up from a read:
 // 47 → 17 → 7 → 3 → 1 over four notches, all of them after the page had visibly stopped moving. At a
 // 2px tolerance those four notches did nothing at all, which reads as the top edge being dead. The
@@ -601,13 +623,10 @@ function updateExit(scrollY) {
   const vh = window.innerHeight
   const outroTop = outro.offsetTop      // the article is fully scrolled out at this scroll position
   const end = lenis.limit               // page bottom
-  let de
-  if (scrollY < outroTop) {
-    de = Math.max(0, (scrollY - (outroTop - vh)) / vh) * DROP_START          // article scrolling out
-  } else {
-    const span = Math.max(1, end - outroTop)
-    de = DROP_START + Math.min(1, (scrollY - outroTop) / span) * (1 - DROP_START)  // the drop
-  }
+  const startY = outroTop - vh          // …and it begins to clear here
+  const span = Math.max(1, end - startY)                   // the whole exit, in pixels
+  const de = Math.min(1, (scrollY - startY) / span)        // ONE rate, both halves
+  const ds = Math.min(DROP_START_MAX, Math.max(DROP_START_MIN, vh / span))  // where the article lands in it
   // The exit background is the chapter accent, so the nav must go light over it.
   if (de <= 0) {
     if (exitEngaged) { scene.cancelExit?.(); exitEngaged = false }  // scrolled back up into the article
@@ -618,7 +637,7 @@ function updateExit(scrollY) {
     if (!scene.beginExit?.()) return   // capture the selected/scrolled state + start the reassembly
     exitEngaged = true
   }
-  scene.setExitProgress(de)
+  scene.setExitProgress(de, ds)
   // ⚠️ THE RING CLOSES EXACTLY AS THE PAGE LEAVES THE FRAME. `DROP_START` is the `de` at which the
   // article has fully scrolled out, so that is the moment the ring is describing and that is where
   // it completes — not 0.50, and not still filling over the deck afterwards. It then gets out of
@@ -627,8 +646,9 @@ function updateExit(scrollY) {
   // ⚠️ NO FADE-OUT any more. The cue is part of the page now, so it leaves the frame by scrolling
   // off the top with everything else; fading it as well would only mean the ring un-drew itself in
   // the instant before it went, and un-drew visibly on the way back up.
-  pullBottom.value = Math.max(0, Math.min(1, (de - 0.03) / (DROP_START - 0.03)))
-  if (de >= COMMIT_AT) commitExit()
+  pullBottom.value = Math.max(0, Math.min(1, (de - 0.03) / (ds - 0.03)))
+  // ⚠️ The commit is a fraction of the DROP, not a number in `de` — `ds` moves with the viewport.
+  if (de >= ds + COMMIT_AT_B * (1 - ds)) commitExit()
 }
 
 // ⚠️ Is the article's own background over the canvas? `.chapter-hero` (100dvh) and
@@ -821,17 +841,27 @@ onBeforeUnmount(() => {
    ⚠️ 250vh gave the drop 150vh of scroll, which was fine while the ring also had to unfurl and rise
    through it. It does not any more — the ring is finished before it is uncovered — so 150vh of scroll
    for one falling card was a long wait with nothing else happening. 200vh ⇒ 100vh of drop.
-   ⚠️ AND 100vh WAS STILL A WHOLE SCREEN OF SCROLLING AFTER THE PAGE HAD GONE. User, 2026-09-21:
-   "the timing between the inner page actually scrolling out of viewport and dropping into the card
-   deck is too much. The movement should be fluid and natural, dropping in right as it leaves
-   viewport." This height IS that timing and nothing else: phase B spans `height − 100vh` of scroll,
-   so 140vh gives the drop 40vh — about 360px at 900 tall, four notches of a wheel — and the card is
-   already falling as the last of the article clears the frame. Everything in the scene's exit is
-   keyed to `de`, not to pixels, so the whole choreography tightens with it and nothing needs
-   re-timing there. ⚠️ Do not take it below ~120vh: the commit fires at de 0.955, and with less than
-   ~20vh of phase B a single flick would land past it before the drop was visible at all. */
+   ⚠️ AND 100vh WAS STILL A WHOLE SCREEN OF SCROLLING AFTER THE PAGE HAD GONE (2026-09-21): "the
+   timing between the inner page actually scrolling out of viewport and dropping into the card deck
+   is too much." That went to 140vh — and the answer was wrong, because the complaint was not really
+   about length. With `de` mapped piecewise, this height set the drop's rate ALONE, so shortening it
+   made the second half three times faster than the first and the deck visibly changed gear the
+   moment the cards came back: **−25.8°/100px, then −80°/100px**, measured notch by notch. Same user,
+   the next day: *"why does the deck rotation suddenly have to speed up when the cards are added back
+   in? Can't we keep the entire motion locked to scroll."*
+   ⚠️ SO THIS IS NOW THE WHOLE EXIT'S LENGTH AT ONE RATE, and nothing else. `updateExit` maps the
+   full outro to `de` on one straight line, so the turn runs at **516 / height** degrees per pixel
+   from the first pixel to the commit: 180vh at 900 tall is 1620px, i.e. 31.9°/100px — a shade under
+   the 31.5 the drop ran at back when the outro was 200vh, and 2.5x calmer than the 80 it had reached
+   at 140. The article still takes exactly one viewport to leave, so where that lands inside this
+   height is what `de` calls `dropStart` — 1/1.8 = 0.556 — and the page hands the scene that number
+   rather than either of them assuming it.
+   ⚠️ Raising this slows the ENTIRE exit and gives the drop proportionally more of it; lowering it
+   speeds everything up. There is no longer a way to change one half without the other, which is the
+   point. Do not go below ~120vh: the commit fires at 0.92 of the drop, and the drop needs enough
+   pixels to be seen before a single flick lands past it. */
 .chapter-outro {
-  height: 140vh;
+  height: 180vh;
 }
 
 /* Content scrolls up over the (fixed) WebGL hero on the chapter's light accent. */

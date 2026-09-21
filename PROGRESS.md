@@ -46,7 +46,12 @@
 > actually was (#144); the RSVP arrow and the speaker icon come back on every dark ground (#145);
 > the bottom exit drops the card as the page leaves rather than a screen later (#146); and the
 > hero's title keeps its size through the select and holds the same composition at every aspect
-> ratio (#147). The three that matter most: a shared link has no preview and every chapter
+> ratio (#147).
+>
+> ▶▶ **ONE RATE, 2026-09-21 — AUDIT #148–#149.** The bottom exit's scroll→progress map was piecewise,
+> so the deck turned at −25.8°/100px through the article and −80 from the frame the cards came back
+> — a 3.1x step, and #146's shortening is what made it visible. One straight line now: −31.87 before
+> the boundary, −31.86 after. The top return's released finish was stretched 1.73x (#149). The three that matter most: a shared link has no preview and every chapter
 > previews as the homepage (#99); the bottom chrome is invisible on the first screen of every
 > chapter, measuring 1.03 against its own ground (#100); and page copy runs under the nav at up to
 > 69% of scroll positions (#101). Healthy: zero overflow, zero console errors, zero failed requests,
