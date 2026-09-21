@@ -39,12 +39,33 @@
 </template>
 
 <script setup>
+import { watch, onBeforeUnmount } from 'vue'
 import { SITE } from '~/site.config'
 
-defineProps({
+const props = defineProps({
   isOpen: { type: Boolean, default: false },
 })
-defineEmits(['close'])
+const emit = defineEmits(['close'])
+
+// ⚠️ ESCAPE CLOSES IT. This panel covers the whole frame and had one way out — a ✕ the visitor
+// has to go and find (AUDIT #137). Both of the site's other overlays already handle the key:
+// WithLove's item panel ("Escape is the first thing a visitor will reach for", says its own
+// comment) and In Frames' folder view. This is the third.
+// ⚠️ The listener only exists WHILE the panel is open, so it can never eat an Escape meant for
+// one of those two — In Frames' folder view and this note are never open at the same time.
+function onKey(e) {
+  if (e.key === 'Escape' && props.isOpen) { e.preventDefault(); emit('close') }
+}
+watch(
+  () => props.isOpen,
+  (open) => {
+    if (typeof window === 'undefined') return
+    if (open) window.addEventListener('keydown', onKey)
+    else window.removeEventListener('keydown', onKey)
+  },
+  { immediate: true }
+)
+onBeforeUnmount(() => { if (typeof window !== 'undefined') window.removeEventListener('keydown', onKey) })
 </script>
 
 <style scoped>

@@ -7,17 +7,37 @@
          hero card and the article slide DOWN, opening a band of the chapter accent at the top, and
          `.pull-cue` below is the line that lives in that band. Nothing is painted over anything. -->
 
+    <!-- ⚠️ THE ONLY WAY INTO A CHAPTER WITHOUT A POINTER. The deck is a WebGL canvas: a card is
+         not an element, so it cannot be tabbed to, and until this there was no DOM route into any
+         chapter at all (AUDIT #105). These are real links to the real routes — the route watcher
+         in app.vue drives the same select the click does — visually hidden until one takes focus,
+         at which point `.sr-focusable` brings it back on screen so the visitor can see where they
+         are. First in the DOM, so it is the first thing Tab reaches. -->
+    <nav class="chapter-jump" aria-label="Chapters">
+      <ul>
+        <li v-for="c in CHAPTERS" :key="c.slug">
+          <NuxtLink :to="`/${c.slug}`" class="sr-only sr-focusable">{{ c.title }}</NuxtLink>
+        </li>
+      </ul>
+    </nav>
+
     <!-- Top navigation bar -->
     <div class="!fixed z-20 top-0 w-full">
       <div class="container flex justify-between mt-2 md:mt-6">
         <!-- Left: About -->
+        <!-- ⚠️ A BUTTON, NOT A DIV WITH A CLICK. These three controls — WELCOME, the wordmark and
+             the sound toggle — were `<div @click>`, which means no tab stop, no Enter or Space, no
+             role and no focus ring: twelve presses of Tab on the homepage reached exactly ONE
+             element, the RSVP link, and a keyboard visitor could not open the welcome note, mute
+             the music or go home (AUDIT #105). `.menu-item` carries the look; `button` carries the
+             behaviour, and `appearance:none` below takes back what the UA stylesheet adds. -->
         <div>
-          <div class="menu-item" @click="$emit('toggle-about')">
+          <button type="button" class="menu-item nav-btn" @click="$emit('toggle-about')">
             <!-- Was `hidden md:block`: on a phone that left an invisible click target and no
                  way into About at all. The reference shows this label at mobile widths too,
                  and it fits (ABOUT + the 136px centre logo + COLLECTION inside 390px). -->
             <span>{{ SITE.nav.aboutLabel }}</span>
-          </div>
+          </button>
         </div>
         <!-- Right: Collection link -->
         <div>
@@ -59,13 +79,15 @@
                top-edge pull is charging (see `.pull-cue` below): the pull opens a band of the
                chapter's accent at the top of the frame, and this is the space inside it. Two things
                in one place is a collision; a handover is not. -->
-          <div
-            class="wordmark whitespace-nowrap text-[17px] lg:text-[26px] pointer-events-auto"
+          <button
+            type="button"
+            class="wordmark nav-btn whitespace-nowrap text-[17px] lg:text-[26px] pointer-events-auto"
             :style="{ color: navInk, opacity: wordmarkFade, letterSpacing: wordmarkTrack }"
+            :aria-label="isHome ? 'Covenant and Uvie' : 'Back to the chapters'"
             @click="$emit('go-home')"
           >
             COVENANT <span class="amp">&amp;</span> UVIE
-          </div>
+          </button>
           <!-- ── going back: the veil, and the loader that was the logo ──────────────────────
                ⚠️ THIS IS A SCRUB, NOT A SPINNER. `--p` is how far the top-edge pull has been drawn,
                0→1, and the whole return is scrubbed to the same number — so the veil coming down,
@@ -135,7 +157,13 @@
         </component>
 
         <!-- Sound toggle -->
-        <div class="menu-item pointer-events-auto" @click="$emit('toggle-sound')">
+        <button
+          type="button"
+          class="menu-item nav-btn pointer-events-auto"
+          :aria-pressed="soundOn"
+          :aria-label="soundOn ? 'Sound on — turn it off' : 'Sound off — turn it on'"
+          @click="$emit('toggle-sound')"
+        >
           <span>{{ soundOn ? 'On' : 'Off' }}</span>
           <svg
             width="20"
@@ -154,7 +182,7 @@
               d="M10 7.22006L6.60282 9.99957H3V13.9996H6.60282L10 16.7791V7.22006ZM5.88889 15.9996H2C1.44772 15.9996 1 15.5519 1 14.9996V8.99958C1 8.44729 1.44772 7.99958 2 7.99958H5.88889L11.1834 3.66772C11.3971 3.49286 11.7121 3.52436 11.887 3.73808C11.9601 3.82741 12 3.93928 12 4.0547V19.9445C12 20.2206 11.7761 20.4445 11.5 20.4445C11.3846 20.4445 11.2727 20.4046 11.1834 20.3315L5.88889 15.9996ZM20.4142 11.9996L23.9497 15.5351L22.5355 16.9494L19 13.4138L15.4645 16.9494L14.0503 15.5351L17.5858 11.9996L14.0503 8.46404L15.4645 7.04983L19 10.5854L22.5355 7.04983L23.9497 8.46404L20.4142 11.9996Z"
             />
           </svg>
-        </div>
+        </button>
       </div>
     </div>
   </div>
@@ -163,6 +191,9 @@
 <script setup>
 import { computed, watch, onBeforeUnmount } from 'vue'
 import { SITE } from '~/site.config'
+// The four chapters, for the keyboard route above. ⚠️ This is the same list the scene builds
+// the ring from, so the links cannot drift from the deck.
+import { CHAPTERS } from '~/composables/useChapterScene'
 
 // Whole days until the next wedding (static per page load — day resolution needs no
 // timer). ⚠️ ONE day as of 2026-09-06 — the traditional marriage was removed site-wide at
@@ -409,4 +440,30 @@ defineEmits(['toggle-about', 'go-home', 'toggle-sound'])
   width: 91.666667%;
   z-index: 1;
 }
+
+/* ── The chrome's controls are buttons now (AUDIT #105) ──────────────────────
+   `.menu-item` was written for a <div>; a <button> arrives with a UA background, border,
+   font and padding of its own. This takes those back without touching the class the rest of
+   the chrome shares. The focus ring is deliberately NOT removed: it is the only thing telling
+   a keyboard visitor where they are, and it appears on `:focus-visible` only, so a mouse
+   click never shows it. */
+.nav-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: inherit;
+}
+.nav-btn:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+/* The jump list holds no space until one of its links takes focus. */
+.chapter-jump ul { list-style: none; margin: 0; padding: 0; }
 </style>

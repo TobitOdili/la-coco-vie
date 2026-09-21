@@ -43,9 +43,18 @@ export default defineNuxtConfig({
   app: {
     baseURL,
     head: {
+      // ⚠️ `lang` IS THE ONE HEAD FIELD THAT HAS TO BE HERE. Everything else per-route is
+      // injected into the prerendered shells by scripts/gen-head.mjs (see AUDIT #99) — but
+      // htmlAttrs are rendered into every shell by Nuxt itself, so this is the cheapest
+      // place for it, and a page with no `lang` is read out in the reader's default voice.
+      htmlAttrs: { lang: 'en' },
       title: SITE.titles.home,
       meta: [
-        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' }
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
+        // A floor, so no route is ever description-less even if gen-head.mjs is skipped.
+        // The per-route text that actually ships is SITE.share — see that, and gen-head.
+        { name: 'description', content: SITE.share.home.desc },
+        { name: 'theme-color', content: '#f7f6f4' },
       ],
       link: [
         { rel: 'icon', type: 'image/png', href: `${baseURL}images/cu-favicon.png` },

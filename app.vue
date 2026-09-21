@@ -22,6 +22,13 @@
       @chapter-front="onChapterFront"
     />
 
+    <!-- ⚠️ THE ONLY <h1> IN THE SITE, and it is spoken, not seen. Every visible title here is
+         either drawn in WebGL (the hero, the deck) or set as art in a PNG, so a screen reader
+         and a crawler had nothing to read: /us started at h2, /with-love at h3, and the
+         homepage and The Big Day had no headings at all (AUDIT #112). It changes with the
+         route, so there is exactly one per view and it always names the page you are on. -->
+    <h1 class="sr-only">{{ pageHeading }}</h1>
+
     <!-- Routed page content. Empty on '/' (the scene IS the homepage); the chapter
          inner page renders here on '/{slug}'. -->
     <NuxtPage />
@@ -108,10 +115,28 @@ const chapterClass = computed(() => (currentChapter.value ? `--${currentChapter.
 
 // Document title — via useHead so Nuxt's head system manages it (assigning
 // document.title directly gets clobbered by Nuxt's managed <title>).
-const pageTitle = computed(() =>
-  currentChapter.value ? `${currentChapter.value.title} ${SITE.titles.chapterSuffix}` : SITE.titles.home
+// ⚠️ THIS IS THE CLIENT-SIDE HALF ONLY. With `ssr: false` none of it reaches a crawler or a
+// link unfurler, which read the HTML they are served and stop — the shells are rewritten
+// after the build by `scripts/gen-head.mjs` (AUDIT #99). Both halves read `SITE.share`, so
+// what a visitor's tab says and what WhatsApp says cannot drift apart.
+const shareKey = computed(() => (currentChapter.value ? currentChapter.value.slug : 'home'))
+// The h1's text: the chapter's own name, or the couple's line on the homepage. Deliberately
+// NOT the document title — a heading that repeats the tab's suffix reads as noise aloud.
+const pageHeading = computed(() =>
+  currentChapter.value ? currentChapter.value.title : `${SITE.brand} — ${SITE.subtitle}`
 )
-useHead({ title: pageTitle })
+const share = computed(() => SITE.share[shareKey.value] || SITE.share.home)
+const pageTitle = computed(() => share.value.title)
+useHead({
+  title: pageTitle,
+  meta: [
+    { name: 'description', content: () => share.value.desc },
+    { property: 'og:title', content: () => share.value.title },
+    { property: 'og:description', content: () => share.value.desc },
+    { property: 'og:url', content: () => `${SITE.url}/${currentChapter.value ? currentChapter.value.slug + '/' : ''}` },
+    { property: 'og:image', content: () => `${SITE.url}/og/${shareKey.value}.jpg` },
+  ],
+})
 
 function onLoaded() { loaded.value = true }
 

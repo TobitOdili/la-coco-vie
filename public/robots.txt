@@ -1,0 +1,7 @@
+# Covenant & Uvie — a wedding site. Everything on it is meant to be found by the
+# people who were sent the link; none of it is private, and none of it is a trap
+# for a crawler either (the four chapters are the only routes there are).
+User-agent: *
+Allow: /
+
+Sitemap: https://lacocovie26.com/sitemap.xml

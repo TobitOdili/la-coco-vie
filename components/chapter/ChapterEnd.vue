@@ -1,6 +1,9 @@
 <template>
   <footer ref="root" class="chapter-end" :class="{ 'in-view': visible }">
-    <h3 class="end-title">See you there.</h3>
+    <!-- ⚠️ h2, not h3. Every chapter now opens with the site's single h1 (app.vue), and this
+         footer is the only heading The Big Day has — an h3 there skipped a level with nothing
+         in between (AUDIT #112). The class carries the styling; the level carries the outline. -->
+    <h2 class="end-title">See you there.</h2>
 
     <!-- ⚠️ THE DATE, AND NOTHING ELSE ABOUT THE DAY. Same rule as The Big Day's page: a guest
          who has not RSVP'd gets the date and the form, never the time, the venue or the

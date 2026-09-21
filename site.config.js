@@ -25,6 +25,44 @@ export const SITE = {
   // Brand name, used to build document titles + the nav wordmark.
   brand: 'Covenant & Uvie',
 
+  // ── Where the site lives ────────────────────────────────────────────────────
+  // ⚠️ ABSOLUTE, AND IT MATTERS. Canonicals and og:image cannot be relative — an unfurler
+  // resolves them against nothing. `scripts/gen-head.mjs` builds every absolute URL in the
+  // prerendered shells from this (override with SITE_URL in the environment for a preview
+  // deploy). A GitHub Pages deploy under /la-coco-vie/ would need this to carry that path.
+  url: 'https://lacocovie26.com',
+
+  // ── What a shared link says ─────────────────────────────────────────────────
+  // ⚠️ THE LINK IS THE DISTRIBUTION MODEL. This site is pasted into WhatsApp, and until
+  // 2026-09-20 every one of the five URLs unfurled as the homepage with no description and no
+  // image at all (AUDIT #99) — because with `ssr: false` the per-chapter title is set by
+  // `app.vue` AFTER hydration and a crawler never runs it. These strings are baked into the
+  // prerendered shells at build time by `scripts/gen-head.mjs`.
+  // ⚠️ Keep descriptions under ~155 characters — past that they are cut mid-sentence in a
+  // preview card. Keyed by route slug; `home` is `/`.
+  share: {
+    home: {
+      title: 'Covenant & Uvie — A Love Story in Chapters',
+      desc: 'Covenant & Uvie are getting married on 29 October 2026 in Lagos. Their story in four chapters — and how to RSVP.',
+    },
+    us: {
+      title: 'Coco & Uvie — Covenant & Uvie',
+      desc: 'Two stories, one beginning: how Coco & Uvie became us, told in their own hand.',
+    },
+    'the-big-day': {
+      title: 'The Big Day — Covenant & Uvie',
+      desc: 'Thursday 29 October 2026 in Lagos — ceremony, reception, and a night of dancing. Save the date.',
+    },
+    'in-frames': {
+      title: 'In Frames — Covenant & Uvie',
+      desc: 'Photographs and film from the day, and the moments captured on the way to it.',
+    },
+    'with-love': {
+      title: 'For Our Next Chapter — Covenant & Uvie',
+      desc: 'Your presence is the greatest gift — but if you insist, here is our wishlist.',
+    },
+  },
+
   // ⚠️ ONE DAY. The traditional marriage (23 Oct) was removed site-wide on 2026-09-06 at
   // the couple's request: the site counts down to the white wedding and nothing else.
   // The array shape is kept — SiteNav still `find`s the next event ahead and rolls over —
