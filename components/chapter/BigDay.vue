@@ -313,7 +313,12 @@ onBeforeUnmount(() => { cancelAnimationFrame(rafId) })
   font-size: clamp(0.5rem, 1vw, 0.68rem);
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  opacity: 0.38;
+  /* ⚠️ THE GHOST MONTH IS THE POINT, and these letters are the one part of it that has a job:
+     they say which column is which day. At 0.38 they measured 1.9:1 (AUDIT #107). 0.8 keeps
+     them quieter than the numerals and clear of the floor. The blank cells and the unmarked
+     numerals stay as faint as they were — they are the ghost, and they carry no information
+     the ringed 29th does not. */
+  opacity: 0.8;
   padding-bottom: 0.6rem;
 }
 .cell {

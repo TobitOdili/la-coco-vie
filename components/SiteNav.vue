@@ -137,7 +137,7 @@
     </div>
 
     <!-- Bottom bar -->
-    <div class="!fixed z-20 bottom-0 w-full pointer-events-none">
+    <div class="!fixed z-20 bottom-0 w-full pointer-events-none" :class="{ 'over-hero': !isHome }">
       <div class="container flex justify-between pb-2 md:pb-6">
         <!-- The couple's own credit. ⚠️ A LINK ONLY IF IT GOES SOMEWHERE: `credit.url`
              is a placeholder `#`, and as an <a target="_blank"> that opened a blank tab
@@ -150,8 +150,11 @@
           class="pointer-events-auto"
         >
           <div class="flex items-center menu-item">
-            <div class="text-[8px]">
-              <span class="opacity-40">{{ SITE.credit.prefix }}</span>{{ SITE.credit.name }}
+            <!-- ⚠️ 8px at 0.4 opacity measured 2.25:1 — the least readable type in the site, on
+                 every route (AUDIT #107). 10px at 0.75 clears 4.5:1 and is still the quietest
+                 thing on the screen. -->
+            <div class="text-[10px] credit-line">
+              <span class="credit-prefix">{{ SITE.credit.prefix }}</span>{{ SITE.credit.name }}
             </div>
           </div>
         </component>
@@ -164,8 +167,9 @@
           :aria-label="soundOn ? 'Sound on — turn it off' : 'Sound off — turn it on'"
           @click="$emit('toggle-sound')"
         >
-          <span>{{ soundOn ? 'On' : 'Off' }}</span>
+          <span class="sound-label">{{ soundOn ? 'On' : 'Off' }}</span>
           <svg
+            class="sound-icon"
             width="20"
             height="20"
             viewBox="0 0 24 24"
@@ -466,4 +470,42 @@ defineEmits(['toggle-about', 'go-home', 'toggle-sound'])
 }
 /* The jump list holds no space until one of its links takes focus. */
 .chapter-jump ul { list-style: none; margin: 0; padding: 0; }
+
+.credit-prefix { opacity: 0.75; }
+
+/* ⚠️ The wordmark is 24px tall and it is the way home (AUDIT #109). It became a <button> in the
+   same pass that found this, which is how it started being measured at all. The hit area is
+   grown with a pseudo-element rather than padding: the nav is a flex row measured to the pixel
+   and padding would move the date line under it. */
+.wordmark { position: relative; }
+.wordmark::after {
+  content: '';
+  position: absolute;
+  left: -0.5rem;
+  right: -0.5rem;
+  top: -11px;
+  bottom: -11px;
+}
+
+/* ── The bottom chrome, over a hero ───────────────────────────────────────────
+   ⚠️ AT THE TOP OF A CHAPTER THE GROUND IS A FILM, NOT THE PAGE. The credit and the sound
+   toggle are `--accentLight` sitting on whatever the hero happens to be showing, and over a
+   pale frame they disappeared entirely — photographed at 1440x900 on The Big Day, the credit
+   was invisible (AUDIT #100). It cannot be fixed with a colour: the ground is a moving
+   photograph and is not readable from the DOM at all (AUDIT #66).
+   The scroll cue beside them already solved this, and this is the same answer — a stacked
+   dark outline, tight enough not to close the counters at 10px, no box and no veil. It is
+   applied ONLY while a chapter is open (`.over-hero`), because on the homepage these sit on
+   paper and the outline would be a smudge on nothing. */
+.over-hero .credit-line,
+.over-hero .sound-label {
+  text-shadow:
+    0 0 1px rgba(16, 14, 11, 0.95),
+    0 0 1px rgba(16, 14, 11, 0.95),
+    0 0 3px rgba(16, 14, 11, 0.75),
+    0 1px 8px rgba(16, 14, 11, 0.45);
+}
+.over-hero .sound-icon {
+  filter: drop-shadow(0 0 1px rgba(16, 14, 11, 0.9)) drop-shadow(0 1px 5px rgba(16, 14, 11, 0.45));
+}
 </style>

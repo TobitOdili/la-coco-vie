@@ -117,7 +117,7 @@ onBeforeUnmount(() => observer?.disconnect())
 .hashtag {
   font-family: 'Bague', sans-serif;
   letter-spacing: 0.08em;
-  opacity: 0.7;
+  opacity: 0.85;
 }
 
 /* ⚠️ The old PLACEHOLDER DISCLAIMER lived here — "dates, times, venues and links on this page
@@ -129,8 +129,14 @@ onBeforeUnmount(() => observer?.disconnect())
   margin: -1rem 0 0;
   font-family: 'Bague', sans-serif;
   text-transform: uppercase;
+/* ⚠️ THE QUIET VOICE HAS A FLOOR NOW (AUDIT #107). Every functional label in this site is the
+   chapter's ink further lightened by an opacity, and the deep contrast scan on 2026-09-20 found
+   26 instances under AA — the worst at 2.19:1. Measured per chapter against its own ground, the
+   opacity needed for 4.5:1 runs 0.66 (Coco & Uvie's ink on paper) to 0.78 (The Big Day's on its
+   sage). 0.82 clears all four with margin and is still visibly quieter than the copy it sits
+   under; large type (>=24px) needs only 0.60, so 0.68 there. Raise the FLOOR, not the ink. */
   letter-spacing: 0.22em;
-  font-size: 0.8rem;
-  opacity: 0.55;
+  font-size: 0.82rem;
+  opacity: 0.82;
 }
 </style>

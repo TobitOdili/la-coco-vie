@@ -477,9 +477,11 @@ onBeforeUnmount(() => {
 }
 .fmeta {
   font-family: 'Bague', sans-serif;
-  font-size: 0.5rem;
+  font-size: 0.54rem;
   letter-spacing: 0.24em;
-  opacity: 0.3;
+  /* AUDIT #107. Light ink on the room's near-black needs only 0.49 for 4.5:1 — this is
+     the one label in the site whose ground is dark, so its floor is lower than 0.82. */
+  opacity: 0.66;
 }
 
 /* ── the window ── */
@@ -586,9 +588,9 @@ onBeforeUnmount(() => {
 
 .win-status {
   font-family: 'Bague', sans-serif;
-  font-size: 0.54rem;
+  font-size: 0.58rem;
   letter-spacing: 0.28em;
-  opacity: 0.42;
+  opacity: 0.72;
   padding: 0.55rem 0.85rem;
   border-top: 1px solid rgba(195, 166, 216, 0.14);
 }
@@ -614,7 +616,8 @@ onBeforeUnmount(() => {
   font-family: 'Bague', sans-serif;
   font-size: 0.78rem;
   line-height: 1.5;
-  opacity: 0.55;
+  /* AUDIT #107: the quiet voice has a floor — 0.82 clears 4.5:1 on every chapter ground. */
+  opacity: 0.82;
 }
 .go-back {
   margin-top: 0.5rem;
@@ -623,7 +626,9 @@ onBeforeUnmount(() => {
   background: none;
   border: 0;
   box-shadow: inset 0 0 0 1px rgba(195, 166, 216, 0.28);
-  padding: 0.5rem 1.15rem;
+  /* AUDIT #109 — 88.4x29.5 measured; 0.8rem of vertical padding puts it over 44. */
+  padding: 0.8rem 1.15rem;
+  min-height: 44px;
   font-family: 'Bague', sans-serif;
   font-size: 0.6rem;
   letter-spacing: 0.22em;
@@ -641,10 +646,11 @@ onBeforeUnmount(() => {
 .empty-sub {
   margin: 0;
   font-family: 'Bague', sans-serif;
-  font-size: 0.56rem;
+  font-size: 0.58rem;
   letter-spacing: 0.28em;
-  /* 0.3 on this ground was effectively invisible — it read as an empty gap. */
-  opacity: 0.55;
+  /* 0.3 on this ground was effectively invisible — it read as an empty gap. 0.55 was still
+     under AA (AUDIT #107). */
+  opacity: 0.78;
 }
 
 @media (max-width: 768px) {

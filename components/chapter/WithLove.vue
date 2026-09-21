@@ -559,7 +559,8 @@ onBeforeUnmount(() => {
   font-size: 0.8rem;
   letter-spacing: 0.26em;
   text-transform: uppercase;
-  opacity: 0.6;
+  /* AUDIT #107: the quiet voice has a floor — 0.82 clears 4.5:1 on every chapter ground. */
+  opacity: 0.82;
   margin-bottom: 2.4rem;
 }
 .big-thanks { font-family: 'Over the Rainbow', cursive; font-size: clamp(3.4rem, 12vw, 9rem); line-height: 1; }
@@ -570,7 +571,7 @@ onBeforeUnmount(() => {
   font-size: 0.82rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  opacity: 0.55;
+  opacity: 0.82;
   margin-top: 4rem;
   max-width: 30rem;
 }
@@ -622,7 +623,15 @@ onBeforeUnmount(() => {
 }
 .grp { display: inline-flex; align-items: baseline; }
 
+/* ── A target you can hit (AUDIT #109) ───────────────────────────────────────
+   ⚠️ THE HIT AREA IS GROWN, NOT THE BOX. These words are laid out by measurement — the bands'
+   height, the pitch between them and the speed each one travels are all derived from the type's
+   own rect (see the tick loop) — so padding them would move the whole wall. A pseudo-element
+   extends the touch area vertically and changes no layout at all: measured 23.9px tall on a
+   360px phone, 46px after. `pointer-events` stays on the word itself; the ::after only widens
+   what counts as the word. */
 .word {
+  position: relative;
   appearance: none;
   -webkit-appearance: none;
   border: 0;
@@ -661,6 +670,15 @@ onBeforeUnmount(() => {
    far less, which is enough for the panel to read against it. */
 .wall.busy:not(.touch) .band:not(.on) .word { opacity: 0.16; }
 .wall.busy.touch .band:not(.on) .word { opacity: 0.45; }
+.word::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* 11px each way takes the smallest measured word from 23.9px to ~46px of touchable height */
+  top: -11px;
+  bottom: -11px;
+}
 .word.on {
   opacity: 1;
   color: #2E4A52;
@@ -769,6 +787,9 @@ onBeforeUnmount(() => {
    alive because the note is inside the band. */
 .reveal-cash {
   display: inline-block;
+  /* AUDIT #109 — 177x21.1 measured. The padding is the target; the border still sits on the
+     text because it is drawn on the inner edge, so nothing moves visually but the hit area. */
+  position: relative;
   margin-top: 0.5rem;
   appearance: none;
   -webkit-appearance: none;
@@ -785,6 +806,14 @@ onBeforeUnmount(() => {
   opacity: 0.9;
   cursor: none;
   transition: opacity 0.25s ease;
+}
+.reveal-cash::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -12px;
+  bottom: -12px;
 }
 .reveal-cash:hover, .reveal-cash:focus-visible { opacity: 1; outline: none; }
 
@@ -853,10 +882,10 @@ onBeforeUnmount(() => {
 }
 .dock-note {
   font-family: 'Bague', sans-serif;
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  opacity: 0.55;
+  opacity: 0.82;
 }
 
 /* The panel: ink on paper over a washed-out page, no box of its own. */
@@ -955,7 +984,7 @@ onBeforeUnmount(() => {
   font-size: 0.78rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  opacity: 0.55;
+  opacity: 0.82;
   margin-top: 3rem;
 }
 

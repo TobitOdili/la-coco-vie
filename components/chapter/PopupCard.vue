@@ -94,7 +94,10 @@ const open = () => { openPanel.value = props?.popup?.action ?? null }
   letter-spacing: 0.04em;
 }
 .popup-param {
-  opacity: 0.6;
+  /* AUDIT #107 — 0.6 measured 3.53:1 on In Frames' pale ground. These lines are what the card
+     is FOR ("your shots from the day", "a shared drive link is coming"); the title above them
+     carries the name, these carry the answer. */
+  opacity: 0.82;
   text-transform: lowercase;
 }
 </style>

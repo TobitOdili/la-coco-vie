@@ -1,5 +1,18 @@
 <template>
   <div v-if="chapter" ref="pageEl" class="chapter-page">
+    <!-- ── the top veil ────────────────────────────────────────────────────────────────────
+         ⚠️ THE SAME COLOUR AS THE GROUND IT SITS ON, so it is not a box and has no edge: the
+         page's paper is `--accentLight` and so is this, fading to nothing over ~130px. It
+         exists because copy scrolled clean under the fixed nav — measured on /us at 5 of 15
+         scroll positions on a 360px phone, with "Will you do life with me?" crossing the
+         wordmark (AUDIT #101). Type now dissolves into the paper as it reaches the chrome.
+         ⚠️ IT IS OFF INSIDE THE HERO. At the top of a chapter the ground is the film, not the
+         paper, and a paper-coloured band there would be a stripe across the photograph — so its
+         opacity is driven by the scroll and only arrives once the article is what is up there.
+         That also keeps it clear of the RETURN: the top-edge pull only charges at scroll 0,
+         where this is fully transparent, so it can never paint over the accent band. -->
+    <div class="top-veil" :style="{ opacity: topVeil }" aria-hidden="true" />
+
     <!-- Single content child = Lenis's scrolled element (wrapper is .chapter-page). -->
     <div ref="scrollEl" class="chapter-scroll">
       <!-- Hero: transparent so the WebGL card (animated to fill the screen by the
@@ -253,6 +266,9 @@ function settlePull() {
 // something that has not arrived. Set from the same poll that opens scrolling.
 const cueReady = ref(false)
 const cueSeen = ref(false)
+// 0 inside the hero, 1 once the article is what passes under the nav. Ramped across the
+// second half of the first screen, so it is fully on before any copy can reach the chrome.
+const topVeil = ref(0)
 const pullTop = ref(0)
 const pullBottom = ref(0)
 // A section asking to be scrolled to (see the listener registered in onMounted).
@@ -602,6 +618,8 @@ onMounted(() => {
   lenis.on('scroll', (e) => {
     scene?.setScroll(e.scroll); syncNavInk(); updateExit(e.scroll); syncCanvasCover(e.scroll)
     if (!cueSeen.value && e.scroll > 40) cueSeen.value = true
+    const vh = window.innerHeight || 800
+    topVeil.value = Math.max(0, Math.min(1, (e.scroll - vh * 0.55) / (vh * 0.3)))
     // Left the top edge — whatever the pull had reached is no longer true.
     if (e.scroll > 2 && topAccum > 0) releasePull()   // scrolled away from the top edge
   })
@@ -820,6 +838,27 @@ onBeforeUnmount(() => {
    with a ring under it; the ring closes as the page leaves. ⚠️ NOT `fixed` and NOT tied to `--p`
    for its visibility: at rest, halfway down the footer, it is simply there. Only the ring's
    circumference reads the exit. */
+/* Below the nav (z 20), above everything the page draws — including the popups (15) and the
+   scroll cue (14), both of which would otherwise pass under the chrome too. */
+.top-veil {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 8.5rem;
+  z-index: 18;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    var(--accentLight, #F2EEE8) 0%,
+    var(--accentLight, #F2EEE8) 46%,
+    color-mix(in srgb, var(--accentLight, #F2EEE8) 55%, transparent) 72%,
+    transparent 100%
+  );
+  transition: opacity 0.25s linear;
+}
+@media (max-width: 640px) { .top-veil { height: 7rem; } }
+
 .leave-cue {
   display: flex;
   flex-direction: column;
@@ -832,10 +871,11 @@ onBeforeUnmount(() => {
 }
 .leave-label {
   font-family: 'Bague', sans-serif;
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  opacity: 0.5;
+  /* AUDIT #107: the quiet voice has a floor — 0.82 clears 4.5:1 on every chapter ground. */
+  opacity: 0.82;
 }
 .leave-ring { position: relative; display: block; width: 2.75rem; height: 2.75rem; }
 .leave-ring svg { width: 100%; height: 100%; display: block; overflow: visible; }

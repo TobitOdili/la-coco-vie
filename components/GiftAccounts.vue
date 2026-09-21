@@ -201,14 +201,16 @@ onBeforeUnmount(() => clearTimeout(timer))
      without aiming, and the digits alone were half that. */
   padding: 0.9rem 1.4rem;
   text-transform: uppercase;
-  font-size: clamp(0.58rem, 0.75vw, 0.68rem);
+  font-size: clamp(0.62rem, 0.8vw, 0.72rem);
   letter-spacing: 0.18em;
 }
 /* The divider is on the SECOND account, drawn on its leading edge — so one account has no stray
    rule and three would each get one without another rule being written. */
 .tone-page .acc + .acc { border-inline-start: 1px solid currentColor; }
-.tone-page .acc-bank { opacity: 0.55; }
-.tone-page .acc-name { opacity: 0.55; }
+/* ⚠️ THESE TWO NAME WHICH ACCOUNT IS WHICH — the most consequential small type in the site, and
+   they sat at 2.70:1 (AUDIT #107). 0.82 puts them over 4.5:1 on every chapter ground. */
+.tone-page .acc-bank { opacity: 0.82; }
+.tone-page .acc-name { opacity: 0.82; }
 .tone-page .digits {
   font-size: clamp(1.12rem, 1.9vw, 1.4rem);
   letter-spacing: 0.16em;
@@ -221,9 +223,9 @@ onBeforeUnmount(() => clearTimeout(timer))
 .tone-page .acc-state {
   display: inline-flex;
   align-items: center;
-  font-size: 0.56rem;
+  font-size: 0.6rem;
   letter-spacing: 0.2em;
-  opacity: 0.42;
+  opacity: 0.82;
   transition: opacity 0.2s ease;
 }
 /* ⚠️ THE FEEDBACK HAS TO BE SEEN. A 0.42-opacity label swapping one small-caps word for another is
