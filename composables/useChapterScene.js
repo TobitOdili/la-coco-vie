@@ -520,6 +520,18 @@ export function useChapterScene() {
   let introComplete = false
   let isMobile = false
   let deepLinkIdx = -1      // chapter index the page was loaded ON (a reload / shared link), else -1
+  // ── prefers-reduced-motion ───────────────────────────────────────────────────
+  // ⚠️ SEVEN FILES HANDLED THIS AND THE ONE WITH THE MOTION DID NOT. Measured 2026-09-20: With
+  // Love's wall froze, the loader's shuffle held, In Frames and the cue complied — and the deck
+  // still ran its full 6s intro spin, still tracked the pointer, still chased a hover and still
+  // turned for three seconds on a select (AUDIT #106). This is the scene's half.
+  // ⚠️ WHAT IT DOES NOT TOUCH: the return and the bottom exit. Both are scrubbed by the
+  // visitor's own scroll — direct manipulation, not animation played AT someone — and freezing
+  // them would leave a chapter with no way back. Reduced motion is not "no movement".
+  // ⚠️ READ ONCE, AT INIT. `matchMedia` can change mid-session, but every branch below is a
+  // decision taken at a moment (how to enter, how to select); re-reading it halfway would leave
+  // the scene half-spun.
+  let reducedMotion = false
 
   const N = 8
   const baseDistance = 40  // original source: ve=40
@@ -805,6 +817,10 @@ export function useChapterScene() {
     height = vp.h
     aspectRatio = width / height
     isMobile = aspectRatio < 1
+    reducedMotion =
+      typeof window !== 'undefined' && window.matchMedia
+        ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        : false
 
     // Renderer
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
@@ -1008,6 +1024,7 @@ export function useChapterScene() {
         front: frontChapterIdx(), hovered: hoveredIndex,
       })
       window.__camDebug = () => ({
+        reducedMotion,
         x: +camera.position.x.toFixed(1), y: +camera.position.y.toFixed(1), z: +camera.position.z.toFixed(1),
         fov: camera.fov, baseDistance,
         groupRot: { x: +groupG.rotation.x.toFixed(3), y: +groupG.rotation.y.toFixed(3), z: +groupG.rotation.z.toFixed(3) },
@@ -1186,8 +1203,33 @@ export function useChapterScene() {
     if (onReadyCallback) onReadyCallback()
   }
 
+  // The homepage, arrived at rather than assembled. Mirrors runArrive (the deep-link path that
+  // has always done this) minus the chapter selection.
+  function runStill() {
+    posters.forEach((p) => {
+      p.mesh.position.set(p.baseX, p.baseY, p.baseZ)
+      if (p.material.uniforms.axisPosition) p.material.uniforms.axisPosition.value.z = baseDistance
+    })
+    mouse.set(0.5, 0.5)
+    prevMouse.set(0.5, 0.5)
+    carousel.animatedRotationY = 0
+    carousel.rotation.y = 0
+    carousel.position.y = idleCarouselY()
+    { const t = homeTilt(); groupG.rotation.set(t.x, t.y, t.z) }
+    isIntro = false
+    introComplete = true
+    setTxtChapter(frontChapterIdx(), true)
+    if (onReadyCallback) onReadyCallback()
+  }
+
   function runIntro() {
     if (deepLinkIdx >= 0 && deepLinkIdx < CHAPTERS.length) { runArrive(deepLinkIdx); return }
+    // ⚠️ REDUCED MOTION ENTERS AT REST. The intro is two full revolutions and eight cards flying
+    // in from 75 units out — the largest single movement in the site, and it plays before the
+    // visitor has asked for anything. `runStill()` puts the same pose on screen with no journey
+    // to it; everything downstream (the wordmark reveal, the EXPLORE gate, the route watcher)
+    // hangs off introComplete and onReadyCallback, which it fires the same way.
+    if (reducedMotion) { runStill(); return }
     isIntro = true
     introComplete = false
 
@@ -1299,8 +1341,12 @@ export function useChapterScene() {
       // (broken bowl-of-cards view) until the first real mousemove. The intro
       // intentionally overdrives the value, so only clamp once it completes.
       const clampM = (v) => (introComplete ? Math.max(-1.2, Math.min(1.2, v)) : v)
-      const mx = isMobile ? 0 : clampM(mouse.x)   // x.x in original
-      const my = isMobile ? 0 : clampM(mouse.y)   // x.y in original
+      // ⚠️ AND NO PARALLAX UNDER REDUCED MOTION. A camera that follows the pointer is continuous
+      // movement nobody asked for; the spring still runs, it just has nothing to chase, so the
+      // camera settles on axis and stays there (AUDIT #106).
+      const still = isMobile || reducedMotion
+      const mx = still ? 0 : clampM(mouse.x)   // x.x in original
+      const my = still ? 0 : clampM(mouse.y)   // x.y in original
       // ⚠️ `ne` is how hard the pointer drags the camera; at 0.7 the spring settles ~15 units off
       // axis at full travel, against a 40-unit ring radius — a big swing for a mouse that is just
       // resting somewhere. Halved on 2026-09-07 with LEAN_MAX_DEG ("limiting the motion response
@@ -1799,8 +1845,11 @@ export function useChapterScene() {
   const _hvFlip = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI)
 
   function applyHoverPose(dt) {
-    const rIn = 1 - Math.exp(-dt / HOVER_TAU_IN)
-    const rOut = 1 - Math.exp(-dt / HOVER_TAU_OUT)
+    // ⚠️ REDUCED MOTION KEEPS THE POSE AND DROPS THE TRAVEL. The card still comes forward and
+    // still turns to face you — that is what tells a visitor which card the pointer is on, and
+    // removing it would leave the deck unreadable — but it ARRIVES rather than glides.
+    const rIn = reducedMotion ? 1 : 1 - Math.exp(-dt / HOVER_TAU_IN)
+    const rOut = reducedMotion ? 1 : 1 - Math.exp(-dt / HOVER_TAU_OUT)
     // ⚠️ THE PULL AND THE RISE ARE WORLD DISTANCES, so they travel with the camera exactly as
     // the depth fade's thresholds do (AUDIT #86): a short viewport pulls the camera back, and a
     // fixed 20.9 units there would be a visibly weaker hover than the same hover on a laptop.
@@ -1906,6 +1955,11 @@ export function useChapterScene() {
   // loaded straight onto the chapter, and a 3s carousel turn in front of a page they asked for
   // by URL is exactly the "homepage leads first" complaint.
   function selectChapter(chIdx, fast = false) {
+    // ⚠️ THE SIGNATURE TURN IS STILL A THREE-SECOND ANIMATION. Under reduced motion every select
+    // takes the SHORT entry — the one a deep link has always used, which places the hero rather
+    // than flying it — so a click opens the chapter instead of performing for three seconds.
+    // Everything after it (the page, both exits) is unchanged.
+    if (reducedMotion) fast = true
     // Idempotent — safe to call from the route watcher. ⚠️ EXCEPT mid-deselect, where
     // `selectedIndex` still names the chapter being left: re-opening the one you just came
     // back from is a perfectly ordinary thing to do, and this was silently dropping it (on
@@ -2707,10 +2761,23 @@ export function useChapterScene() {
   // plane's 60 units, which cropped the wordmark. Only ever scales DOWN (desktop keeps 1:1).
   // Idle (homepage) carousel Y. Desktop drops the ring so the front card clears the central
   // tagline; mobile keeps 0 (its ring/text separation is handled by TXT_Y_MOBILE + fitTxtMesh).
-  function idleCarouselY() { return isMobile ? 0 : IDLE_Y_DESKTOP }
+  // ⚠️ AND IT DROPS FURTHER ON A SHORT FRAME. The deck is meant to bleed off the bottom — that
+  // is the approved look at 900px — but on a landscape phone it sat in the middle with the
+  // tagline's badge trapped behind the card tops and 100px of empty paper underneath (AUDIT
+  // #103). Every unit here is ~6.4px at that camera, so 55·(k−1) is the ~45px that opens the
+  // band the badge sits in and puts the cards back on the bottom edge where they belong.
+  // k is 1 above FIT_MIN_H, so this is exactly IDLE_Y_DESKTOP everywhere the design was drawn.
+  function idleCarouselY() { return isMobile ? 0 : IDLE_Y_DESKTOP - 55 * (fitScale() - 1) }
 
   // Below this the frame is too short for the composition as drawn; above it, no-op.
-  const FIT_MIN_H = 500
+  // ⚠️ 500 UNTIL 2026-09-20, AND IT OVERCORRECTED ON A PHONE ON ITS SIDE. At 390px tall it put
+  // the camera 28% further back, which shrinks EVERYTHING — while the nav and the credit row
+  // are CSS pixels and do not shrink with it, so the deck ended up a small object in the middle
+  // of a frame full of chrome (AUDIT #103). The chrome now gives back ~50px at that height (see
+  // SiteNav's landscape block) and this pulls back less to match: k is 1.13 at 390 instead of
+  // 1.28. Still 1 at every height the design was drawn for — nothing on a laptop or a portrait
+  // phone moves by a pixel.
+  const FIT_MIN_H = 440
   const fitScale = () => Math.max(1, FIT_MIN_H / Math.max(1, height))
   // Scale the camera's whole offset, not just its distance: `lookAt` aims at
   // (0, basePosition.y, 0), so moving z alone would swing the view angle and re-frame the

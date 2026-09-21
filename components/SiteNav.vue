@@ -473,6 +473,20 @@ defineEmits(['toggle-about', 'go-home', 'toggle-sound'])
 
 .credit-prefix { opacity: 0.75; }
 
+/* ── A phone on its side (AUDIT #103) ─────────────────────────────────────────
+   ⚠️ THE CHROME DOES NOT SCALE AND THE SCENE DOES. `fitScale()` pulls the camera back on a
+   short frame so the whole 3D composition shrinks, while this bar stays in CSS pixels — at
+   844x390 the nav ate the top 88px and the credit row another 66, leaving the deck 236px of
+   a 390px frame and making it look like a model of itself. Nothing here changes the type's
+   role, only how much room it takes when there is none: measured, this gives the scene back
+   about 50px, a fifth of what it had. */
+@media (orientation: landscape) and (max-height: 460px) {
+  .container.flex { margin-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
+  .wordmark { font-size: 15px !important; }
+  .countdown { font-size: 9px !important; margin-top: 0.1rem !important; letter-spacing: 0.16em !important; }
+  .menu-item { height: 2.4rem !important; font-size: 10px !important; }
+}
+
 /* ⚠️ The wordmark is 24px tall and it is the way home (AUDIT #109). It became a <button> in the
    same pass that found this, which is how it started being measured at all. The hit area is
    grown with a pseudo-element rather than padding: the nav is a flex row measured to the pixel
