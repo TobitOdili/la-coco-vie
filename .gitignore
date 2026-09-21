@@ -10,7 +10,10 @@ node_modules/
 dist
 .claude/settings.local.json
 .DS_Store
-# Local-only: screen-capture frames shared for exit-animation tuning (never commit — large)
+# Local-only: screen-capture frames shared for exit-animation tuning (never commit — large).
+# ⚠️ The folder itself was deleted on 2026-09-21 at the couple's request — 68 MB of reference
+# captures whose work is done and long since written up. The rule stays so that if any are ever
+# dropped back in they are still ignored. Nothing in the app ever read from it.
 millanova frames/
 exit-frames/
 *.frames/

@@ -32,7 +32,7 @@
              the music or go home (AUDIT #105). `.menu-item` carries the look; `button` carries the
              behaviour, and `appearance:none` below takes back what the UA stylesheet adds. -->
         <div>
-          <button type="button" class="menu-item nav-btn" @click="$emit('toggle-about')">
+          <button type="button" class="menu-item nav-btn" data-cursor="morph" data-cursor-style="pill" data-cursor-pad="-17" data-cursor-pad-x="12" @click="$emit('toggle-about')">
             <!-- Was `hidden md:block`: on a phone that left an invisible click target and no
                  way into About at all. The reference shows this label at mobile widths too,
                  and it fits (ABOUT + the 136px centre logo + COLLECTION inside 390px). -->
@@ -46,6 +46,10 @@
             rel="noopener noreferrer"
             target="_blank"
             class="menu-item"
+            data-cursor="morph"
+            data-cursor-style="pill"
+            data-cursor-pad="-17"
+            data-cursor-pad-x="12"
           >
             <span>{{ SITE.nav.collectionLabel }}</span>
             <svg
@@ -82,6 +86,10 @@
           <button
             type="button"
             class="wordmark nav-btn whitespace-nowrap text-[17px] lg:text-[26px] pointer-events-auto"
+            data-cursor="morph"
+            data-cursor-style="laurel"
+            data-cursor-pad="14"
+            data-cursor-pad-x="62"
             :style="{ color: navInk, opacity: wordmarkFade, letterSpacing: wordmarkTrack }"
             :aria-label="isHome ? 'Covenant and Uvie' : 'Back to the chapters'"
             @click="$emit('go-home')"
@@ -168,6 +176,10 @@
         <button
           type="button"
           class="menu-item nav-btn pointer-events-auto"
+          data-cursor="morph"
+          data-cursor-style="pill"
+          data-cursor-pad="-17"
+          data-cursor-pad-x="12"
           :aria-pressed="soundOn"
           :aria-label="soundOn ? 'Sound on — turn it off' : 'Sound off — turn it on'"
           @click="$emit('toggle-sound')"

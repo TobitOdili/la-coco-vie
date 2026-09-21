@@ -312,9 +312,13 @@ onMounted(() => {
   window.addEventListener('click', initAudioOnce, { once: true })
   window.addEventListener('touchstart', initAudioOnce, { once: true })
 
-  // Resolve the noise texture to an ABSOLUTE url (see Issue #3 / ARCHITECTURE).
+  // Resolve the noise texture to an ABSOLUTE url (see Issue #3 / ARCHITECTURE). Same for the
+  // laurel the wordmark's cursor wears — a CSS mask needs a real URL, and `asset()` is what knows
+  // about the base path a GitHub Pages build is served under.
   const noiseUrl = new URL(asset('/images/noise.png'), window.location.origin).href
   document.documentElement.style.setProperty('--noise-url', `url('${noiseUrl}')`)
+  const laurelUrl = new URL(asset('/images/laurel.png'), window.location.origin).href
+  document.documentElement.style.setProperty('--laurel-url', `url('${laurelUrl}')`)
 
   // Apply any deep-linked chapter once the intro finishes (selection is gated until
   // then). onReady re-syncs from whatever the route is AT THAT MOMENT — no stale state.

@@ -84,13 +84,16 @@ export const SITE = {
   // ⚠️ ONE AMBIENT TRACK FOR THE WHOLE SITE (user, 2026-09-11: "use the same music for all the
   // pages"). It replaces four per-chapter tracks that were the REFERENCE SITE'S, renamed and never
   // licensed — a liability flagged here since 2026-09-04 and now gone.
-  // ⚠️ THE COUPLE'S OWN CHOICE SINCE 2026-09-17: The Bayonne Orchestra's violin instrumental of
-  // "Can't Help Falling in Love", supplied in `new frames/` after the generated bed was rejected
-  // ("I don't love it"). It replaced a track that `scripts/gen-theme-audio.mjs` synthesised — that
-  // generator still exists but no longer produces what ships.
+  // ⚠️ THE COUPLE'S OWN CHOICE, AND THEY HAVE CHANGED IT ONCE. 2026-09-17: The Bayonne Orchestra's
+  // violin instrumental of "Can't Help Falling in Love", supplied in `new frames/` after the
+  // generated bed was rejected ("I don't love it") — that generator, `scripts/gen-theme-audio.mjs`,
+  // still exists but no longer produces what ships. **2026-09-21: replaced, at their request, with
+  // `new frames/Audio Score Can't Help Falling In Love.mp3`** — the same song, a different score.
+  // 126.3s in, 123.8s out, 1.44 MB against the previous 1.91.
   // ⚠️ PREPARED, NOT JUST CONVERTED. It loops forever, so the join is the job:
-  // `node scripts/prep-theme-audio.mjs "<source>"` trims the dead tail (the source ran 4.6s past
-  // its last note) and fades the head in (it had none), then encodes 96 kbps AAC. See that script.
+  // `node scripts/prep-theme-audio.mjs "<source>"` trims the dead tail and fades the head in, then
+  // encodes 96 kbps AAC. It finds the tail by scanning, so it adapts: the first source ran 4.6s past
+  // its last note, this one 3.7s. See that script.
   // ⚠️ LICENSING, STATED PLAINLY AND NOT AS AN OBJECTION: the composition is still in copyright
   // (Peretti / Creatore / Weiss, 1961) and this is an unlicensed recording of it. The couple chose
   // it knowing that. If it ever needs to be clean, a licensed cover from Epidemic Sound / Artlist /

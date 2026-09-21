@@ -2,7 +2,7 @@
   <div
     ref="cursorRef"
     class="cursor"
-    :class="{ active: isActive || parkedVisible || confirming, parked: isTouch, ready: parkedVisible, confirming, morphed }"
+    :class="[{ active: isActive || parkedVisible || confirming, parked: isTouch, ready: parkedVisible, confirming, morphed }, morphStyle]"
     :style="{ '--cursorAccent': accent }"
     @click="onExploreTap"
   >
@@ -55,14 +55,21 @@ let moveEvent = 'pointermove'
 // nothing inside the page can ever be painted above it. A filled morph would bury the label of
 // the very button it is advertising. The colour change belongs to the button (.cursor-held).
 const morphed = ref(false)
+// ⚠️ A CONTROL CAN ASK FOR ITS OWN MARK. `data-cursor-style="laurel"` puts `morph-laurel` on the
+// cursor, and the stylesheet decides what that looks like — the ring is only the default. The
+// wordmark uses it: the couple's names get the couple's own wreath rather than a box round them.
+const morphStyle = ref('')
 let morphEl = null          // the element being shadowed, or null
 let morphPad = 6            // px the ring sits outside it — data-cursor-pad overrides
+let morphPadX = 6           // …and data-cursor-pad-x, when a mark needs more air sideways than above
 let morphArrived = false    // has the glide finished? once true the ring is glued, not chased
 
 function morphTo(el) {
   if (isTouch.value || !el || el === morphEl) return
   morphEl = el
   morphPad = Number(el.dataset.cursorPad) || 6
+  morphPadX = Number(el.dataset.cursorPadX) || morphPad
+  morphStyle.value = el.dataset.cursorStyle ? 'morph-' + el.dataset.cursorStyle : ''
   morphArrived = false
   morphed.value = true
   // ⚠️ READ ONCE, NOT PER FRAME. getComputedStyle forces style resolution; the rect below is
@@ -73,7 +80,9 @@ function morphTo(el) {
     // A ring outside a rounded box needs the pad added to its radius to stay concentric. A
     // percentage radius is already relative to the ring's own box, so it passes straight through;
     // an absurd pill radius is clamped to half the box by the browser, not by us.
-    n.style.setProperty('--morphRadius', raw.includes('%') ? raw : (parseFloat(raw) || 0) + morphPad + 'px')
+    // ⚠️ A PAD MAY BE NEGATIVE, so clamp. The nav's items are 4rem tall boxes around a 14px word;
+    // a ring on their full height is a rectangle of empty space, so they pull it IN to the type.
+    n.style.setProperty('--morphRadius', raw.includes('%') ? raw : Math.max(0, (parseFloat(raw) || 0) + morphPad) + 'px')
   }
 }
 
@@ -82,6 +91,7 @@ function unmorph() {
   morphArrived = false
   if (!morphed.value) return
   morphed.value = false
+  morphStyle.value = ''
   const n = cursorRef.value
   if (n) { n.style.width = ''; n.style.height = ''; n.style.removeProperty('--morphRadius') }
 }
@@ -128,7 +138,7 @@ function loop() {
       targetX = r.left + r.width / 2
       targetY = r.top + r.height / 2
       if (cursorRef.value) {
-        cursorRef.value.style.width = (r.width + morphPad * 2) + 'px'
+        cursorRef.value.style.width = (r.width + morphPadX * 2) + 'px'
         cursorRef.value.style.height = (r.height + morphPad * 2) + 'px'
       }
     }
