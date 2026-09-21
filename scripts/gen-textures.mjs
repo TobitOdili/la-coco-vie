@@ -3,7 +3,8 @@
 //
 // Produces, into public/images/:
 //   cu-p1..4.svg   — poster card FACES, editable SVG sources (bg = chapter accentLight,
-//                    title in the chapter font, ink = chapter accent) at 1000×1330
+//                    title in the chapter font, ink = chapter accent) at 1000×1330.
+//                    ⚠️ WRITTEN TO scripts/assets/, NOT public/ — see AUDIT #108.
 //   cu-p1..4.png   — the SAME faces rendered to PNG. ⚠️ SHIP THE PNGs: an SVG loaded as an
 //                    <img> does NOT block its load event on embedded @font-face fonts, so the
 //                    scene's SVG→canvas texture path draws the title BLANK. Rendering here via a
@@ -179,7 +180,11 @@ ${titleEls}
   // happens to be installed — noise in the diff for no change in the art. Use the flag when
   // the edit is to the tagline side.
   if (!ONLY_TAGLINES) {
-    writeFileSync(`${IMG}/cu-p${c.n}.svg`, svg)
+    // ⚠️ THE SVG IS A SOURCE, NOT AN ASSET, so it does not live in public/. All four were
+    // deployed on every build — 478 KB of files nothing requests, because the scene loads the
+    // PNGs deliberately (an SVG as an <img> does not block its load event on embedded fonts,
+    // so the title bakes blank). AUDIT #108.
+    writeFileSync(`${HERE}/assets/cu-p${c.n}.svg`, svg)
     // ── poster PNG (fonts baked in — render the SVG inside a real page) ──
     await shoot(
       `<!doctype html><body style="margin:0"><img src="data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}" style="width:1000px;height:1330px"></body>`,

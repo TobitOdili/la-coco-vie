@@ -13,7 +13,8 @@
 //     DELETED on 2026-09-03 — 4.6 MB of the reference site's own photographs,
 //     referenced by nothing but still being deployed at guessable URLs. Originally:
 //     all 3.8 MB of Milla Nova stills there are now unused (kept, not deleted).
-//   • POPUPS — dummy registry items / map links; urls are '#' dead links.
+//   • POPUPS — the docked cards. One entry now (In Frames' album invite); the dummy registry
+//     and map cards were deleted on 2026-09-20, see the note on the export.
 //
 // (The previous Milla Nova replica content — the reference's verbatim harvested
 // copy — is preserved in git history at a4224399 should it ever be needed.)
@@ -35,84 +36,38 @@ import { asset } from '~/utils/asset'
 // one, leave it null and the note stands alone. See docs/CONTENT-AND-ASSETS.md.
 
 // ── The floating popup cards ─────────────────────────────────────────────────
-// ⚠️ AUDIT #110 (open, found 2026-09-15): SEVEN of the entries below are referenced by NOTHING.
-// `fullAlbum` is the only one any page uses. `calBoth`, `dressCode`, `regFund`, `regEspresso`,
-// `regDinner`, `regLuggage` and `us` are dead — AND SO ARE SEVERAL COMMENTS IN THIS FILE: three of
-// them describe `marks[].events[].map` and `marks[].dress` "in the-big-day below", but the-big-day
-// has no `marks`. Its calendar section carries `monthISO`, `mark`, `kicker` and `note`, and that
-// chapter renders no maps, no .ics and no dress code at all. Read the data, not the comments,
-// until this is cleaned up. See docs/QA-2026-09-15.md.
+// ⚠️ CLEANED 2026-09-20 (AUDIT #110). Six of the seven entries were referenced by nothing and
+// each carried a `url: '#'`; they are gone, along with the comments that described them. One
+// remains, and one section references it.
+// ⚠️ AND THE COMMENTS THAT WERE WRONG ARE GONE WITH THEM. Several described
+// `marks[].events[].map` and `marks[].dress` "in the-big-day below" — that chapter has no
+// `marks`. Its calendar section carries `monthISO`, `mark`, `kicker` and `note`, and it renders
+// no maps, no .ics and no dress code at all. Where this file and the data disagree, the data is
+// right; that is what put the note here in the first place.
 export const POPUPS = {
-  // ⚠️ THE “US” POPUPS ARE GONE (2026-09-13, user: “remove the widgets on that coco & uvie
-  // page. we won’t need them”). They were two captioned polaroids that docked while their scene
-  // was in view — the page already tapes a polaroid into every scene, so the dock was showing a
-  // second photograph beside the first. The two images they pointed at (neon-restaurant,
-  // love-big-ben) were deleted with them; the originals are in `new frames/` and in git at 6297b0a5.
-  // Nothing else on the US page uses `popups`, and every section there now carries an empty array.
-
-  // “The Big Day” — utility cards (maps / calendar / dress code). Two weddings, so
-  // each day carries its own map(s); ONE calendar card on the cover covers both days
-  // (a single .ics with two events), which also keeps the dock to two cards wide —
-  // three would overflow a 390px phone, since .popup-stack is one flex row.
-  calBoth: {
-    title: '🗓 Add to Calendar',
-    params: ['both days · one file'],
-    url: '#',
-  },
-  // ⚠️ Keep params SHORT (ideally one line each). These dock at the viewport bottom on
-  // a phone, and every extra wrapped line raises the dock over the page's own copy.
-  // ⚠️ The three MAP links moved INTO the calendar's expanding card (2026-08-31) — a
-  // docked card would have covered the very panel it duplicated. They live on
-  // `marks[].events[].map` in the-big-day below; there are no map popups any more.
-  // ⚠️ ORPHANED 2026-08-31 — each day's dress code is now written on its own card in
-  // the calendar (`marks[].dress`). Kept only in case a docked version is wanted again.
-  dressCode: {
-    title: 'The Dress Code',
-    params: ['colours of the day: tbc', 'come beautiful, come comfy'],
-  },
-
-  // “In Frames” — the shared Drive folder guests upload their own shots into.
-  // ⚠️ PLACEHOLDER url — swap for the real Google Drive folder link. Until then
-  // PopupCard renders this as a plain card rather than a link, and the copy does not
-  // promise a jump: the `↗` was an arrow on a card that went nowhere.
+  // The one card the site still docks: In Frames' invitation to add your own photographs.
+  //
+  // ⚠️ SIX OF THE SEVEN ENTRIES WERE DELETED ON 2026-09-20 (AUDIT #110). Every one had been
+  // orphaned for weeks and each carried a `url: '#'` — a dead link kept alive in data:
+  //   • calBoth / dressCode — the calendar and the dress code are written ON the calendar's own
+  //     cards now (`marks[].events[].map`, `marks[].dress`), because a docked card covered the
+  //     very panel it duplicated (2026-08-31).
+  //   • regFund / regEspresso / regDinner / regLuggage — placeholder registry items from before
+  //     the couple's real list existed. With Love renders its items in the page and has never
+  //     had floating popups (orphaned 2026-08-10).
+  // The US popups went earlier still (2026-09-13, user: "remove the widgets on that coco & uvie
+  // page. we won't need them"); their two images are in `new frames/` and in git at 6297b0a5.
+  // Anything here is rendered by `PopupCard` and keyed from a section's `popups[]` — of which
+  // exactly one, In Frames', is non-empty.
+  //
+  // ⚠️ PLACEHOLDER url — swap for the real Google Drive folder link. Until then PopupCard
+  // renders this as a plain card rather than a link, and the copy does not promise a jump:
+  // the `↗` was an arrow on a card that went nowhere.
   fullAlbum: {
     title: 'Add Your Photos',
     params: ['your shots from the day', 'a shared drive link is coming'],
     url: '#',
   },
-
-  // “With Love” — the real gift list now lives in `CHAPTER_PAGES['with-love']` below.
-  // ⚠️ Was a bordered box mid-page on With Love ("or, simply —"). The user's note:
-  // it read as out of character — a hard rectangle with a button, on a chapter that
-  // is otherwise ink on paper. It is the floating dock card now, the same widget the
-  // other chapters use, so the offer is present without interrupting the writing.
-  // ⚠️ REMOVED 2026-09-11 — `cashNote` was the dock card that raised the `chapterPanel` flag and
-  // opened a full-screen modal over With Love. The chapter has its own dock now, which expands in
-  // place instead of covering the page, so neither this nor the modal exists.
-
-  regFund: {
-    title: 'The Honeymoon Fund',
-    params: ['contribute any amount', 'placeholder link'],
-    url: '#',
-  },
-  regEspresso: {
-    title: 'Espresso Machine',
-    params: ['for slow sunday mornings', 'placeholder item'],
-    url: '#',
-  },
-  regDinner: {
-    title: 'Dinnerware for Twelve',
-    params: ['for the tables we will host', 'placeholder item'],
-    url: '#',
-  },
-  regLuggage: {
-    title: 'Weekender Luggage',
-    params: ['for everywhere we have not been', 'placeholder item'],
-    url: '#',
-  },
-  // ⚠️ The four reg* cards above are ORPHANED as of 2026-08-10: the With Love
-  // album renders its items in the page and has no floating popups. Kept only
-  // in case the album ever wants a utility card; delete if it never does.
 }
 
 // ── The four chapters ────────────────────────────────────────────────────────
@@ -302,12 +257,14 @@ export const CHAPTER_PAGES = {
         // SOON under it was both a duplicate and a contradiction of it. Kept only
         // because other chapters read the field.
         endSub: 'MORE PICTURES COMING SOON',
+        // ⚠️ `-xs` (240px), not `-sm` (560px): these are drawn in a ~96px box at 0.12 opacity
+        // and were 5.8x oversized on every phone (AUDIT #138). From gen-image-variants.mjs.
         frames: [
-          asset('/images/reel/car-selfie-sm.jpg'),
-          asset('/images/reel/bw-beanie-sm.jpg'),
-          asset('/images/reel/summer-fit-sm.jpg'),
-          asset('/images/reel/dinner-date-sm.jpg'),
-          asset('/images/reel/hanging-ledge-sm.jpg'),
+          asset('/images/reel/car-selfie-xs.jpg'),
+          asset('/images/reel/bw-beanie-xs.jpg'),
+          asset('/images/reel/summer-fit-xs.jpg'),
+          asset('/images/reel/dinner-date-xs.jpg'),
+          asset('/images/reel/hanging-ledge-xs.jpg'),
         ],
         // ── THE FOLDERS (2026-09-02) ──
         // ⚠️ The nine "prints" that used to be the subject of this page are GONE, at

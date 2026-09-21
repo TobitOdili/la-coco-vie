@@ -33,6 +33,15 @@ const JOBS = [
   ...[1, 2, 3, 4].map((i) => [`cu-txt${i}.png`, `cu-txt${i}-sm.png`, 1024, 'image/png', 1]),
   ...readdirSync(`${IMG}/us`).filter((f) => /\.jpe?g$/i.test(f) && !/-sm\./.test(f))
     .map((f) => [`us/${f}`, `us/${f.replace(/\.jpe?g$/i, '-sm.jpg')}`, 600, 'image/jpeg', 0.82]),
+  // ⚠️ THE REEL THUMBS ARE DECORATION, and tiny decoration at that: In Frames drifts them
+  // behind the room at 0.12 opacity in a 95.8px box, and they were shipping at 560px — 5.8x
+  // oversized on every phone and tablet, 2.66x at 1920 (AUDIT #138). There is no larger
+  // original in that folder; the `-sm` files ARE the sources, so this is a second step down.
+  // ⚠️ SOURCE IN scripts/assets/reel/, OUTPUT IN public/ — the 560px files were the only
+  // copies and were being deployed for a 96px slot. They are sources now, like the poster
+  // SVGs (AUDIT #108); only the 240px thumbs ship. 393 KB → 47 KB.
+  ...readdirSync(`${HERE}/assets/reel`).filter((f) => /-sm\.jpe?g$/i.test(f))
+    .map((f) => [`../../scripts/assets/reel/${f}`, `reel/${f.replace(/-sm\.jpe?g$/i, '-xs.jpg')}`, 240, 'image/jpeg', 0.8]),
 ]
 
 const run = async () => {
