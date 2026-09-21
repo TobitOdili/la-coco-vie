@@ -215,8 +215,20 @@ onBeforeUnmount(() => clearTimeout(timer))
   letter-spacing: 0.18em;
 }
 /* The divider is on the SECOND account, drawn on its leading edge — so one account has no stray
-   rule and three would each get one without another rule being written. */
-.tone-page .acc + .acc { border-inline-start: 1px solid currentColor; }
+   rule and three would each get one without another rule being written.
+   ⚠️ AND IT NEEDS THE PADDING TO MATCH THE GAP, or the two accounts are not equidistant from it.
+   A border sits ON the element's edge: the 2rem flex gap is all on the FIRST account's side, and the
+   second account's box begins at the rule itself. Invisible while both are ink on paper — but the
+   cursor morph fills the row it is holding (AUDIT #142), and the fill of the second account ran
+   straight over the divider while the first stopped a clear 2rem short. User, 2026-09-21: *"hovering
+   over the second account details overlays the divider … are they not spaced equidistant from the
+   divider?"* They were not. Padding the second account by the same 2rem the gap gives the first puts
+   the rule in the middle of the space, with 32px of air on each side of it — which is exactly what
+   the stacked rule below already does with `padding-top` against its own 1.2rem gap. */
+.tone-page .acc + .acc {
+  border-inline-start: 1px solid currentColor;
+  padding-inline-start: 2rem;
+}
 /* ⚠️ THESE TWO NAME WHICH ACCOUNT IS WHICH — the most consequential small type in the site, and
    they sat at 2.70:1 (AUDIT #107). 0.82 puts them over 4.5:1 on every chapter ground. */
 .tone-page .acc-bank { opacity: 0.82; }
@@ -276,6 +288,8 @@ onBeforeUnmount(() => clearTimeout(timer))
   .tone-page .acc-list { flex-direction: column; gap: 1.2rem; }
   .tone-page .acc + .acc {
     border-inline-start: 0;
+    /* ⚠️ …and the inline padding with it, or the second account sits 2rem in from the first. */
+    padding-inline-start: 0;
     border-top: 1px solid color-mix(in srgb, currentColor 35%, transparent);
     padding-top: 1.2rem;
   }
