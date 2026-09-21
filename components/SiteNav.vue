@@ -137,7 +137,12 @@
     </div>
 
     <!-- Bottom bar -->
-    <div class="!fixed z-20 bottom-0 w-full pointer-events-none" :class="{ 'over-hero': !isHome }">
+    <!-- ⚠️ THE FOOT READS ITS OWN GROUND (2026-09-21). `over-hero` used to be "any chapter", and
+         the ink came from `nav-on-dark` — a probe at the TOP of the screen. See syncFootInk in
+         pages/[slug].vue for what that cost. Now: `foot-dark` picks the ink, `over-hero` adds the
+         outline, and the outline is on ONLY over the hero film. -->
+    <div class="!fixed z-20 bottom-0 w-full pointer-events-none foot-bar"
+         :class="{ 'over-hero': !isHome && footOnFilm, 'foot-dark': !isHome && footOnDark }">
       <div class="container flex justify-between pb-2 md:pb-6">
         <!-- The couple's own credit. ⚠️ A LINK ONLY IF IT GOES SOMEWHERE: `credit.url`
              is a placeholder `#`, and as an <a target="_blank"> that opened a blank tab
@@ -175,7 +180,6 @@
             viewBox="0 0 24 24"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
-            :style="{ fill: 'var(--accent)' }"
           >
             <path
               v-if="soundOn"
@@ -249,6 +253,9 @@ const creditLink = computed(() => {
 })
 
 const navOnDark = useState('navOnDark', () => false)
+// Set by the chapter page from a probe at the BOTTOM of the screen — see syncFootInk there.
+const footOnDark = useState('footOnDark', () => false)
+const footOnFilm = useState('footOnFilm', () => false)
 
 const props = defineProps({
   isHome: {
@@ -511,11 +518,24 @@ defineEmits(['toggle-about', 'go-home', 'toggle-sound'])
    dark outline, tight enough not to close the counters at 10px, no box and no veil. It is
    applied ONLY while a chapter is open (`.over-hero`), because on the homepage these sit on
    paper and the outline would be a smudge on nothing. */
+/* ⚠️ THE FOOT'S INK, AND IT OUT-SPECIFIES `body.nav-on-dark .menu-item` ON PURPOSE. These rules
+   are scoped, so each compiles with a [data-v-…] attribute — (0,3,0) and (0,4,0) against that
+   rule's (0,2,1) — which is what takes the bottom bar out from under a flag read at the top of
+   the screen. The homepage never sets either flag, so it is the chapter accent there as before. */
+.foot-bar .menu-item { color: var(--accent); }
+.foot-bar.foot-dark .menu-item { color: var(--accentLight); }
+
 .over-hero .credit-line,
 .over-hero .sound-label {
+  /* ⚠️ THE INK OVER A FILM IS THE LIGHT TONE NOW, so this outline is carrying more than it did.
+     It used to sit under the chapter's DARK accent — which the nav's top probe happened to be
+     serving here — and that pair is only readable on a pale frame; light ink with a dark outline
+     is readable on both, which is the point of an outline. One more 2px layer, because at 10px on
+     the pale wall of In Frames' film the old stack was marginal. */
   text-shadow:
     0 0 1px rgba(16, 14, 11, 0.95),
     0 0 1px rgba(16, 14, 11, 0.95),
+    0 0 2px rgba(16, 14, 11, 0.85),
     0 0 3px rgba(16, 14, 11, 0.75),
     0 1px 8px rgba(16, 14, 11, 0.45);
 }

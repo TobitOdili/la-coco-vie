@@ -39,7 +39,14 @@
 > leans backwards and comes forward 1.08× rather than 1.15× (#140); a tap on a phone stops throwing a
 > second EXPLORE circle in from off-screen (#141); and the inner pages' buttons have the reference's
 > hover language — the cursor takes the control's shape while the control changes colour — with the
-> arrow glyphs off them (#142). The three that matter most: a shared link has no preview and every chapter
+> arrow glyphs off them (#142).
+>
+> ▶▶ **HERO + CHROME ROUND, 2026-09-21 — AUDIT #143–#147.** The top veil is gone and #101 with it
+> (#143); the foot reads its own ground instead of the nav's, which is what "the ink is too dark"
+> actually was (#144); the RSVP arrow and the speaker icon come back on every dark ground (#145);
+> the bottom exit drops the card as the page leaves rather than a screen later (#146); and the
+> hero's title keeps its size through the select and holds the same composition at every aspect
+> ratio (#147). The three that matter most: a shared link has no preview and every chapter
 > previews as the homepage (#99); the bottom chrome is invisible on the first screen of every
 > chapter, measuring 1.03 against its own ground (#100); and page copy runs under the nav at up to
 > 69% of scroll positions (#101). Healthy: zero overflow, zero console errors, zero failed requests,

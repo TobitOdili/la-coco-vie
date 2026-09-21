@@ -170,7 +170,6 @@ void main() {
     float sm = 768.0;
     // How late the card art re-frames itself relative to the select. 1.0 is the old linear
     // behaviour (the title collapses immediately); higher holds it longer. See the note below.
-    float TITLE_EASE = 1.8;
     bool condition = aspectRatio < 0.75 || (windowWidth < sm && aspectRatio < 1.);
     float windowHeight = windowWidth / aspectRatio;
     float posterWidth = windowWidth;
@@ -224,7 +223,27 @@ void main() {
         // hands the rest of the band to the film.
         // ⚠️ Measure it — render all four chapters at several widths and look. The numbers here,
         // the top margin below, and ofY further down are one layout, not three settings.
-        float posterSize = posterWidth * 0.20;
+        // ⚠️ AND 0.20 WAS TOO SMALL — 2026-09-21: "no more title shrinking on desktop. Just don't
+        // want it. If you see the original reference site, title keeps its relative size and the
+        // hero media stretches down the page, with more of it showing as you scroll." At 0.20 the
+        // art was magnified 5x LESS than the plane was scaled up (5 against 3.31), so the hero's
+        // title came out at 0.66x the size it has on a ring card — a card you click and the title
+        // gets smaller. Measured off the reference's own hero at 1440x900 (wine-o-clock, captured
+        // and read off the frame): its title ink runs 125px to 385px of a 1920px plane, a span of
+        // 0.141 — where the four card arts here put 0.258 of texture between the first ink and the
+        // deepest descender. 0.141 / 0.258 = 0.547, and at that value the plane's scale wins: the
+        // title GROWS 1.81x through the select instead of shrinking to two thirds.
+        // ⚠️ AND IT IS DIVIDED BY THE ASPECT RATIO, WHICH IS THE REST OF THE STORY. The plane is
+        // fitted to the viewport's WIDTH and it is 4:3 tall, so its height is (4/3)x the frame's
+        // width — 2.13 frames tall at 16:10, but 2.89 at a landscape phone's 844x390. A flat
+        // fraction of the PLANE is therefore a different share of the FRAME at every aspect:
+        // measured, the 0.547 that gives the reference's own framing at 1440x900 gave a landscape
+        // phone a title band over two thirds of its screen with 130px of film under it. Dividing by
+        // the aspect makes the layout frame-relative instead: 0.8752 / aspect is 0.547 at 16:10 and
+        // falls away as the frame gets wider, so the title's top edge lands at 13.3% of the frame
+        // height and the band at 50% of it — the same composition at every shape of window. The
+        // note above still applies: measure it, at several aspects, and look.
+        float posterSize = posterWidth * (0.8752 / aspectRatio);
         ppUv.x = (ppUv.x - xCenter) / (posterSize / posterWidth) + xCenter;
         ppUv.y = (ppUv.y - 1.) / (posterSize / posterWidth) + 1.;
         // ⚠️ THE HERO'S TOP MARGIN, and it has to be its own. The card art leaves ~0.10 of the
@@ -241,24 +260,30 @@ void main() {
         // the lowest ink on the four (The Big Day's descender) sits 0.311 below the top of the art,
         // so the band has to reach (this + 0.311) and it reaches (this + 0.351) — 15px of clearance
         // at 1440. Raise this without raising the band and the titles are sliced from underneath.
-        ppUv.y += 0.189;
+        // ⚠️ RE-DERIVED WITH posterSize, NOT CARRIED OVER. This is in TEXTURE units and the value
+        // above divides them, so the same number is nearly three times the drop it used to be:
+        // at 0.189 the titles started 340px down a 900px frame. Plane depth t = (D + this) x
+        // posterSize, for art depth D — so 0.061 puts The Big Day's first ink at 0.0625 of the
+        // plane (120px at 1440x900, clear of the nav) and its descender at 0.204, which is the
+        // reference's own framing. Raise it and the titles move DOWN into the film.
+        ppUv.y += 0.061;
     }
-    // ⚠️ THE TITLE DOES NOT SHRINK ON THE FIRST FRAME OF THE SELECT. The hero framing zooms the
-    // card art OUT by 1/0.20 = 5x (see posterSize above) while the card itself only scales UP by
-    // 3.31x, so the title's size ON SCREEN is cardScale / artZoom — and mixed linearly those two
-    // do not cancel. Worked out along the tween: (1 + 2.31p) / (1 + 4p) is 0.88 by p = 0.1 and
-    // 0.77 by p = 0.3, so nearly all of the shrink happened in the first third, while the card had
-    // barely begun to move. User, 2026-09-17: *"let's NOT shrink the title immediately after
-    // clicking … without any jarring changes like suddenly shrinking the title."*
-    // Raising progress to TITLE_EASE holds the art at its card framing while the card grows and
-    // spends the change at the end instead: the same curve now reads 1.13 at p = 0.3, 1.00 at
-    // p = 0.5 and 0.66 at p = 1 — the title rides the card out and settles, rather than collapsing
-    // the moment it is clicked.
+    // ⚠️ THE TITLE MUST NEVER SHRINK THROUGH THE SELECT, AND NOW IT CANNOT. Its size on screen is
+    // cardScale / artZoom. While posterSize was 0.20 the art zoomed OUT 5x against a card that
+    // only scaled UP 3.31x, so the title ended at 0.66x its ring size and, mixed linearly,
+    // (1 + 2.31p) / (1 + 4p) spent nearly all of that collapse in the first third of the tween —
+    // user, 2026-09-17: *"let's NOT shrink the title immediately after clicking … without any
+    // jarring changes like suddenly shrinking the title."* That was patched by raising progress to
+    // TITLE_EASE = 1.8, which held the art at its card framing and back-loaded the shrink.
+    // ⚠️ THAT CONSTANT IS GONE (2026-09-21) BECAUSE THE SHRINK IS. At posterSize 0.547 the card
+    // wins from the first frame: (1 + 2.31p) / (1 + 0.828p) climbs 1.00 → 1.81 and never dips. A
+    // curve that held the art back would now only delay the GROWTH and spend it in a late jump, so
+    // the honest mix is the linear one. ⚠️ Re-check this ratio if posterSize changes again: the
+    // rule is that it must not fall below 1 anywhere on [0,1].
     // ⚠️ LANDSCAPE ONLY. On portrait, ppUv.y also derives the photo window's top edge (pUvY
-    // below, AUDIT #92), so re-timing it there would move the film off the plane's top edge. That
-    // framing was already right and is untouched.
+    // below, AUDIT #92), so none of this touches that framing, which was already right.
     // ⚠️ NO BACKTICKS ANYWHERE IN THIS SHADER — it is a JS template literal. See AUDIT #81.
-    float titleP = condition ? progress : pow(progress, TITLE_EASE);
+    float titleP = progress;
     ppUv.x = mix(uv.x, ppUv.x, titleP);
     ppUv.y = mix(uv.y, ppUv.y, titleP);
     vec4 poster = texture2D(posterTexture, ppUv);
@@ -308,7 +333,17 @@ void main() {
     // ⚠️ The window's TOP edge on the hero — a tenth of the plane of dead poster between the title
     // and the picture. Closing it is the other half of showing more of the film; the portrait
     // branch (condition) is untouched, because that framing was already right.
-    float ofY = condition ? 0.0 : .038;
+    // ⚠️ AND THE BAND GREW WITH THE TYPE. Band depth is exactly ofY + 0.0698 of the plane (the
+    // constant is what pUv.y carries by here at progress 1), so .038 gave 0.108 — 207px, which a
+    // title three times taller does not fit in. .164 gives 0.234, which is 449px at 1440x900 and
+    // the same share of the plane the reference gives its own band. The film is unmoved: it still
+    // runs from the band down past the bottom of the frame, so scrolling still reveals more of it.
+    // ⚠️ AND IT TRACKS THE TYPE, by the same division and for the same reason — a band that stayed
+    // a flat fraction of the plane while the title shrank with the aspect would leave the film
+    // starting halfway down an empty band. 0.375 / aspect − 0.0698 is .164 at 16:10 and .104 at a
+    // landscape phone; the title's deepest descender lands at 0.868 of the band at EVERY aspect,
+    // so the 13% of clearance under it is a property of the arithmetic rather than a tuned number.
+    float ofY = condition ? 0.0 : (0.375 / aspectRatio - 0.0698);
     float wL = edge;
     float wR = 1. - edge;
     float wB = edge*1.4 + mix(.18, 0., progress);

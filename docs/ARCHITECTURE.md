@@ -638,6 +638,23 @@ painted above it and a filled ring would bury the label. The colour change is th
 A tap synthesizes a `mousemove` at the touch point; treating that as a real pointer un-parked the
 EXPLORE button mid-tap and flew the circle to the finger. AUDIT #141.
 
+### The chrome's ink — two probes, not one
+`pages/[slug].vue` reads the ground twice a scroll, at two different points, because the nav and
+the foot sit on different things. `groundIsDark()` probes 10px from the top and sets
+`body.nav-on-dark`; `footGround()` probes 14px from the bottom and returns **'light' | 'dark' |
+'film'**, which becomes `footOnDark` / `footOnFilm` and reaches SiteNav's bottom bar as
+`.foot-dark` / `.over-hero`. Both walk `elementsFromPoint` for the first opaque background, share
+`GROUND_SKIP` and share `bgLuminance`.
+
+⚠️ **One probe served both until 2026-09-21 and it was the wrong one for the foot** — scrolled into a
+chapter, the top of the screen is the hero film (dark) while the bottom is the article's paper
+(pale), so the credit and the sound toggle were inked pale on pale. AUDIT #144.
+⚠️ **`GROUND_SKIP` includes `.loader-overlay`, and that is not housekeeping** — it is opaque,
+full-screen, and still mounted when the 400ms settling probe fires, so a probe that does not skip it
+answers "light" and, at scroll 0 where no scroll event will ever correct it, keeps that answer.
+⚠️ **Icon paths are `fill: currentColor`** so they follow whichever rule owns their `.menu-item`; a
+hard-coded fill there is invisible on half the site's grounds. AUDIT #145.
+
 ### `components/SiteNav.vue`
 Fixed chrome: top row (About · centered MILLA NOVA logo + "Chapter the bride" · Collection),
 bottom row (Sarakuz credit · sound toggle). Logo + nav tint with the current `--accent` var.

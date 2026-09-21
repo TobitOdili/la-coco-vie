@@ -293,15 +293,19 @@ body.nav-on-dark .menu-item svg { color: var(--accentLight); fill: var(--accentL
   color: var(--accentLight);
 }
 
-/* SVG path fills */
+/* SVG path fills.
+   ⚠️ `currentColor`, NOT `var(--accent)` — the ink is decided ABOVE, on .menu-item, by three
+   different rules (the base, `body.nav-on-dark` for the top bar, `.foot-bar.foot-dark` for the
+   bottom), and a hard-coded fill down here silently ignored all of them. Measured mid-exit on
+   /in-frames: the <svg> resolved to rgb(239,232,245) exactly as intended while its <path> resolved
+   to rgb(69,51,80) — the chapter's dark accent, on the chapter's dark accent. The RSVP arrow and
+   the speaker icon were invisible on every dark ground the site has: the whole bottom exit, and
+   In Frames' room. Found 2026-09-21 while giving the foot its own ground; it predates that.
+   ⚠️ The two rules that used to sit here — `.menu-item.active > svg > path` and
+   `.logo > svg > g > path` — are gone: neither class is on any element in this site. They came
+   from the original markup. */
 .menu-item > svg > path {
-  fill: var(--accent);
-}
-.menu-item.active > svg > path {
-  fill: var(--accentLight);
-}
-.logo > svg > g > path {
-  fill: var(--accent);
+  fill: currentColor;
 }
 
 /* ===== Typography ===== */

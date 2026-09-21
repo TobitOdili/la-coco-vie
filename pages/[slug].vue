@@ -1,17 +1,12 @@
 <template>
   <div v-if="chapter" ref="pageEl" class="chapter-page">
-    <!-- ── the top veil ────────────────────────────────────────────────────────────────────
-         ⚠️ THE SAME COLOUR AS THE GROUND IT SITS ON, so it is not a box and has no edge: the
-         page's paper is `--accentLight` and so is this, fading to nothing over ~130px. It
-         exists because copy scrolled clean under the fixed nav — measured on /us at 5 of 15
-         scroll positions on a 360px phone, with "Will you do life with me?" crossing the
-         wordmark (AUDIT #101). Type now dissolves into the paper as it reaches the chrome.
-         ⚠️ IT IS OFF INSIDE THE HERO. At the top of a chapter the ground is the film, not the
-         paper, and a paper-coloured band there would be a stripe across the photograph — so its
-         opacity is driven by the scroll and only arrives once the article is what is up there.
-         That also keeps it clear of the RETURN: the top-edge pull only charges at scroll 0,
-         where this is fully transparent, so it can never paint over the accent band. -->
-    <div class="top-veil" :style="{ opacity: topVeil }" aria-hidden="true" />
+    <!-- ⚠️ THERE WAS A TOP VEIL HERE AND IT IS GONE (2026-09-21). A paper-coloured band across
+         the top, fading out over ~130px, so copy dissolved into the chrome instead of sliding
+         under it (AUDIT #101). It was invisible while it was working — it is the same colour as
+         the paper — and visible only where the ground is NOT paper: over the accent during the
+         bottom exit it read as a pale stripe laid across the deck. User, 2026-09-21: "there's a
+         very weird top overlay at the top of the page. Please remove that." ⚠️ #101 IS OPEN AGAIN:
+         page copy passes under the fixed nav on the way up. -->
 
     <!-- Single content child = Lenis's scrolled element (wrapper is .chapter-page). -->
     <div ref="scrollEl" class="chapter-scroll">
@@ -181,8 +176,9 @@ function pushPull() {
   // ⚠️ RE-PROBE THE NAV'S GROUND. `syncNavInk` otherwise only runs on Lenis scroll events, and the
   // pull STOPS Lenis — so the flag was whatever the last scroll left it as while the veil, which is
   // the chapter's pale paper, washed in underneath the nav. Measured mid-pull: menu ink
-  // rgb(239,232,245) on a near-white veil.
-  syncNavInk()
+  // rgb(239,232,245) on a near-white veil. The foot moves with it — the whole page is translated
+  // down by the pull, so its ground changes too.
+  syncNavInk(); syncFootInk()
   if (!scene) return
   if (pullTop.value > 0 && !backEngaged) {
     // ⚠️ LAND ON THE TOP FIRST, THEN CAPTURE. The pull engages anywhere inside TOP_EDGE, and
@@ -281,7 +277,6 @@ const cueReady = ref(false)
 const cueSeen = ref(false)
 // 0 inside the hero, 1 once the article is what passes under the nav. Ramped across the
 // second half of the first screen, so it is fully on before any copy can reach the chrome.
-const topVeil = ref(0)
 const pullTop = ref(0)
 const pullBottom = ref(0)
 // A section asking to be scrolled to (see the listener registered in onMounted).
@@ -497,6 +492,9 @@ function doExit() {
 // and `SiteNav` reads it. Shared state rather than props because the page owns the
 // scroll and the nav is mounted a level above it.
 const navOnDark = useState('navOnDark', () => false)
+// The foot's ink and its outline, read by SiteNav's bottom bar — see syncFootInk.
+const footOnDark = useState('footOnDark', () => false)
+const footOnFilm = useState('footOnFilm', () => false)
 
 // ⚠️ MEASURED, not guessed. The first attempt keyed this off "In Frames is a dark
 // chapter" and "the exit has begun", and both were wrong: In Frames' page ground is
@@ -507,27 +505,71 @@ const navOnDark = useState('navOnDark', () => false)
 // centre point, skip the nav itself, and take the first one with an opaque
 // background. The WebGL canvas has no CSS background, so the exit — which paints
 // the chapter accent through the renderer's clear colour — is OR'd in separately.
+// ⚠️ WHAT A GROUND PROBE MUST WALK STRAIGHT PAST. The nav's own fixed bars, obviously — but also
+// the LOADER, and that one cost an afternoon. `.loader-overlay` is opaque and full-screen, it is
+// still in the DOM for the first beat of a deep-linked chapter, and the settling probe fires at
+// 400ms: measured, the foot probe read `DIV.loader-overlay` and answered "light" — and with
+// nothing scrolling at scroll 0, that first wrong answer was the only answer it ever gave.
+const GROUND_SKIP = '.\\!fixed, .loader-overlay'
 const NAV_PROBE_Y = 10
+// ⚠️ THE FOOT HAS ITS OWN GROUND, AND IT IS NOT THE NAV'S. The credit and the sound toggle are
+// `.menu-item`s, so until 2026-09-21 they took their ink from `nav-on-dark` — a probe TEN PIXELS
+// FROM THE TOP of the screen. Scrolled into a chapter that reads: top of screen = the hero film =
+// dark, so the ink went pale — while the BOTTOM of the screen was the article's paper. Pale ink on
+// pale paper, saved only by the outline added for the opposite case (AUDIT #100), which is what
+// the couple actually saw: "the ink for the OFF (sound) and Footer text are too dark, and only
+// while in the inner pages." It was not too dark. It was the wrong ink with a shadow under it.
+// Probed at the bottom, the three grounds the foot ever sits on separate cleanly:
+//   'light' — the article's paper (most of a chapter): the chapter's own dark accent, no outline.
+//   'dark'  — the accent, during the exit: the light tone, no outline.
+//   'film'  — the hero, where the ground is a moving photograph and NOT readable from the DOM at
+//             all (AUDIT #66): the light tone AND the outline, which is the case #100 was for.
+const FOOT_PROBE_INSET = 14
 function syncNavInk() { navOnDark.value = groundIsDark() }
+function syncFootInk() {
+  const g = footGround()
+  footOnDark.value = g !== 'light'
+  footOnFilm.value = g === 'film'
+}
+function footGround() {
+  if (!import.meta.client) return 'light'
+  const y = Math.max(0, (window.innerHeight || 800) - FOOT_PROBE_INSET)
+  const els = document.elementsFromPoint(Math.round(window.innerWidth / 2), y)
+  for (const el of els) {
+    if (el.closest(GROUND_SKIP)) continue
+    if (el === document.body || el === document.documentElement) break
+    const lum = bgLuminance(el)
+    if (lum === null) continue
+    return lum < 0.35 ? 'dark' : 'light'
+  }
+  // Nothing opaque in the DOM: we are looking at the canvas. Inside the hero that is the FILM;
+  // past it, the exit's accent. Same split the nav's fallback makes, for the same reason.
+  if (!exitEngaged && lenis && lenis.scroll < window.innerHeight * 0.9) return 'film'
+  return webglSceneRef?.value?.scene?.clearIsDark?.() ? 'dark' : 'light'
+}
+// Relative luminance of an element's own background, or null if it is see-through.
+// ⚠️ TWO COMPONENT SCALES — see the note in groundIsDark; this is that arithmetic, shared.
+function bgLuminance(el) {
+  const bg = getComputedStyle(el).backgroundColor
+  const m = bg.match(/[\d.]+/g)
+  if (!m) return null
+  if (m.length > 3 && Number(m[3]) < 0.5) return null
+  const k = bg.startsWith('color(') ? 255 : 1
+  const lum = (c) => { const v = (c * k) / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }
+  return 0.2126 * lum(+m[0]) + 0.7152 * lum(+m[1]) + 0.0722 * lum(+m[2])
+}
 function groundIsDark() {
   if (!import.meta.client) return false
   const els = document.elementsFromPoint(Math.round(window.innerWidth / 2), NAV_PROBE_Y)
   for (const el of els) {
-    if (el.closest('.\\!fixed')) continue          // the nav's own fixed bars
+    if (el.closest(GROUND_SKIP)) continue
     if (el === document.body || el === document.documentElement) break
-    const bg = getComputedStyle(el).backgroundColor
-    const m = bg.match(/[\d.]+/g)
-    if (!m) continue
-    if (m.length > 3 && Number(m[3]) < 0.5) continue  // see-through, keep walking
-    // ⚠️ TWO COMPONENT SCALES. `rgb()/rgba()` computes to 0–255, but anything written with
-    // `color-mix()` — which is how the chapter tints are blended — computes to
-    // `color(srgb r g b / a)` with components in 0–1. Read as 0–255 those come out at a
-    // luminance of ~0.003, i.e. BLACK, so the nav flipped to its light ink over a pale panel
-    // and vanished. Measured on With Love's cash panel: wordmark rgb(232,237,242) on a
-    // rgb(232,237,242) ground.
-    const k = bg.startsWith('color(') ? 255 : 1
-    const lum = (c) => { const v = (c * k) / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }
-    return 0.2126 * lum(+m[0]) + 0.7152 * lum(+m[1]) + 0.0722 * lum(+m[2]) < 0.35
+    // ⚠️ TWO COMPONENT SCALES, and the reason is in bgLuminance — `color-mix()`, which is how the
+    // chapter tints are blended, computes to `color(srgb r g b / a)` in 0–1 while rgb() is 0–255.
+    // Read as 0–255 a pale panel came out BLACK and the nav flipped to its light ink over it.
+    const lum = bgLuminance(el)
+    if (lum === null) continue                        // see-through, keep walking
+    return lum < 0.35
   }
   // Nothing opaque in the DOM means we are looking straight at the canvas — and WHICH canvas
   // matters.
@@ -629,10 +671,8 @@ onMounted(() => {
     autoRaf: true,
   })
   lenis.on('scroll', (e) => {
-    scene?.setScroll(e.scroll); syncNavInk(); updateExit(e.scroll); syncCanvasCover(e.scroll)
+    scene?.setScroll(e.scroll); syncNavInk(); syncFootInk(); updateExit(e.scroll); syncCanvasCover(e.scroll)
     if (!cueSeen.value && e.scroll > 40) cueSeen.value = true
-    const vh = window.innerHeight || 800
-    topVeil.value = Math.max(0, Math.min(1, (e.scroll - vh * 0.55) / (vh * 0.3)))
     // Left the top edge — whatever the pull had reached is no longer true.
     if (e.scroll > 2 && topAccum > 0) releasePull()   // scrolled away from the top edge
   })
@@ -640,8 +680,12 @@ onMounted(() => {
   // painted behind the transparent hero, so the nav can be invisible before the
   // visitor has scrolled at all. And `updateExit` early-returns in several states,
   // which is why this cannot live inside it.
-  syncNavInk()
-  setTimeout(syncNavInk, 400)
+  syncNavInk(); syncFootInk()
+  // ⚠️ TWICE, AND THE SECOND ONE IS NOT BELT-AND-BRACES. At scroll 0 there are no scroll events,
+  // so whatever these leave behind is what the chrome wears until the visitor moves — and on a
+  // cold deep link the loader is still up at 400ms and the select is still running at 1200.
+  setTimeout(() => { syncNavInk(); syncFootInk() }, 400)
+  setTimeout(() => { syncNavInk(); syncFootInk() }, 1800)
   scene?.setScroll(0)
 
   // ⚠️ THE ONE WAY A SECTION MOVES THIS PAGE. Lenis owns the scroller, and anything that sets
@@ -711,6 +755,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   navOnDark.value = false   // the homepage has no dark ground
+  footOnDark.value = false
+  footOnFilm.value = false
   // …and no pull in progress (unless one is landing, which SiteNav plays out and then clears)
   if (!navLeaving.value) { navPull.value = 0; navCue.value = 0 }
   pageEl.value?.removeEventListener('wheel', onWheel)
@@ -774,9 +820,18 @@ onBeforeUnmount(() => {
    article scrolls out above it. 1vh of that is the article leaving; the REST is the drop.
    ⚠️ 250vh gave the drop 150vh of scroll, which was fine while the ring also had to unfurl and rise
    through it. It does not any more — the ring is finished before it is uncovered — so 150vh of scroll
-   for one falling card was a long wait with nothing else happening. 200vh ⇒ 100vh of drop. */
+   for one falling card was a long wait with nothing else happening. 200vh ⇒ 100vh of drop.
+   ⚠️ AND 100vh WAS STILL A WHOLE SCREEN OF SCROLLING AFTER THE PAGE HAD GONE. User, 2026-09-21:
+   "the timing between the inner page actually scrolling out of viewport and dropping into the card
+   deck is too much. The movement should be fluid and natural, dropping in right as it leaves
+   viewport." This height IS that timing and nothing else: phase B spans `height − 100vh` of scroll,
+   so 140vh gives the drop 40vh — about 360px at 900 tall, four notches of a wheel — and the card is
+   already falling as the last of the article clears the frame. Everything in the scene's exit is
+   keyed to `de`, not to pixels, so the whole choreography tightens with it and nothing needs
+   re-timing there. ⚠️ Do not take it below ~120vh: the commit fires at de 0.955, and with less than
+   ~20vh of phase B a single flick would land past it before the drop was visible at all. */
 .chapter-outro {
-  height: 200vh;
+  height: 140vh;
 }
 
 /* Content scrolls up over the (fixed) WebGL hero on the chapter's light accent. */
@@ -853,24 +908,6 @@ onBeforeUnmount(() => {
    circumference reads the exit. */
 /* Below the nav (z 20), above everything the page draws — including the popups (15) and the
    scroll cue (14), both of which would otherwise pass under the chrome too. */
-.top-veil {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 8.5rem;
-  z-index: 18;
-  pointer-events: none;
-  background: linear-gradient(
-    to bottom,
-    var(--accentLight, #F2EEE8) 0%,
-    var(--accentLight, #F2EEE8) 46%,
-    color-mix(in srgb, var(--accentLight, #F2EEE8) 55%, transparent) 72%,
-    transparent 100%
-  );
-  transition: opacity 0.25s linear;
-}
-@media (max-width: 640px) { .top-veil { height: 7rem; } }
 
 .leave-cue {
   display: flex;
