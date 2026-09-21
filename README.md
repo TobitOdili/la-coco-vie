@@ -147,11 +147,11 @@ is that no two pages share a language. Breaking it is what made With Love fail i
   three that matter most: **a shared link has no preview and every chapter previews as the
   homepage** (#99), **the bottom chrome is invisible on the first screen of every chapter** (#100),
   and **page copy runs under the nav at up to 69% of scroll positions** (#101). Survey, measurements
-  and the ordered plan → [`docs/QA-2026-09-20.md`](docs/QA-2026-09-20.md) (the second pass,
-  2026-09-20 — re-tests everything and adds #137–#139; the first is
-  [`docs/QA-2026-09-15.md`](docs/QA-2026-09-15.md)). ⚠️ The site itself is mechanically clean: 30
-  route × size loads with **0 errors, 0 failed requests, 0 overflow**, every link live and every
-  interaction path working. What is open is sharing, keyboard reach and contrast.
+  and the ordered plan → [`docs/QA-2026-09-20.md`](docs/QA-2026-09-20.md). ⚠️ **All five rounds
+  were done on 2026-09-20** — every chapter link previews as itself, the site is operable by
+  keyboard, no functional label sits under AA, the scene answers `prefers-reduced-motion`, and a
+  phone on its side gets its deck back. **One item is left: #139**, `us.mp4` needs one ffmpeg
+  pass.
 - 🔧 **Open — code health** — `useChapterScene.js` is past 2,400 lines and wants splitting.
   ⚠️ Deliberately **not** in the QA plan: every issue above is a small verifiable edit, and a
   refactor underneath them turns a QA round into a regression hunt.

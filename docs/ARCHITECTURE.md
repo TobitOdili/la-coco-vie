@@ -646,6 +646,30 @@ the laurel badge** under them (AUDIT #133).
   scrub, bottom exit). Killing the tween alone would strand `txtSwapping` and every later swap
   would be dropped.
 
+### Head, share cards and the crawler files — `scripts/gen-head.mjs`, `scripts/gen-og.mjs`
+⚠️ **`ssr: false` means `useHead` is the client-side half only.** Nuxt prerenders one SPA shell per
+route and the head in it comes from `app.head` — so for months every chapter link previewed as the
+homepage (AUDIT #99). `gen-head.mjs` runs as part of `npm run build` (pure Node — it has to work on
+Vercel's builder) and rewrites all five `.output/public/**/index.html`:
+- per-route `<title>`, `description`, `canonical`, `og:*`, `twitter:*`, `theme-color`, all from
+  **`SITE.share`** in `site.config.js`, which `app.vue` also reads — so the tab and the unfurl
+  cannot drift apart.
+- ⚠️ **It REPLACES, never appends.** Two `<title>`s or two descriptions is undefined behaviour and
+  some unfurlers take the first — which would be the default the injector is there to fix.
+- writes `sitemap.xml`; `robots.txt` is a static file in `public/`.
+
+`gen-og.mjs` draws the 1200×630 share cards into `public/og/` — the chapter's own ground and ink
+with its own still beside it. It needs Chrome, so it is a **local step whose output is committed**;
+`gen-head` only points at the files and warns if they are missing.
+
+### The top veil — `pages/[slug].vue`
+A fixed strip the same colour as the page's paper (`--accentLight` → transparent over 8.5rem), so
+copy dissolves into the ground as it reaches the fixed nav instead of crossing the wordmark (AUDIT
+#101). ⚠️ **Its opacity is driven by scroll** — 0 inside the hero, where the ground is the film and
+a paper-coloured band would be a stripe across it, and 0 at scroll 0, which is where the return's
+accent band opens. ⚠️ A geometry probe will always still report copy "under the chrome": the fix
+hides it rather than moving it.
+
 ### `components/LoadingScreen.vue`
 Asset-gated counter. Receives `progress` (0–100) from `app.vue`, GSAP-eases the displayed
 number toward it, plays a GSAP fade-out on reaching 100. Light-gray, centered. 12 s safety
@@ -858,6 +882,10 @@ One function owns what a hovered card does with its transform, called once a fra
   render pass after `clearDepth()`. Both flags are released the moment the card stops being the
   hovered one.
 - Mobile keeps the lift and nothing else — nothing hovers on touch.
+- **`prefers-reduced-motion`** (AUDIT #106): the pose arrives instead of gliding (`rIn`/`rOut` = 1),
+  `runStill()` replaces the intro, the camera stops tracking the pointer, and every select takes
+  the `fast` path. ⚠️ The return and the bottom exit are untouched — they are scrubbed by the
+  visitor's own scroll, and freezing them would leave a chapter with no way back.
 
 ### Select (`selectChapter(chIdx)`, ~3 s GSAP timeline)
 The chosen chapter becomes a single full-bleed **hero**:

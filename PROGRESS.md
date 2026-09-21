@@ -31,7 +31,9 @@
 > motion, link health and what a crawler receives. **Nothing in the app was changed.** Survey,
 > measurements and the ordered plan → [`docs/QA-2026-09-20.md`](docs/QA-2026-09-20.md) (second pass,
 > 2026-09-20; the first is [`docs/QA-2026-09-15.md`](docs/QA-2026-09-15.md)); the issues are
-> **AUDIT #99–#112 and #137–#139**, with #104 and #111 closed on re-test and #102 half fixed. The three that matter most: a shared link has no preview and every chapter
+> **AUDIT #99–#112 and #137–#139**. ⚠️ **All five rounds were worked through on 2026-09-20 and
+> fourteen of the fifteen are closed** — #104 and #111 on re-test, the rest in `091f04e7`,
+> `8063a546`, `3d8ae4d1` and `6f0dd183`. **#139 is the only one left.** The three that matter most: a shared link has no preview and every chapter
 > previews as the homepage (#99); the bottom chrome is invisible on the first screen of every
 > chapter, measuring 1.03 against its own ground (#100); and page copy runs under the nav at up to
 > 69% of scroll positions (#101). Healthy: zero overflow, zero console errors, zero failed requests,

@@ -393,6 +393,18 @@ silhouette/colour specs, except for the two originals where the reference showed
 The reference pairs **Yaroslava** with wine, **Markita** with la-storia, and **Kohana + Yaroslava**
 with amour; we use the subset whose images we host.
 
+**Share cards** live in `public/og/` — one 1200×630 JPEG per route, drawn by
+`scripts/gen-og.mjs` from each chapter's ground, ink and still. Regenerate after changing a
+chapter's colours or its still; `scripts/gen-head.mjs` points the prerendered shells at them on
+every build, and the copy beside them is `SITE.share` in `site.config.js`.
+
+⚠️ **SOURCES DO NOT LIVE IN `public/`.** Anything `public/` holds is deployed, whether or not a
+page asks for it — 478 KB of poster SVGs and 393 KB of 560px reel thumbnails were shipping to
+nobody (AUDIT #108, #138). Editable sources belong in `scripts/assets/`: the poster SVGs
+(`cu-p1..4.svg`, written there by `gen-textures.mjs`), the reel's full-size thumbs
+(`reel/*-sm.jpg`, from which `gen-image-variants.mjs` makes the 240px `-xs` files that ship), and
+the laurel mask.
+
 **The laurel badge** under every tagline (`COCO & UVIE / 2026`) is baked into `cu-txt1..4.png` in
 each chapter's ink. The wreath is **`scripts/assets/laurel.png`** — **the reference site's own**,
 taken out of its tagline texture at the owner's instruction (*"that svg is not copyrighted, we

@@ -99,12 +99,86 @@ state, everything below it is history — newest first.)
 > and the **card films work**. The only thing still unchecked by a human is the **mobile swipe lean**
 > (emulation says rest 0.24° / peak 10.2°; `LEAN_MAX_DEG` is the knob).
 >
-> **NEXT / OPEN:** the five-round plan in [`QA-2026-09-20.md`](QA-2026-09-20.md) — share previews
-> (#99) first, then keyboard reach (#105/#137), then contrast and the nav overlap (#107/#101/#100),
-> then landscape + reduced motion (#103/#106), then housekeeping (#108/#110/#138/#139). Plus: real
-> content + media; Big Day follow-ups (traditional-wedding date, thread-motion consistency, a real
-> map card); code-health (split the ~2500-line `useChapterScene.js`).
+> **NEXT / OPEN:** the QA plan is **done** — all five rounds, 2026-09-20 (see the section below).
+> What is left: **#139** (`us.mp4` needs one ffmpeg pass); real content + media from the couple;
+> Big Day follow-ups (traditional-wedding date, thread-motion consistency, a real map card);
+> code-health (split the ~2500-line `useChapterScene.js`).
 > **Regenerate card art:** `npm run gen:textures` (see [`scripts/README.md`](../scripts/README.md)).
+
+---
+
+## ▶▶ THE QA PLAN, DONE — 2026-09-20 (AUDIT #99–#112, #137–#139)
+
+All five rounds of [`QA-2026-09-20.md`](QA-2026-09-20.md), in the order it set out. **Fourteen of
+the fifteen open items are closed.** Every round was verified before the next one started; the
+final sweep is 25 route × size loads (five sizes, landscape included) with **0 errors, 0 overflow,
+0 failed requests and no broken images.**
+
+### 1 — the link (#99, the h1 half of #112) — `091f04e7`
+
+⚠️ **With `ssr: false`, `useHead` is the client-side half only.** Nuxt prerenders one shell per
+route and the head in it comes from `app.head` — one title for five URLs — while the per-chapter
+title is set by `app.vue` after hydration, which an unfurler never reaches.
+`scripts/gen-head.mjs` rewrites the shells after every build (pure Node, so it runs on Vercel):
+title, description, canonical, `og:*`, `twitter:*`, plus `sitemap.xml`. `lang="en"` goes in
+`app.head`, which Nuxt renders itself. `scripts/gen-og.mjs` draws the 1200×630 share cards — the
+chapter's ground and ink with its own still beside it — as a local step whose output is committed.
+
+⚠️ **Replace, never append.** The first cut left nuxt.config's default description UNDER the
+injected one, so every route shipped the homepage's description first — where a crawler reading
+the first match would never see the difference.
+
+The site's single `<h1>` is in `app.vue`, visually hidden, changing with the route.
+
+### 2 — reach (#105, #137) — `091f04e7`
+
+Twelve presses of Tab used to reach **one** element. Now eight: four chapter links → WELCOME →
+RSVP → wordmark → sound. ⚠️ **The deck is a canvas**, so a card cannot be tabbed to — `SiteNav`
+opens with a visually-hidden `<nav>` of real links to the four routes, revealed by
+`.sr-focusable` on focus. The three `<div @click>` are `<button>`s with `aria-pressed` and focus
+rings. Escape closes the welcome note.
+
+### 3 — reading the pages (#107, #101, #100, #109) — `8063a546`
+
+**A floor of 0.82 under the quiet voice** — measured per chapter, the opacity needed for 4.5:1 runs
+0.66 to 0.78, so one number clears all four. Raise the floor, not the ink: no colour changed. The
+gift account labels went 2.70 → 5.3.
+
+**A veil the colour of the ground it sits on** for the nav overlap — no box, no edge, off inside
+the hero, and fully transparent at scroll 0 where the return's band opens.
+
+**The cue's outline**, applied to the credit and the sound toggle while a chapter is open.
+
+**Hit areas grown with a pseudo-element, never padding** — the registry's words are laid out by
+measurement, so padding would move the whole wall.
+
+### 4 — landscape + motion (#103, #106, rest of #102) — `3d8ae4d1`
+
+⚠️ **Two rules were disagreeing at 844×390:** `fitScale()` shrinks the 3D composition on a short
+frame and the chrome is CSS pixels, which does not. Chrome tightened (+50px), `FIT_MIN_H` 500 →
+440, `idleCarouselY` −55·(k−1). k is 1 above 440px, so nothing else moved — verified by camera and
+carousel readings at 1440×900, 390×844 and 768×1024.
+
+**The scene answers `prefers-reduced-motion`** — `runStill()` instead of the intro, no parallax,
+the hover pose arrives instead of gliding, selects take the short entry. ⚠️ The return and the
+bottom exit are untouched: both are scrubbed by the visitor's own scroll, and freezing them would
+leave a chapter with no way back.
+
+### 5 — housekeeping (#108, #110, #138) — `6f0dd183`
+
+Poster SVGs and the reel's 560px sources moved to `scripts/assets/` (sources do not belong in a
+build); a 240px `-xs` step ships instead — `/in-frames` 3,309 → 2,972 KB. Six dead `POPUPS`
+entries and the comments describing removed behaviour deleted.
+
+### What is left
+
+**#139 only.** `us.mp4` is 3.6 MB at 4,973 kbps where the other films sit near 1,200 — the excess
+is bitrate, not resolution, and `avconvert`'s fixed presets either grew the file (1280×720 → 4,655
+KB) or halved the resolution. It wants one `ffmpeg -crf 26` pass, recorded in AUDIT #139.
+
+⚠️ And the soft-404's other half cannot be fixed here: `[slug]` now sends an unknown URL home so
+the address bar stops lying, but the HTTP status stays 200 — a static SPA's host has no idea which
+slugs the bundle knows.
 
 ---
 

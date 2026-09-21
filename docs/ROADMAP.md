@@ -125,7 +125,14 @@ Mechanics are documented in [`CONTENT-AND-ASSETS.md`](CONTENT-AND-ASSETS.md):
 
 ---
 
-## Phase 4 — Ship-readiness 🔎 (opened 2026-09-15 by the full QA pass)
+## Phase 4 — Ship-readiness ✅ (opened 2026-09-15, closed 2026-09-20 but for one item)
+
+> **DONE 2026-09-20.** Both QA passes were worked through in the order the second one set out:
+> share previews and the crawler files (#99, #112), keyboard reach (#105, #137), contrast, the nav
+> overlap, the chrome over the hero and tap targets (#107, #101, #100, #109), landscape and reduced
+> motion (#103, #106, #102), then housekeeping (#108, #110, #138). #104 and #111 closed on re-test.
+> **#139 alone is open** — `us.mp4` needs one `ffmpeg -crf 26` pass, which this machine cannot run.
+> The table below is the original ordering, kept for the reasoning.
 
 The four chapters are built and live; what is left is the difference between *built* and *ready to
 be shared with a few hundred guests*. The survey, the measurements behind each item and the ordered

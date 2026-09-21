@@ -103,7 +103,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onBeforeUnmount, inject, ref } from 'vue'
+import { computed, onMounted, onBeforeUnmount, inject, ref, watch } from 'vue'
 import Lenis from 'lenis'
 import { CHAPTERS } from '~/composables/useChapterScene'
 import { CHAPTER_PAGES, POPUPS } from '~/composables/chapterPages'
@@ -119,6 +119,19 @@ const route = useRoute()
 const router = useRouter()
 const chapter = computed(() => CHAPTERS.find((c) => c.slug === route.params.slug))
 const pageContent = computed(() => CHAPTER_PAGES[route.params.slug])
+
+// ⚠️ A URL THAT IS NOT A CHAPTER GOES HOME, AND SAYS SO IN THE ADDRESS BAR. This route is
+// `[slug]`, so it matches anything — `/definitley-not-a-page` rendered the homepage under its
+// own wrong URL, with the homepage's title, at HTTP 200 (AUDIT #112). `replace`, not `push`:
+// a typo should not become a step in the visitor's history that Back returns them to.
+// ⚠️ The HTTP status stays 200 and cannot not be: this is a static SPA, and the host serving
+// the shell has no idea which slugs the bundle knows about. What is fixed is the lie the
+// ADDRESS BAR was telling.
+watch(
+  chapter,
+  (c) => { if (!c && route.params.slug) router.replace('/') },
+  { immediate: true }
+)
 
 // Floating popup cards: the active (most in-view) section's popups, shown in one fixed
 // overlay at the viewport bottom-center (so they're never affected by the content scroll).

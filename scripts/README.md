@@ -2,6 +2,22 @@
 
 Build-time asset generation. Not shipped to the browser.
 
+## `gen-head.mjs` — the head injector (runs on every build)
+
+Wired into `npm run build` as `nuxt build && node scripts/gen-head.mjs`. Rewrites the five
+prerendered shells with their own `<title>`, description, canonical and `og:*`/`twitter:*` from
+`SITE.share`, and writes `sitemap.xml`. **Pure Node — no browser, no network** — because it has to
+run on Vercel's builder. See AUDIT #99.
+
+⚠️ It **replaces** title/description/theme-color rather than appending: two of either is undefined
+behaviour, and some unfurlers take the first.
+
+## `gen-og.mjs` — the share cards
+
+`npm run gen:og` → `public/og/{home,us,the-big-day,in-frames,with-love}.jpg` at 1200×630. Needs
+Chrome, so it is a **local step whose output is committed**; `gen-head.mjs` only points at the
+files and warns if they are missing.
+
 ## `gen-textures.mjs` — the card-art generator
 
 Regenerates every generated texture the WebGL scene uses, into `public/images/`:
