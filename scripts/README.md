@@ -12,6 +12,13 @@ run on Vercel's builder. See AUDIT #99.
 ⚠️ It **replaces** title/description/theme-color rather than appending: two of either is undefined
 behaviour, and some unfurlers take the first.
 
+⚠️ It finds the build output by **probing**, not by assuming `.output/public`. The preset decides
+where Nitro writes: static and node give `.output/public`, Vercel's gives `.vercel/output/static`.
+Hardcoding the first failed every Vercel deploy on 2026-09-21 — a red build that was green locally
+and on GitHub Pages and Cloudflare, which use the static preset. It now takes whichever candidate
+was written most recently, so a stale `.vercel/output` cannot shadow a fresh `nuxt build`.
+`GEN_HEAD_OUT` overrides the search.
+
 ## `gen-og.mjs` — the share cards
 
 `npm run gen:og` → `public/og/{home,us,the-big-day,in-frames,with-love}.jpg` at 1200×630. Needs

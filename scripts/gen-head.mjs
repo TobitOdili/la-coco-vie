@@ -15,14 +15,28 @@
 //
 // Also writes: sitemap.xml (from the same route list) and checks robots.txt is in place.
 // ─────────────────────────────────────────────────────────────────────────────
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { readFileSync, writeFileSync, existsSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { SITE } from '../site.config.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const REPO = resolve(HERE, '..')
-const OUT = `${REPO}/.output/public`
+// ⚠️ THE BUILD OUTPUT IS NOT ALWAYS `.output/public` — THE PRESET DECIDES. The static and
+// node presets write `.output/public`, which is what a local `npm run build` produces; Vercel's
+// preset writes `.vercel/output/static`, and that is the one that runs in CI. This script
+// hardcoded the first and so exited 1 on EVERY Vercel deploy (2026-09-21), failing a build that
+// passed locally and on the two static hosts. Probe both and take the one built most recently,
+// so a stale `.vercel/output` from an old `vercel build` can never shadow a fresh `nuxt build`.
+const CANDIDATES = [
+  process.env.GEN_HEAD_OUT,
+  process.env.NITRO_OUTPUT_DIR && `${process.env.NITRO_OUTPUT_DIR}/public`,
+  `${REPO}/.output/public`,
+  `${REPO}/.vercel/output/static`,
+].filter(Boolean)
+const OUT = CANDIDATES
+  .filter((d) => existsSync(`${d}/index.html`))
+  .sort((a, b) => statSync(`${b}/index.html`).mtimeMs - statSync(`${a}/index.html`).mtimeMs)[0]
 const SITE_URL = (process.env.SITE_URL || SITE.url).replace(/\/$/, '')
 
 // slug → the file that serves it. '' is the homepage.
@@ -30,10 +44,13 @@ const ROUTES = [['', 'home'], ['us', 'us'], ['the-big-day', 'the-big-day'], ['in
 
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
-if (!existsSync(OUT)) {
-  console.error('gen-head: no .output/public — run `nuxt build` first')
+if (!OUT) {
+  console.error('gen-head: no prerendered build found — looked in:')
+  for (const d of CANDIDATES) console.error(`  ${d}`)
+  console.error('Run `nuxt build` first, or point GEN_HEAD_OUT at the output directory.')
   process.exit(1)
 }
+console.log(`gen-head: writing into ${OUT.replace(REPO + '/', '')}`)
 
 let missingOg = 0
 for (const [slug, key] of ROUTES) {
