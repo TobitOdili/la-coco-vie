@@ -57,7 +57,11 @@
 > from the rule between them (#150); the cursor's mark reaches the nav, with the couple's own wreath
 > for the wordmark (#151); the share cards are the site's own tagline artwork on its own paper, no
 > photographs (#152); and the ambient bed is the couple's second choice, with `millanova frames/`
-> deleted (#153). The three that matter most: a shared link has no preview and every chapter
+> deleted (#153).
+>
+> ▶▶ **2026-09-22 — AUDIT #154–#155.** The laurel came off the wordmark on sight, the nav's pills went
+> from 30px to 44px tall and lost their underline (#154), and **the RSVP link changed**: the couple's
+> new Lalso event, `lal.so/e/ZUomvI5QVsK`, replaces a dead one (#155). The three that matter most: a shared link has no preview and every chapter
 > previews as the homepage (#99); the bottom chrome is invisible on the first screen of every
 > chapter, measuring 1.03 against its own ground (#100); and page copy runs under the nav at up to
 > 69% of scroll positions (#101). Healthy: zero overflow, zero console errors, zero failed requests,

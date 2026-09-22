@@ -84,7 +84,7 @@ state, everything below it is history — newest first.)
 > 3. **The bottom-left credit** — `SITE.credit.url` = `'#'`. On every page, in the footer bar.
 >
 > **CLOSED on 2026-09-03, and how:**
-> - **RSVP** is live — `https://lal.so/e/9j09CHqj2sn` (user-supplied). It was the one that mattered
+> - **RSVP** is live — `https://lal.so/e/ZUomvI5QVsK` (user-supplied; replaced `9j09CHqj2sn`, which the couple retired on 2026-09-22). It was the one that mattered
 >   most: the nav plus the end of all four chapters.
 > - **All three "open in maps"** are live. `marks[].events[].map = '#'` is gone entirely; each mark
 >   carries a real `place` string instead, and the component derives the Google Maps search URL, the

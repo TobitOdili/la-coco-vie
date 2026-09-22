@@ -156,61 +156,17 @@ body {
 /* The chrome's ring is a pill round the word, not a box round its 4rem hit area. */
 .cursor.morph-pill > .cursor-box { border-radius: 9999px; }
 
-/* ── The wordmark's own mark: the couple's wreath, not a box ────────────────────────────────────
-   `data-cursor-style="laurel"`. Everything else in the site gets the ring; the names get the same
-   laurel that sits under the tagline on the homepage, opening around them. It is the one mark on
-   this site that is already about these two people, so it is the one the wordmark should wear.
-   ⚠️ THE FILE IS A MASK, NOT ARTWORK — white-on-transparent, 446x250, both branches in one image
-   (see AUDIT #136). Painting it with `background-color` means it takes the cursor's accent, so the
-   wreath is the chapter's own ink on every route, exactly as the tagline's badge is.
-   ⚠️ Each half is masked from ONE image: `mask-size: 200% 100%` doubles it and the position picks
-   the left or the right branch, so there is one file and no second request. The branch keeps the
-   wreath's own 223:250 aspect off the box HEIGHT, which is why the wordmark asks for a wider
-   `data-cursor-pad-x` — the branches need room to flank the names rather than sit on them. */
-.cursor.morph-laurel > .cursor-box {
-  border: 0;
-  background-color: transparent;
-}
-.cursor.morph-laurel > .cursor-box::before,
-.cursor.morph-laurel > .cursor-box::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  aspect-ratio: 223 / 250;
-  background-color: var(--cursorAccent, #333);
-  -webkit-mask-image: var(--laurel-url);
-  mask-image: var(--laurel-url);
-  -webkit-mask-size: 200% 100%;
-  mask-size: 200% 100%;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  opacity: 0.9;
-}
-.cursor.morph-laurel > .cursor-box::before {
-  left: 0;
-  -webkit-mask-position: left center;
-  mask-position: left center;
-}
-.cursor.morph-laurel > .cursor-box::after {
-  right: 0;
-  -webkit-mask-position: right center;
-  mask-position: right center;
-}
+/* ⚠️ THE WORDMARK HAD ITS OWN MARK HERE AND IT IS GONE (2026-09-22). It wore the couple's laurel —
+   the same mask the tagline's badge is drawn from — split left and right to flank the names, built
+   because the wordmark was asked to be "even more special than encircling". Seen in place it was
+   not wanted: "I don't like the laurel effect on logo hover, let's take that out." The names take
+   the same pill as the rest of the chrome now. The mask itself is still in scripts/assets, where
+   gen-og.mjs and gen-textures.mjs read it from; only the public copy and this rule went. */
 
-/* ── The chrome's held state: a hairline, not a fill ────────────────────────────────────────────
-   ⚠️ THE NAV SITS ON EVERY GROUND THIS SITE HAS — paper, a moving film, the accent during an exit
-   — so it cannot take the inverted fill the inner pages' buttons take: any colour that reads on one
-   of those is invisible on another. An underline in the item's OWN ink is ground-agnostic by
-   construction (it is `currentColor`, which the foot and nav probes already steer), and a hairline
-   is what this site draws with anyway. `text-decoration` rather than a border, so nothing moves. */
-.menu-item.cursor-held span,
-.wordmark.cursor-held {
-  text-decoration: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 0.42em;
-}
-.wordmark.cursor-held { text-decoration: none; }   /* the wreath is its mark; a rule as well is two */
+/* ⚠️ AND THE HELD STATE IS THE RING ALONE. The chrome briefly underlined its label as well — the
+   nav sits on paper, on a moving film and on the accent, so an underline in the item's own
+   currentColor was the one "colour change" that could not fail on any of them. It was not wanted
+   either (2026-09-22): "there is an underline (shouldn't be)". The ring is the whole mark up here. */
 
 /* The control's half of the effect. The colour itself is the component's business — each chapter
    has its own palette and a single global colour here would fight all four — so this only

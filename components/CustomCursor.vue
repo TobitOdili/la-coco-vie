@@ -55,9 +55,10 @@ let moveEvent = 'pointermove'
 // nothing inside the page can ever be painted above it. A filled morph would bury the label of
 // the very button it is advertising. The colour change belongs to the button (.cursor-held).
 const morphed = ref(false)
-// ⚠️ A CONTROL CAN ASK FOR ITS OWN MARK. `data-cursor-style="laurel"` puts `morph-laurel` on the
-// cursor, and the stylesheet decides what that looks like — the ring is only the default. The
-// wordmark uses it: the couple's names get the couple's own wreath rather than a box round them.
+// ⚠️ A CONTROL CAN ASK FOR ITS OWN MARK. `data-cursor-style="pill"` puts `morph-pill` on the
+// cursor, and the stylesheet decides what that looks like — the plain ring is only the default.
+// The nav uses it. (A `laurel` style once flanked the wordmark with the couple's wreath; it was
+// built, seen and rejected on 2026-09-22 — the mechanism stays, that mark does not.)
 const morphStyle = ref('')
 let morphEl = null          // the element being shadowed, or null
 let morphPad = 6            // px the ring sits outside it — data-cursor-pad overrides

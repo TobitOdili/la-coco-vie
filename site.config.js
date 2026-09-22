@@ -117,10 +117,13 @@ export const SITE = {
   nav: {
     aboutLabel: 'Welcome',
     collectionLabel: 'RSVP',
-    // PLACEHOLDER — point at the real RSVP form / WhatsApp / mailto when it exists.
-    // The real RSVP destination (user, 2026-09-03). This is the site's primary
-    // call to action — it appears in the nav AND at the end of all four chapters.
-    collectionUrl: 'https://lal.so/e/9j09CHqj2sn',
+    // ⚠️ THE SITE'S PRIMARY CALL TO ACTION, AND THIS IS ITS ONLY COPY. It is read by the nav
+    // (SiteNav) and by the footer of all four chapters (ChapterEnd) — nothing hardcodes it, which
+    // is what makes swapping it a one-line change rather than a hunt.
+    // ⚠️ CHANGED 2026-09-22: the couple's Lalso event was re-created and the old link is dead.
+    // Was `https://lal.so/e/9j09CHqj2sn` (supplied 2026-09-03). If it changes again, change it
+    // here and nowhere else — and check the three mentions in docs/, which are prose, not code.
+    collectionUrl: 'https://lal.so/e/ZUomvI5QVsK',
   },
 
   // ── Where a gift goes ───────────────────────────────────────────────────────
