@@ -65,7 +65,11 @@
 >
 > ▶▶ **2026-09-23 — AUDIT #156–#157.** The hovered card's twist was the SHADER, not the pose:
 > `blendFactor: 2` is past flat, so the card curled the other way (#156). The pull is down to 2, and
-> the turn stops short of square-on with a per-card roll, so no two hovers look alike (#157). The three that matter most: a shared link has no preview and every chapter
+> the turn stops short of square-on with a per-card roll, so no two hovers look alike (#157).
+>
+> ▶▶ **2026-09-24 — AUDIT #158–#159.** A hovered card keeps a sixth of the ring's curve so it still
+> reads as paper (#158), and the wordmark's hover is its own ink — deepening on paper, brightening
+> on a dark ground — with no ring at all (#159). The three that matter most: a shared link has no preview and every chapter
 > previews as the homepage (#99); the bottom chrome is invisible on the first screen of every
 > chapter, measuring 1.03 against its own ground (#100); and page copy runs under the nav at up to
 > 69% of scroll positions (#101). Healthy: zero overflow, zero console errors, zero failed requests,

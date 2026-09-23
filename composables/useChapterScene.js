@@ -518,6 +518,16 @@ export function useChapterScene() {
   const HOVER_TURN = 0.82        // how far toward square-on a hovered card goes
   const HOVER_TURN_VARY = 0.10   // ± per card, so even two front cards differ
   const HOVER_ROLL = toRad(2.6)  // ± the signature tilt, in the card's own plane
+  // ── The fold ────────────────────────────────────────────────────────────────
+  // ⚠️ A HOVERED CARD IS STILL A PIECE OF PAPER. Flattening it all the way (blendFactor 1) left a
+  // rectangle so exact that the card stopped reading as an object at all. User, 2026-09-24: "it's a
+  // 3d object so bend it a little on the sides or something fitting and elegant." The lever is the
+  // one already there: `mix(bentPosition, flat, b)` is the ring's own cylinder at b = 0, dead flat
+  // at 1, so stopping just short keeps a fraction of the SAME curve every other card in the deck
+  // wears — the edges easing away from you, never toward. ⚠️ Never above 1: past flat the curl
+  // inverts and the card twists, which is the whole of AUDIT #156.
+  const HOVER_FLATTEN = 0.84      // 16% of the ring's curve left in the card
+  const HOVER_FLATTEN_VARY = 0.06 // ± per card, like the roll — no two folds alike either
   // Deterministic per-slot noise in [0,1) — the same card gets the same character every time, and
   // it costs two trig ops on the ONE card that is hovered.
   const slotNoise = (n) => { const v = Math.sin(n * 127.1) * 43758.5453; return v - Math.floor(v) }
@@ -1920,7 +1930,7 @@ export function useChapterScene() {
     // this was the whole of it. 2.0 came from the reference's own bundle; the select has always
     // used 1.0 for the same card (see selectChapter), which is what flat actually means here.
     gsap.to(p.material.uniforms.blendFactor, {
-      value: 1.0,
+      value: HOVER_FLATTEN + HOVER_FLATTEN_VARY * (slotNoise(p.i + 71) * 2 - 1),
       duration: 0.55,
       ease: 'power2.out',
       overwrite: true,

@@ -86,11 +86,7 @@
           <button
             type="button"
             class="wordmark nav-btn whitespace-nowrap text-[17px] lg:text-[26px] pointer-events-auto"
-            data-cursor="morph"
-            data-cursor-style="pill"
-            data-cursor-pad="10"
-            data-cursor-pad-x="22"
-            :style="{ color: navInk, opacity: wordmarkFade, letterSpacing: wordmarkTrack }"
+            :style="{ '--wm-ink': navInk, opacity: wordmarkFade, letterSpacing: wordmarkTrack }"
             :aria-label="isHome ? 'Covenant and Uvie' : 'Back to the chapters'"
             @click="$emit('go-home')"
           >
@@ -511,6 +507,26 @@ defineEmits(['toggle-about', 'go-home', 'toggle-sound'])
    grown with a pseudo-element rather than padding: the nav is a flex row measured to the pixel
    and padding would move the date line under it. */
 .wordmark { position: relative; }
+/* ⚠️ THE INK COMES THROUGH A VARIABLE SO THAT :hover CAN HAVE IT. It used to be bound straight to
+   `style="color:"`, and an inline style beats every stylesheet — there was no way to write a hover
+   state for the couple's own names at all.
+   ⚠️ AND THE NAMES DO NOT GET A RING. Every other control in the chrome does; the wordmark had one
+   for a day and a wreath for a day before that, and neither was wanted (2026-09-24: "completely
+   remove the pill effect on the logo hover. Maybe just change its color or something"). So this is
+   the only control whose whole answer is its own ink.
+   ⚠️ IT DEEPENS ON PAPER AND BRIGHTENS ON A DARK GROUND, which is the one formulation that cannot
+   fail: the nav sits on paper, on a moving film and on the accent mid-exit, and mixing toward the
+   opposite tone would LOSE contrast on half of them. `nav-on-dark` already knows which case it is
+   — it is the same flag that picks the ink in the first place. */
+.wordmark {
+  color: var(--wm-ink);
+  transition: color 0.3s ease;
+}
+.wordmark:hover,
+.wordmark:focus-visible { color: color-mix(in srgb, var(--wm-ink) 62%, #0B0A08 38%); }
+body.nav-on-dark .wordmark:hover,
+body.nav-on-dark .wordmark:focus-visible { color: color-mix(in srgb, var(--wm-ink) 62%, #FFFDF8 38%); }
+@media (prefers-reduced-motion: reduce) { .wordmark { transition-duration: 0.01ms; } }
 .wordmark::after {
   content: '';
   position: absolute;
