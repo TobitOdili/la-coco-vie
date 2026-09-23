@@ -479,8 +479,13 @@ export function useChapterScene() {
   // bit overstated ... let's tone it down." 5 put a front card at ~69 units (1.15x on screen);
   // 3 lands it at ~72, a hair over 1.08x. At that size the pull is no longer what you notice —
   // the turn and the compositing are — which is the whole point of the note above.
-  const HOVER_LIFT = 5      // ring-local +Y — the lift this hover has always had
-  const HOVER_PULL = 3      // world units toward the camera
+  // ⚠️ AND SUBTLER AGAIN, FOURTH TIME (2026-09-23): "I still think the zoom/pan on the cards is too
+  // overstated on desktop … can we make it more subtle?" 20.9 → 10 → 5 → 3 → 2. A front card sits
+  // 77.8 units out and now hovers at ~73.5, which is 1.06x on screen. Past this there is no zoom
+  // left to remove: what makes a hovered card read as picked up is that it is composited in FRONT
+  // of the whole deck (depthTest off + renderOrder), and that is not a size change at all.
+  const HOVER_LIFT = 3.5    // ring-local +Y — the lift, cut with the pull
+  const HOVER_PULL = 2      // world units toward the camera
   const HOVER_RENDER_ORDER = 10   // the hovered card draws after every other
   // ⚠️ AND A SMALL RISE THE REFERENCE DOES NOT HAVE, because a card growing around its own
   // centre grows DOWNWARD too and our deck sits low in the frame. At the first attempt's 1.7x
@@ -489,13 +494,34 @@ export function useChapterScene() {
   // unit the card climbs into the tagline, which is the thing it must not swallow.
   // ⚠️ And down again with the pull: the rise exists to keep a GROWING card's bottom edge in
   // frame, so it is scaled to the growth. At 1.08x there is almost nothing to clear.
-  const HOVER_RISE = 0.6    // world +Y, desktop only — framing, not lift
+  const HOVER_RISE = 0.4    // world +Y, desktop only — framing, not lift
   // Seconds to close 63% of the remaining distance.
   // ⚠️ A CHASE, NOT A TWEEN. The pose is re-derived from the ring's CURRENT pose every frame,
   // so it has to survive the deck rotating under a held hover, a card handing the lift to its
   // neighbour mid-flight, and a click interrupting both. An exponential chase does that from
   // any state; a tween toward a target captured at hover time does not. dt-scaled, so it is
   // the same motion at 60 and 120Hz.
+  // ── No two cards alike ──────────────────────────────────────────────────────
+  // ⚠️ AIMING EVERY CARD AT THE CAMERA MAKES EVERY HOVER IDENTICAL. Square-on is a single pose, so
+  // however differently the eight cards sit in the ring, they all arrived at the same attitude and
+  // the deck lost the hand-laid quality it has at rest. User, 2026-09-23: "right now they all tilt
+  // in a very similar if not exact same way, would be nice to have the center tilt a little
+  // differently than sides."
+  // Two things fix it, and the first does most of the work for free:
+  //   • A PARTIAL TURN. Stopping short of square-on leaves each card a trace of its own ring angle
+  //     — and that residue is small for a front card, which barely had to turn, and large for a
+  //     side card, which turned a long way. The centre and the sides end up different WITHOUT any
+  //     per-card table, because the ring already made them different.
+  //   • A SIGNATURE ROLL, a couple of degrees either way, keyed to the slot so a given card always
+  //     tilts its own way. Roll, never pitch: pitch is what the recede complaint was about, and the
+  //     deck's own language is a tipped card (homeTilt's z is 8°), not a leaning one.
+  const HOVER_TURN = 0.82        // how far toward square-on a hovered card goes
+  const HOVER_TURN_VARY = 0.10   // ± per card, so even two front cards differ
+  const HOVER_ROLL = toRad(2.6)  // ± the signature tilt, in the card's own plane
+  // Deterministic per-slot noise in [0,1) — the same card gets the same character every time, and
+  // it costs two trig ops on the ONE card that is hovered.
+  const slotNoise = (n) => { const v = Math.sin(n * 127.1) * 43758.5453; return v - Math.floor(v) }
+
   const HOVER_TAU_IN = 0.28
   const HOVER_TAU_OUT = 0.32
   // ⚠️ A SELECT UNWINDS THE HERO'S HOVER ON THE SELECT'S OWN CLOCK, and it is the one place
@@ -1086,6 +1112,54 @@ export function useChapterScene() {
         leanDeg: +leanDeg.toFixed(2), rotVel: +rotVel.toFixed(5),
         canvasHidden, renderCount,
       })
+      // ── The hovered card, as it is actually drawn ───────────────────────────────────────────
+      // ⚠️ THE RIGID POSE AND THE RENDERED SHAPE ARE TWO DIFFERENT QUESTIONS, and only this hook
+      // answers the second. `__heroDebug` reports the mesh's transform — which said "upright,
+      // normal horizontal to three decimals" while the card on screen was visibly twisted, because
+      // the vertex shader bends and re-blends every vertex AFTER that transform. This replays the
+      // shader in JS and projects the four corners, so `bent` is where the card really lands. It is
+      // what found AUDIT #156: blendFactor 2 is past flat, not flat.
+      window.__poseDebug = () => {
+        const p = posters.find((q) => q.i === hoveredIndex)
+        if (!p) return null
+        p.mesh.updateWorldMatrix(true, false)
+        const n = new THREE.Vector3(0, 0, 1).transformDirection(p.mesh.matrixWorld)
+        const up = new THREE.Vector3(0, 1, 0).transformDirection(p.mesh.matrixWorld)
+        const rt = new THREE.Vector3(1, 0, 0).transformDirection(p.mesh.matrixWorld)
+        const proj = (lx, ly) => {
+          const v = new THREE.Vector3(lx, ly, 0).applyMatrix4(p.mesh.matrixWorld).project(camera)
+          return [Math.round((v.x * 0.5 + 0.5) * width), Math.round((-v.y * 0.5 + 0.5) * height)]
+        }
+        return {
+          hoverK: +p.hoverK.toFixed(3), blend: +p.material.uniforms.blendFactor.value.toFixed(2),
+          normal: [n.x, n.y, n.z].map((v) => +v.toFixed(3)),
+          up: [up.x, up.y, up.z].map((v) => +v.toFixed(3)),
+          right: [rt.x, rt.y, rt.z].map((v) => +v.toFixed(3)),
+          tl: proj(-12, 16), tr: proj(12, 16), bl: proj(-12, -16), br: proj(12, -16),
+          // …and the corners as the SHADER actually places them: rotateZ by uAngle, bend onto the
+          // cylinder, then the same mix(bent, mirrored-flat, blendFactor) the fragment stage sees.
+          bent: (() => {
+            const ax = p.material.uniforms.axisPosition.value
+            const bf = p.material.uniforms.blendFactor.value
+            const ua = (p.material.uniforms.uAngle.value || 0) * Math.PI / 180
+            const shade = (lx, ly) => {
+              const rx = Math.cos(ua) * lx - Math.sin(ua) * ly
+              const ry = Math.sin(ua) * lx + Math.cos(ua) * ly
+              const theta = (rx - ax.x) / ax.z
+              const c = Math.cos(-theta), s2 = Math.sin(-theta)
+              const bent = new THREE.Vector3(-s2 * (-ax.z), ry, c * (-ax.z)).add(ax)
+              const flat = new THREE.Vector3(-lx, ly, 0)
+              const fin = new THREE.Vector3(
+                bent.x + (flat.x - bent.x) * bf,
+                bent.y + (flat.y - bent.y) * bf,
+                bent.z + (flat.z - bent.z) * bf)
+              const v = fin.applyMatrix4(p.mesh.matrixWorld).project(camera)
+              return [Math.round((v.x * 0.5 + 0.5) * width), Math.round((-v.y * 0.5 + 0.5) * height)]
+            }
+            return { tl: shade(-12, 16), tr: shade(12, 16), bl: shade(-12, -16), br: shade(12, -16) }
+          })(),
+        }
+      }
       // What does a click at screen (x,y) resolve to, vs the front-facing card?
       window.__probe = (x, y) => {
         const slot = resolveHoverTarget(x, y)   // what hover/click really resolve to
@@ -1836,8 +1910,17 @@ export function useChapterScene() {
 
     // power2.OUT (not inOut) so the flatten starts immediately on hover — inOut eases IN, so
     // the first ~0.3s barely moved and the hover read as laggy though it registered instantly.
+    // ⚠️ 1.0 IS FLAT. 2.0 IS PAST IT, AND PAST IT IS A TWIST. `mix(bent, flat, b)` at b = 2 is
+    // `2·flat − bent`: the card does not flatten, it curls the OTHER way and half again as far.
+    // Measured on the shipped build at 1440x900, projecting the hovered card's real (post-shader)
+    // corners: the top edge level, the bottom edge sloping 5.7°, and the right edge 8% taller on
+    // screen than the left — a card twisted rather than a card facing you. User, 2026-09-23: "the
+    // top part also looks much more receded than it should be compared to the bottom." The rigid
+    // pose was already innocent (`up` = [0, 1, 0] exactly, normal horizontal to three decimals);
+    // this was the whole of it. 2.0 came from the reference's own bundle; the select has always
+    // used 1.0 for the same card (see selectChapter), which is what flat actually means here.
     gsap.to(p.material.uniforms.blendFactor, {
-      value: 2.0,
+      value: 1.0,
       duration: 0.55,
       ease: 'power2.out',
       overwrite: true,
@@ -1894,6 +1977,8 @@ export function useChapterScene() {
   // would walk away from the ring and never come back.
   const _hvRest = new THREE.Vector3(), _hvDir = new THREE.Vector3(), _hvOff = new THREE.Vector3()
   const _hvLook = new THREE.Vector3()
+  const _hvRoll = new THREE.Quaternion()
+  const _hvZ = new THREE.Vector3(0, 0, 1)
   const _hvM = new THREE.Matrix4()
   const _hvQ = new THREE.Quaternion(), _hvQPar = new THREE.Quaternion(), _hvQTar = new THREE.Quaternion()
   const _hvFlip = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI)
@@ -1962,8 +2047,12 @@ export function useChapterScene() {
         _hvLook.set(camera.position.x, _hvRest.y, camera.position.z)
         _hvM.lookAt(_hvLook, _hvRest, p.mesh.up)
         _hvQ.setFromRotationMatrix(_hvM).multiply(_hvFlip)
+        // …and this card's own tilt, about its own normal, so it reads as set down by hand.
+        _hvRoll.setFromAxisAngle(_hvZ, HOVER_ROLL * (slotNoise(p.i) * 2 - 1))
+        _hvQ.multiply(_hvRoll)
         _hvQTar.copy(_hvQPar).multiply(_hvQ)
-        p.mesh.quaternion.copy(p.baseQuat).slerp(_hvQTar, p.hoverK)
+        const turn = HOVER_TURN + HOVER_TURN_VARY * (slotNoise(p.i + 37) * 2 - 1)
+        p.mesh.quaternion.copy(p.baseQuat).slerp(_hvQTar, p.hoverK * turn)
 
         // COME FORWARD along the view ray — straight at the camera, so the card's projected
         // centre stays put and it grows where it stands — and rise, in world up, to sit in

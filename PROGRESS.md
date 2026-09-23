@@ -61,7 +61,11 @@
 >
 > ▶▶ **2026-09-22 — AUDIT #154–#155.** The laurel came off the wordmark on sight, the nav's pills went
 > from 30px to 44px tall and lost their underline (#154), and **the RSVP link changed**: the couple's
-> new Lalso event, `lal.so/e/ZUomvI5QVsK`, replaces a dead one (#155). The three that matter most: a shared link has no preview and every chapter
+> new Lalso event, `lal.so/e/ZUomvI5QVsK`, replaces a dead one (#155).
+>
+> ▶▶ **2026-09-23 — AUDIT #156–#157.** The hovered card's twist was the SHADER, not the pose:
+> `blendFactor: 2` is past flat, so the card curled the other way (#156). The pull is down to 2, and
+> the turn stops short of square-on with a per-card roll, so no two hovers look alike (#157). The three that matter most: a shared link has no preview and every chapter
 > previews as the homepage (#99); the bottom chrome is invisible on the first screen of every
 > chapter, measuring 1.03 against its own ground (#100); and page copy runs under the nav at up to
 > 69% of scroll positions (#101). Healthy: zero overflow, zero console errors, zero failed requests,
