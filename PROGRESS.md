@@ -69,7 +69,11 @@
 >
 > ▶▶ **2026-09-24 — AUDIT #158–#159.** A hovered card keeps a sixth of the ring's curve so it still
 > reads as paper (#158), and the wordmark's hover is its own ink — deepening on paper, brightening
-> on a dark ground — with no ring at all (#159). The three that matter most: a shared link has no preview and every chapter
+> on a dark ground — with no ring at all (#159).
+>
+> ▶▶ **2026-09-24 (ii) — AUDIT #160–#161.** The intro's last beat had the deck leaning 15°, the camera
+> 2.9 units off axis and the tagline popping on in one frame; all three now land where they rest
+> (#160). The hover's fold went from 16% of the ring's curve to 28% (#161). The three that matter most: a shared link has no preview and every chapter
 > previews as the homepage (#99); the bottom chrome is invisible on the first screen of every
 > chapter, measuring 1.03 against its own ground (#100); and page copy runs under the nav at up to
 > 69% of scroll positions (#101). Healthy: zero overflow, zero console errors, zero failed requests,

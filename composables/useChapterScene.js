@@ -419,6 +419,7 @@ export function useChapterScene() {
   let currentTxtChapter = -1             // chapter shown on the center txtMesh (#9/#14)
   let pendingTxtChapter = -1             // …and the one it is heading for, if a swap is running
   let txtSwapping = false
+  const TXT_INTRO_FADE = 0.9             // the first reveal, across the beat after the cards land
   const TXT_FADE_OUT = 0.1               // a full swap is 0.26s, so a fast scroll still reads
   const TXT_FADE_IN = 0.16
   let lastFrontChapter = -1              // last front chapter reported for the cursor tint
@@ -526,7 +527,7 @@ export function useChapterScene() {
   // at 1, so stopping just short keeps a fraction of the SAME curve every other card in the deck
   // wears — the edges easing away from you, never toward. ⚠️ Never above 1: past flat the curl
   // inverts and the card twists, which is the whole of AUDIT #156.
-  const HOVER_FLATTEN = 0.84      // 16% of the ring's curve left in the card
+  const HOVER_FLATTEN = 0.72      // 28% of the ring's curve left in the card (was 0.84 — "a bit more pronounced")
   const HOVER_FLATTEN_VARY = 0.06 // ± per card, like the roll — no two folds alike either
   // Deterministic per-slot noise in [0,1) — the same card gets the same character every time, and
   // it costs two trig ops on the ONE card that is hovered.
@@ -595,6 +596,14 @@ export function useChapterScene() {
   let selectedIndex = -1
   let isIntro = true
   let introComplete = false
+  // ⚠️ THE INTRO'S LEAN IS ITS OWN NUMBER NOW, NOT A FUNCTION OF THE MOUSE PROXY. It used to be
+  // `mouse.x * 10 + 10`, driven by the proxy the intro tweens from −10 to 0.5 — which lands the
+  // deck at FIFTEEN DEGREES of lean and holds it there for the whole beat between the last card
+  // settling and `introComplete`, at which point the rest target becomes 0 and the deck visibly
+  // rights itself. User, 2026-09-24: "the cards are momentarily stuck in a state … then suddenly
+  // snap upright." Tweened to 0 on the spin's own curve, the deck arrives upright and the flag
+  // changes nothing anyone can see. 0 is also what `runStill` wants, which is why it is the default.
+  let introLeanDeg = 0
   let isMobile = false
   let deepLinkIdx = -1      // chapter index the page was loaded ON (a reload / shared link), else -1
   // ── prefers-reduced-motion ───────────────────────────────────────────────────
@@ -1383,6 +1392,7 @@ export function useChapterScene() {
     const posterStagger = isMobile ? 0.12 : 0.2
     const posterDur = isMobile ? 1.2 : 1.5
     // last card settles at posterDelay + stagger*7 + dur  →  mobile 3.54s, desktop 5.9s
+    const cardsSettleAt = posterDelay + posterStagger * 7 + posterDur
     const introEndAt = isMobile ? 3.75 : 7
 
     // Original: B.animatedRotationY starts at 0, animates to degToRad(360*2) = 720°
@@ -1390,6 +1400,16 @@ export function useChapterScene() {
     carousel.rotation.y = 0
     carouselLerpTarget = 0
     introAnims = []   // track the intro's tweens so destroy() can kill them (no fire into a torn-down scene)
+    // The sweep the old `mouse.x * 10 + 10` produced, end to end: −90° at mouse.x = −10, and now
+    // UPRIGHT at the finish rather than the 15° the proxy's 0.5 was worth.
+    introLeanDeg = -90
+    const leanProxy = { deg: -90 }
+    introAnims.push(gsap.to(leanProxy, {
+      deg: 0,
+      duration: introSpinDur,
+      ease: 'power3.inOut',
+      onUpdate: () => { introLeanDeg = leanProxy.deg },
+    }))
     const rotProxy = { val: 0 }
     introAnims.push(gsap.to(rotProxy, {
       val: Math.PI * 4,  // 720° = degToRad(360*2)
@@ -1405,10 +1425,14 @@ export function useChapterScene() {
     // Starting at x=-10 → strong leftward bias → cards pushed RIGHT in screen space
     mouse.set(-10.0, -10.0)
     prevMouse.set(-10.0, -10.0)
+    // ⚠️ AND IT LANDS ON AXIS, NOT AT THE ORIGINAL'S 0.5. The parallax spring settles at
+    // `mouse · ne · oe` off centre, so 0.5 left the camera 2.9 units right and 2.9 down — the deck
+    // "always offset in one particular direction" until the visitor's first real mousemove, which
+    // on a page nobody has touched yet may never come. 0 rests it where the composition was drawn.
     const camMouseProxy = { x: -10.0, y: -10.0 }
     introAnims.push(gsap.to(camMouseProxy, {
-      x: 0.5,
-      y: 0.5,
+      x: 0,
+      y: 0,
       duration: introSpinDur,
       ease: 'power3.inOut',
       onUpdate: () => {
@@ -1445,14 +1469,35 @@ export function useChapterScene() {
       }))
     })
 
+    // ── The tagline arrives WITH the last card, and it fades ───────────────────
+    // ⚠️ IT USED TO BE SET AT `introEndAt` WITH `instant`, WHICH IS `opacity = 1` ON ONE FRAME —
+    // a second of settled deck with nothing in the middle of it, and then type appearing out of
+    // nothing. Starting it on the settle and fading it across the beat turns that gap into the
+    // reveal it was meant to be. The animate() tracker cannot fight this: it is gated on
+    // `introComplete`, and by the time that flips the chapter already matches and it returns.
+    introAnims.push(gsap.delayedCall(cardsSettleAt, () => {
+      if (isDestroyed) return
+      const txtMat = groupG.userData.txtMat
+      const ci = frontChapterIdx()
+      if (!txtMat || ci < 0 || !txtTextures[ci]) return
+      cancelTxtSwap()
+      currentTxtChapter = ci
+      pendingTxtChapter = ci
+      txtMat.map = txtTextures[ci]
+      txtMat.needsUpdate = true
+      txtMat.opacity = 0
+      introAnims.push(gsap.to(txtMat, { opacity: 1, duration: TXT_INTRO_FADE, ease: 'power2.out' }))
+    }))
+
     // Mark intro complete — cued just after the last card settles (see the timing block above),
-    // so the wordmark reveal lands on the settle rather than trailing it.
+    // so selection and the EXPLORE gate open on the settle rather than trailing it.
     introAnims.push(gsap.delayedCall(introEndAt, () => {
       if (isDestroyed) return   // the component unmounted mid-intro — don't touch a torn-down scene
       isIntro = false
       introComplete = true
-      // Sync the center text to whichever card the intro left at front (Issue #14)
-      setTxtChapter(frontChapterIdx(), true)
+      // Safety net only: the fade above owns the reveal, and this fires just in case it could not
+      // run (no texture yet, no front card). It must not clobber a fade in flight.
+      if (currentTxtChapter < 0) setTxtChapter(frontChapterIdx(), true)
       // Let the app apply any deep-linked chapter now that selection is allowed (Phase 2)
       if (onReadyCallback) onReadyCallback()
     }))
@@ -1548,7 +1593,7 @@ export function useChapterScene() {
     prevRotY = carousel.rotation.y
     let leanTarget
     if (!introComplete) {
-      leanTarget = mouse.x * 10 + 10        // unchanged intro sweep
+      leanTarget = introLeanDeg             // the intro's own sweep, −90° → upright
     } else if (isMobile) {
       leanTarget = Math.max(-LEAN_MAX_DEG, Math.min(LEAN_MAX_DEG, rotVel * SWIPE_LEAN_PER_ROTVEL))
     } else {
